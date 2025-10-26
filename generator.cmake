@@ -8,7 +8,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             RESULT_VARIABLE GEN_UI_CLASSES_RESULT
@@ -22,7 +22,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     file(GLOB_RECURSE GENERATOR_UI_CLASSES_SPECS
             CONFIGURE_DEPENDS
             "${SOURCE_DIR}/*.yaml"
-            "${CMAKE_SOURCE_DIR}/tools/${generator}"
+            "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
     set(GENERATOR_UI_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
@@ -30,10 +30,10 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
             OUTPUT "${GENERATOR_UI_CLASSES_STAMP}"
             BYPRODUCTS ${GENERATED_UI_CLASSES_IXX}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${GENERATOR_UI_CLASSES_STAMP}"
-            DEPENDS ${GENERATOR_UI_CLASSES_SPECS} "${CMAKE_SOURCE_DIR}/tools/${generator}"
+            DEPENDS ${GENERATOR_UI_CLASSES_SPECS} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating ixx files from YAML specs (batch mode)"
             VERBATIM
     )
@@ -70,13 +70,14 @@ function(generateRecordsets GEN_DIR YAML_DIR)
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${GEN_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/yaml2rs.py"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
                     --quiet --scan "${YAML_DIR}" --output "${GEN_DIR}"
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             RESULT_VARIABLE RS_GEN_RESULT
+            ERROR_VARIABLE RS_OOPSIE
     )
     if (NOT RS_GEN_RESULT EQUAL 0)
-        message(FATAL_ERROR "yaml2rs.py batch generation failed at configure time")
+        message(FATAL_ERROR "yaml2rs.py batch generation failed at configure time : ${RS_OOPSIE}")
     endif ()
 
     # 2) Build-time regeneration whenever YAML specs or the generator change
@@ -91,10 +92,10 @@ function(generateRecordsets GEN_DIR YAML_DIR)
             OUTPUT "${RS_STAMP}"
             BYPRODUCTS ${GENERATED_RS}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${GEN_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/yaml2rs.py"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
                     --quiet --scan "${YAML_DIR}" --output "${GEN_DIR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${RS_STAMP}"
-            DEPENDS ${YAML_RS_SPECS} "${CMAKE_SOURCE_DIR}/tools/yaml2rs.py"
+            DEPENDS ${YAML_RS_SPECS} "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
             COMMENT "Generating RS.ixx files from YAML specs (batch mode)"
             VERBATIM
     )
