@@ -199,7 +199,7 @@ function(wxWidgets_process incs libs defs)
     #    endif ()
     #
     add_library(Widgets INTERFACE)
-    target_sources(Widgets PUBLIC "${CMAKE_SOURCE_DIR}/include/"Gfx/Widgets.h)
+    target_sources(Widgets PUBLIC "${CMAKE_SOURCE_DIR}/include/Gfx/Widgets.h")
 
     # @formatter:off
     target_compile_options(Widgets      INTERFACE ${wxWidgets_COMPILER_OPTIONS})
@@ -270,7 +270,9 @@ function(wxWidgets_process incs libs defs)
 endfunction()
 
 if (WIDGETS IN_LIST APP_FEATURES)
-    wxWidgets_process(_IncludePathsList _LibrariesList _DefinesList)
+    if (NOT SKIP_WIDGETS)
+        wxWidgets_process(_IncludePathsList _LibrariesList _DefinesList)
+    endif ()
     set(HANDLED ON)
 
     #    set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_COMPILER_OPTIONS}   PARENT_SCOPE)
