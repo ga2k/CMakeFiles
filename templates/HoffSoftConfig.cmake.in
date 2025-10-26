@@ -1,0 +1,47 @@
+# HoffSoft CMake package configuration (installed)
+@PACKAGE_INIT@
+
+# We expose an imported target HoffSoft::Core and keep third-party deps internal.
+# This lets consumers just link HoffSoft::Core without needing to locate yaml-cpp at configure time.
+
+# Define imported target HoffSoft::Core for consumers
+if(NOT TARGET HoffSoft::Core)
+  add_library(HoffSoft::Core SHARED IMPORTED)
+endif()
+
+# Resolve installed library path (cover common layouts)
+set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
+set(_candidates
+  "${_hs_prefix}/lib/libhoffsoft_core.so"
+  "${_hs_prefix}/lib64/libhoffsoft_core.so"
+  "${_hs_prefix}/lib/libhoffsoft_core.dylib"
+  "${_hs_prefix}/bin/hoffsoft_core.dll"
+  "${_hs_prefix}/lib/hoffsoft_core.dll"
+)
+set(_hs_core_lib "")
+foreach(_c ${_candidates})
+  if(EXISTS "${_c}")
+    set(_hs_core_lib "${_c}")
+    break()
+  endif()
+endforeach()
+if(NOT _hs_core_lib)
+  message(FATAL_ERROR "HoffSoft::Core library not found under ${_hs_prefix}.")
+endif()
+
+set_target_properties(HoffSoft::Core PROPERTIES
+  IMPORTED_LOCATION "${_hs_core_lib}"
+  INTERFACE_INCLUDE_DIRECTORIES "${_hs_prefix}/include"
+)
+
+# For Clang consumers of modules, provide prebuilt-module path automatically
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_options(HoffSoft::Core INTERFACE
+    "-fprebuilt-module-path=${_hs_prefix}/share/cmake/cxx/pcm/HoffSoft/Core.dir"
+  )
+endif()
+
+# Convenience variables
+set(HoffSoft_INCLUDE_DIR  "${_hs_prefix}/include")
+set(HoffSoft_INCLUDE_DIRS "${_hs_prefix}/include")
+set(HoffSoft_LIBRARIES    HoffSoft::Core)
