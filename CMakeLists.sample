@@ -1,0 +1,483 @@
+cmake_minimum_required(VERSION 4.0) #                                                 Absolute minimum required is 3.8.2
+
+########################################################################################################################
+#                                                                          C u s t o m i z e   y o u r   a p p   h e r e
+set(APP_NAME "Gfx") #                                                                                     Your app name
+set(APP_VENDOR "HoffSoft") #   Your Company Name or other identifying tag. Multiple apps by the same vendor are grouped
+set(APP_DESCRIPTION "Graphics library for HoffSoft-based app development") #                       Aww, that's so sweet
+set(APP_VERSION "1.0.0") #                            The app version number. Components have their own version numbers
+set(APP_DATE "2025-10-23") #                                                                                 Build Date
+
+set(APP_SHOW_SIZER_INFO_IN_SOURCE ON) #                Generate sizer info comments in generated UI modules source code
+
+set(APP_FEATURES #                  Available : APPEARANCE BOOST BZIP COMMS DATABASE LOGGER PRINT SSL TOML WIDGETS ZLIB
+        APPEARANCE
+        DATABASE
+        LOGGER
+        PRINT
+        WIDGETS
+)
+#######################################################################################################################
+#                                             N o   n e e d   t o   c h a n g e   a n y t h i n g   b e l o w   h e r e
+#######################################################################################################################
+set(CMAKE_CXX_STANDARD 23) #  C++-23 used extensively. Think how much work you'll make for yourself before changing this
+
+string(TOUPPER ${APP_NAME}   APP_NAME_UC)
+string(TOLOWER ${APP_NAME}   APP_NAME_LC)
+string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
+string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
+
+execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -v
+        ERROR_VARIABLE compiler_version
+        OUTPUT_QUIET
+)
+
+if (APP_SHOW_SIZER_INFO_IN_SOURCE)
+    set(SHOW_SIZER_INFO_FLAG "--sizer-info")
+else ()
+    set(SHOW_SIZER_INFO_FLAG "")
+endif ()
+
+set(CMAKE_WARN_UNINITIALIZED ON) #                                                                      No pain, no gain
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE CACHE STRING "Log Level" FORCE) #              So we get some preset variable output
+
+unset(PLUGINS) #                                                       Available : Appearance Database RecordSetUI Print
+list(APPEND PLUGINS Appearance)
+list(APPEND PLUGINS Print)
+list(APPEND PLUGINS Logger)
+
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
+# Include the directory containing addLibrary and tools, etc
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+set(extra_CompileOptions)
+set(extra_Definitions)
+set(extra_IncludePaths)
+set(extra_LibrariesList)
+set(extra_LibraryPaths)
+set(extra_LinkOptions)
+
+# Link libbacktrace when available for std::stacktrace support
+find_library(BACKTRACE_LIB backtrace)
+find_library(STDCXX_BACKTRACE_LIB stdc++_libbacktrace)
+if (BACKTRACE_LIB)
+    list(APPEND extra_LibrariesList ${BACKTRACE_LIB})
+elseif (STDCXX_BACKTRACE_LIB)
+    list(APPEND extra_LibrariesList ${STDCXX_BACKTRACE_LIB})
+endif ()
+
+set(extra_wxCompilerOptions)
+set(extra_wxDefines)
+set(extra_wxFrameworks)
+set(extra_wxIncludePaths)
+set(extra_wxLibraries)
+set(extra_wxLibraryPaths)
+
+set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Add subdirectories
+###############################################################################################
+add_subdirectory(cmake)
+check_environment("${PROJECT_ROOT}")
+###############################################################################################
+
+if (INSTALLED)
+    list(APPEND extra_Definitions DEVEL)
+endif ()
+
+set(HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
+include("${CMAKE_SOURCE_DIR}/BaseDirs.cmake")
+
+set(HS_CompileOptionsList "")
+set(HS_DefinesList "")
+set(HS_DependenciesList "")
+set(HS_IncludePathsList "")
+set(HS_LibrariesList "")
+set(HS_LibraryPathsList "")
+set(HS_LinkOptionsList "")
+set(HS_PrefixPathsList "")
+
+list(APPEND extra_LibraryPaths
+        "${OUTPUT_DIR}/bin"
+        "${OUTPUT_DIR}/lib"
+        "${OUTPUT_DIR}/dll"
+        "${OUTPUT_DIR}/bin/plugins"
+        "${OUTPUT_DIR}/lib/plugins"
+        "${OUTPUT_DIR}/dll/plugins"
+)
+
+list(APPEND extra_LibraryPaths
+        "${CMAKE_INSTALL_PREFIX}"
+        "${CMAKE_INSTALL_PREFIX}/lib64"
+        "${CMAKE_INSTALL_PREFIX}/lib"
+)
+
+if (APPLE)
+    message(STATUS "Building on an Apple machine.")
+
+    # Run uname -m to determine the architecture
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE CMAKE_SYSTEM_PROCESSOR OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        message(STATUS "Detected Apple Silicon (arm64).")
+        set(CMAKE_OSX_ARCHITECTURES "arm64")
+    elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        message(STATUS "Detected Intel (x86_64).")
+        set(CMAKE_OSX_ARCHITECTURES "x86_64")
+    else ()
+        message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif ()
+    add_definitions("-DPCRE2_CODE_UNIT_WIDTH=32")
+    add_definitions("-DMAGIC_ENUM_ENABLE_HASH")
+    if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+        # If no deployment target has been set default to the minimum supported
+        # OS version (this has to be set before the first project() call)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "macOS Deployment Target")
+    endif ()
+    list(APPEND extra_Definitions BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
+    list(APPEND extra_CompileOptions "-fPIC")
+    set(DYN_FLAG dl)
+
+    if ("${LINK_TYPE_UC}" STREQUAL "SHARED")
+        set(APP_DYN_FLAG ${DYN_FLAG})
+    else ()
+        set(APP_DYN_FLAG)
+    endif ()
+
+    set(gui "darwin")
+
+    list(APPEND extra_Definitions __WXOSX_COCOA__)
+
+    #    if (${CMAKE_OSX_ARCHITECTURES} STREQUAL "x86_64")
+    #        list(APPEND extra_CompileOptions "-stdlib=libc++")
+    #        list(APPEND extra_LinkOptions "-stdlib=libc++")
+    #    endif ()
+
+elseif (LINUX)
+
+    list(APPEND extra_CompileOptions -fPIC)
+
+    if ("${GUI}" STREQUAL "GUI_GTK")
+        set(LINUX_GUI "gtk3")
+        list(APPEND extra_Definitions __WXGTK__)
+        list(APPEND extrawxLibraries wxwebview)
+        list(APPEND extra_IncludePaths "/usr/include/gtk-3.0")
+        list(APPEND extra_IncludePaths "/usr/include/pango-1.0")
+        list(APPEND extra_IncludePaths "/usr/include/harfbuzz")
+        list(APPEND extra_IncludePaths "/usr/include/gdk-pixbuf-2.0")
+        list(APPEND extra_IncludePaths "/usr/include/glib-2.0")
+        list(APPEND extra_IncludePaths "/usr/lib64/glib-2.0/include")
+
+    elseif ("${GUI}" STREQUAL "GUI_QT")
+        set(LINUX_GUI "qt")
+        list(APPEND extra_Definitions __WXQT__)
+    else ()
+        message(FATAL_ERROR "Unknown Linux GUI (${GUI}): GUI must be set to one of (GUI_GTK;GUI_QT)")
+    endif ()
+
+    set(wxBUILD_TOOLKIT ${LINUX_GUI} CACHE STRING "" FORCE)
+
+    list(APPEND extra_CompileOptions -fvisibility=default)
+
+    set(DYN_FLAG dl)
+
+    if (${LINK_TYPE_UC} STREQUAL "SHARED")
+        set(APP_DYN_FLAG ${DYN_FLAG})
+    else ()
+        set(APP_DYN_FLAG)
+    endif ()
+
+    set(gui ${LINUX_GUI})
+
+elseif (WIN32)
+
+    set(GSASL_ROOT ${CMAKE_SOURCE_DIR}/windows/GSASL)
+    set(GSASL_INCLUDE_DIR ${GSASL_ROOT}/include)
+    set(GSASL_LIBRARIES ${GSASL_ROOT}/bin;${GSASL_ROOT}/lib)
+    set(GNUTLS_ROOT ${CMAKE_SOURCE_DIR}/windows/GnuTLS)
+    set(GNUTLS_INCLUDE_DIR ${GNUTLS_ROOT}include)
+    set(GNUTLS_LIBRARIES ${GNUTLS_ROOT}bin;${GNUTLS_ROOT}lib)
+    set(ICU_ROOT ${CMAKE_SOURCE_DIR}/windows/ICU)
+    set(ICU_LIBRARIES ${ICU_ROOT}/bin64;${ICU_ROOT}/lib64)
+    set(OPENSSL_CRYPTO_LIBRARY C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib)
+
+    if (LINK_SHARED)
+        set(GSASL_LIBRARY ${GSASL_ROOT}/lib/libgsasl.dll.a)
+        set(GNUTLS_LIBRARY ${GNUTLS_ROOT}/lib/libgnutls.dll.a)
+        set(ICU_LIBRARY ${ICU_ROOT}/bin64/icuuc75.dll)
+    else ()
+        set(GSASL_LIBRARY ${GSASL_ROOT}/lib/libgsasl.a)
+        set(GNUTLS_LIBRARY ${GNUTLS_ROOT}/lib/libgnutls.a)
+        set(ICU_LIBRARY ${ICU_ROOT}/bin64/icuuc.lib)
+    endif ()
+
+    set(PlatformFlag "WIN32")
+    set(DYN_FLAG ws2_32)
+
+    if (${LINK_TYPE_UC} STREQUAL "SHARED")
+        set(APP_DYN_FLAG ${DYN_FLAG})
+    else ()
+        set(APP_DYN_FLAG)
+    endif ()
+
+    set(gui "win")
+
+    list(APPEND extra_Definitions __WXMSW__ UNICODE _UNICODE)
+
+    list(APPEND extra_IncludePaths
+            "C:/Program Files/OpenSSL-Win64/include"
+            ${SQLITE3_INCLUDE_DIR}
+            ${GSASL_INCLUDE_DIR}
+            ${GNUTLS_INCLUDE_DIR}
+            ${ICU_INCLUDE_DIR}
+    )
+
+    # Suppress nologo for the compiler
+    list(APPEND extra_CompileOptions "/nologo")
+    list(APPEND extra_CompileOptions "/MP")
+    list(APPEND extra_CompileOptions "/Wv:19.34")
+
+    # Suppress nologo for the linker (for executables and shared libraries)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}    /nologo")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nologo")
+    set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /nologo")
+
+    string(SUBSTRING "${CMAKE_GENERATOR}" 0 13 Visual_Studio)
+    if ("${Visual_Studio}" STREQUAL "Visual Studio")
+        set(CMAKE_GENERATOR_TOOLSET "host=x64")
+    endif ()
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
+
+endif ()
+
+set(fn "")
+
+########################################################################################################################
+project(${APP_NAME}Lib VERSION "${APP_VERSION}" DESCRIPTION "${DESCRIPTION}" LANGUAGES CXX) ############################
+########################################################################################################################
+initialiseFeatureHandlers()
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_LIBDIR})
+find_package(HoffSoft REQUIRED CONFIG)
+########################################################################################################################
+# Configure prebuilt C++ module search path for HoffSoft (Clang)
+# Priority:
+# 1) HOFFSOFT_MODULES_PCM_DIR env/cached var if provided by the user
+# 2) Derive from HoffSoft_DIR discovered by find_package
+# 3) Fallback to a common system default
+set(HOFFSOFT_MODULES_PCM_DIR_DEFAULT "/usr/local/share/cmake/cxx/pcm/${APP_VENDOR}/Core.dir")
+set(HOFFSOFT_MODULES_PCM_DIR "$ENV{HOFFSOFT_MODULES_PCM_DIR}")
+# If not set via env, try derive from Core_DIR (points to <prefix>/lib/cmake/HoffSoft)
+if (HOFFSOFT_MODULES_PCM_DIR STREQUAL "")
+    if (DEFINED HoffSoft_DIR AND EXISTS "${HoffSoft_DIR}")
+        # Go up one directory from .../lib/cmake/HoffSoft to .../lib/cmake
+        get_filename_component(_hoffsoft_cmake_dir "${HoffSoft_DIR}" DIRECTORY)
+        set(HOFFSOFT_MODULES_PCM_DIR "${_hoffsoft_cmake_dir}/cxx/pcm/HoffSoft/Core.dir")
+    endif ()
+endif ()
+# Final fallback to default if still empty
+if (HOFFSOFT_MODULES_PCM_DIR STREQUAL "")
+    set(HOFFSOFT_MODULES_PCM_DIR "${HOFFSOFT_MODULES_PCM_DIR_DEFAULT}")
+endif ()
+set(HOFFSOFT_MODULES_PCM_DIR "${HOFFSOFT_MODULES_PCM_DIR}" CACHE PATH "Directory containing HoffSoft prebuilt C++ module PCM/BMI files")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Propagate to all targets via extra_CompileOptions → HS_CompileOptionsList
+    list(APPEND extra_CompileOptions "-fprebuilt-module-path=${HOFFSOFT_MODULES_PCM_DIR}")
+    message(STATUS "Using HoffSoft prebuilt modules from: ${HOFFSOFT_MODULES_PCM_DIR}")
+endif ()
+
+# Add any extra definitions to "extra_Definitions" here
+list(APPEND extra_Definitions ${INSTALLED} MAGIC_ENUM_NO_MODULE)
+list(APPEND extra_Definitions ${GUI})
+string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
+list(APPEND extra_Definitions "PLUGINS=${PI}")
+
+list(APPEND extra_IncludePaths
+        ${HEADER_BASE_DIRS}
+        ${CMAKE_INSTALL_PREFIX}/include
+        ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}
+)
+
+########################################################################################################################
+list(PREPEND HS_CompileOptionsList ${extra_CompileOptions})
+list(PREPEND HS_DefinesList ${debugFlags} ${extra_Definitions})
+list(PREPEND HS_IncludePathsList ${extra_IncludePaths})
+list(PREPEND HS_LibrariesList ${extra_LibrariesList})
+list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
+list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
+########################################################################################################################
+fetchContents(
+        PREFIX HS # NO_CORE_LIBS
+        USE ${APP_FEATURES}
+        FIND_PACKAGE_ARGS
+        #            "WIDGETS REQUIRED CONFIG HINTS $ENV{VCPKG_ROOT_DIR}/installed/x64-windows/share/wxwidgets"
+        #            "BOOST GIT_SHALLOW TRUE"
+)
+########################################################################################################################
+include(GoogleTest)
+########################################################################################################################
+message(STATUS "=== Configuring Gfx Components ===")
+add_subdirectory(src)
+add_library(HoffSoft::Gfx ALIAS Gfx)
+add_library(HoffSoft::wxLib ALIAS wxLib)
+########################################################################################################################
+
+# Set plugin paths based on build type
+if (NOT INSTALLED)
+    # Development build
+    set(PLUGIN_PATH "${OUTPUT_DIR}/plugins")
+    set(PLUGIN_PATH_TYPE "development")
+else ()
+    # Install build
+    set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/lib/${APP_VENDOR}/${APP_NAME}/plugins")
+    set(PLUGIN_PATH_TYPE "installed")
+endif ()
+
+# Create a timestamp that changes when CMake configures (i.e., when profile changes)
+string(TIMESTAMP CONFIG_TIMESTAMP "%Y%m%d%H%M%S")
+set(CONFIG_STAMP "${CMAKE_BINARY_DIR}/config_stamp_${CONFIG_TIMESTAMP}")
+
+# Create the stamp file
+file(WRITE "${CONFIG_STAMP}" "Profile: ${CMAKE_BUILD_TYPE}-${gui}\n")
+
+########################################################################################################################
+# Appropriate include paths
+if(TARGET ${APP_NAME})
+    # Ensure no link directories leak into INTERFACE to satisfy CMake export validation
+    set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
+    # Expose the overrides include folder (e.g., patched magic_enum headers) for installed consumers
+    target_include_directories(${APP_NAME} INTERFACE
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
+    )
+endif()
+
+install(TARGETS ${APP_NAME} wxLib
+        EXPORT ${APP_NAME}Target
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
+        CXX_MODULES_BMI
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+        FILE_SET CXX_MODULES
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+        FILE_SET HEADERS
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(TARGETS ${APP_NAME} wxLib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_ONLY
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_ONLY
+)
+
+install(CODE [[
+  set(_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+  set(CMAKE_INSTALL_LIBDIR "lib64")
+  message("Removing ${_root}/${CMAKE_INSTALL_LIBDIR}/cmake/HoffSoft/Gfx")
+  file(REMOVE_RECURSE "${_root}/${CMAKE_INSTALL_LIBDIR}/cmake/HoffSoft/Gfx")
+]])
+
+install(TARGETS Appearance Print Logger
+        EXPORT ${APP_NAME}Target
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR/${APP_VENDOR}/${APP_NAME}} NAMELINK_SKIP
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR/${APP_VENDOR}/${APP_NAME}}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR/${APP_VENDOR}/${APP_NAME}} NAMELINK_SKIP
+        CXX_MODULES_BMI
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+        FILE_SET CXX_MODULES
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+        FILE_SET HEADERS
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(TARGETS Appearance Print Logger
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR/${APP_VENDOR}/${APP_NAME}} NAMELINK_ONLY
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} NAMELINK_ONLY
+)
+
+# PCM files for modules
+install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/cxx/pcm/${APP_VENDOR}
+        FILES_MATCHING
+        PATTERN *.pcm
+        PATTERN "app" EXCLUDE
+        PATTERN "ctrls" EXCLUDE
+        PATTERN "interface" EXCLUDE
+        PATTERN "misc" EXCLUDE
+        PATTERN "plugins" EXCLUDE
+        PATTERN "widgets" EXCLUDE
+)
+
+# Need to tweak some locations. We'll keep it limited
+if ("${APP_NAME}" STREQUAL "Core")
+    set (_TARGET ${APP_VENDOR})
+else ()
+    set (_TARGET ${APP_NAME})
+endif ()
+
+# Install export set for consumers (enabled by default)
+option(HS_INSTALL_EXPORT "Install ${APP_NAME} export set" ON)
+if(HS_INSTALL_EXPORT)
+    install(EXPORT ${APP_NAME}Target
+            FILE ${_TARGET}Target.cmake
+            NAMESPACE ${APP_VENDOR}::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+            CXX_MODULES_DIRECTORY .
+    )
+endif()
+
+# Package config and target exports for find_package
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}ConfigVersion.cmake"
+        VERSION ${APP_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+        cmake/${_TARGET}Config.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+)
+
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}ConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+)
+
+# Install end-user documentation and resources (Linux only for now)
+if(UNIX AND NOT APPLE)
+    include(GNUInstallDirs)
+
+    # User guide
+    if(EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+        install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
+    endif()
+    # Resources directory (fonts, images, etc.)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/resources")
+        install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}")
+    endif()
+    # If any desktop files are provided under resources/, install them to share/applications
+    file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
+    if(_hs_desktop_files)
+        install(FILES ${_hs_desktop_files}
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
+    endif()
+    unset(_hs_desktop_files)
+endif()
