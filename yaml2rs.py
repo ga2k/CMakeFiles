@@ -456,10 +456,18 @@ class CppModuleGenerator:
 
         # Generate safe insertRecord_impl
         insert_impl = self.generate_insert_impl(table_name, fields)
+        # Use YAML file modification time for deterministic headers (prevents needless rebuilds)
+        try:
+            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
+            _mts = _mt.isoformat(sep=' ', timespec='seconds')
+        except Exception:
+            _mts = 'unknown'
 
         module_content = f'''module;
-//        
-// Auto-generated {self.now} from {yaml_file}
+
+// Auto-generated from
+// file://{yaml_file} (mtime: {_mts})
+
 // Make any changes there. This file will be overwritten.
 
 //

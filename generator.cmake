@@ -11,113 +11,109 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            RESULT_VARIABLE GEN_UI_CLASSES_RESULT
+            RESULT_VARIABLE CONFIGURE_RESULT
+            ERROR_VARIABLE OOPSIE
     )
-    if (NOT GEN_UI_CLASSES_RESULT EQUAL 0)
-        message(FATAL_ERROR "${generator} batch generation failed at configure time")
+    if (NOT CONFIGURE_RESULT EQUAL 0)
+        message(FATAL_ERROR "${generator} batch generation failed at configure time : ${OOPSIE}")
     endif ()
 
     # 2) Build-time regeneration whenever YAML specs or the generator change
     #    We use a 'stamp' file as the known OUTPUT so Ninja/Make can track the rule.
-    file(GLOB_RECURSE GENERATOR_UI_CLASSES_SPECS
+    file(GLOB_RECURSE UI_DEPENDENCIES
             CONFIGURE_DEPENDS
             "${SOURCE_DIR}/*.yaml"
             "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
-    set(GENERATOR_UI_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
+    set(UI_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
     add_custom_command(
-            OUTPUT "${GENERATOR_UI_CLASSES_STAMP}"
-            BYPRODUCTS ${GENERATED_UI_CLASSES_IXX}
+            OUTPUT "${UI_CLASSES_STAMP}"
+            BYPRODUCTS ${UI_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E touch "${GENERATOR_UI_CLASSES_STAMP}"
-            DEPENDS ${GENERATOR_UI_CLASSES_SPECS} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
+            COMMAND "${CMAKE_COMMAND}" -E touch "${UI_CLASSES_STAMP}"
+            DEPENDS ${UI_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating ixx files from YAML specs (batch mode)"
             VERBATIM
     )
 
     # 3) Add generated RS.ixx to your target
     #    Do an initial glob after the configure-time generation.
-    file(GLOB GENERATED_UI_CLASSES_IXX
+    file(GLOB UI_CLASS_FILES
             LIST_DIRECTORIES false
             "${OUT_DIR}/*Group.ixx"
             "${OUT_DIR}/*Page.ixx"
     )
 
-    add_custom_target(generate_UI_CLASSES_ixx ALL DEPENDS "${GENERATOR_UI_CLASSES_STAMP}")
+    add_custom_target(generate_ui ALL DEPENDS "${UI_CLASSES_STAMP}")
 
     # Ensure your target waits for the generation step
-    add_dependencies(${APP_NAME} generate_UI_CLASSES_ixx)
+    add_dependencies(main generate_ui)
 
     # Add generated sources
-    target_sources(${APP_NAME}
+    target_sources(main
             PUBLIC FILE_SET CXX_MODULES
-#            BASE_DIRS "${OUT_DIR}"
-            FILES ${GENERATED_UI_CLASSES_IXX}
+            FILES ${UI_CLASS_FILES}
     )
 
-    target_include_directories(${APP_NAME} PRIVATE "${OUT_DIR}")
+    target_include_directories(main PRIVATE "${OUT_DIR}")
 
 endfunction()
 
-function(generateRecordsets GEN_DIR YAML_DIR)
-    # Where your YAML lives (source tree) and where to put generated RS.ixx (build tree)
-    #    set(YAML_DIR "${CMAKE_SOURCE_DIR}/path/to/yaml")      # adjust
-    #    set(GEN_DIR "${CMAKE_BINARY_DIR}/generated/rs")      # adjust if you prefer a different folder
+function(generateRecordsets OUT_DIR SOURCE_DIR)
+
+    set (generator "yaml2rs.py")
 
     # 1) Configure-time generation so CMake can glob and add sources
-    file(MAKE_DIRECTORY "${GEN_DIR}")
+    file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
-                    --quiet --scan "${YAML_DIR}" --output "${GEN_DIR}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
+                    --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            RESULT_VARIABLE RS_GEN_RESULT
-            ERROR_VARIABLE RS_OOPSIE
+            RESULT_VARIABLE CONFIGURE_RESULT
+            ERROR_VARIABLE OOPSIE
     )
-    if (NOT RS_GEN_RESULT EQUAL 0)
-        message(FATAL_ERROR "yaml2rs.py batch generation failed at configure time : ${RS_OOPSIE}")
+    if (NOT CONFIGURE_RESULT EQUAL 0)
+        message(FATAL_ERROR "${generator} batch generation failed at configure time : ${OOPSIE}")
     endif ()
 
     # 2) Build-time regeneration whenever YAML specs or the generator change
     #    We use a 'stamp' file as the known OUTPUT so Ninja/Make can track the rule.
-    file(GLOB_RECURSE YAML_RS_SPECS
+    file(GLOB_RECURSE RS_DEPENDENCIES
             CONFIGURE_DEPENDS
-            "${YAML_DIR}/*.yaml"
+            "${SOURCE_DIR}/*.yaml"
+            "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
-    set(RS_STAMP "${GEN_DIR}/.generated.stamp")
+    set(RS_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
     add_custom_command(
-            OUTPUT "${RS_STAMP}"
-            BYPRODUCTS ${GENERATED_RS}
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "${GEN_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
-                    --quiet --scan "${YAML_DIR}" --output "${GEN_DIR}"
-            COMMAND "${CMAKE_COMMAND}" -E touch "${RS_STAMP}"
-            DEPENDS ${YAML_RS_SPECS} "${CMAKE_SOURCE_DIR}/cmake/yaml2rs.py"
+            OUTPUT "${RS_CLASSES_STAMP}"
+            BYPRODUCTS ${RS_CLASS_FILES}
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
+                    --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
+            COMMAND "${CMAKE_COMMAND}" -E touch "${RS_CLASSES_STAMP}"
+            DEPENDS ${RS_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating RS.ixx files from YAML specs (batch mode)"
             VERBATIM
     )
 
     # 3) Add generated RS.ixx to your target
     #    Do an initial glob after the configure-time generation.
-    file(GLOB_RECURSE GENERATED_RS
-            "${GEN_DIR}/*RS.ixx"
+    file(GLOB_RECURSE RS_CLASS_FILES
+            "${OUT_DIR}/*RS.ixx"
     )
 
-    add_custom_target(generate_rs ALL DEPENDS "${RS_STAMP}")
+    add_custom_target(generate_rs ALL DEPENDS "${RS_CLASSES_STAMP}")
 
     # Ensure your target waits for the generation step
-    add_dependencies(${APP_NAME} generate_rs)
+    add_dependencies(main generate_rs)
 
     # Add generated sources
-    target_sources(${APP_NAME}
+    target_sources(main
             PUBLIC FILE_SET CXX_MODULES
-#            BASE_DIRS "${GEN_DIR}"
-            FILES ${GENERATED_RS}
+            FILES ${RS_CLASS_FILES}
     )
-
-    #    # If the generator emits headers/includes alongside the .ixx, expose the directory:
-    #    target_include_directories(${TGT} PRIVATE "${GEN_DIR}")
 endfunction()

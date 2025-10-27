@@ -258,35 +258,11 @@ function(wxWidgets_process incs libs defs)
     set(_wxLibraryPaths             ${wxw_libraryPaths}             PARENT_SCOPE)
     set(_wxLibraries                ${wxw_libraries}                PARENT_SCOPE)
     set(_wxFrameworks               ${wxw_frameworks}               PARENT_SCOPE)
-
-#    FindReplaceInFile("${wxWidgets_INCLUDE_DIRS}" "wx/image.h"  "const unsigned char wxIMAGE_ALPHA_TRANSPARENT = 0;"    "inline const unsigned char wxIMAGE_ALPHA_TRANSPARENT = 0;")
-#    FindReplaceInFile("${wxWidgets_INCLUDE_DIRS}" "wx/image.h"  "const unsigned char wxIMAGE_ALPHA_THRESHOLD = 0x80;"   "inline const unsigned char wxIMAGE_ALPHA_THRESHOLD = 0x80;")
-#    FindReplaceInFile("${wxWidgets_INCLUDE_DIRS}" "wx/image.h"  "const unsigned char wxIMAGE_ALPHA_OPAQUE = 0xff;"      "inline const unsigned char wxIMAGE_ALPHA_OPAQUE = 0xff;")
-#
-#    FindReplaceInFile("${wxWidgets_INCLUDE_DIRS}" "wx/colour.h" "const unsigned char wxALPHA_TRANSPARENT = 0;"          "inline const unsigned char wxALPHA_TRANSPARENT = 0;")
-#    FindReplaceInFile("${wxWidgets_INCLUDE_DIRS}" "wx/colour.h" "const unsigned char wxALPHA_OPAQUE = 0xff;"            "inline const unsigned char wxALPHA_OPAQUE = 0xff")
-
     # @formatter:on
 endfunction()
 
 if (WIDGETS IN_LIST APP_FEATURES)
-    if (NOT SKIP_WIDGETS)
-        wxWidgets_process(_IncludePathsList _LibrariesList _DefinesList)
-    endif ()
+    wxWidgets_process(_IncludePathsList _LibrariesList _DefinesList)
     set(HANDLED ON)
-
-    #    set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_COMPILER_OPTIONS}   PARENT_SCOPE)
-    #    set(wxWidgets_DEFINES           ${wxWidgets_DEFINES}            PARENT_SCOPE)
-    #    set(wxWidgets_INCLUDE_DIRS      ${wxWidgets_INCLUDE_DIRS}       PARENT_SCOPE)
-    #    set(wxWidgets_LIBRARY_PATHS     ${wxWidgets_LIBRARY_PATHS}      PARENT_SCOPE)
-    #    set(wxWidgets_LIBRARIES         ${wxWidgets_LIBRARIES}          PARENT_SCOPE)
-    #
-    #    set(_wxCompilerOptions          ${_wxCompilerOptions}           PARENT_SCOPE)
-    #    set(_wxDefines                  ${_wxDefines}                   PARENT_SCOPE)
-    #    set(_wxIncludePaths             ${_wxIncludePaths}              PARENT_SCOPE)
-    #    set(_wxLibraryPaths             ${_wxLibraryPaths}              PARENT_SCOPE)
-    #    set(_wxLibraries                ${_wxLibraries}                 PARENT_SCOPE)
-    #    set(_wxFrameworks               ${_wxFrameworks}                PARENT_SCOPE)
-
 endif ()
 
