@@ -2039,8 +2039,8 @@ class CppGroupGenerator:
             elements = class_def['elements']
             if (not isinstance(elements, list) or len(elements) == 0):
                 elements = {}
-                print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section",
-                      file=sys.stderr)
+                if not self.quiet:
+                    print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section", file=sys.stderr)
 
             module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim)
 

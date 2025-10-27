@@ -1,6 +1,6 @@
 function(addLibrary)
     cmake_parse_arguments(arg
-            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE"
+            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX"
             "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS"
             ${ARGN}
@@ -208,15 +208,20 @@ function(addLibrary)
         target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Core)
     endif ()
 
+    #    # Link Gfx
+    if (arg_USES_GFX AND TARGET HoffSoft::Gfx)
+        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
+    endif ()
+
     # Link Widgets
-    if (arg_USES_WIDGETS AND WIDGETS IN_LIST APP_FEATURES AND TARGET Widgets)
-        if (NOT ${arg_NAME} STREQUAL "wxLib")
-#            target_compile_definitions(${arg_NAME}  PRIVATE ${HS_wxDefines})
-#            target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
-#            target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
-#            target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})
-#            target_link_libraries(${arg_NAME}       PRIVATE ${HS_wxLibraries} ${HS_wxFrameworks})
-#            target_link_options(${arg_NAME}         PRIVATE ${HS_wxLinkOptions})
+    if (arg_USES_WIDGETS AND WIDGETS IN_LIST APP_FEATURES)
+        if (NOT ${arg_NAME} STREQUAL "wxLib" AND TARGET HoffSoft::wxLib)
+            target_compile_definitions(${arg_NAME}  PRIVATE ${HS_wxDefines})
+            target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
+            target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
+            target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})
+            target_link_libraries(${arg_NAME}       PRIVATE ${HS_wxLibraries} ${HS_wxFrameworks})
+            target_link_options(${arg_NAME}         PRIVATE ${HS_wxLinkOptions})
             target_link_libraries(${arg_NAME}       PRIVATE wxLib)
         else ()
             target_compile_definitions(${arg_NAME}  PUBLIC ${HS_wxDefines})
