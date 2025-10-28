@@ -24,7 +24,7 @@ else ()
 endif ()
 
 find_library(Gfx_LIBRARY
-    NAMES HoffSoftGfx hoffsoft_gfx%{MULTI_LIB_DECLARATOR}
+    NAMES HoffSoftGfx hoffsoft_gfx${MULTI_LIB_DECLARATOR}
     PATHS ${_Gfx_lib_paths}
     NO_DEFAULT_PATH
 )
