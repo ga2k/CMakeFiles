@@ -124,9 +124,7 @@ function(addLibrary)
         target_sources(${arg_NAME}
                 PUBLIC FILE_SET HEADERS
                 BASE_DIRS
-                # The line below causes problems for Gfx but not for Core
-                # $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
-                ${HEADER_BASE_DIRS}
+                 $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
                 $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
                 FILES
                 ${arg_HEADERS}
@@ -191,6 +189,7 @@ function(addLibrary)
             PRIVATE
             ${HS_IncludePathsList}
             PUBLIC
+            $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
