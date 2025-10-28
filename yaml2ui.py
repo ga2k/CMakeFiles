@@ -521,7 +521,7 @@ class CppGroupGenerator:
 
         # Layout boilerplate
         code.append(
-            f'      layoutPath = hs::resourceName(UIType::GeneratorSource, "{layout_class_name}", false, nullptr);')
+            f'      layoutPath = Util::getInstance().resourceName(UIType::GeneratorSource, "{layout_class_name}", false, nullptr);')
         code.append(
             '      ASSERT_MSG(!layoutPath.empty(), "Couldn\'t find layout resource file://" + layoutPath.string());')
         code.append(f'      layoutKey = "{layout_key}";')
