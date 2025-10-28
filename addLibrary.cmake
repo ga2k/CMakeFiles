@@ -1,6 +1,6 @@
 function(addLibrary)
     cmake_parse_arguments(arg
-            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX"
+            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX;MULTI_LIBS"
             "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS"
             ${ARGN}
@@ -8,30 +8,34 @@ function(addLibrary)
     get_filename_component(LIB_PATH ${CMAKE_PARENT_LIST_FILE} DIRECTORY)
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
 
+    if (NOT arg_MULTI_LIB)
+        set(arg_MULTI_LIB OFF)
+    endif ()
+
     if (NOT arg_HEADER_VISIBILITY)
-        set (arg_HEADER_VISIBILITY "PRIVATE")
+        set(arg_HEADER_VISIBILITY "PRIVATE")
     else ()
         string(TOUPPER ${arg_HEADER_VISIBILITY} arg_HEADER_VISIBILITY)
     endif ()
 
     if (NOT arg_SOURCE_VISIBILITY)
-        set (arg_SOURCE_VISIBILITY "PRIVATE")
+        set(arg_SOURCE_VISIBILITY "PRIVATE")
     else ()
         string(TOUPPER ${arg_SOURCE_VISIBILITY} arg_SOURCE_VISIBILITY)
     endif ()
 
     if (NOT arg_MODULE_VISIBILITY)
-        set (arg_MODULE_VISIBILITY "PRIVATE")
+        set(arg_MODULE_VISIBILITY "PRIVATE")
     else ()
         string(TOUPPER ${arg_MODULE_VISIBILITY} arg_MODULE_VISIBILITY)
     endif ()
 
     if (arg_SOURCES)
-        list (APPEND arg_SOURCE ${arg_SOURCES})
+        list(APPEND arg_SOURCE ${arg_SOURCES})
     endif ()
 
     if (arg_DEPENDS)
-        list (APPEND arg_LIBS ${arg_DEPENDS})
+        list(APPEND arg_LIBS ${arg_DEPENDS})
     endif ()
 
     if (NOT arg_NAME)
@@ -124,8 +128,7 @@ function(addLibrary)
         target_sources(${arg_NAME}
                 PUBLIC FILE_SET HEADERS
                 BASE_DIRS
-                 $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
-                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
+                ${HEADER_BASE_DIRS}
                 FILES
                 ${arg_HEADERS}
         )
@@ -164,6 +167,12 @@ function(addLibrary)
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
 
+    if (arg_MULTI_LIB AND ${LINUX_GUI})
+        set (MULTI_LIB_DECLARATOR "_${LINUX_GUI}")
+    else ()
+        set (MULTI_LIB_DECLARATOR)
+    endif ()
+
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY    "${LIB_ARCHIVE_DIR}"
@@ -171,7 +180,7 @@ function(addLibrary)
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
             LIBRARY_OUTPUT_DIRECTORY    "${LIB_LIBRARY_DIR}"
-            OUTPUT_NAME                 "${LIB_OUTPUT_NAME}"
+            OUTPUT_NAME                 "${LIB_OUTPUT_NAME}${MULTI_LIB_DECLARATOR}"
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             RUNTIME_OUTPUT_DIRECTORY    "${LIB_RUNTIME_DIR}"
@@ -189,17 +198,17 @@ function(addLibrary)
             PRIVATE
             ${HS_IncludePathsList}
             PUBLIC
-            $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
+#            $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
     # Avoid exporting build-tree dependency targets from the library. They are exposed to consumers via xxxConfig.cmake
-    if (NOT ${arg_NAME} STREQUAL "Core")
-        target_link_libraries(${arg_NAME}       PRIVATE ${arg_LIBS} PRIVATE $<BUILD_INTERFACE:${HS_LibrariesList}>)
-    else ()
+#    if (NOT ${arg_NAME} STREQUAL "Core")
+#        target_link_libraries(${arg_NAME}       PRIVATE ${arg_LIBS})# PRIVATE $<BUILD_INTERFACE:${HS_LibrariesList}>)
+#    else ()
         target_link_libraries(${arg_NAME}       PRIVATE ${arg_LIBS})
-    endif ()
+#    endif ()
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
 #    # Link Core

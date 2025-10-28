@@ -16,8 +16,15 @@ set(_Gfx_lib_paths
     "${PACKAGE_PREFIX_DIR}/lib"
     "${PACKAGE_PREFIX_DIR}/lib64"
 )
+
+if (LINUX_GUI)
+    set (MULTI_LIB_DECLARATOR "_${LINUX_GUI}")
+else ()
+    set (MULTI_LIB_DECLARATOR)
+endif ()
+
 find_library(Gfx_LIBRARY
-    NAMES HoffSoftGfx hoffsoft_gfx
+    NAMES HoffSoftGfx hoffsoft_gfx%{MULTI_LIB_DECLARATOR}
     PATHS ${_Gfx_lib_paths}
     NO_DEFAULT_PATH
 )
