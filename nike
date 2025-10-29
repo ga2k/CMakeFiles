@@ -9,13 +9,11 @@ fi
 
 if [ "${1}" == 'build' ]; then
     target=$(basename $(pwd))
-    noun=''
 elif [ "${1}" == 'stage' ]; then
     target="install"
-    noun='DESTDIR=/tmp/stage'
+    mkdir -p /tmp/stage 
 elif [ "${1}" == 'install' ]; then
     target='install'
-    noun='sudo'
 else    
     echo "Usage nike build"
     echo "   or nike stage"
@@ -23,8 +21,24 @@ else
     exit 1
 fi
 
-for l in gtk3 Qt6; do 
-    echo ${noun} cmake --build build/clang/${l}/debug/shared --target ${target}
-    ${noun} cmake --build build/clang/${l}/debug/shared --target ${target}
+for l in gtk3 Qt6; do
+    if [ -e "build/clang/${l}/debug/shared" ]
+    then
+        if [ ${1} == 'build' ]
+        then 
+            echo cmake --build build/clang/${l}/debug/shared --target ${target}
+            cmake --build build/clang/${l}/debug/shared --target ${target}
+        fi
+        if [ ${1} == 'stage'   ]
+        then 
+            echo DESTDIR=/tmp/stage cmake --build build/clang/${l}/debug/shared --target ${target}
+            DESTDIR=/tmp/stage cmake --build build/clang/${l}/debug/shared --target ${target}
+        fi
+        if [ ${1} == 'install' ]
+        then 
+            echo sudo cmake --build build/clang/${l}/debug/shared --target ${target}
+            sudo cmake --build build/clang/${l}/debug/shared --target ${target}
+        fi
+    fi
 done
 
