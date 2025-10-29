@@ -199,7 +199,7 @@ function(wxWidgets_process incs libs defs)
     #    endif ()
     #
     add_library(Widgets INTERFACE)
-#    target_sources(Widgets PUBLIC "${CMAKE_SOURCE_DIR}/include/Gfx/Widgets.h")
+#    target_sources(Widgets PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/Gfx/Widgets.h")
 
     # @formatter:off
     target_compile_options(Widgets      INTERFACE ${wxWidgets_COMPILER_OPTIONS})

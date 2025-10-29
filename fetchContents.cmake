@@ -9,7 +9,7 @@ set(UserCategoryData)
 macro(call_handler fn pkg)
     set(fn ${fn})
     set(HANDLED OFF)
-    set(handler "${CMAKE_SOURCE_DIR}/cmake/handlers/${pkg}/${fn}.cmake")
+    set(handler "${CMAKE_CURRENT_SOURCE_DIR}/cmake/handlers/${pkg}/${fn}.cmake")
     if (EXISTS ${handler})
         include("${handler}")
     endif ()
@@ -92,7 +92,7 @@ endfunction()
 #######################################################################################################################
 #######################################################################################################################
 function(initialiseFeatureHandlers)
-    file(GLOB handlers LIST_DIRECTORIES true "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*")
+    file(GLOB handlers LIST_DIRECTORIES true "${CMAKE_CURRENT_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*")
     foreach (handler IN LISTS handlers)
         get_filename_component(basename "${handler}" NAME_WE)
         ################################################################################################################
@@ -249,7 +249,7 @@ function(createStandardPackageData)
     #   [1] CATEGORY is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
-    #       If NAMESPACE=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/HoffSoft/cmake/handlers/<pkgname>/process.cmake
+    #       If NAMESPACE=PROCESS, when their turn comes, only ${CMAKE_CURRENT_SOURCE_DIR}/HoffSoft/cmake/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
     #
     #   [4] One or the other of

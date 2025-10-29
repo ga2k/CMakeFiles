@@ -92,7 +92,7 @@ function(ReplaceInFile f old new)
         set(truncStr "${f}")
     else ()
 
-        string(LENGTH "${CMAKE_SOURCE_DIR}" sourceLength)
+        string(LENGTH "${CMAKE_CURRENT_SOURCE_DIR}" sourceLength)
         math(EXPR sourceLength "${sourceLength} + 1")
         string(SUBSTRING "${f}" ${sourceLength} -1 truncStr)
 
@@ -164,10 +164,10 @@ endfunction()
 ######################################################################################
 ##
 function(ReplaceFile fileToBeOverwritten sampleContents replacementFile)
-    string(LENGTH "${CMAKE_SOURCE_DIR}" srcLength)
+    string(LENGTH "${CMAKE_CURRENT_SOURCE_DIR}" srcLength)
     math(EXPR srcLength "${srcLength} + 1")
     string(SUBSTRING "${fileToBeOverwritten}" ${srcLength} -1 truncStr)
-    set(repositoryFolder "${CMAKE_SOURCE_DIR}/HoffSoft/cmake/replacements")
+    set(repositoryFolder "${CMAKE_CURRENT_SOURCE_DIR}/HoffSoft/cmake/replacements")
 
     cmake_path(GET fileToBeOverwritten PARENT_PATH destPath)
     cmake_path(GET replacementFile FILENAME destFile)
