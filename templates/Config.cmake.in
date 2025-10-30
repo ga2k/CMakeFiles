@@ -13,7 +13,7 @@ endif()
 # Resolve installed library path (cover common layouts)
 set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
 set(_hs_common_lib "@APP_VENDOR_LC@_@APP_NAME_LC@")
-set(_hs_multi_lib "@APP_VENDOR_LC@_@APP_NAME_LC@@MULTI_LIB_DECLARATOR@")
+set(_hs_multi_lib "@APP_VENDOR_LC@_@APP_NAME_LC@${MULTI_LIB_DECLARATOR}")
 
 set(_candidates
   "${_hs_prefix}/lib/lib${_hs_common_lib}.so"
