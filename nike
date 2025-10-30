@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-if [ $# -ne 1 ]; then
-    echo "Usage nike build"
-    echo "   or nike stage"
-    echo "   or nike install"
+if [ $# -lt 1 ]; then
+    echo "Usage: nike build"
+    echo "       nike stage"
+    echo "       nike install"
+    echo "       nike nuke data | generated | build | all | everything!"
     exit 1
 fi
 
@@ -14,11 +15,66 @@ elif [ "${1}" == 'stage' ]; then
     mkdir -p /tmp/stage 
 elif [ "${1}" == 'install' ]; then
     target='install'
+elif [ "${1}" == 'nuke' ]; then
+    target='nuke'
 else    
-    echo "Usage nike build"
-    echo "   or nike stage"
-    echo "   or nike install"
+    echo "Usage: nike build"
+    echo "       nike stage"
+    echo "       nike install"
+    echo "       nike nuke data | generated | build | all | everything!"
     exit 1
+fi
+
+if [ ${target} == 'nuke' ]
+then
+    failed=1
+    if [[ "$2" == "data" ]] || [[ "$2" == "all" ]]
+    then
+        rm -f ~/Documents/*.mcdb
+        rm -rf ~/.MyCare
+        rm -rf ~/.HoffSoft/MyCare
+        rm -rf ~/.cache/HoffSoft
+        rm -rf ~/.cache/MyCare
+        rm -rf ~/Library/Caches/HoffSoft/MyCare
+
+        echo 'data gone'
+        failed=0
+    fi
+
+    if [[ "$2" == "generated" ]] || [[ "$2" == "all" ]]
+    then
+        rm -rf src/generated
+
+        echo 'generated gone'
+        failed=0
+    fi
+
+    if [[ "$2" == "build" ]] || [[ "$2" == "all" ]]
+    then
+        rm -rf build
+        rm -rf external
+        rm -rf out
+        echo 'build gone'
+        failed=0
+    fi
+
+    if [[ "$2" == "everything!" ]]
+    then
+        project=$(basename $(pwd))
+
+        echo -n "Completely remove ${project}? <Enter> for yes, ^C if not > "
+        read
+        cd .. && rm -rf "${project}" && git clone --recurse https://$GITOKEN@github.com/ga2k/${project}.git && cd "${project}" && . ./cmake/setup
+
+        failed=0
+    fi
+
+    if (( failed ))
+    then
+        echo "Usage: nike nuke data | generated | build | all | everything!"
+
+    fi
+    exit ${failed}
 fi
 
 for l in gtk3 Qt6; do
@@ -41,4 +97,3 @@ for l in gtk3 Qt6; do
         fi
     fi
 done
-
