@@ -1,4 +1,7 @@
 
+set (PLATFORM_GFX_LIBS)
+set (CURRENT_GFX_LIB)
+
 if (APPLE)
     message(STATUS "Building on an Apple machine.")
 
@@ -42,10 +45,11 @@ if (APPLE)
 
 elseif(LINUX)
 
-    list(APPEND extra_CompileOptions -fPIC)
+    list (APPEND PLATFORM_GFX_LIBS gtk qt)
+    list (APPEND extra_CompileOptions -fPIC)
 
     if("${GUI}" STREQUAL "GUI_GTK")
-        set(LINUX_GUI "gtk3")
+        set(CURRENT_GFX_LIB "gtk3")
         list(APPEND extra_Definitions __WXGTK__)
         list(APPEND extrawxLibraries wxwebview)
         list(APPEND extra_IncludePaths "/usr/include/gtk-3.0")
@@ -56,13 +60,15 @@ elseif(LINUX)
         list(APPEND extra_IncludePaths "/usr/lib64/glib-2.0/include")
 
     elseif ("${GUI}" STREQUAL "GUI_QT")
-        set(LINUX_GUI "qt")
+        set(CURRENT_GFX_LIB "qt")
         list(APPEND extra_Definitions __WXQT__)
     else ()
-        message(FATAL_ERROR "Unknown Linux GUI (${GUI}): GUI must be set to one of (GUI_GTK;GUI_QT)")
+        message(WARNING "Unknown Linux GUI (${GUI}): GUI must be set to one of (GUI_GTK;GUI_QT) - Assuming GUI_QT")
+        set(CURRENT_GFX_LIB "qt")
+        list(APPEND extra_Definitions __WXQT__)
     endif ()
 
-    set(wxBUILD_TOOLKIT ${LINUX_GUI} CACHE STRING "" FORCE)
+    set(wxBUILD_TOOLKIT ${CURRENT_GFX_LIB} CACHE STRING "" FORCE)
 
     list(APPEND extra_CompileOptions -fvisibility=default)
 
@@ -74,7 +80,7 @@ elseif(LINUX)
         set(APP_DYN_FLAG)
     endif ()
 
-    set(gui ${LINUX_GUI})
+    set(gui ${CURRENT_GFX_LIB})
 
 elseif (WIN32)
 

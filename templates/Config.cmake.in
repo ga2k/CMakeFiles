@@ -12,8 +12,8 @@ endif()
 
 # Resolve installed library path (cover common layouts)
 set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
-set(_hs_common_lib @APP_VENDOR_LC@_@APP_NAME_LC@)
-set(_hs_multi_lib @APP_VENDOR_LC@_@APP_NAME_LC@@MULTI_LIB_DECLARATOR@)
+set(_hs_common_lib "@APP_VENDOR_LC@_@APP_NAME_LC@")
+set(_hs_multi_lib "@APP_VENDOR_LC@_@APP_NAME_LC@@MULTI_LIB_DECLARATOR@")
 
 set(_candidates
   "${_hs_prefix}/lib/lib${_hs_common_lib}.so"
@@ -23,22 +23,32 @@ set(_candidates
   "${_hs_prefix}/lib/${_hs_common_lib}.dll"
 )
 
-if (NOT ${_hs_common_lib} STREQUAL ${_hs_multi_lib})
-  list(APPEND _candidates
+set(_hs_lib "")
+
+if (NOT "${_hs_common_lib}" STREQUAL "${_hs_multi_lib}")
+  set(_extended_candidates
     "${_hs_prefix}/lib/lib${_hs_multi_lib}.so"
     "${_hs_prefix}/lib64/lib${_hs_multi_lib}.so"
   )
+  foreach(_c ${_extended_candidates})
+    if(EXISTS "${_c}")
+      set(_hs_lib "${_c}")
+      set(_current_candidate_lib_if_any "/@CURRENT_GFX_LIB@")
+      break()
+    endif()
+  endforeach()
+else ()
+  foreach(_c ${_candidates})
+    if(EXISTS "${_c}")
+      set(_hs_lib "${_c}")
+      set(_current_candidate_lib_if_any "")
+      break()
+    endif()
+  endforeach()
 endif ()
 
-set(_hs_lib "")
-foreach(_c ${_candidates})
-  if(EXISTS "${_c}")
-    set(_hs_lib "${_c}")
-    break()
-  endif()
-endforeach()
 if(NOT _hs_lib)
-  message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${_hs_prefix}.")
+  message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${_hs_prefix}")
 endif()
 
 set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
@@ -49,7 +59,7 @@ set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${_hs_prefix}/share/cmake/cxx/pcm/@APP_VENDOR@/@APP_NAME@.dir"
+    "-fprebuilt-module-path=${_hs_prefix}/share/cmake/cxx/pcm/@APP_VENDOR@${_current_candidate_lib_if_any}/@APP_NAME@.dir"
   )
 endif()
 
