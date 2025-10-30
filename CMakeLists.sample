@@ -57,7 +57,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # Include the directory containing addLibrary and tools, etc
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 set(extra_CompileOptions)
 set(extra_Definitions)
@@ -82,7 +82,7 @@ set(extra_wxIncludePaths)
 set(extra_wxLibraries)
 set(extra_wxLibraryPaths)
 
-set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}")
 
 # Add subdirectories
 ###############################################################################################
@@ -95,7 +95,7 @@ if (INSTALLED)
 endif ()
 
 set(HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
+include("${CMAKE_SOURCE_DIR}/BaseDirs.cmake")
 
 set(HS_CompileOptionsList "")
 set(HS_DefinesList "")
@@ -200,13 +200,13 @@ elseif (LINUX)
 
 elseif (WIN32)
 
-    set(GSASL_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/windows/GSASL)
+    set(GSASL_ROOT ${CMAKE_SOURCE_DIR}/windows/GSASL)
     set(GSASL_INCLUDE_DIR ${GSASL_ROOT}/include)
     set(GSASL_LIBRARIES ${GSASL_ROOT}/bin;${GSASL_ROOT}/lib)
-    set(GNUTLS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/windows/GnuTLS)
+    set(GNUTLS_ROOT ${CMAKE_SOURCE_DIR}/windows/GnuTLS)
     set(GNUTLS_INCLUDE_DIR ${GNUTLS_ROOT}include)
     set(GNUTLS_LIBRARIES ${GNUTLS_ROOT}bin;${GNUTLS_ROOT}lib)
-    set(ICU_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/windows/ICU)
+    set(ICU_ROOT ${CMAKE_SOURCE_DIR}/windows/ICU)
     set(ICU_LIBRARIES ${ICU_ROOT}/bin64;${ICU_ROOT}/lib64)
     set(OPENSSL_CRYPTO_LIBRARY C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib)
 
@@ -464,17 +464,17 @@ if(UNIX AND NOT APPLE)
     include(GNUInstallDirs)
 
     # User guide
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
+    if(EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+        install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
     endif()
     # Resources directory (fonts, images, etc.)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
+    if(EXISTS "${CMAKE_SOURCE_DIR}/resources")
+        install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}")
     endif()
     # If any desktop files are provided under resources/, install them to share/applications
-    file(GLOB _hs_desktop_files "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.desktop")
+    file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
     if(_hs_desktop_files)
         install(FILES ${_hs_desktop_files}
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")

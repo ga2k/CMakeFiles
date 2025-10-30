@@ -8,9 +8,9 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
     )
@@ -23,7 +23,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     file(GLOB_RECURSE UI_DEPENDENCIES
             CONFIGURE_DEPENDS
             "${SOURCE_DIR}/*.yaml"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
     set(UI_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
@@ -31,10 +31,10 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
             OUTPUT "${UI_CLASSES_STAMP}"
             BYPRODUCTS ${UI_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${UI_CLASSES_STAMP}"
-            DEPENDS ${UI_DEPENDENCIES} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            DEPENDS ${UI_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating ixx files from YAML specs (batch mode)"
             VERBATIM
     )
@@ -69,9 +69,9 @@ function(generateRecordsets OUT_DIR SOURCE_DIR)
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
     )
@@ -84,7 +84,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR)
     file(GLOB_RECURSE RS_DEPENDENCIES
             CONFIGURE_DEPENDS
             "${SOURCE_DIR}/*.yaml"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
     set(RS_CLASSES_STAMP "${OUT_DIR}/.generated.stamp")
@@ -92,10 +92,10 @@ function(generateRecordsets OUT_DIR SOURCE_DIR)
             OUTPUT "${RS_CLASSES_STAMP}"
             BYPRODUCTS ${RS_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${RS_CLASSES_STAMP}"
-            DEPENDS ${RS_DEPENDENCIES} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${generator}"
+            DEPENDS ${RS_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating RS.ixx files from YAML specs (batch mode)"
             VERBATIM
     )
