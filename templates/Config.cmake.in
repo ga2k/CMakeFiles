@@ -14,7 +14,7 @@ endif()
 set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
 set(_hs_common_lib "@APP_VENDOR_LC@_@APP_NAME_LC@")
 
-if (${CURRENT_GFX_LIB})
+if (NOT "${CURRENT_GFX_LIB}" STREQUAL "")
   set(_hs_multi_lib "@APP_VENDOR_LC@_@APP_NAME_LC@_${CURRENT_GFX_LIB}")
 else ()
   set(_hs_multi_lib "${_hs_common_lib}")
