@@ -21,14 +21,19 @@ set(_candidates
   "${_hs_prefix}/lib/lib${_hs_common_lib}.dynlib"
   "${_hs_prefix}/bin/${_hs_common_lib}.dll"
   "${_hs_prefix}/lib/${_hs_common_lib}.dll"
-
-  "${_hs_prefix}/lib/lib${_hs_multi_lib}.so"
-  "${_hs_prefix}/lib64/lib${_hs_multi_lib}.so"
 )
+
+if (NOT ${_hs_common_lib} STREQUAL ${_hs_multi_lib})
+  list(APPEND _candidates
+    "${_hs_prefix}/lib/lib${_hs_multi_lib}.so"
+    "${_hs_prefix}/lib64/lib${_hs_multi_lib}.so"
+  )
+endif ()
+
 set(_hs_lib "")
 foreach(_c ${_candidates})
   if(EXISTS "${_c}")
-    set(_hs_core_lib "${_c}")
+    set(_hs_lib "${_c}")
     break()
   endif()
 endforeach()
@@ -36,19 +41,19 @@ if(NOT _hs_lib)
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${_hs_prefix}.")
 endif()
 
-set_target_properties(@APP_VENDOR@::@APP_NAME PROPERTIES
+set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
   IMPORTED_LOCATION "${_hs_lib}"
   INTERFACE_INCLUDE_DIRECTORIES "${_hs_prefix}/include"
 )
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  target_compile_options(@APP_VENDOR@::@APP_NAME INTERFACE
+  target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
     "-fprebuilt-module-path=${_hs_prefix}/share/cmake/cxx/pcm/@APP_VENDOR@/@APP_NAME@.dir"
   )
 endif()
 
 # Convenience variables
-set(HoffSoft_INCLUDE_DIR  "${_hs_prefix}/include")
-set(HoffSoft_INCLUDE_DIRS "${_hs_prefix}/include")
-set(HoffSoft_LIBRARIES    @APP_VENDOR@::@APP_NAME)
+set(@_TARGET@_INCLUDE_DIR  "${_hs_prefix}/include")
+set(@_TARGET@_INCLUDE_DIRS "${_hs_prefix}/include")
+set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
