@@ -50,8 +50,8 @@ elseif(LINUX)
     list (APPEND extra_CompileOptions -fPIC)
 
     if("${GUI}" STREQUAL "GUI_GTK")
-        set(CURRENT_GFX_LIB      "gt3k")
-        set(CURRENT_GFX_LIB_PATH "/gt3k")
+        set(CURRENT_GFX_LIB      "gtk3")
+        set(CURRENT_GFX_LIB_PATH "/gtk3")
 
         list(APPEND extra_Definitions __WXGTK__)
         list(APPEND extrawxLibraries wxwebview)

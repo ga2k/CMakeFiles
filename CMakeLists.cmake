@@ -31,7 +31,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # Include the directory containing addLibrary and tools, etc
 list(APPEND CMAKE_MODULE_PATH
         ${CMAKE_SOURCE_DIR}/cmake
-        /tmp/stage/usr/local)
+        /tmp/stage/usr/local/lib64/cmake)
 
 set(extra_CompileOptions)
 set(extra_Definitions)
@@ -135,12 +135,18 @@ list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 ########################################################################################################################
 # string(REPLACE <match_string> <replace_string> <output_variable> <input> [<input>...])
 # Replace all occurrences of <match_string> in the <input> with <replace_string> and store the result in the <output_variable>.
-string(REPLACE ";" " " escapedPath "${CMAKE_MODULE_PATH}")
-fetchContents(
+string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
+if (FIND_PACKAGE_HINTS)
+    string(REPLACE "{escapedModulePath}" ${escapedModulePath} FIND_PACKAGE_HINTS ${FIND_PACKAGE_HINTS})
+    fetchContents(
         PREFIX HS
         USE ${APP_FEATURES}
-#        FIND_PACKAGE_ARGS "CORE HINTS ${escapedPath};GFX HINTS ${escapedPath}"
-)
+        FIND_PACKAGE_ARGS ${FIND_PACKAGE_HINTS})
+else()
+    fetchContents(
+            PREFIX HS
+            USE ${APP_FEATURES})
+endif ()
 ########################################################################################################################
 include(GoogleTest)
 ########################################################################################################################

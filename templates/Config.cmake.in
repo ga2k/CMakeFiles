@@ -28,7 +28,7 @@ set(_candidates
   "${_hs_prefix}/lib/${_hs_common_lib}.dll"
 )
 
-set(_hs_lib "")
+unset(_hs_lib)
 
 if (NOT "${_hs_common_lib}" STREQUAL "${_hs_multi_lib}")
   set(_extended_candidates
@@ -38,11 +38,12 @@ if (NOT "${_hs_common_lib}" STREQUAL "${_hs_multi_lib}")
   foreach(_c ${_extended_candidates})
     if(EXISTS "${_c}")
       set(_hs_lib "${_c}")
-      set(_current_candidate_lib_if_any "/@CURRENT_GFX_LIB@")
+      set(_current_candidate_lib_if_any "/${CURRENT_GFX_LIB}")
       break()
     endif()
   endforeach()
-else ()
+endif()
+if (NOT _hs_lib)
   foreach(_c ${_candidates})
     if(EXISTS "${_c}")
       set(_hs_lib "${_c}")
@@ -64,7 +65,7 @@ set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${_hs_prefix}/share/cmake/cxx/pcm/@APP_VENDOR@${_current_candidate_lib_if_any}/@APP_NAME@.dir"
+    "-fprebuilt-module-path=${_hs_prefix}/lib64/cmake/bmi/@APP_NAME@${_current_candidate_lib_if_any}"
   )
 endif()
 
