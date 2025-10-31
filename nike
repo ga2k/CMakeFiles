@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 if [ $# -lt 1 ]; then
-    echo "Usage: nike build"
+    echo "Usage: nike clean"
+    echo "       nike build"
     echo "       nike stage"
     echo "       nike install"
     echo "       nike nuke data | generated | build | all | everything!"
@@ -10,6 +11,8 @@ fi
 
 if [ "${1}" == 'build' ]; then
     target=$(basename $(pwd))
+elif [ "${1}" == 'clean' ]; then
+    target="clean"
 elif [ "${1}" == 'stage' ]; then
     target="install"
     mkdir -p /tmp/stage 
@@ -18,7 +21,8 @@ elif [ "${1}" == 'install' ]; then
 elif [ "${1}" == 'nuke' ]; then
     target='nuke'
 else    
-    echo "Usage: nike build"
+    echo "Usage: nike clean"
+    echo "       nike build"
     echo "       nike stage"
     echo "       nike install"
     echo "       nike nuke data | generated | build | all | everything!"
@@ -79,6 +83,11 @@ fi
 
 for l in '' '/gtk3' '/Qt6'; do
     test -d "build/clang${l}/debug/shared" && {
+      if [ "${1}" == 'clean' ]
+      then
+          echo cmake --build "build/clang${l}/debug/shared" --target ${target}
+          cmake --build "build/clang${l}/debug/shared" --target ${target}
+      fi
       if [ "${1}" == 'build' ]
       then
           echo cmake --build "build/clang${l}/debug/shared" --target ${target}
