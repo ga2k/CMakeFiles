@@ -1,6 +1,7 @@
 
 set (PLATFORM_GFX_LIBS)
 set (CURRENT_GFX_LIB)
+set (CURRENT_GFX_LIB_PATH)
 
 if (APPLE)
     message(STATUS "Building on an Apple machine.")
@@ -50,6 +51,7 @@ elseif(LINUX)
 
     if("${GUI}" STREQUAL "GUI_GTK")
         set(CURRENT_GFX_LIB "gtk3")
+        set(CURRENT_GFX_LIB_PATH "/gtk3")
         list(APPEND extra_Definitions __WXGTK__)
         list(APPEND extrawxLibraries wxwebview)
         list(APPEND extra_IncludePaths "/usr/include/gtk-3.0")
@@ -61,10 +63,12 @@ elseif(LINUX)
 
     elseif ("${GUI}" STREQUAL "GUI_QT")
         set(CURRENT_GFX_LIB "qt")
+        set(CURRENT_GFX_LIB_PATH "/qt")
         list(APPEND extra_Definitions __WXQT__)
     else ()
         message(WARNING "Unknown Linux GUI (${GUI}): GUI must be set to one of (GUI_GTK;GUI_QT) - Assuming GUI_QT")
         set(CURRENT_GFX_LIB "qt")
+        set(CURRENT_GFX_LIB_PATH "/qt")
         list(APPEND extra_Definitions __WXQT__)
     endif ()
 

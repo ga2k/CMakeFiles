@@ -140,7 +140,7 @@ endfunction()
 ##
 function(parsePackage pkgArray)
     set(options)
-    set(one_value_args ARGS CAT PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST)
+    set(one_value_args ARGS CAT PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST METHOD)
     set(multi_value_args)
 
     # Parse the arguments
@@ -167,6 +167,7 @@ function(parsePackage pkgArray)
     getCatPackage(${pkgArray} ${A_PP_CAT} ${A_PP_PKG_INDEX} local)
     # Initialize output variables
     set(${A_PP_LIST} "" PARENT_SCOPE)
+    set(${A_PP_METHOD} "" PARENT_SCOPE)
     set(${A_PP_URL} "" PARENT_SCOPE)
     set(${A_PP_GIT_TAG} "" PARENT_SCOPE)
     set(${A_PP_SRC_DIR} "" PARENT_SCOPE)
@@ -181,9 +182,12 @@ function(parsePackage pkgArray)
     set(${A_PP_LIST} "${pkg_deets}" PARENT_SCOPE)
     list(LENGTH pkg_deets pkg_deets_size)
 
-    if (${pkg_deets_size} GREATER 2)
+    if (${pkg_deets_size} GREATER 3)
         list(GET pkg_deets 1 localNS)
-        if ("${localNS}" STREQUAL "PROCESS")
+        list(GET pkg_deets 2 localMethod)
+        set(${A_PP_METHOD} ${localMethod} PARENT_SCOPE)
+
+        if ("${localMethod}" STREQUAL "PROCESS")
             return()
         endif ()
     else ()

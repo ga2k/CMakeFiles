@@ -108,11 +108,15 @@ endfunction()
 ###################################################################################################################
 ###################################################################################################################
 function(addPackageData)
-    set(switches SYSTEM;USER;PROCESS)
-    set(args CATEGORY;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
+    set(switches SYSTEM;USER)
+    set(args METHOD;CATEGORY;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
     set(arrays COMPONENTS;ARGS)
 
     cmake_parse_arguments("aoc" "${switches}" "${args}" "${arrays}" ${ARGN})
+
+    if (NOT aoc_METHOD OR (NOT ${aoc_METHOD} STREQUAL "PROCESS" AND NOT ${aoc_METHOD} STREQUAL "FETCH_CONTENTS" AND NOT ${aoc_METHOD} STREQUAL "FIND_PACKAGE"))
+        message(FATAL_ERROR "addPackageData: One of METHOD FIND/FETCH/PROCESS required")
+    endif ()
 
     if (aoc_SYSTEM AND aoc_USER)
         message(FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER allowed")
@@ -122,14 +126,11 @@ function(addPackageData)
     endif ()
     if ((aoc_URL AND aoc_GIT_REPOSITORY) OR
     (aoc_URL AND aoc_SRCDIR) OR
-    (aoc_URL AND aoc_PROCESS) OR
-    (aoc_GIT_REPOSITORY AND aoc_SRCDIR) OR
-    (aoc_GIT_REPOSITORY AND aoc_PROCESS) OR
-    (aoc_SRCDIR AND aoc_PROCESS))
-        message(FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR/PROCESS allowed")
+    (aoc_GIT_REPOSITORY AND aoc_SRCDIR))
+        message(FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
     endif ()
-    if (NOT aoc_URL AND NOT aoc_GIT_REPOSITORY AND NOT aoc_SRCDIR AND NOT aoc_PROCESS)
-        message(FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR/PROCESS required")
+    if (NOT aoc_URL AND NOT aoc_GIT_REPOSITORY AND NOT aoc_SRCDIR AND aoc_METHOD STREQUAL "FETCH_CONTENTS")
+        message(FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR required")
     endif ()
     if ((aoc_GIT_REPOSITORY AND NOT aoc_GIT_TAG) OR
     (NOT aoc_GIT_REPOSITORY AND aoc_GIT_TAG))
@@ -153,8 +154,8 @@ function(addPackageData)
 
     set(entry "${aoc_PKGNAME}")
 
-    if (aoc_PROCESS)
-        string(JOIN "|" entry "${entry}" "PROCESS")
+    if (${aoc_METHOD} STREQUAL "PROCESS")
+        unset(aoc_NAMESPACE)
         unset(aoc_URL)
         unset(aoc_GIT_REPOSITORY)
         unset(aoc_SRCDIR)
@@ -165,11 +166,15 @@ function(addPackageData)
         unset(aoc_ARG)
         unset(aoc_COMPONENTS)
         unset(aoc_ARGS)
-    elseif (aoc_NAMESPACE)
+    endif ()
+
+    if (aoc_NAMESPACE)
         string(JOIN "|" entry "${entry}" "${aoc_NAMESPACE}")
     else ()
         string(APPEND entry "|")
     endif ()
+
+    string(JOIN "|" entry "${entry}" ${aoc_METHOD} )
 
     if (aoc_GIT_REPOSITORY)
         string(JOIN "|" entry "${entry}" "${aoc_GIT_REPOSITORY}")
@@ -243,16 +248,17 @@ endfunction()
 ###################################################################################################################
 function(createStandardPackageData)
 
-    # 1          2          3            4                5                     6          7                                            8
-    #CATEGORY | PKGNAME | [NAMESPACE] | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # 1          2          3            4        5                6                     7          8                                            9
+    # CATEGORY | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
 
     #   [1] CATEGORY is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
-    #       If NAMESPACE=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/HoffSoft/cmake/handlers/<pkgname>/process.cmake
+    #   [4] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
+    #       If METHOD=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/cmake/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
     #
-    #   [4] One or the other of
+    #   [5] One or the other of
     #       ----------------------------------------------------------------------------------------------------
     #       GIT_REPOSITORY is the git url where the package can be found
     #       URL is the location of a .zip, .tar, or .gz file, either remote or local
@@ -267,50 +273,56 @@ function(createStandardPackageData)
     #       [BUILD]/path/to/folder      [BUILD] will be replaced by the directory
     #                                   ${BUILD_DIR}/_deps
     #       ----------------------------------------------------------------------------------------------------
-    #   [5] GIT_TAG     for identifying which git branch/tag to retrieve, OR
+    #   [6] GIT_TAG     for identifying which git branch/tag to retrieve, OR
     #       BINDIR      is the build directory if you have manually downloaded the source. Format as SRCDIR
     #
-    #   [6] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
+    #   [7] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
     #
-    #   [7] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
-    #   [8] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
+    #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
+    #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
 
     #   [, ...] More packages in the same category, if any
 #
 #    addPackageData(SYSTEM CATEGORY "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
 #            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
 #            COMPONENT "cpptrace" ARG "REQUIRED")
-#
-    addPackageData(SYSTEM CATEGORY "REFLECTION" PKGNAME "magic_enum"
+
+    addPackageData(SYSTEM CATEGORY "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
             ARG "REQUIRED")
 
-    addPackageData(SYSTEM CATEGORY "SIGNAL" PKGNAME "eventpp"
+    addPackageData(SYSTEM CATEGORY "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
             ARG "REQUIRED")
 
-    addPackageData(SYSTEM CATEGORY "TESTING" PKGNAME "gtest" NAMESPACE "GTest"
+    addPackageData(SYSTEM CATEGORY "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
             ARGS REQUIRED NAMES GTest googletest)
 
-    addPackageData(SYSTEM CATEGORY "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp"
+    addPackageData(SYSTEM CATEGORY "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             COMPONENT "yaml-cpp" ARG "REQUIRED")
 
     ##
     ####
     ##
+    #
 
-    addPackageData(CATEGORY "BOOST" PKGNAME "Boost" NAMESPACE "Boost"
+    addPackageData(CATEGORY "CORE" PKGNAME "HoffSoft"  METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+            ARGS REQUIRED CONFIG)
+    addPackageData(CATEGORY "GFX"  PKGNAME "Gfx"   METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+            ARGS REQUIRED CONFIG)
+
+    addPackageData(CATEGORY "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENT system date_time regex url algorithm ARGS NAMES Boost)
 
-    addPackageData(CATEGORY "BZIP" PKGNAME "bz2"
+    addPackageData(CATEGORY "BZIP" PKGNAME "bz2" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://gitlab.com/bzip2/bzip2" GIT_TAG "master"
             ARG "REQUIRED")
 
-    addPackageData(CATEGORY "COMMS" PKGNAME "mailio" NAMESPACE "mailio"
+    addPackageData(CATEGORY "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG "REQUIRED")
 
@@ -319,28 +331,28 @@ function(createStandardPackageData)
     #            INCDIR "[BUILD]/sqlite3/include"
     #            COMPONENT "sqlite3" ARG "REQUIRED")
 
-    addPackageData(CATEGORY "DATABASE" PKGNAME "soci"
+    addPackageData(CATEGORY "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG "REQUIRED")
 
-    addPackageData(CATEGORY "SSL" PKGNAME "OpenSSL"
+    addPackageData(CATEGORY "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
             ARG "REQUIRED")
 
-    addPackageData(CATEGORY "SSL" PKGNAME "ManualSSL"
+    addPackageData(CATEGORY "SSL" PKGNAME "ManualSSL" METHOD "FETCH_CONTENTS"
             SRCDIR "[SRC]/OpenSSL/src"
             BINDIR "[BUILD]/OpenSSL/bin"
             ARG "REQUIRED")
 
-    addPackageData(CATEGORY "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB"
+    addPackageData(CATEGORY "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/madler/zlib" GIT_TAG "master"
             COMPONENT "ZLIB" "ARG" "REQUIRED")
 
-    addPackageData(CATEGORY "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus"
+    addPackageData(CATEGORY "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "wxyz" GIT_TAG "master"
             COMPONENT tomlplusplus ARG "REQUIRED")
 
-    addPackageData(CATEGORY "WIDGETS" PKGNAME "wxWidgets" PROCESS)
+    addPackageData(CATEGORY "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
 
     set(SystemCategoryData "${SystemCategoryData}" PARENT_SCOPE)
     set(UserCategoryData "${UserCategoryData}" PARENT_SCOPE)
@@ -394,23 +406,25 @@ function(fetchContents)
     set(CatIX 0)
     set(CatPkgNameIX 1)
     set(CatNamespaceIX 2)
-    set(CatUrlIX 3)
-    set(CatGitTagIX 4)
-    set(CatSrcDirIX 3)
-    set(CatBuildDirIX 4)
-    set(CatIncDirIX 5)
-    set(CatComponentsIX 6)
-    set(CatArgsIX 7)
+    set(CatMethodIX 3)
+    set(CatUrlIX 4)
+    set(CatGitTagIX 5)
+    set(CatSrcDirIX 4)
+    set(CatBuildDirIX 5)
+    set(CatIncDirIX 6)
+    set(CatComponentsIX 7)
+    set(CatArgsIX 8)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
-    set(PkgUrlIX 2)
-    set(PkgGitTagIX 3)
-    set(PkgSrcDirIX 2)
-    set(PkgBuildDirIX 3)
-    set(PkgIncDirIX 4)
-    set(PkgComponentsIX 5)
-    set(PkgArgsIX 6)
+    set(PkgMethodIX 2)
+    set(PkgUrlIX 3)
+    set(PkgGitTagIX 4)
+    set(PkgSrcDirIX 3)
+    set(PkgBuildDirIX 4)
+    set(PkgIncDirIX 5)
+    set(PkgComponentsIX 6)
+    set(PkgArgsIX 7)
 
     foreach (line IN LISTS SystemCategoryData)
         SplitAt(${line} "|" acat dc)
@@ -523,7 +537,7 @@ function(fetchContents)
     # any effect on the system libraries, only the optional libraries, which
     # we will deal with next
 
-    # UPDATE: Why not allow changes to the system libraries? If the break it,
+    # UPDATE: Why not allow changes to the system libraries? If they break it,
     # they own it...
 
 
@@ -680,6 +694,7 @@ function(fetchContents)
         unset(this_pkglc)
         unset(this_pkguc)
         unset(this_namespace)
+        unset(this_method)
         unset(this_url)
         unset(this_tag)
         unset(this_src)
@@ -696,6 +711,7 @@ function(fetchContents)
         parsePackage(AllPackageData
                 CAT ${this_cat}
                 PKG_INDEX ${this_pkgindex}
+                METHOD this_method
                 LIST pkg_details
                 URL this_url
                 GIT_TAG this_tag
@@ -715,7 +731,7 @@ function(fetchContents)
         ################################################################################################################
         ################################################################################################################
         ################################################################################################################
-        if ("${this_namespace}" STREQUAL "PROCESS") ####################################################################
+        if ("${this_method}" STREQUAL "PROCESS") ####################################################################
             call_handler(process ${this_pkgname}) ######################################################################
         else () ########################################################################################################
             set(HANDLED OFF) ###########################################################################################
@@ -771,50 +787,56 @@ function(fetchContents)
 
             string(TOLOWER "${this_pkgname}" this_pkglc)
             string(TOUPPER "${this_pkgname}" this_pkguc)
-            ################################################################################################################
-            set(tfpc "${this_find_package_components}") ####################################################################
-            set(tnpc "${this_namespace_package_components}") ###############################################################
-            ################################################################################################################
+            ###########################################################################################################
+            set(tfpc "${this_find_package_components}") ###############################################################
+            set(tnpc "${this_namespace_package_components}") ##########################################################
+            ###########################################################################################################
             #                                                                                                              #
-            ################################################################################################################
-            ################################################################################################################
-            ################################################################################################################
-            ################################################################################################################
-            call_handler(preDeclare ${this_pkgname}) #######################################################################
-            ################################################################################################################
-            ################################################################################################################
-            ################################################################################################################
-            ################################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            if ("${this_method}" STREQUAL "FETCH_CONTENTS") ###########################################################
+                call_handler(preDeclare ${this_pkgname}) ##############################################################
+            endif () ##################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
             if (NOT HANDLED)
-                if (NOT this_fetch)
-                    message("FetchContent_Declare not required for ${this_pkgname}")
-                else ()
-                    message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
-                    if ("${SOURCE_KEYWORD}" STREQUAL URL)
-                        FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname})
+                if (${this_method} STREQUAL "FETCH_CONTENTS")
+                    if (NOT this_fetch)
+                        message("FetchContent_Declare not required for ${this_pkgname}")
                     else ()
-                        FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})
+                        message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                        if ("${SOURCE_KEYWORD}" STREQUAL URL)
+                            FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname})
+                        else ()
+                            FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})
+                        endif ()
                     endif ()
+                else ()
+                    message("find_package(${this_pkgname} ${this_find_package_args})")
+                    find_package(${this_pkgname} ${this_find_package_args})
+                    set (HANDLED ON)
                 endif ()
             endif ()
-            ########################################################################################################
-            ########################################################################################################
-            ########################################################################################################
-            ########################################################################################################
-            call_handler(postDeclare ${this_pkgname}) ##############################################################
-            ########################################################################################################
-            ########################################################################################################
-            ########################################################################################################
-            ########################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            if (${this_method} STREQUAL "FETCH_CONTENTS") #############################################################
+                call_handler(postDeclare ${this_pkgname}) #############################################################
+            endif () ##################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
+            ###########################################################################################################
 
             if (this_fetch)
 
                 ########################################################################################################
                 ########################################################################################################
                 ########################################################################################################
-                ########################################################################################################
-                call_handler(preMakeAvailable ${this_pkgname}) #########################################################
-                ########################################################################################################
+                if (${this_method} STREQUAL "FETCH_CONTENTS") ##########################################################
+                    call_handler(preMakeAvailable ${this_pkgname}) #####################################################
+                endif() ################################################################################################
                 ########################################################################################################
                 ########################################################################################################
                 ########################################################################################################
@@ -824,31 +846,32 @@ function(fetchContents)
                 set(cs "${this_find_package_components}")
                 ########################################################################################################
 
-                if (NOT this_src)
-                    set(this_src ${${this_pkglc}_SOURCE_DIR})
+                if (NOT ${this_method} STREQUAL "FIND_PACKAGE")
                     if (NOT this_src)
-                        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                        set(this_src ${${this_pkglc}_SOURCE_DIR})
+                        if (NOT this_src)
+                            set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                        endif ()
+                    endif ()
+
+                    if (NOT this_build)
+                        if (DEFINED ${this_pkglc}_BUILD_DIR)
+                            set(this_build ${${this_pkglc}_BUILD_DIR})
+                        elseif (DEFINED ${this_pkglc}_BINARY_DIR)
+                            set(this_build ${${this_pkglc}_BINARY_DIR})
+                        else ()
+                            set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
+                        endif ()
                     endif ()
                 endif ()
-
-                if (NOT this_build)
-                    if (DEFINED ${this_pkglc}_BUILD_DIR)
-                        set(this_build ${${this_pkglc}_BUILD_DIR})
-                    elseif (DEFINED ${this_pkglc}_BINARY_DIR)
-                        set(this_build ${${this_pkglc}_BINARY_DIR})
-                    else ()
-                        set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
-                    endif ()
-                endif ()
-
                 set(this_out "${OUTPUT_DIR}")
 
                 ############################################################################################################
                 ############################################################################################################
                 ############################################################################################################
-                ############################################################################################################
-                call_handler(postMakeAvailable ${this_pkgname}) ############################################################
-                ############################################################################################################
+                if ("${this_method}" STREQUAL "FETCH_CONTENTS") ############################################################
+                    call_handler(postMakeAvailable ${this_pkgname}) ########################################################
+                endif () ###################################################################################################
                 ############################################################################################################
                 ############################################################################################################
                 ############################################################################################################
