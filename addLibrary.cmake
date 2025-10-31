@@ -1,6 +1,6 @@
 function(addLibrary)
     cmake_parse_arguments(arg
-            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX;MULTI_LIBS"
+            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX;MULTI_LIBS;PRIMARY"
             "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS"
             ${ARGN}
@@ -114,6 +114,9 @@ function(addLibrary)
             add_library(${arg_NAME} SHARED)
         else ()
             add_library(${arg_NAME} ${arg_LINK})
+            if (arg_PRIMARY)
+                add_library(${APP_VENDOR}::${APP_NAME} ALIAS ${arg_NAME})
+            endif ()
         endif ()
     endif ()
 
