@@ -1,8 +1,8 @@
 function(addLibrary)
     cmake_parse_arguments(arg
-            "PLUGIN;STATIC;SHARED;USES_WIDGETS;USES_CORE;USES_GFX;MULTI_LIBS;PRIMARY"
+            "PLUGIN;STATIC;SHARED;MULTI_LIBS;PRIMARY"
             "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
-            "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS"
+            "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES"
             ${ARGN}
     )
     get_filename_component(LIB_PATH ${CMAKE_PARENT_LIST_FILE} DIRECTORY)
@@ -45,6 +45,8 @@ function(addLibrary)
     if (NOT arg_VERSION)
         set(arg_VERSION "1.0.0")
     endif ()
+
+    string(TOUPPER "${arg_USES}" arg_USES)
 
     if (arg_LINK MATCHES SHARED)
         set(arg_SHARED ON)
@@ -153,18 +155,21 @@ function(addLibrary)
     if (arg_PLUGIN)
         set(LIB_PRE "")
         set(LIB_SUF ".plugin")
-        set(LIB_ARCHIVE_DIR "${OUTPUT_DIR}/plugins")
-        set(LIB_LIBRARY_DIR "${OUTPUT_DIR}/plugins")
-        set(LIB_RUNTIME_DIR "${OUTPUT_DIR}/plugins")
+#        set(LIB_ARCHIVE_DIR "${OUTPUT_DIR}/plugins")
+#        set(LIB_LIBRARY_DIR "${OUTPUT_DIR}/plugins")
+#        set(LIB_RUNTIME_DIR "${OUTPUT_DIR}/plugins")
         set(LIB_OUTPUT_NAME "${arg_NAME}")
     else ()
         set(LIB_PRE ${CMAKE_${arg_LINK}_LIBRARY_PREFIX})
         set(LIB_SUF ${CMAKE_${arg_LINK}_LIBRARY_SUFFIX})
-        set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-        set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-        set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+#        set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+#        set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+#        set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
+    set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+    set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+    set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
     if (arg_MULTI_LIBS AND CURRENT_GFX_LIB)
         set (MULTI_LIB_DECLARATOR "_${CURRENT_GFX_LIB}")
@@ -192,6 +197,7 @@ function(addLibrary)
     string(TOUPPER ${arg_NAME} arg_NAME_UC)
     target_compile_definitions(${arg_NAME}      PUBLIC  BUILDING_${arg_NAME_UC} ${HS_DefinesList})
     target_compile_options(${arg_NAME}          PUBLIC  ${HS_CompileOptionsList})
+
     # Expose only install-time include paths to consumers; keep build-time includes private to avoid leaking
     target_include_directories(${arg_NAME}
             PRIVATE
@@ -202,26 +208,21 @@ function(addLibrary)
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
-    # Avoid exporting build-tree dependency targets from the library. They are exposed to consumers via xxxConfig.cmake
-#    if (NOT ${arg_NAME} STREQUAL "Core")
-#        target_link_libraries(${arg_NAME}       PRIVATE ${arg_LIBS})# PRIVATE $<BUILD_INTERFACE:${HS_LibrariesList}>)
-#    else ()
-        target_link_libraries(${arg_NAME}       PRIVATE ${arg_LIBS})
-#    endif ()
+    target_link_libraries(${arg_NAME}           PRIVATE ${arg_LIBS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
 #    # Link Core
-    if (arg_USES_CORE AND TARGET HoffSoft::Core)
+    if (CORE IN_LIST arg_USES AND TARGET HoffSoft::Core)
         target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Core)
     endif ()
 
     #    # Link Gfx
-    if (arg_USES_GFX AND TARGET HoffSoft::Gfx)
+    if (GFX IN_LIST arg_USES AND TARGET HoffSoft::Gfx)
         target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
     endif ()
 
     # Link Widgets
-    if (arg_USES_WIDGETS AND WIDGETS IN_LIST APP_FEATURES)
+    if (WIDGETS IN_LIST arg_USES AND WIDGETS IN_LIST APP_FEATURES)
         target_compile_definitions(${arg_NAME}  PRIVATE ${HS_wxDefines})
         target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
         target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
