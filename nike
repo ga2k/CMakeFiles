@@ -77,23 +77,22 @@ then
     exit ${failed}
 fi
 
-for l in gtk3 Qt6; do
-    if [ -e "build/clang/${l}/debug/shared" ]
-    then
-        if [ ${1} == 'build' ]
-        then 
-            echo cmake --build build/clang/${l}/debug/shared --target ${target}
-            cmake --build build/clang/${l}/debug/shared --target ${target}
-        fi
-        if [ ${1} == 'stage'   ]
-        then 
-            echo DESTDIR=/tmp/stage cmake --build build/clang/${l}/debug/shared --target ${target}
-            DESTDIR=/tmp/stage cmake --build build/clang/${l}/debug/shared --target ${target}
-        fi
-        if [ ${1} == 'install' ]
-        then 
-            echo sudo cmake --build build/clang/${l}/debug/shared --target ${target}
-            sudo cmake --build build/clang/${l}/debug/shared --target ${target}
-        fi
-    fi
+for l in '' '/gtk3' '/Qt6'; do
+    test -d "build/clang${l}/debug/shared" && {
+      if [ "${1}" == 'build' ]
+      then
+          echo cmake --build "build/clang${l}/debug/shared" --target ${target}
+          cmake --build "build/clang${l}/debug/shared" --target ${target}
+      fi
+      if [ "${1}" == 'stage'   ]
+      then
+          echo DESTDIR=/tmp/stage cmake --build "build/clang${l}/debug/shared" --target ${target}
+          DESTDIR=/tmp/stage cmake --build "build/clang${l}/debug/shared" --target ${target}
+      fi
+      if [ "${1}" == 'install' ]
+      then
+          echo sudo cmake --build "build/clang${l}/debug/shared" --target ${target}
+          sudo cmake --build "build/clang${l}/debug/shared" --target ${target}
+      fi
+    }
 done

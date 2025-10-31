@@ -139,7 +139,7 @@ string(REPLACE ";" " " escapedPath "${CMAKE_MODULE_PATH}")
 fetchContents(
         PREFIX HS
         USE ${APP_FEATURES}
-        FIND_PACKAGE_ARGS "CORE HINTS ${escapedPath};GFX HINTS ${escapedPath}"
+#        FIND_PACKAGE_ARGS "CORE HINTS ${escapedPath};GFX HINTS ${escapedPath}"
 )
 ########################################################################################################################
 include(GoogleTest)
@@ -175,6 +175,12 @@ endif()
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Start of Install !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
+# Need to tweak some locations. We'll keep it limited
+if ("${APP_NAME}" STREQUAL "Core")
+    set (_TARGET ${APP_VENDOR})
+else ()
+    set (_TARGET ${APP_NAME})
+endif ()
 
 install(TARGETS ${APP_NAME}
         EXPORT ${APP_NAME}Target
@@ -182,9 +188,9 @@ install(TARGETS ${APP_NAME}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
         CXX_MODULES_BMI
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
         FILE_SET CXX_MODULES
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
         FILE_SET HEADERS
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES
@@ -197,13 +203,6 @@ install(TARGETS ${APP_NAME}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_ONLY
 )
 
-install(CODE [[
-  set(_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
-  set(CMAKE_INSTALL_LIBDIR "lib64")
-  message("Removing ${_root}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}")
-  file(REMOVE_RECURSE "${_root}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}")
-]])
-
 if (BUILDING_APPEARANCE)
     install(TARGETS Appearance Print Logger
             EXPORT ${APP_NAME}Target
@@ -211,9 +210,9 @@ if (BUILDING_APPEARANCE)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} NAMELINK_SKIP
             CXX_MODULES_BMI
-                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
             FILE_SET CXX_MODULES
-                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}/${APP_NAME}
+                DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
             FILE_SET HEADERS
                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
             INCLUDES
@@ -231,29 +230,18 @@ endif ()
 install(DIRECTORY
         ${CMAKE_CURRENT_SOURCE_DIR}/include/overrides
         DESTINATION
-        ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
-)
+        ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR})
 
 # Static libraries
 install(DIRECTORY
         ${OUTPUT_DIR}/lib
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}
-)
+        ${CMAKE_INSTALL_PREFIX})
 
-# PCM files for modules
-install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/cxx/pcm/${APP_VENDOR}${CURRENT_GFX_LIB_PATH}
-        FILES_MATCHING
-        PATTERN *.pcm
-)
-
-# Need to tweak some locations. We'll keep it limited
-if ("${APP_NAME}" STREQUAL "Core")
-    set (_TARGET ${APP_VENDOR})
-else ()
-    set (_TARGET ${APP_NAME})
-endif ()
+## PCM files for modules
+install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+        FILES_MATCHING PATTERN *.pcm)
 
 # Install export set for consumers (enabled by default)
 option(HS_INSTALL_EXPORT "Install ${APP_NAME} export set" ON)
@@ -261,7 +249,7 @@ if(HS_INSTALL_EXPORT)
     install(EXPORT ${APP_NAME}Target
             FILE ${_TARGET}Target.cmake
             NAMESPACE ${APP_VENDOR}::
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
             CXX_MODULES_DIRECTORY .
     )
 endif()
@@ -277,14 +265,20 @@ write_basic_package_version_file(
 configure_package_config_file(
         cmake/templates/Config.cmake.in
         "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
-            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
 install(FILES
         "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}ConfigVersion.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
+
+install(CODE [[
+  set(_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+  message("Removing ${_root}/lib64/cmake/cxx")
+  file(REMOVE_RECURSE "${_root}/lib64/cmake/cxx")
+]])
 
 # Install end-user documentation and resources (Linux only for now)
 if(UNIX AND NOT APPLE)
@@ -298,7 +292,7 @@ if(UNIX AND NOT APPLE)
     # Resources directory (fonts, images, etc.)
     if(EXISTS "${CMAKE_SOURCE_DIR}/resources")
         install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
-                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}")
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
     endif()
     # If any desktop files are provided under resources/, install them to share/applications
     file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
