@@ -137,11 +137,15 @@ list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 # Replace all occurrences of <match_string> in the <input> with <replace_string> and store the result in the <output_variable>.
 string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
 if (FIND_PACKAGE_HINTS)
-    string(REPLACE "{escapedModulePath}" ${escapedModulePath} FIND_PACKAGE_HINTS ${FIND_PACKAGE_HINTS})
+    set (FIND_PACKAGE_ARGS)
+    foreach (hint IN LISTS FIND_PACKAGE_HINTS)
+        string(REPLACE "{escapedModulePath}" ${escapedModulePath} hint ${hint})
+        list(APPEND FIND_PACKAGE_ARGS ${hint})
+    endforeach ()
     fetchContents(
         PREFIX HS
         USE ${APP_FEATURES}
-        FIND_PACKAGE_ARGS ${FIND_PACKAGE_HINTS})
+        FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else()
     fetchContents(
             PREFIX HS
@@ -193,7 +197,7 @@ install(TARGETS ${APP_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
-        CXX_MODULES_BMI
+        CXX_MODULES_DIRECTORY
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
         FILE_SET CXX_MODULES
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
