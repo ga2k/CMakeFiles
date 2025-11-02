@@ -1,7 +1,7 @@
 
-set(PLATFORM_GFX_LIBS        "gtk3;qt")
-set(CURRENT_GFX_LIB          ""       )
-set(ENV:CURRENT_GFX_LIB_PATH ""       )
+set(PLATFORM_GFX_LIBS        "gtk;qt")
+set(CURRENT_GFX_LIB          ""      )
+set(ENV:CURRENT_GFX_LIB_PATH ""      )
 
 if (APPLE)
     message(STATUS "Building on an Apple machine.")
@@ -50,8 +50,8 @@ elseif(LINUX)
     list (APPEND extra_CompileOptions -fPIC)
 
     if("${GUI}" STREQUAL "GUI_GTK")
-        set(CURRENT_GFX_LIB      "gtk3")
-        set(CURRENT_GFX_LIB_PATH "/gtk3")
+        set(CURRENT_GFX_LIB      "gtk")
+        set(CURRENT_GFX_LIB_PATH "/gtk")
 
         list(APPEND extra_Definitions __WXGTK__)
         list(APPEND extrawxLibraries wxwebview)
