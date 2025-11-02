@@ -239,16 +239,12 @@ install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
         FILES_MATCHING PATTERN *.pcm)
 
-# Install export set for consumers (enabled by default)
-option(HS_INSTALL_EXPORT "Install ${APP_NAME} export set" ON)
-if(HS_INSTALL_EXPORT)
-    install(EXPORT ${APP_NAME}Target
-            FILE ${_TARGET}Target.cmake
-            NAMESPACE ${APP_VENDOR}::
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-            CXX_MODULES_DIRECTORY "cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}"
-    )
-endif()
+install(EXPORT ${APP_NAME}Target
+        FILE ${_TARGET}Target.cmake
+        NAMESPACE ${APP_VENDOR}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+        CXX_MODULES_DIRECTORY "cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}"
+)
 
 # Package config and target exports for find_package
 include(CMakePackageConfigHelpers)
