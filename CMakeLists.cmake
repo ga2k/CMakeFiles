@@ -31,7 +31,8 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 # Include the directory containing addLibrary and tools, etc
 list(APPEND CMAKE_MODULE_PATH
         ${CMAKE_SOURCE_DIR}/cmake
-        /tmp/stage/usr/local/lib64/cmake)
+        $ENV{HOME}/stage/${CMAKE_INSTALL_LIBDIR}/cmake
+)
 
 set(extra_CompileOptions)
 set(extra_Definitions)
