@@ -194,9 +194,6 @@ else ()
     set (_TARGET ${APP_NAME})
 endif ()
 
-#set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_DEPENDENCIES 1942b4fa-b2c5-4546-9385-83f254070067)
-
-
 install(TARGETS                 ${APP_NAME}
         EXPORT                  ${APP_NAME}Target
         CONFIGURATIONS          Debug Release
@@ -249,7 +246,7 @@ if(HS_INSTALL_EXPORT)
             FILE ${_TARGET}Target.cmake
             NAMESPACE ${APP_VENDOR}::
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-            CXX_MODULES_DIRECTORY "CXX_MODULES_DIRECTORY"
+            CXX_MODULES_DIRECTORY "cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}"
     )
 endif()
 

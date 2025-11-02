@@ -6,9 +6,9 @@ include(CMakeFindDependencyMacro)
 # We expose an imported target HoffSoft::<lib>> and keep third-party deps internal.
 # This lets consumers just link HoffSoft::<lib> without needing to locate deps at configure time.
 
-if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-endif()
+# if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+#   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+# endif()
 
 # Resolve installed library path (cover common layouts)
 set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
@@ -57,10 +57,12 @@ if(NOT _hs_lib)
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${_hs_prefix}")
 endif()
 
-set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-  IMPORTED_LOCATION "${_hs_lib}"
-  INTERFACE_INCLUDE_DIRECTORIES "${_hs_prefix}/include"
-)
+# set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#   IMPORTED_LOCATION "${_hs_lib}"
+#   INTERFACE_INCLUDE_DIRECTORIES "${_hs_prefix}/include"
+# )
+
+include("${CMAKE_CURRENT_LIST_DIR}/@_TARGET@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
