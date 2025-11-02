@@ -61,7 +61,7 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/@_TARGET@Target.cmake")
 
 set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-  CXX_MODULE_STD "CXX_STD_23"
+  CXX_STANDARD 23
 )
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
