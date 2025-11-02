@@ -62,7 +62,6 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
     IMPORTED_LOCATION "${_hs_lib}"
     CXX_STANDARD 23
-    ${{CMAKE_CXX_STANDARD_LIBRARIES_INIT}}
   )
 
 endif()
