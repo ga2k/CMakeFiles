@@ -155,16 +155,16 @@ function(addLibrary)
     if (arg_PLUGIN)
         set(LIB_PRE "")
         set(LIB_SUF ".plugin")
-#        set(LIB_ARCHIVE_DIR "${OUTPUT_DIR}/plugins")
-#        set(LIB_LIBRARY_DIR "${OUTPUT_DIR}/plugins")
-#        set(LIB_RUNTIME_DIR "${OUTPUT_DIR}/plugins")
+        #        set(LIB_ARCHIVE_DIR "${OUTPUT_DIR}/plugins")
+        #        set(LIB_LIBRARY_DIR "${OUTPUT_DIR}/plugins")
+        #        set(LIB_RUNTIME_DIR "${OUTPUT_DIR}/plugins")
         set(LIB_OUTPUT_NAME "${arg_NAME}")
     else ()
         set(LIB_PRE ${CMAKE_${arg_LINK}_LIBRARY_PREFIX})
         set(LIB_SUF ${CMAKE_${arg_LINK}_LIBRARY_SUFFIX})
-#        set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-#        set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-#        set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+        #        set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+        #        set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+        #        set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
     set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
@@ -203,16 +203,16 @@ function(addLibrary)
             PRIVATE
             ${HS_IncludePathsList}
             PUBLIC
-#            $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
+            #            $<BUILD_INTERFACE:${HEADER_BASE_DIRS}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-#            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
+            #            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${arg_NAME}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_LIBS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
-#    # Link Core
+    #    # Link Core
     if (CORE IN_LIST arg_USES AND TARGET HoffSoft::Core)
         target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Core)
     endif ()

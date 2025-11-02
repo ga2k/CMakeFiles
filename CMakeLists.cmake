@@ -1,6 +1,6 @@
 
-string(TOUPPER ${APP_NAME}   APP_NAME_UC)
-string(TOLOWER ${APP_NAME}   APP_NAME_LC)
+string(TOUPPER ${APP_NAME} APP_NAME_UC)
+string(TOLOWER ${APP_NAME} APP_NAME_LC)
 string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
 string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
 
@@ -100,7 +100,7 @@ list(APPEND extra_LibraryPaths
 )
 
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-include (cmake/platform.cmake) #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+include(cmake/platform.cmake) #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #project(${APP_NAME} VERSION "${APP_VERSION}" DESCRIPTION "${DESCRIPTION}" LANGUAGES CXX) #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -139,16 +139,16 @@ list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 # Replace all occurrences of <match_string> in the <input> with <replace_string> and store the result in the <output_variable>.
 string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
 if (FIND_PACKAGE_HINTS)
-    set (FIND_PACKAGE_ARGS)
+    set(FIND_PACKAGE_ARGS)
     foreach (hint IN LISTS FIND_PACKAGE_HINTS)
         string(REPLACE "{escapedModulePath}" ${escapedModulePath} hint ${hint})
         list(APPEND FIND_PACKAGE_ARGS ${hint})
     endforeach ()
     fetchContents(
-        PREFIX HS
-        USE ${APP_FEATURES}
-        FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
-else()
+            PREFIX HS
+            USE ${APP_FEATURES}
+            FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
+else ()
     fetchContents(
             PREFIX HS
             USE ${APP_FEATURES})
@@ -157,8 +157,34 @@ endif ()
 include(GoogleTest)
 ########################################################################################################################
 message(STATUS "=== Configuring Components ===")
+
+# Note - we need this for after the main library/app creaation, so save it here
+set(ALREADY_HAVE_CORE OFF)
+if (TARGET HoffSoft::Core)
+    set(ALREADY_HAVE_CORE ON)
+endif ()
+
 add_subdirectory(src)
 ########################################################################################################################
+
+# Temporary consumer-side workaround for missing transitive yaml-cpp from HoffSoft::Core install package
+# When using the installed HoffSoft::Core, its package currently does not declare yaml-cpp as a dependency,
+# which can lead to unresolved symbols during linking. Until that package is fixed upstream, we try to
+# locate yaml-cpp here and link it explicitly to ensure stable linkage in both build and install scenarios.
+
+# Note - we only do this "down-stream" from Core, so if THIS is core - skip altogether
+if (ALREADY_HAVE_CORE)
+    find_package(yaml-cpp CONFIG QUIET)
+    if (TARGET yaml-cpp::yaml-cpp)
+        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::Core package")
+        if (TARGET ${APP_NAME})
+            #        target_link_libraries(${APP_NAME} LINK_PRIVATE yaml-cpp::yaml-cpp)
+        endif ()
+        if (TARGET main)
+            target_link_libraries(main LINK_PRIVATE yaml-cpp::yaml-cpp)
+        endif ()
+    endif ()
+endif ()
 
 # Set plugin paths based on build type
 if (NOT INSTALLED)
@@ -173,14 +199,14 @@ endif ()
 
 ########################################################################################################################
 # Appropriate include paths
-if(TARGET ${APP_NAME})
+if (TARGET ${APP_NAME})
     # Ensure no link directories leak into INTERFACE to satisfy CMake export validation
     set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
     # Expose the overrides include folder (e.g., patched magic_enum headers) for installed consumers
     target_include_directories(${APP_NAME} INTERFACE
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
-endif()
+endif ()
 
 #
 # End of Configure !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -189,35 +215,35 @@ endif()
 #
 # Need to tweak some locations. We'll keep it limited
 if ("${APP_NAME}" STREQUAL "Core")
-    set (_TARGET ${APP_VENDOR})
+    set(_TARGET ${APP_VENDOR})
 else ()
-    set (_TARGET ${APP_NAME})
+    set(_TARGET ${APP_NAME})
 endif ()
 
-install(TARGETS                 ${APP_NAME}
-        EXPORT                  ${APP_NAME}Target
-        CONFIGURATIONS          Debug Release
-        LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
-        RUNTIME                 DESTINATION ${CMAKE_INSTALL_BINDIR}
-        ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
-        CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-        FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-        FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+install(TARGETS ${APP_NAME}
+        EXPORT ${APP_NAME}Target
+        CONFIGURATIONS Debug Release
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
+        CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+        FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 if (APP_CREATES_PLUGINS)
 
-    install(TARGETS                 ${APP_CREATES_PLUGINS}
-            EXPORT                  ${APP_NAME}Target
-            CONFIGURATIONS          Debug Release
-            LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} #NAMELINK_SKIP
-            RUNTIME                 DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}
-            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} #NAMELINK_SKIP
-            CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-            FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-            FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-            INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    install(TARGETS ${APP_CREATES_PLUGINS}
+            EXPORT ${APP_NAME}Target
+            CONFIGURATIONS Debug Release
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} #NAMELINK_SKIP
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME} #NAMELINK_SKIP
+            CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+            FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
 endif ()
@@ -257,7 +283,7 @@ write_basic_package_version_file(
 configure_package_config_file(
         cmake/templates/Config.cmake.in
         "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
-            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
 install(FILES
@@ -267,24 +293,24 @@ install(FILES
 )
 
 # Install end-user documentation and resources (Linux only for now)
-if(UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE)
     include(GNUInstallDirs)
 
     # User guide
-    if(EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+    if (EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
         install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
-    endif()
+    endif ()
     # Resources directory (fonts, images, etc.)
-    if(EXISTS "${CMAKE_SOURCE_DIR}/resources")
+    if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
         install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
-    endif()
+    endif ()
     # If any desktop files are provided under resources/, install them to share/applications
     file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
-    if(_hs_desktop_files)
+    if (_hs_desktop_files)
         install(FILES ${_hs_desktop_files}
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-    endif()
+    endif ()
     unset(_hs_desktop_files)
-endif()
+endif ()
