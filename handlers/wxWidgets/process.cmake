@@ -64,6 +64,8 @@ function(wxWidgets_process incs libs defs)
     set(wxw_frameworks ${_frameworks})
 
     if (${gui} STREQUAL "gtk" OR ${gui} STREQUAL "qt" OR ${gui} STREQUAL "darwin")
+        if ("${gui}" STREQUAL "gtk")
+            set(toolkit_used --toolkit=gtk3)
             set(GTKREQUIRED "REQUIRED")
             set(QTREQUIRED "")
         elseif ("${gui}" STREQUAL "qt")
