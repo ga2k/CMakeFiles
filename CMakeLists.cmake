@@ -68,8 +68,8 @@ add_subdirectory(cmake)
 check_environment("${PROJECT_ROOT}")
 ###############################################################################################
 
-if (INSTALLED)
-    list(APPEND extra_Definitions DEVEL)
+if (THEY_ARE_INSTALLED)
+    list(APPEND extra_Definitions INSTALLED)
 endif ()
 
 list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
@@ -110,7 +110,7 @@ initialiseFeatureHandlers() #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_LIBDIR})
 
 # Add any extra definitions to "extra_Definitions" here
-list(APPEND extra_Definitions ${INSTALLED} MAGIC_ENUM_NO_MODULE)
+list(APPEND extra_Definitions ${THEY_ARE_INSTALLED} MAGIC_ENUM_NO_MODULE)
 list(APPEND extra_Definitions ${GUI})
 string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
 list(APPEND extra_Definitions "PLUGINS=${PI}")
@@ -186,7 +186,7 @@ if (ALREADY_HAVE_CORE)
 endif ()
 
 ## Set plugin paths based on build type
-#if (NOT INSTALLED)
+#if (NOT THEY_ARE_INSTALLED)
 #    # Development build
 #    set(PLUGIN_PATH "${OUTPUT_DIR}/plugins")
 #    set(PLUGIN_PATH_TYPE "development")
@@ -210,10 +210,9 @@ endif ()
 include(ExternalProject)
 
 if(APP_SUPPLIES_RESOURCES)
-    get_filename_component(RESOURCE_PATH "${APP_SUPPLIES_RESOURCES}" NAME_WLE)
 
     # Directory to place the checkout
-    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE_PATH}")
+    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
     ExternalProject_Add(${APP_NAME}ResourceRepo
             GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
