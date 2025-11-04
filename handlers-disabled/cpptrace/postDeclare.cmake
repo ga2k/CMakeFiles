@@ -1,4 +1,4 @@
-function(cpptrace_postDeclare librariesList didFetch)
+function(cpptrace_postDownload librariesList didFetch)
 
     if (NOT "${this_tag}" STREQUAL "v0.7.3")
         message(FATAL_ERROR "Attempting to patch wrong version of cpptrace")
@@ -27,5 +27,5 @@ function(cpptrace_postDeclare librariesList didFetch)
     )
 endfunction()
 
-cpptrace_postDeclare("${_LibrariesList}" "${this_fetch}")
+cpptrace_postDownload("${_LibrariesList}" "${this_fetch}")
 set(HANDLED ON)

@@ -29,7 +29,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # Include the directory containing addLibrary and tools, etc
-set(staged "$ENV{HOME}/stage/usr/local/lib64/cmake")
+set(staged "$ENV{HOME}/dev/stage/usr/local/lib64/cmake")
 list(APPEND CMAKE_MODULE_PATH
         ${CMAKE_SOURCE_DIR}/cmake
         ${staged}

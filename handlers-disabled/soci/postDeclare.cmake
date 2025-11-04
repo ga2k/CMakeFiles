@@ -1,4 +1,4 @@
-function(soci_postDeclare librariesList didFetch)
+function(soci_postDownload librariesList didFetch)
     message("soci requires sqlite3, so lets get it.")
     if (WIN32)
         find_package(unofficial-sqlite3 CONFIG REQUIRED)
@@ -13,6 +13,6 @@ function(soci_postDeclare librariesList didFetch)
     set(_LibrariesList ${librariesList} PARENT_SCOPE)
 endfunction()
 
-soci_postDeclare("${_LibrariesList}" "${this_fetch}")
+soci_postDownload("${_LibrariesList}" "${this_fetch}")
 set(_LibrariesList ${_LibrariesList} PARENT_SCOPE)
 set(HANDLED ON)

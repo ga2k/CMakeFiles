@@ -1,4 +1,4 @@
-function(cpptrace_preDeclare pkgname url tag srcDir)
+function(cpptrace_preDownload pkgname url tag srcDir)
 
     if (NOT "${tag}" STREQUAL "v0.7.3")
         message(FATAL_ERROR "Wrong version of ${pkgname}")
@@ -9,6 +9,6 @@ function(cpptrace_preDeclare pkgname url tag srcDir)
 
 endfunction()
 
-cpptrace_preDeclare(${this_pkgname} ${this_url} ${this_tag} "${EXTERNALS_DIR}/${this_pkgname}")
+cpptrace_preDownload(${this_pkgname} ${this_url} ${this_tag} "${EXTERNALS_DIR}/${this_pkgname}")
 set(this_fetch OFF PARENT_SCOPE)
 set(HANDLED ON)
