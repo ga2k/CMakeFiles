@@ -135,7 +135,6 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 ########################################################################################################################
-# string(REPLACE <match_string> <replace_string> <output_variable> <input> [<input>...])
 # Replace all occurrences of <match_string> in the <input> with <replace_string> and store the result in the <output_variable>.
 string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
 if (FIND_PACKAGE_HINTS)
@@ -186,16 +185,16 @@ if (ALREADY_HAVE_CORE)
     endif ()
 endif ()
 
-# Set plugin paths based on build type
-if (NOT INSTALLED)
-    # Development build
-    set(PLUGIN_PATH "${OUTPUT_DIR}/plugins")
-    set(PLUGIN_PATH_TYPE "development")
-else ()
-    # Install build
-    set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/lib64")
-    set(PLUGIN_PATH_TYPE "installed")
-endif ()
+## Set plugin paths based on build type
+#if (NOT INSTALLED)
+#    # Development build
+#    set(PLUGIN_PATH "${OUTPUT_DIR}/plugins")
+#    set(PLUGIN_PATH_TYPE "development")
+#else ()
+#    # Install build
+#    set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/lib64")
+#    set(PLUGIN_PATH_TYPE "installed")
+#endif ()
 
 ########################################################################################################################
 # Appropriate include paths
@@ -207,6 +206,40 @@ if (TARGET ${APP_NAME})
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
 endif ()
+########################################################################################################################
+include(ExternalProject)
+
+if(APP_SUPPLIES_RESOURCES)
+    get_filename_component(RESOURCE_PATH "${APP_SUPPLIES_RESOURCES}" NAME_WLE)
+
+    # Directory to place the checkout
+    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE_PATH}")
+
+    ExternalProject_Add(${APP_NAME}ResourceRepo
+            GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
+            GIT_TAG master
+            GIT_SHALLOW TRUE
+            UPDATE_DISCONNECTED TRUE
+
+            # We only want sources; skip configure/build/install
+            CONFIGURE_COMMAND ""
+            BUILD_COMMAND ""
+            INSTALL_COMMAND ""
+            TEST_COMMAND ""
+
+            # Where to put the sources
+            SOURCE_DIR "${RES_DIR}"
+
+            # Create a marker so builds see a byproduct
+            BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
+            COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
+    )
+
+    # Make a convenient target to trigger the download:
+    add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo) # use ALL to fetch every build
+    add_dependencies(${APP_NAME} fetch_resources)
+    # Or omit ALL and run: cmake --build . --target fetch_resources
+endif()
 
 #
 # End of Configure !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -292,25 +325,23 @@ install(FILES
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
-# Install end-user documentation and resources (Linux only for now)
-if (UNIX AND NOT APPLE)
-    include(GNUInstallDirs)
+include(GNUInstallDirs)
 
-    # User guide
-    if (EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
-        install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
-                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
+# User guide
+if (EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+    install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
+endif ()
+
+# Resources directory (fonts, images, etc.)
+if (APP_SUPPLIES_RESOURCES AND EXISTS "${RES_DIR}")
+    install(DIRECTORY "${RES_DIR}/"
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
+    # If any desktop files are provided under resources/, install them to share/applications
+    file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
+    if (_hs_desktop_files)
+        install(FILES ${_hs_desktop_files}
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
     endif ()
-    # Resources directory (fonts, images, etc.)
-    if (APP_SUPPLIES_RESOURCES AND EXISTS "${CMAKE_SOURCE_DIR}/resources")
-        install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
-                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
-        # If any desktop files are provided under resources/, install them to share/applications
-        file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
-        if (_hs_desktop_files)
-            install(FILES ${_hs_desktop_files}
-                    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-        endif ()
-        unset(_hs_desktop_files)
-    endif ()
+    unset(_hs_desktop_files)
 endif ()
