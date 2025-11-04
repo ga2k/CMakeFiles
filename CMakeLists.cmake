@@ -237,9 +237,9 @@ if (APP_CREATES_PLUGINS)
     install(TARGETS ${APP_CREATES_PLUGINS}
             EXPORT ${APP_NAME}PluginTarget
             CONFIGURATIONS Debug Release
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/Plugins
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/Plugins
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/Plugins
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
             CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
             FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
             FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -302,15 +302,15 @@ if (UNIX AND NOT APPLE)
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
     endif ()
     # Resources directory (fonts, images, etc.)
-    if (EXISTS "${CMAKE_SOURCE_DIR}/resources")
+    if (APP_SUPPLIES_RESOURCES AND EXISTS "${CMAKE_SOURCE_DIR}/resources")
         install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
+        # If any desktop files are provided under resources/, install them to share/applications
+        file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
+        if (_hs_desktop_files)
+            install(FILES ${_hs_desktop_files}
+                    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
+        endif ()
+        unset(_hs_desktop_files)
     endif ()
-    # If any desktop files are provided under resources/, install them to share/applications
-    file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
-    if (_hs_desktop_files)
-        install(FILES ${_hs_desktop_files}
-                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-    endif ()
-    unset(_hs_desktop_files)
 endif ()
