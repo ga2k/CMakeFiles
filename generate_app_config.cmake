@@ -1,34 +1,65 @@
 # cmake/generate_app_config.cmake
 
-# All variables are passed in via -D flags
-# Expected variables:
-# - APP_YAML_TEMPLATE_PATH
-# - APP_YAML_PATH
-# - PLUGIN_PATH
-# - PLUGIN_PATH_TYPE
-# - PLUGIN_LIST (semicolon-separated)
-# - APP_NAME, APP_VENDOR, etc. (all template variables)
-
-# Convert the plugin list to YAML format
 set(PLUGIN_YAML_LIST "")
-if (PLUGIN_LIST)
+if (PLUGINS)
     # Convert semicolon-separated list to individual items
-    string(REPLACE "&" "\n" PLUGIN_ITEMS "${PLUGIN_LIST}")
-    string(REPLACE "\n" "\n  - " PLUGIN_YAML_LIST "${PLUGIN_ITEMS}")
-    set(PLUGIN_YAML_LIST "  - ${PLUGIN_YAML_LIST}\n")
+    string(REPLACE ";" "\n" PLUGIN_ITEMS "${PLUGINS}")
+    string(REPLACE "\n" "\n    - " PLUGIN_YAML_LIST "${PLUGIN_ITEMS}")
+    # Start list on a new line so YAML is valid under the key, with 4-space indent under the key
+    set(PLUGIN_YAML_LIST "\n    - ${PLUGIN_YAML_LIST}\n")
 else ()
-    set(PLUGIN_YAML_LIST "  # No plugins configured\n")
+    # Emit an explicit empty list to remain valid YAML on a single line
+    set(PLUGIN_YAML_LIST "[]")
 endif ()
 
-# Create the staging directory
-file(MAKE_DIRECTORY "${PLUGIN_PATH}")
+set(FEATURES_YAML_LIST "")
+if (APP_FEATURES)
+    # Convert semicolon-separated list to individual items
+    string(REPLACE ";" "\n" FEATURES_ITEMS "${APP_FEATURES}")
+    string(REPLACE "\n" "\n    - " FEATURES_YAML_LIST "${FEATURES_ITEMS}")
+    set(FEATURES_YAML_LIST "\n    - ${FEATURES_YAML_LIST}\n")
+else ()
+    set(FEATURES_YAML_LIST "[]")
+endif ()
 
-# Generate the app.yaml file
+set(HOFFSOFT_LIBS_YAML_LIST "")
+if (APP_HOFFSOFT_LIBS)
+    # Convert semicolon-separated list to individual items
+    string(REPLACE ";" "\n" HOFFSOFT_LIBS_ITEMS "${APP_HOFFSOFT_LIBS}")
+    string(REPLACE "\n" "\n    - " HOFFSOFT_LIBS_YAML_LIST "${HOFFSOFT_LIBS_ITEMS}")
+    set(HOFFSOFT_LIBS_YAML_LIST "\n    - ${HOFFSOFT_LIBS_YAML_LIST}\n")
+else ()
+    set(HOFFSOFT_LIBS_YAML_LIST "[]")
+endif ()
+
+set(CREATES_PLUGINS_YAML_LIST "")
+if (APP_CREATES_PLUGINS)
+    # Convert semicolon-separated list to individual items
+    string(REPLACE ";" "\n" CREATES_PLUGINS_ITEMS "${APP_CREATES_PLUGINS}")
+    string(REPLACE "\n" "\n    - " CREATES_PLUGINS_YAML_LIST "${CREATES_PLUGINS_ITEMS}")
+    set(CREATES_PLUGINS_YAML_LIST "\n    - ${CREATES_PLUGINS_YAML_LIST}\n")
+else ()
+    set(CREATES_PLUGINS_YAML_LIST "[]")
+endif ()
+
+# Generate the app.yaml body first (without checksum)
+set(_APP_YAML_BODY_PATH "${APP_YAML_PATH}.body")
 configure_file(
         "${APP_YAML_TEMPLATE_PATH}"
-        "${APP_YAML_PATH}"
+        "${_APP_YAML_BODY_PATH}"
         @ONLY
 )
 
-message(STATUS "Generated app configuration: ${APP_YAML_PATH}")
+# Compute SHA-256 checksum of the body
+file(SHA256 "${_APP_YAML_BODY_PATH}" APP_YAML_BODY_SHA256)
+
+# Write final app.yaml: first line is the checksum, then the original body
+file(WRITE "${APP_YAML_PATH}" "checksum_sha256: ${APP_YAML_BODY_SHA256}\n")
+file(READ "${_APP_YAML_BODY_PATH}" _APP_YAML_BODY_CONTENT)
+file(APPEND "${APP_YAML_PATH}" "${_APP_YAML_BODY_CONTENT}")
+
+# Clean up temporary body file
+file(REMOVE "${_APP_YAML_BODY_PATH}")
+
+message(STATUS "Generated app configuration with checksum: ${APP_YAML_PATH}")
 message(STATUS "Plugin path: ${PLUGIN_PATH} (${PLUGIN_PATH_TYPE})")

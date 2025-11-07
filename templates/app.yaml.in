@@ -1,0 +1,27 @@
+# App/DLL Configuration
+
+binary:
+  name:             "@APP_NAME@"
+  vendor_name:      "@APP_VENDOR@"
+  display_name:     "@APP_DESCRIPTION@"
+  version:          "@APP_VERSION@"
+  date:             "@APP_DATE@"
+
+documents:
+  data_version:     @APP_DATA_VERSION@
+  magic_bean:       @APP_MAGIC_BEAN@
+
+  file_types:       "@APP_FILE_TYPES@"
+  file_filters:     "@APP_FILE_FILTERS@"
+  file_extension:   "@APP_FILE_EXTN@"
+  doc_class:        "@APP_DOC_CLASS@"
+  view_class:       "@APP_VIEW_CLASS@"
+
+consumes:
+  plugins:          @PLUGIN_YAML_LIST@
+  features:         @FEATURES_YAML_LIST@
+  libs:             @HOFFSOFT_LIBS_YAML_LIST@
+
+supplies:
+  plugins:          @CREATES_PLUGINS_YAML_LIST@
+  resources:        @APP_SUPPLIES_RESOURCES@

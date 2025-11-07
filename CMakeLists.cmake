@@ -184,20 +184,24 @@ if (ALREADY_HAVE_CORE)
         endif ()
     endif ()
 endif ()
+#
+########################################################################################################################
+# Define the path to the app.yaml file
+#
+set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
+set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 
-## Set plugin paths based on build type
-#if (NOT THEY_ARE_INSTALLED)
-#    # Development build
-#    set(PLUGIN_PATH "${OUTPUT_DIR}/plugins")
-#    set(PLUGIN_PATH_TYPE "development")
-#else ()
-#    # Install build
-#    set(PLUGIN_PATH "${CMAKE_INSTALL_PREFIX}/lib64")
-#    set(PLUGIN_PATH_TYPE "installed")
-#endif ()
+# Generate app.yaml at configure time
+# Ensure output directory exists
+file(MAKE_DIRECTORY "${OUTPUT_DIR}/bin")
 
+# Execute the generator script now (configure-time). It uses the variables
+# defined above and in AppSpecific.cmake to render the template.
+include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
+#
 ########################################################################################################################
 # Appropriate include paths
+#
 if (TARGET ${APP_NAME})
     # Ensure no link directories leak into INTERFACE to satisfy CMake export validation
     set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
@@ -209,7 +213,7 @@ endif ()
 ########################################################################################################################
 include(ExternalProject)
 
-if(APP_SUPPLIES_RESOURCES)
+if (APP_SUPPLIES_RESOURCES)
 
     # Directory to place the checkout
     set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
@@ -238,7 +242,7 @@ if(APP_SUPPLIES_RESOURCES)
     add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo) # use ALL to fetch every build
     add_dependencies(${APP_NAME} fetch_resources)
     # Or omit ALL and run: cmake --build . --target fetch_resources
-endif()
+endif ()
 
 #
 # End of Configure !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -252,33 +256,33 @@ else ()
     set(_TARGET ${APP_NAME})
 endif ()
 
-install(TARGETS ${APP_NAME}
-        EXPORT ${APP_NAME}Target
-        CONFIGURATIONS Debug Release
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
-        CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-        FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+# @formatter:off
+install(TARGETS                  ${APP_NAME}
+        EXPORT                   ${APP_NAME}Target
+        CONFIGURATIONS           Debug Release
+        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
+        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR} # NAMELINK_SKIP
+        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 if (APP_CREATES_PLUGINS)
-
-    install(TARGETS ${APP_CREATES_PLUGINS}
-            EXPORT ${APP_NAME}PluginTarget
-            CONFIGURATIONS Debug Release
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
+    install(TARGETS              ${APP_CREATES_PLUGINS}
+            EXPORT               ${APP_NAME}PluginTarget
+            CONFIGURATIONS       Debug Release
+            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}${CURRENT_GFX_LIB_PATH}
             FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}${CURRENT_GFX_LIB_PATH}
-            FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            INCLUDES             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
-
 endif ()
+# @formatter:on
 
 # Manual copy because CMake won't
 install(DIRECTORY
@@ -311,6 +315,20 @@ write_basic_package_version_file(
         VERSION ${APP_VERSION}
         COMPATIBILITY SameMajorVersion
 )
+
+# our {appname}.yaml file
+if ("${APP_TYPE}" STREQUAL "Library")
+    install(FILES
+            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+else ()
+    install(FILES
+            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+endif ()
+set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 configure_package_config_file(
         cmake/templates/Config.cmake.in
