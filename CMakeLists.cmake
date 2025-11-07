@@ -320,12 +320,12 @@ write_basic_package_version_file(
 if ("${APP_TYPE}" STREQUAL "Library")
     install(FILES
             "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
-            DESTINATION ${CMAKE_INSTALL_BINDIR}
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else ()
     install(FILES
             "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
