@@ -186,9 +186,13 @@ if (ALREADY_HAVE_CORE)
 endif ()
 #
 ########################################################################################################################
-# Define the path to the app.yaml file
+# Define the path to the app.yaml file (match executable name, beside the exe)
 #
-set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml")
+if (${APP_TYPE} STREQUAL "Library")
+    set(APP_YAML_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml")
+else ()
+    set(APP_YAML_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME}.yaml")
+endif ()
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 
 # Generate app.yaml at configure time
