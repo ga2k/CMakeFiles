@@ -188,7 +188,7 @@ endif ()
 ########################################################################################################################
 # Define the path to the app.yaml file
 #
-set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
+set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 
 # Generate app.yaml at configure time
@@ -319,7 +319,7 @@ write_basic_package_version_file(
 # our {appname}.yaml file
 if ("${APP_TYPE}" STREQUAL "Library")
     install(FILES
-            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
+            "${OUTPUT_DIR}/bin/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else ()
