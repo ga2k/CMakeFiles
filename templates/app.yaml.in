@@ -1,6 +1,6 @@
 # App/DLL Configuration
 
-binary:
+app:
   name:             "@APP_NAME@"
   vendor_name:      "@APP_VENDOR@"
   display_name:     "@APP_DESCRIPTION@"
@@ -18,6 +18,7 @@ documents:
   view_class:       "@APP_VIEW_CLASS@"
 
 consumes:
+  plugin_path:      @PLUGIN_PATH@
   plugins:          @PLUGIN_YAML_LIST@
   features:         @FEATURES_YAML_LIST@
   libs:             @HOFFSOFT_LIBS_YAML_LIST@

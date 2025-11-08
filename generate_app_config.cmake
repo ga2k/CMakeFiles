@@ -1,5 +1,9 @@
 # cmake/generate_app_config.cmake
 
+if (HoffSoft_PLUGIN_DIR)
+    set(PLUGIN_PATH "${HoffSoft_PLUGIN_DIR}")
+endif ()
+
 set(PLUGIN_YAML_LIST "")
 if (PLUGINS)
     # Convert semicolon-separated list to individual items
