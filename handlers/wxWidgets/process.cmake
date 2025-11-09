@@ -51,8 +51,6 @@ function(wxWidgets_process incs libs defs)
         list(APPEND GLLibs TIFF::TIFF)
         find_package(EXPAT REQUIRED)
         list(APPEND GLLibs EXPAT::EXPAT)
-        #    find_package(PkgConfig REQUIRED)
-        #    list(APPEND GLLibs PkgConfig)
     endif ()
     # Find wxWidgets dependencies
 
@@ -63,25 +61,11 @@ function(wxWidgets_process incs libs defs)
     set(wxw_libraries ${_libraries})
     set(wxw_frameworks ${_frameworks})
 
-    if (${gui} STREQUAL "gtk" OR ${gui} STREQUAL "qt" OR ${gui} STREQUAL "darwin")
-        if ("${gui}" STREQUAL "gtk")
-            set(toolkit_used --toolkit=gtk3)
-            set(GTKREQUIRED "REQUIRED")
-            set(QTREQUIRED "")
-        elseif ("${gui}" STREQUAL "qt")
-            set(toolkit_used --toolkit=qt)
-            set(GTKREQUIRED "")
-            set(QTREQUIRED "REQUIRED")
-        else()
-            set(toolkit_used "")  # or handle darwin separately
-        endif()
+    set(toolkit_used "")
+    if(LINUX)
+        set(toolkit_used --toolkit=qt)
 
-        pkg_check_modules(GTK3 ${GTKREQUIRED} gtk+-3.0)
-        if (GTK3_LINK_LIBRARIES AND NOT "${GTK3_LINK_LIBRARIES}" STREQUAL "GTK3_LINK_LIBRARIES-NOTFOUND")
-            list(APPEND wxw_libraries ${GTK3_LINK_LIBRARIES})
-        endif ()
-
-        find_package(Qt6 COMPONENTS Core DBus Gui Widgets ${QTREQUIRED})
+        find_package(Qt6 COMPONENTS Core DBus Gui Widgets REQUIRED)
         if (QT_ALL_MODULES_VERSIONED_FOUND_VIA_FIND_PACKAGE AND NOT "${QT_ALL_MODULES_VERSIONED_FOUND_VIA_FIND_PACKAGE}" STREQUAL "QT_ALL_MODULES_VERSIONED_FOUND_VIA_FIND_PACKAGE-NOTFOUND")
             list(APPEND wxw_libraries ${QT_ALL_MODULES_VERSIONED_FOUND_VIA_FIND_PACKAGE})
             list(APPEND wxw_includePaths
@@ -91,7 +75,7 @@ function(wxWidgets_process incs libs defs)
                     ${Qt6DBus_INCLUDE_DIRS})
         endif ()
     endif ()
-    message("Configuring wxWidgets for ${gui}")
+
     set(wx_config "${CMAKE_INSTALL_PREFIX}/bin/wx-config")
     if (EXISTS "${wx_config}")
         execute_process(

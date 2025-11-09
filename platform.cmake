@@ -1,8 +1,4 @@
 
-set(PLATFORM_GFX_LIBS        "gtk;qt")
-set(CURRENT_GFX_LIB          ""      )
-set(ENV:CURRENT_GFX_LIB_PATH ""      )
-
 if (APPLE)
     message(STATUS "Building on an Apple machine.")
 
@@ -46,33 +42,8 @@ if (APPLE)
 
 elseif(LINUX)
 
-    list (APPEND PLATFORM_GFX_LIBS gtk qt)
-    list (APPEND extra_CompileOptions -fPIC)
-
-    if("${GUI}" STREQUAL "GUI_GTK")
-        set(CURRENT_GFX_LIB      "gtk")
-        set(CURRENT_GFX_LIB_PATH "/gtk")
-
-        list(APPEND extra_Definitions __WXGTK__)
-        list(APPEND extrawxLibraries wxwebview)
-        list(APPEND extra_IncludePaths "/usr/include/gtk-3.0")
-        list(APPEND extra_IncludePaths "/usr/include/pango-1.0")
-        list(APPEND extra_IncludePaths "/usr/include/harfbuzz")
-        list(APPEND extra_IncludePaths "/usr/include/gdk-pixbuf-2.0")
-        list(APPEND extra_IncludePaths "/usr/include/glib-2.0")
-        list(APPEND extra_IncludePaths "/usr/lib64/glib-2.0/include")
-
-    elseif ("${GUI}" STREQUAL "GUI_QT")
-        set(CURRENT_GFX_LIB      "qt")
-        set(CURRENT_GFX_LIB_PATH "/qt")
-
-        list(APPEND extra_Definitions __WXQT__)
-    else ()
-        message(WARNING "No GUI specified - none will be linked")
-    endif ()
-
-    set(wxBUILD_TOOLKIT ${CURRENT_GFX_LIB} CACHE STRING "" FORCE)
-
+    list(APPEND extra_Definitions __WXQT__)
+    set(wxBUILD_TOOLKIT qt CACHE STRING "" FORCE)
     list(APPEND extra_CompileOptions -fvisibility=default)
 
     set(DYN_FLAG dl)

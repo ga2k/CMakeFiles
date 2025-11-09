@@ -22,7 +22,6 @@ consumes:
   plugins:          @PLUGIN_YAML_LIST@
   features:         @FEATURES_YAML_LIST@
   libs:             @HOFFSOFT_LIBS_YAML_LIST@
-  gfx_library:      "@GFX_LIB@"
 
 supplies:
   plugins:          @CREATES_PLUGINS_YAML_LIST@
