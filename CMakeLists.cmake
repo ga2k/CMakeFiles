@@ -327,7 +327,7 @@ write_basic_package_version_file(
 # our {appname}.yaml file
 if ("${APP_TYPE}" STREQUAL "Library")
     install(FILES
-            "${OUTPUT_DIR}/bin/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
+            "${OUTPUT_DIR}/dll/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else ()
