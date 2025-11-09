@@ -24,7 +24,7 @@ cmake_minimum_required(VERSION 3.28)
 #
 ###############################################################################
 #
-# Redistribution and use in source and binary forms, with or without    unset(CMAKE_BINARY_DIR)
+# Redistribution and use in source and binary forms, with or without
 
 # modification, are permitted provided that the following conditions are met:
 #
@@ -150,7 +150,7 @@ function(check_environment PROJECT_ROOT)
     forceSet(BUILD_DIR "" "${CMAKE_BUILD_DIR}" FILEPATH)
 
     # Set the binary (output)  directory
-    forceSet(CMAKE_BINARY_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
+    forceSet(CMAKE_CURRENT_BINARY_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
     forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
 
     # Set the external module path

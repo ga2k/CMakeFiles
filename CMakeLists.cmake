@@ -51,7 +51,7 @@ elseif (STDCXX_BACKTRACE_LIB)
     list(APPEND extra_LibrariesList ${STDCXX_BACKTRACE_LIB})
 endif ()
 
-set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}")
+set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 if (WIDGETS IN_LIST APP_FEATURES)
     set(extra_wxCompilerOptions)
@@ -73,7 +73,7 @@ if (THEY_ARE_INSTALLED)
 endif ()
 
 list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-include("${CMAKE_SOURCE_DIR}/BaseDirs.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
 
 set(HS_CompileOptionsList "")
 set(HS_DefinesList "")
@@ -122,7 +122,7 @@ list(APPEND extra_Definitions "PLUGINS=${PI}")
 # Ensure our header overrides (e.g., patched magic_enum headers) take precedence in include search order.
 # Keep this path at the very front so it survives cache clears and external refetches.
 list(PREPEND extra_IncludePaths
-        ${CMAKE_SOURCE_DIR}/HoffSoft/overrides/magic_enum/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/HoffSoft/overrides/magic_enum/include
 )
 
 list(APPEND extra_IncludePaths
@@ -353,8 +353,8 @@ install(FILES
 include(GNUInstallDirs)
 
 # User guide
-if (EXISTS "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
-    install(FILES "${CMAKE_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
 endif ()
 
@@ -363,7 +363,7 @@ if (APP_SUPPLIES_RESOURCES AND EXISTS "${RES_DIR}")
     install(DIRECTORY "${RES_DIR}/"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
     # If any desktop files are provided under resources/, install them to share/applications
-    file(GLOB _hs_desktop_files "${CMAKE_SOURCE_DIR}/resources/*.desktop")
+    file(GLOB _hs_desktop_files "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.desktop")
     if (_hs_desktop_files)
         install(FILES ${_hs_desktop_files}
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")

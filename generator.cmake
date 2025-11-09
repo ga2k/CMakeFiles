@@ -10,7 +10,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     execute_process(
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
     )
@@ -71,7 +71,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR)
     execute_process(
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
     )
