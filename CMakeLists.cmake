@@ -221,35 +221,39 @@ endif ()
 ########################################################################################################################
 include(ExternalProject)
 
-if (APP_SUPPLIES_RESOURCES)
+if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
 
-    # Directory to place the checkout
     set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
-    ExternalProject_Add(${APP_NAME}ResourceRepo
-            GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
-            GIT_TAG master
-            GIT_SHALLOW TRUE
-            UPDATE_DISCONNECTED TRUE
+    if (APP_SUPPLIES_RESOURCES)
 
-            # We only want sources; skip configure/build/install
-            CONFIGURE_COMMAND ""
-            BUILD_COMMAND ""
-            INSTALL_COMMAND ""
-            TEST_COMMAND ""
+        set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
 
-            # Where to put the sources
-            SOURCE_DIR "${RES_DIR}"
+        ExternalProject_Add(${APP_NAME}ResourceRepo
+                GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
+                GIT_TAG master
+                GIT_SHALLOW TRUE
+                UPDATE_DISCONNECTED TRUE
 
-            # Create a marker so builds see a byproduct
-            BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
-            COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
-    )
+                # We only want sources; skip configure/build/install
+                CONFIGURE_COMMAND ""
+                BUILD_COMMAND ""
+                INSTALL_COMMAND ""
+                TEST_COMMAND ""
 
-    # Make a convenient target to trigger the download:
-    add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo) # use ALL to fetch every build
-    add_dependencies(${APP_NAME} fetch_resources)
-    # Or omit ALL and run: cmake --build . --target fetch_resources
+                # Where to put the sources
+                SOURCE_DIR "${RES_DIR}"
+
+                # Create a marker so builds see a byproduct
+                BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
+                COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
+        )
+
+        # Make a convenient target to trigger the download:
+        add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo) # use ALL to fetch every build
+        add_dependencies(${APP_NAME} fetch_resources)
+        # Or omit ALL and run: cmake --build . --target fetch_resources
+    endif ()
 endif ()
 
 #
@@ -359,7 +363,8 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
 endif ()
 
 # Resources directory (fonts, images, etc.)
-if ((APP_SUPPLIES_RESOURCES OR APP_INCLUDES_RESOURCES) AND EXISTS "${RES_DIR}")
+if (RES_DIR)
+#if ((APP_SUPPLIES_RESOURCES OR APP_INCLUDES_RESOURCES) AND EXISTS "${RES_DIR}")
     install(DIRECTORY "${RES_DIR}/"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
     # If any desktop files are provided under resources/, install them to share/applications
