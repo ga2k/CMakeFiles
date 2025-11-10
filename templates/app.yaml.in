@@ -26,3 +26,4 @@ consumes:
 supplies:
   plugins:          @CREATES_PLUGINS_YAML_LIST@
   resources:        "@APP_SUPPLIES_RESOURCES@"
+  own_resources:    "@APP_INCLUDES_RESOURCES@"

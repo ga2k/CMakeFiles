@@ -359,7 +359,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
 endif ()
 
 # Resources directory (fonts, images, etc.)
-if (APP_SUPPLIES_RESOURCES AND EXISTS "${RES_DIR}")
+if ((APP_SUPPLIES_RESOURCES OR APP_INCLUDES_RESOURCES) AND EXISTS "${RES_DIR}")
     install(DIRECTORY "${RES_DIR}/"
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
     # If any desktop files are provided under resources/, install them to share/applications
