@@ -4,6 +4,8 @@ string(TOLOWER ${APP_NAME} APP_NAME_LC)
 string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
 string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
 
+set(CMAKE_GENERATOR Ninja)
+
 execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} -v
         ERROR_VARIABLE compiler_version
