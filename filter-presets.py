@@ -48,15 +48,6 @@ def evaluate_expression(expression):
         this_platform = platform.system()  # Returns "Windows", "Linux", "Darwin", etc.
         return this_platform
 
-        # platform = return platform.system()  # Returns "Windows", "Linux", "Darwin", etc.
-        # try:
-        #     # Use uname to get the OS name (valid for Unix/Linux/BSD/macOS)
-        #     result = subprocess.run(["uname"], capture_output=True, text=True, check=True)
-        #     return result.stdout.strip()
-        # except (subprocess.CalledProcessError, FileNotFoundError):
-        #     # uname is not available on Windows, so default to 'Windows'
-        #     return 'Windows'
-
     # Check for environment variable patterns like $env{VAR_NAME}
     elif expression.startswith("$env{") and expression.endswith("}"):
         env_var = expression[5:-1]  # Extract the environment variable name
