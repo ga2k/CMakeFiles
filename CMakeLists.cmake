@@ -298,6 +298,26 @@ if (APP_CREATES_PLUGINS)
 endif ()
 # @formatter:on
 
+install(CODE "
+  message(STATUS \"Removing \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
+  file(GLOB junk \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
+  if(junk)
+    file(REMOVE \${junk})
+  endif()
+")
+
+
+
+## Inline CMake code
+#install(CODE "
+#  file(GLOB to_remove \"$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
+#  if(\"${to_remove}\" STREQUAL \"\")
+#    message(FATAL_ERROR \"no files in $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}\")
+#  endif()
+#  message(STATUS \"Removing ${to_remove} from $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}...\")
+#  file(REMOVE ${to_remove})
+#")
+
 # Manual copy because CMake won't
 install(DIRECTORY
         ${CMAKE_CURRENT_SOURCE_DIR}/include/overrides
