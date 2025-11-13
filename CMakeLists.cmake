@@ -299,14 +299,12 @@ endif ()
 # @formatter:on
 
 install(CODE "
-  message(STATUS \"Removing \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
-  file(GLOB junk \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
+  message(STATUS \"Removing \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/**/*.ixx\")
+  file(GLOB_RECURSE junk \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/*.ixx\")
   if(junk)
     file(REMOVE \${junk})
   endif()
 ")
-
-
 
 ## Inline CMake code
 #install(CODE "
