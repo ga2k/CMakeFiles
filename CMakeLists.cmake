@@ -258,6 +258,20 @@ if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
     endif ()
 endif ()
 
+include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
+
+if (APP_GENERATE_RECORDSETS)
+    generateRecordsets(
+            ${CMAKE_SOURCE_DIR}/src/generated/rs
+            ${APP_GENERATE_RECORDSETS})
+endif ()
+
+if (APP_GENERATE_UI_CLASSES)
+    generateUIClasses(
+            ${CMAKE_SOURCE_DIR}/src/generated/ui
+            ${APP_GENERATE_UI_CLASSES})
+endif ()
+
 #
 # End of Configure !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
