@@ -1659,7 +1659,7 @@ class CppGroupGenerator:
         if isinstance(handler_code, str):
             handler_code = handler_code.replace('\\n', '\n')
             lines = [line.strip() for line in handler_code.split('\n')]
-            handler_code = '\n            '.join(lines)
+            handler_code = '\n         '.join(lines)
 
         # Support a single event or a list of events
         events = event if isinstance(event, (list, tuple)) else [event]
@@ -1667,7 +1667,7 @@ class CppGroupGenerator:
 
         # Generate one hook per event; caller decides whether to prefix with '->' or '.'
         hooks = [
-            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {handler_code}\n         }})"
+            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {handler_code}}})"
             for wx_evt in wx_events
         ]
 
