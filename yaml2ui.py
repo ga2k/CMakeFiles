@@ -221,72 +221,111 @@ class CppGroupGenerator:
             'sizeWizardPage': 'wxDefaultSize'
         }
         self.event_mapping = {
-            # Text
-            'EVT_TEXT': 'wxEVT_TEXT',
-            'EVT_TEXT_ENTER': 'wxEVT_TEXT_ENTER',
-            'EVT_TEXT_MAXLEN': 'wxEVT_TEXT_MAXLEN',
-            'EVT_TEXT_URL': 'wxEVT_TEXT_URL',
 
-            # Buttons / toggles / check / radio
-            'EVT_BUTTON': 'wxEVT_BUTTON',
-            'EVT_COMMAND_BUTTON_CLICKED': 'wxEVT_COMMAND_BUTTON_CLICKED',  # legacy alias kept for compatibility
+            'EVT_BUTTON' : 'wxEVT_BUTTON',
             'EVT_TOGGLEBUTTON': 'wxEVT_TOGGLEBUTTON',
-            'EVT_COMMAND_TOGGLEBUTTON_CLICKED': 'wxEVT_TOGGLEBUTTON',  # normalize to modern name
-            'EVT_CHECKBOX': 'wxEVT_CHECKBOX',
-            'EVT_RADIOBUTTON': 'wxEVT_RADIOBUTTON',
-            'EVT_RADIOBOX': 'wxEVT_RADIOBOX',
 
-            # Choice / combo
-            'EVT_CHOICE': 'wxEVT_CHOICE',
-            'EVT_COMBOBOX': 'wxEVT_COMBOBOX',
-            'EVT_COMBOBOX_DROPDOWN': 'wxEVT_COMBOBOX_DROPDOWN',
-            'EVT_COMBOBOX_CLOSEUP': 'wxEVT_COMBOBOX_CLOSEUP',
+            'EVT_CHECKBOX' : 'wxEVT_CHECKBOX',
 
-            # Spin / slider / scrollbar
+            'EVT_CHOICE' : 'wxEVT_CHOICE',
+
+            'EVT_COMBOBOX_CLOSEUP' : 'wxEVT_COMBOBOX_CLOSEUP',
+            'EVT_COMBOBOX_DROPDOWN' : 'wxEVT_COMBOBOX_DROPDOWN',
+            'EVT_COMBOBOX' : 'wxEVT_COMBOBOX',
+
+            'EVT_DATE_CHANGED' : 'wxEVT_DATE_CHANGED',
+
+            'EVT_LISTBOX' : 'wxEVT_LISTBOX',
+            'EVT_LISTBOX_DCLICK' : 'wxEVT_LISTBOX_DCLICK',
+
+            'EVT_LIST_BEGIN_LABEL_EDIT' : 'wxEVT_LIST_BEGIN_LABEL_EDIT',
+            'EVT_LIST_BEGIN_RDRAG' : 'wxEVT_LIST_BEGIN_RDRAG',
+            'EVT_LIST_CACHE_HINT' : 'wxEVT_LIST_CACHE_HINT',
+            'EVT_LIST_COL_BEGIN_DRAG' : 'wxEVT_LIST_COL_BEGIN_DRAG',
+            'EVT_LIST_COL_CLICK' : 'wxEVT_LIST_COL_CLICK',
+            'EVT_LIST_COL_DRAGGING' : 'wxEVT_LIST_COL_DRAGGING',
+            'EVT_LIST_COL_END_DRAG' : 'wxEVT_LIST_COL_END_DRAG',
+            'EVT_LIST_COL_RIGHT_CLICK' : 'wxEVT_LIST_COL_RIGHT_CLICK',
+            'EVT_LIST_DELETE_ALL_ITEMS' : 'wxEVT_LIST_DELETE_ALL_ITEMS',
+            'EVT_LIST_DELETE_ITEM' : 'wxEVT_LIST_DELETE_ITEM',
+            'EVT_LIST_END_LABEL_EDIT' : 'wxEVT_LIST_END_LABEL_EDIT',
+            'EVT_LIST_INSERT_ITEM' : 'wxEVT_LIST_INSERT_ITEM',
+            'EVT_LIST_ITEM_ACTIVATED' : 'wxEVT_LIST_ITEM_ACTIVATED',
+            'EVT_LIST_ITEM_CHECKED' : 'wxEVT_LIST_ITEM_CHECKED',
+            'EVT_LIST_ITEM_DESELECTED' : 'wxEVT_LIST_ITEM_DESELECTED',
+            'EVT_LIST_ITEM_FOCUSED' : 'wxEVT_LIST_ITEM_FOCUSED',
+            'EVT_LIST_ITEM_MIDDLE_CLICK' : 'wxEVT_LIST_ITEM_MIDDLE_CLICK',
+            'EVT_LIST_ITEM_RIGHT_CLICK' : 'wxEVT_LIST_ITEM_RIGHT_CLICK',
+            'EVT_LIST_ITEM_SELECTED' : 'wxEVT_LIST_ITEM_SELECTED',
+            'EVT_LIST_ITEM_UNCHECKED' : 'wxEVT_LIST_ITEM_UNCHECKED',
+            'EVT_LIST_KEY_DOWN' : 'wxEVT_LIST_KEY_DOWN',
+
+            'EVT_RADIOBOX' : 'wxEVT_RADIOBOX',
+
+            'EVT_RADIOBUTTON' : 'wxEVT_RADIOBUTTON',
+
+            'EVT_SCROLL_TOP' : 'wxEVT_SCROLL_TOP',
+            'EVT_SCROLL_BOTTOM' : 'wxEVT_SCROLL_BOTTOM',
+            'EVT_SCROLL_LINEUP' : 'wxEVT_SCROLL_LINEUP',
+            'EVT_SCROLL_LINEDOWN' : 'wxEVT_SCROLL_LINEDOWN',
+            'EVT_SCROLL_PAGEUP' : 'wxEVT_SCROLL_PAGEUP',
+            'EVT_SCROLL_PAGEDOWN' : 'wxEVT_SCROLL_PAGEDOWN',
+            'EVT_SCROLL_THUMBTRACK' : 'wxEVT_SCROLL_THUMBTRACK',
+            'EVT_SCROLL_THUMBRELEASE' : 'wxEVT_SCROLL_THUMBRELEASE',
+            'EVT_SCROLL_CHANGED' : 'wxEVT_SCROLL_CHANGED',
+
             'EVT_SLIDER': 'wxEVT_SLIDER',
+
+            'EVT_SPIN' : 'wxEVT_SPIN',
             'EVT_SPINCTRL': 'wxEVT_SPINCTRL',
             'EVT_SPINCTRLDOUBLE': 'wxEVT_SPINCTRLDOUBLE',
-            'EVT_SCROLL_TOP': 'wxEVT_SCROLL_TOP',
-            'EVT_SCROLL_BOTTOM': 'wxEVT_SCROLL_BOTTOM',
-            'EVT_SCROLL_LINEUP': 'wxEVT_SCROLL_LINEUP',
-            'EVT_SCROLL_LINEDOWN': 'wxEVT_SCROLL_LINEDOWN',
-            'EVT_SCROLL_PAGEUP': 'wxEVT_SCROLL_PAGEUP',
-            'EVT_SCROLL_PAGEDOWN': 'wxEVT_SCROLL_PAGEDOWN',
-            'EVT_SCROLL_THUMBTRACK': 'wxEVT_SCROLL_THUMBTRACK',
-            'EVT_SCROLL_THUMBRELEASE': 'wxEVT_SCROLL_THUMBRELEASE',
-            'EVT_SCROLL_CHANGED': 'wxEVT_SCROLL_CHANGED',
 
-            # Date
-            'EVT_DATE_CHANGED': 'wxEVT_DATE_CHANGED',
+            'EVT_TEXT' : 'wxEVT_TEXT',
+            'EVT_TEXT_ENTER' : 'wxEVT_TEXT_ENTER',
+            'EVT_TEXT_URL' : 'wxEVT_TEXT_URL',
+            'EVT_TEXT_MAXLEN' : 'wxEVT_TEXT_MAXLEN',
 
-            # List / tree basics
-            'EVT_LISTBOX': 'wxEVT_LISTBOX',
-            'EVT_LISTBOX_DCLICK': 'wxEVT_LISTBOX_DCLICK',
-            'EVT_TREE_SEL_CHANGED': 'wxEVT_TREE_SEL_CHANGED',
-            'EVT_TREE_ITEM_ACTIVATED': 'wxEVT_TREE_ITEM_ACTIVATED',
+            'EVT_TREE_BEGIN_DRAG' : 'wxEVT_TREE_BEGIN_DRAG',
+            'EVT_TREE_BEGIN_LABEL_EDIT' : 'wxEVT_TREE_BEGIN_LABEL_EDIT',
+            'EVT_TREE_BEGIN_RDRAG' : 'wxEVT_TREE_BEGIN_RDRAG',
+            'EVT_TREE_DELETE_ITEM' : 'wxEVT_TREE_DELETE_ITEM',
+            'EVT_TREE_END_DRAG' : 'wxEVT_TREE_END_DRAG',
+            'EVT_TREE_END_LABEL_EDIT' : 'wxEVT_TREE_END_LABEL_EDIT',
+            'EVT_TREE_GET_INFO' : 'wxEVT_TREE_GET_INFO',
+            'EVT_TREE_ITEM_GETTOOLTIP' : 'wxEVT_TREE_ITEM_GETTOOLTIP',
+            'EVT_TREE_ITEM_ACTIVATED' : 'wxEVT_TREE_ITEM_ACTIVATED',
+            'EVT_TREE_ITEM_COLLAPSED' : 'wxEVT_TREE_ITEM_COLLAPSED',
+            'EVT_TREE_ITEM_COLLAPSING' : 'wxEVT_TREE_ITEM_COLLAPSING',
+            'EVT_TREE_ITEM_EXPANDED' : 'wxEVT_TREE_ITEM_EXPANDED',
+            'EVT_TREE_ITEM_EXPANDING' : 'wxEVT_TREE_ITEM_EXPANDING',
+            'EVT_TREE_ITEM_MENU' : 'wxEVT_TREE_ITEM_MENU',
+            'EVT_TREE_ITEM_MIDDLE_CLICK' : 'wxEVT_TREE_ITEM_MIDDLE_CLICK',
+            'EVT_TREE_ITEM_RIGHT_CLICK' : 'wxEVT_TREE_ITEM_RIGHT_CLICK',
+            'EVT_TREE_KEY_DOWN' : 'wxEVT_TREE_KEY_DOWN',
+            'EVT_TREE_SEL_CHANGED' : 'wxEVT_TREE_SEL_CHANGED',
+            'EVT_TREE_SEL_CHANGING' : 'wxEVT_TREE_SEL_CHANGING',
+            'EVT_TREE_SET_INFO' : 'wxEVT_TREE_SET_INFO',
+            'EVT_TREE_STATE_IMAGE_CLICK' : 'wxEVT_TREE_STATE_IMAGE_CLICK',
 
-            # Menu / toolbar
+            'EVT_SET_FOCUS' : 'wxEVT_SET_FOCUS',
+            'EVT_KILL_FOCUS' : 'wxEVT_KILL_FOCUS',
+
             'EVT_MENU': 'wxEVT_MENU',
             'EVT_UPDATE_UI': 'wxEVT_UPDATE_UI',
             'EVT_TOOL': 'wxEVT_TOOL',
             'EVT_TOOL_RCLICKED': 'wxEVT_TOOL_RCLICKED',
 
-            # Window/general
             'EVT_SIZE': 'wxEVT_SIZE',
             'EVT_MOVE': 'wxEVT_MOVE',
             'EVT_PAINT': 'wxEVT_PAINT',
             'EVT_IDLE': 'wxEVT_IDLE',
             'EVT_TIMER': 'wxEVT_TIMER',
-            'EVT_SET_FOCUS': 'wxEVT_SET_FOCUS',
-            'EVT_KILL_FOCUS': 'wxEVT_KILL_FOCUS',
 
-            # Keyboard
             'EVT_KEY_DOWN': 'wxEVT_KEY_DOWN',
             'EVT_KEY_UP': 'wxEVT_KEY_UP',
             'EVT_CHAR': 'wxEVT_CHAR',
             'EVT_CHAR_HOOK': 'wxEVT_CHAR_HOOK',
 
-            # Mouse
             'EVT_LEFT_DOWN': 'wxEVT_LEFT_DOWN',
             'EVT_LEFT_UP': 'wxEVT_LEFT_UP',
             'EVT_LEFT_DCLICK': 'wxEVT_LEFT_DCLICK',
