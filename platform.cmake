@@ -19,7 +19,7 @@ if (APPLE)
     if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         # If no deployment target has been set default to the minimum supported
         # OS version (this has to be set before the first project() call)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "macOS Deployment Target")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0 CACHE STRING "macOS Deployment Target")
     endif ()
     list(APPEND extra_Definitions BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
     list(APPEND extra_CompileOptions "-fPIC")
@@ -34,11 +34,6 @@ if (APPLE)
     set(gui "darwin")
 
     list(APPEND extra_Definitions __WXOSX_COCOA__)
-
-    #    if (${CMAKE_OSX_ARCHITECTURES} STREQUAL "x86_64")
-    #        list(APPEND extra_CompileOptions "-stdlib=libc++")
-    #        list(APPEND extra_LinkOptions "-stdlib=libc++")
-    #    endif ()
 
 elseif(LINUX)
 

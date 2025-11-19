@@ -1,7 +1,5 @@
 include_guard(GLOBAL)
 
-# Global, once-per-build framework initialization shared by all subprojects.
-
 # Derivations of common metadata (safe globally)
 string(TOUPPER ${APP_NAME} APP_NAME_UC)
 string(TOLOWER ${APP_NAME} APP_NAME_LC)
@@ -20,7 +18,6 @@ set(CMAKE_WARN_UNINITIALIZED ON)
 set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE CACHE STRING "Log Level" FORCE)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
