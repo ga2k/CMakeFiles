@@ -12,9 +12,9 @@ function(OpenSSL_process incs libs defs)
             set(OpenSSL_ROOT_DIR "${HOMEBREW_OPENSSL_PREFIX}" CACHE PATH "Homebrew OpenSSL prefix")
         endif()
     endif()
-    find_package(OpenSSL REQUIRED)
+    find_package(OpenSSL CONFIG REQUIRED)
 
-    list(APPEND _LibrariesList OpenSSL::SSL OpenSSL:Crypto)
+    list(APPEND _LibrariesList OpenSSL::SSL OpenSSL::Crypto)
     set (_LibrariesList ${_LibrariesList} PARENT_SCOPE)
     # @formatter:on
 endfunction()

@@ -50,16 +50,23 @@ list(APPEND extra_LibraryPaths
         "${OUTPUT_DIR}/bin"
         "${OUTPUT_DIR}/lib"
         "${OUTPUT_DIR}/dll"
-        "${OUTPUT_DIR}/bin/plugins"
-        "${OUTPUT_DIR}/lib/plugins"
-        "${OUTPUT_DIR}/dll/plugins"
+#        "${OUTPUT_DIR}/bin/plugins"
+#        "${OUTPUT_DIR}/lib/plugins"
+#        "${OUTPUT_DIR}/dll/plugins"
 )
 
 list(APPEND extra_LibraryPaths
-        "${CMAKE_INSTALL_PREFIX}"
-        "${CMAKE_INSTALL_PREFIX}/lib64"
-        "${CMAKE_INSTALL_PREFIX}/lib"
-)
+        "${CMAKE_INSTALL_PREFIX}")
+
+if (EXISTS "${CMAKE_INSTALL_PREFIX}/lib64")
+    list(APPEND extra_LibraryPaths
+        "${CMAKE_INSTALL_PREFIX}/lib64")
+endif ()
+
+if (EXISTS "${CMAKE_INSTALL_PREFIX}/lib")
+    list(APPEND extra_LibraryPaths
+            "${CMAKE_INSTALL_PREFIX}/lib")
+endif ()
 
 # Platform/environment-driven defines
 if (THEY_ARE_INSTALLED)
@@ -193,32 +200,32 @@ if ("${APP_NAME}" STREQUAL "Core")
 else ()
     set(_TARGET ${APP_NAME})
 endif ()
-
-install(TARGETS                  ${APP_NAME}
-        EXPORT                   ${APP_NAME}Target
-        CONFIGURATIONS           Debug Release
-        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
-        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
-        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
-        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-if (APP_CREATES_PLUGINS)
-    install(TARGETS              ${APP_CREATES_PLUGINS}
-            EXPORT               ${APP_NAME}PluginTarget
-            CONFIGURATIONS       Debug Release
-            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
-            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/plugins
-            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
-            CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
-            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
-            FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-            INCLUDES             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-endif ()
+#
+#install(TARGETS                  ${APP_NAME}
+#        EXPORT                   ${APP_NAME}Target
+#        CONFIGURATIONS           Debug Release
+#        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
+#        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
+#        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
+#        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#)
+#
+#if (APP_CREATES_PLUGINS)
+#    install(TARGETS              ${APP_CREATES_PLUGINS}
+#            EXPORT               ${APP_NAME}PluginTarget
+#            CONFIGURATIONS       Debug Release
+#            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
+#            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/plugins
+#            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
+#            CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
+#            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
+#            FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#            INCLUDES             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#    )
+#endif ()
 
 install(CODE "
   message(STATUS \"Removing $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/**/*.ixx\")
@@ -244,12 +251,12 @@ install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
         FILES_MATCHING PATTERN *.pcm)
 
-install(EXPORT ${APP_NAME}Target
-        FILE ${_TARGET}Target.cmake
-        NAMESPACE ${APP_VENDOR}::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-        CXX_MODULES_DIRECTORY "cxx/${APP_NAME}"
-)
+#install(EXPORT ${APP_NAME}Target
+#        FILE ${_TARGET}Target.cmake
+#        NAMESPACE ${APP_VENDOR}::
+#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+#        CXX_MODULES_DIRECTORY "cxx/${APP_NAME}"
+#)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

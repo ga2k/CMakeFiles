@@ -285,15 +285,15 @@ function(createStandardPackageData)
 #
 #    addPackageData(SYSTEM CATEGORY "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
 #            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-#            COMPONENT "cpptrace" ARG "REQUIRED")
+#            COMPONENT "cpptrace" ARG REQUIRED)
 
     addPackageData(SYSTEM CATEGORY "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
-            ARG "REQUIRED")
+            ARG REQUIRED)
 
     addPackageData(SYSTEM CATEGORY "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
-            ARG "REQUIRED")
+            ARG REQUIRED)
 
     addPackageData(SYSTEM CATEGORY "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
@@ -302,7 +302,8 @@ function(createStandardPackageData)
 
     addPackageData(SYSTEM CATEGORY "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
-            COMPONENT "yaml-cpp" ARG "REQUIRED")
+            COMPONENT "yaml-cpp"
+            ARG REQUIRED)
 
     ##
     ####
@@ -316,41 +317,39 @@ function(createStandardPackageData)
 
     addPackageData(CATEGORY "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
-            COMPONENT system date_time regex url algorithm ARGS NAMES Boost)
+            COMPONENT system date_time regex url algorithm
+            ARGS NAMES Boost)
 
     addPackageData(CATEGORY "BZIP" PKGNAME "bz2" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://gitlab.com/bzip2/bzip2" GIT_TAG "master"
-            ARG "REQUIRED")
+            ARG REQUIRED)
 
     addPackageData(CATEGORY "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
-            ARG "REQUIRED")
+            ARG REQUIRED)
 
     #    addPackageData(CATEGORY "SQLITE3" PKGNAME "sqlite3"
     #            URL "https://www.sqlite.org/2025/sqlite-amalgamation-3500200.zip"
     #            INCDIR "[BUILD]/sqlite3/include"
-    #            COMPONENT "sqlite3" ARG "REQUIRED")
+    #            COMPONENT "sqlite3" ARG REQUIRED)
 
     addPackageData(CATEGORY "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARG "REQUIRED")
+            ARG REQUIRED)
 
-    addPackageData(CATEGORY "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
-            ARG "REQUIRED")
-
-    addPackageData(CATEGORY "SSL" PKGNAME "ManualSSL" METHOD "FETCH_CONTENTS"
-            SRCDIR "[SRC]/OpenSSL/src"
-            BINDIR "[BUILD]/OpenSSL/bin"
-            ARG "REQUIRED")
+    addPackageData(CATEGORY "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
+#            GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
+#            ARG REQUIRED)
 
     addPackageData(CATEGORY "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/madler/zlib" GIT_TAG "master"
-            COMPONENT "ZLIB" "ARG" "REQUIRED")
+            COMPONENT "ZLIB" 
+            ARG REQUIRED)
 
     addPackageData(CATEGORY "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "wxyz" GIT_TAG "master"
-            COMPONENT tomlplusplus ARG "REQUIRED")
+            COMPONENT tomlplusplus
+            ARG REQUIRED)
 
     addPackageData(CATEGORY "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
 
