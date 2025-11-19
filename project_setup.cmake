@@ -33,7 +33,7 @@ endif ()
 
 # Base header dirs and include per-project BaseDirs.cmake
 list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-include("${PROJECT_SOURCE_DIR}/BaseDirs.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
 
 # Reset HS_* lists for this project to avoid cross-project leakage
 set(HS_CompileOptionsList "")
@@ -153,7 +153,7 @@ endif ()
 include(ExternalProject)
 if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
     set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-    if (APP_SUPPLIES_RESOURCES)
+    if (APP_SUPPLIES_RESOURCES AND NOT APPLE)
         ExternalProject_Add(${APP_NAME}ResourceRepo
                 GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
                 GIT_TAG master

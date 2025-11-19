@@ -1,7 +1,6 @@
 function(OpenSSL_fix target tag sourceDir)
 # code to create a custom target to have local patches applied before build.
 # change FALSE below to TRUE to enable this feature. That's all you need here.
-message(FATAL_ERROR "OpenSSL_fix")
 
     if (NOT "${tag}" STREQUAL "DISABLED")
         return()

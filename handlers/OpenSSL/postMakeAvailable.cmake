@@ -1,5 +1,4 @@
 function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType components)
-    message(FATAL_ERROR "OpenSSL_postMakeAvailable")
 
     set(definesList         ${_DefinesList})
     set(includePathsList    ${_IncludePathsList})
@@ -28,13 +27,13 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
             LOG_INSTALL ON
     )
 
-    ExternalProject_Add_Step(
-            OpenSSLProj
-            update
-            COMMAND git checkout openssl-3.3.2
-            WORKING_DIRECTORY ${OUTPUT_DIR}/OpenSSL
-            LOG_FILE ${OUTPUT_DIR}/OpenSSLProj-update.log
-    )
+#    ExternalProject_Add_Step(
+#            OpenSSLProj
+#            update
+#            COMMAND git checkout openssl-3.3.2
+#            WORKING_DIRECTORY ${OUTPUT_DIR}/OpenSSL
+#            LOG_FILE ${OUTPUT_DIR}/OpenSSLProj-update.log
+#    )
 
     add_library(OpenSSLShared SHARED IMPORTED)
     set_target_properties(OpenSSLShared PROPERTIES
@@ -46,7 +45,7 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
 
     add_dependencies(OpenSSLShared OpenSSLProj)
 
-    add_target(OpenSSLShared)
+#    addTarget(OpenSSLShared ON "")
 
     list(APPEND librariesList OpenSSLShared)
     list(APPEND dependenciesList OpenSSLShared)
