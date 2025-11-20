@@ -58,14 +58,9 @@ list(APPEND extra_LibraryPaths
 list(APPEND extra_LibraryPaths
         "${CMAKE_INSTALL_PREFIX}")
 
-if (EXISTS "${CMAKE_INSTALL_PREFIX}/lib64")
+if (EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
     list(APPEND extra_LibraryPaths
-        "${CMAKE_INSTALL_PREFIX}/lib64")
-endif ()
-
-if (EXISTS "${CMAKE_INSTALL_PREFIX}/lib")
-    list(APPEND extra_LibraryPaths
-            "${CMAKE_INSTALL_PREFIX}/lib")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 # Platform/environment-driven defines

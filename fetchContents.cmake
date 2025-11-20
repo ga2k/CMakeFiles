@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
 include(FetchContent)
-
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 
 set(SystemCategoryData)

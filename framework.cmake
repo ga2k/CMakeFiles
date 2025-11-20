@@ -26,10 +26,13 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 # Shared CMake module paths (stage + repo cmake directory)
-set(staged "$ENV{HOME}/dev/stage/usr/local/lib64/cmake")
+set(stemp "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+set(staged "$ENV{HOME}/dev/stage${stemp}")
+set(sbuilt "${OUTPUT_DIR}/bin")
 list(APPEND CMAKE_MODULE_PATH
-        ${CMAKE_SOURCE_DIR}/cmake
+        ${stemp}
         ${staged}
+        ${sbuilt}
 )
 
 # Global accumulators provided by framework users

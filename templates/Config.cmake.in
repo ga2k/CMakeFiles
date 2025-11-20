@@ -11,9 +11,11 @@ set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
 set(_hs_common_lib "@APP_VENDOR_LC@_@APP_NAME_LC@")
 
 set(_candidates
+  "${_hs_prefix}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${_hs_common_lib}${CMAKE_SHARED_LIBRARY_SUFFIX}"
   "${_hs_prefix}/lib/lib${_hs_common_lib}.so"
   "${_hs_prefix}/lib64/lib${_hs_common_lib}.so"
   "${_hs_prefix}/lib/lib${_hs_common_lib}.dynlib"
+  "${_hs_prefix}/lib/${_hs_common_lib}.dynlib"
   "${_hs_prefix}/bin/${_hs_common_lib}.dll"
   "${_hs_prefix}/lib/${_hs_common_lib}.dll"
 )
