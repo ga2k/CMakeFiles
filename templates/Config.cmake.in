@@ -8,16 +8,15 @@ include(CMakeFindDependencyMacro)
 
 # Resolve installed library path (cover common layouts)
 set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
-set(_hs_common_lib "@APP_VENDOR_LC@_@APP_NAME_LC@")
 
 set(_candidates
-  "${_hs_prefix}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${_hs_common_lib}${CMAKE_SHARED_LIBRARY_SUFFIX}"
-  "${_hs_prefix}/lib/lib${_hs_common_lib}.so"
-  "${_hs_prefix}/lib64/lib${_hs_common_lib}.so"
-  "${_hs_prefix}/lib/lib${_hs_common_lib}.dynlib"
-  "${_hs_prefix}/lib/${_hs_common_lib}.dynlib"
-  "${_hs_prefix}/bin/${_hs_common_lib}.dll"
-  "${_hs_prefix}/lib/${_hs_common_lib}.dll"
+  "@PACKAGE_PREFIX_DIR@/${CMAKE_INSTALL_LIBDIR}/${CMAKE_SHARED_LIBRARY_PREFIX}@APP_VENDOR_LC@_@APP_NAME_LC@${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  "@PACKAGE_PREFIX_DIR@/lib/lib@APP_VENDOR_LC@_@APP_NAME_LC@.so"
+  "@PACKAGE_PREFIX_DIR@/lib64/lib@APP_VENDOR_LC@_@APP_NAME_LC@.so"
+  "@PACKAGE_PREFIX_DIR@/lib/lib@APP_VENDOR_LC@_@APP_NAME_LC@.dynlib"
+  "@PACKAGE_PREFIX_DIR@/lib/@APP_VENDOR_LC@_@APP_NAME_LC@.dynlib"
+  "@PACKAGE_PREFIX_DIR@/bin/@APP_VENDOR_LC@_@APP_NAME_LC@.dll"
+  "@PACKAGE_PREFIX_DIR@/lib/@APP_VENDOR_LC@_@APP_NAME_LC@.dll"
 )
 
 unset(_hs_lib)
@@ -30,7 +29,7 @@ foreach(_c ${_candidates})
 endforeach()
 
 if(NOT _hs_lib)
-  message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${_hs_prefix}")
+  message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under @PACKAGE_PREFIX_DIR@")
 endif()
 
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
@@ -51,27 +50,27 @@ include("${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_NAME@/cxx-modules-@APP_NAME@Target.c
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${_hs_prefix}/lib64/cmake/bmi/@APP_NAME@"
+    "-fprebuilt-module-path=@PACKAGE_PREFIX_DIR@/lib64/cmake/bmi/@APP_NAME@"
   )
 endif()
 
 # Convenience variables
-set(@_TARGET@_INCLUDE_DIR  "${_hs_prefix}/include")
-set(@_TARGET@_INCLUDE_DIR  "${_hs_prefix}/include" PARENT_SCOPE)
-set(@_TARGET@_INCLUDE_DIRS "${_hs_prefix}/include")
-set(@_TARGET@_INCLUDE_DIRS "${_hs_prefix}/include" PARENT_SCOPE)
+set(@_TARGET@_INCLUDE_DIR  "@PACKAGE_PREFIX_DIR@/include")
+set(@_TARGET@_INCLUDE_DIR  "@PACKAGE_PREFIX_DIR@/include" PARENT_SCOPE)
+set(@_TARGET@_INCLUDE_DIRS "@PACKAGE_PREFIX_DIR@/include")
+set(@_TARGET@_INCLUDE_DIRS "@PACKAGE_PREFIX_DIR@/include" PARENT_SCOPE)
 set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
 set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
 
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
-  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/plugins")
-  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/plugins" PARENT_SCOPE)
+  set(@APP_VENDOR@_PLUGIN_DIR "@PACKAGE_PREFIX_DIR@/lib64/@APP_VENDOR@/plugins")
+  set(@APP_VENDOR@_PLUGIN_DIR "@PACKAGE_PREFIX_DIR@/lib64/@APP_VENDOR@/plugins" PARENT_SCOPE)
 endif()
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
-  set(@_TARGET@_RESOURCE_DIR "${_hs_prefix}/share/@APP_VENDOR@/@APP_NAME@/resources")
-  set(@_TARGET@_RESOURCE_DIR "${_hs_prefix}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
+  set(@_TARGET@_RESOURCE_DIR "@PACKAGE_PREFIX_DIR@/share/@APP_VENDOR@/@APP_NAME@/resources")
+  set(@_TARGET@_RESOURCE_DIR "@PACKAGE_PREFIX_DIR@/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
 endif()
 if (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
-set(@APP_NAME@_RESOURCE_DIR "${_hs_prefix}/share/@APP_VENDOR@/@APP_NAME@/resources")
-set(@APP_NAME@_RESOURCE_DIR "${_hs_prefix}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
+set(@APP_NAME@_RESOURCE_DIR "@PACKAGE_PREFIX_DIR@/share/@APP_VENDOR@/@APP_NAME@/resources")
+set(@APP_NAME@_RESOURCE_DIR "@PACKAGE_PREFIX_DIR@/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
 endif()
