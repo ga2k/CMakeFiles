@@ -195,32 +195,32 @@ if ("${APP_NAME}" STREQUAL "Core")
 else ()
     set(_TARGET ${APP_NAME})
 endif ()
-#
-#install(TARGETS                  ${APP_NAME}
-#        EXPORT                   ${APP_NAME}Target
-#        CONFIGURATIONS           Debug Release
-#        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
-#        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
-#        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
-#        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#)
-#
-#if (APP_CREATES_PLUGINS)
-#    install(TARGETS              ${APP_CREATES_PLUGINS}
-#            EXPORT               ${APP_NAME}PluginTarget
-#            CONFIGURATIONS       Debug Release
-#            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
-#            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/plugins
-#            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
-#            CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
-#            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
-#            FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#            INCLUDES             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#    )
-#endif ()
+
+install(TARGETS                  ${APP_NAME}
+        EXPORT                   ${APP_NAME}Target
+        CONFIGURATIONS           Debug Release
+        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
+        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
+        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+if (APP_CREATES_PLUGINS)
+    install(TARGETS              ${APP_CREATES_PLUGINS}
+            EXPORT               ${APP_NAME}PluginTarget
+            CONFIGURATIONS       Debug Release
+            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
+            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/plugins
+            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
+            CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
+            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
+            FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            INCLUDES             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif ()
 
 install(CODE "
   message(STATUS \"Removing $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}/**/*.ixx\")
@@ -236,10 +236,14 @@ install(DIRECTORY
         ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR})
 
 # Static libraries (copy built libs)
-install(DIRECTORY
-        ${OUTPUT_DIR}/lib
-        DESTINATION
-        ${CMAKE_INSTALL_PREFIX})
+install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
+## Dynamic libraries (copy built dlls)
+#install(DIRECTORY ${OUTPUT_DIR}/dll/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
+## Executables (copy built exes)
+#install(DIRECTORY ${OUTPUT_DIR}/bin/ DESTINATION ${CMAKE_INSTALL_BINDIR})
+# Headers
+#install(FILES FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+#install(FILES INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # PCM/PCM-like files
 install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/

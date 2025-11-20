@@ -171,12 +171,6 @@ function(addLibrary)
     set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
     set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
-    if (arg_MULTI_LIBS AND CURRENT_GFX_LIB)
-        set (MULTI_LIB_DECLARATOR "_${CURRENT_GFX_LIB}")
-    else ()
-        set (MULTI_LIB_DECLARATOR)
-    endif ()
-
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY    "${LIB_ARCHIVE_DIR}"
