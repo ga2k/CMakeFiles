@@ -47,12 +47,12 @@ endif()
 #  CXX_STANDARD 23
 #)
 
-include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${_hs_prefix}/lib64/cmake/bmi/@APP_NAME@"
+    "-fprebuilt-module-path=${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@"
   )
 endif()
 
@@ -65,8 +65,8 @@ set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
 set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
 
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
-  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/plugins")
-  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/plugins" PARENT_SCOPE)
+  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/@APP_NAME@/plugins")
+  set(@APP_VENDOR@_PLUGIN_DIR "${_hs_prefix}/lib64/@APP_VENDOR@/@APP_NAME@/plugins" PARENT_SCOPE)
 endif()
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
   set(@_TARGET@_RESOURCE_DIR "${_hs_prefix}/share/@APP_VENDOR@/@APP_NAME@/resources")

@@ -247,10 +247,10 @@ install(TARGETS                  ${APP_NAME} yaml-cpp eventpp magic_enum
 )
 
 install(EXPORT ${_TARGET}Target
-        FILE ${_TARGET}Target.cmake
+        FILE ${APP_NAME}Target.cmake
         NAMESPACE ${APP_VENDOR}::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
 )
 
 if (APP_CREATES_PLUGINS)
