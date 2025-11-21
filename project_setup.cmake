@@ -93,10 +93,10 @@ list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
 # fetchContents per project (after resolving hints using CMAKE_MODULE_PATH)
-string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
 if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     set(FIND_PACKAGE_ARGS)
     if (FIND_PACKAGE_HINTS)
+        string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
         foreach (hint IN LISTS FIND_PACKAGE_HINTS)
             string(REPLACE "{}" "${escapedModulePath}" hint "${hint}")
             list(APPEND FIND_PACKAGE_ARGS ${hint})
@@ -104,25 +104,35 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     endif ()
     if (FIND_PACKAGE_PATHS)
         # Define the paths to the two configuration files
-        set(INSTALLED_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}Config.cmake")
-        set(STAGED_PATH    "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/${_TARGET}Config.cmake")
-
-        # Check which one is newer
-        # Logic: Returns true if file1 is newer than file2, or if file2 does not exist.
-        if("${STAGED_PATH}" IS_NEWER_THAN "${INSTALLED_PATH}")
-            message(STATUS "Found newer staged config. Using: ${STAGED_PATH}")
-
-            # Point CMake to the directory containing the staged config
-            get_filename_component(config_DIR "${STAGED_PATH}" DIRECTORY)
-        else()
-            message(STATUS "Using installed config (staged is older or missing).")
-
-            # Point CMake to the directory containing the installed config
-            get_filename_component(config_DIR "${INSTALLED_PATH}" DIRECTORY)
-        endif()
+        set(INSTALLED_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        set(STAGED_PATH    "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
-            string(REPLACE "{}" "${config_DIR}" hint "${hint}")
+            string(FIND "${hint}" "{" openBrace)
+            string(FIND "${hint}" "}" closeBrace)
+            if (${openBrace} LESS 0 OR ${closeBrace} LESS 0)
+                message(FATAL_ERROR "FIND_PACKAGE_PATHS in AppSpecific.cmake needs '{packagename}'")
+            endif ()
+
+            math(EXPR firstCharOfPkg "${openBrace} + 1")
+            math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
+            string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
+
+            # Check which one is newer
+            # Logic: Returns true if file1 is newer than file2, or if file2 does not exist.
+            if("${STAGED_PATH}/${pkgName}Config.cmake" IS_NEWER_THAN "${INSTALLED_PATH}/${pkgName}Config.cmake")
+                message(STATUS "Found newer staged config. Using: ${STAGED_PATH}/${pkgName}Config.cmake")
+
+                # Point CMake to the directory containing the staged config
+                set (config_DIR "${STAGED_PATH}")
+            else()
+                message(STATUS "Using installed config (staged is older or missing).")
+
+                # Point CMake to the directory containing the installed config
+                set (config_DIR "${INSTALLED_PATH}")
+            endif()
+
+            string(REGEX REPLACE "\{.*\}" "${config_DIR}" hint "${hint}")
             list(APPEND FIND_PACKAGE_ARGS ${hint})
         endforeach ()
     endif ()
