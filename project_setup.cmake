@@ -97,7 +97,7 @@ string(REPLACE ";" " " escapedModulePath "${CMAKE_MODULE_PATH}")
 if (FIND_PACKAGE_HINTS)
     set(FIND_PACKAGE_ARGS)
     foreach (hint IN LISTS FIND_PACKAGE_HINTS)
-        string(REPLACE "{escapedModulePath}" ${escapedModulePath} hint ${hint})
+        string(REPLACE "{escapedModulePath}" "${escapedModulePath}" hint "${hint}")
         list(APPEND FIND_PACKAGE_ARGS ${hint})
     endforeach ()
     fetchContents(

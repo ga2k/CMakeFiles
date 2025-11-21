@@ -35,6 +35,14 @@ if (APPLE)
 
     list(APPEND extra_Definitions __WXOSX_COCOA__)
 
+    # Shared CMake module paths (stage + repo cmake directory)
+    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
+    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
+    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
+    endif ()
+
 elseif(LINUX)
 
     list(APPEND extra_Definitions __WXQT__)
@@ -50,6 +58,14 @@ elseif(LINUX)
     endif ()
 
     set(gui ${CURRENT_GFX_LIB})
+
+    # Shared CMake module paths (stage + repo cmake directory)
+    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
+    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
+    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
+    endif ()
 
 elseif (WIN32)
 
@@ -83,6 +99,23 @@ elseif (WIN32)
     endif ()
 
     set(gui "win")
+
+    # Shared CMake module paths (stage + repo cmake directory)
+    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
+    message(FATAL_ERROR "Fix here")
+    if(APPLE)
+        list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
+        if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
+            list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
+        endif ()
+    else()
+        list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
+        if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
+            list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
+        endif ()
+    endif ()
 
     list(APPEND extra_Definitions __WXMSW__ UNICODE _UNICODE)
 
