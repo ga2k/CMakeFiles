@@ -247,19 +247,19 @@ install(TARGETS                  ${APP_NAME} yaml-cpp eventpp magic_enum
 )
 
 install(EXPORT ${_TARGET}Target
-        FILE ${APP_NAME}Target.cmake
+        FILE ${_TARGET}Target.cmake
         NAMESPACE ${APP_VENDOR}::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-        CXX_MODULES_DIRECTORY "cxx/${APP_NAME}"
+        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
 )
 
 if (APP_CREATES_PLUGINS)
     install(TARGETS              ${APP_CREATES_PLUGINS}
             EXPORT               ${APP_NAME}PluginTarget
             CONFIGURATIONS       Debug Release
-            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
-            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/plugins
-            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/plugins
+            LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            RUNTIME DESTINATION  ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
             CXX_MODULES_BMI      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
             FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
             FILE_SET HEADERS     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
