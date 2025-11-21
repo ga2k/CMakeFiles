@@ -232,9 +232,10 @@ if ("${APP_NAME}" STREQUAL "Core")
 else ()
     set(_TARGET ${APP_NAME})
 endif ()
-
-install(TARGETS                  ${APP_NAME}
-        EXPORT                   ${APP_NAME}Target
+#
+install(TARGETS                  ${APP_NAME} yaml-cpp eventpp magic_enum
+#install(TARGETS                  ${_TARGET}
+        EXPORT                   ${_TARGET}Target
         CONFIGURATIONS           Debug Release
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -243,6 +244,13 @@ install(TARGETS                  ${APP_NAME}
         FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_NAME}
         FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT ${_TARGET}Target
+        FILE ${_TARGET}Target.cmake
+        NAMESPACE ${APP_VENDOR}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+        CXX_MODULES_DIRECTORY "cxx/${_TARGET}"
 )
 
 if (APP_CREATES_PLUGINS)
@@ -278,7 +286,7 @@ install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 #install(DIRECTORY ${OUTPUT_DIR}/dll/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ## Executables (copy built exes)
 #install(DIRECTORY ${OUTPUT_DIR}/bin/ DESTINATION ${CMAKE_INSTALL_BINDIR})
-# Headers
+## Headers
 #install(FILES FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 #install(FILES INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
@@ -286,13 +294,6 @@ install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_NAME}
         FILES_MATCHING PATTERN *.pcm)
-
-#install(EXPORT ${APP_NAME}Target
-#        FILE ${_TARGET}Target.cmake
-#        NAMESPACE ${APP_VENDOR}::
-#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-#        CXX_MODULES_DIRECTORY "cxx/${APP_NAME}"
-#)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
