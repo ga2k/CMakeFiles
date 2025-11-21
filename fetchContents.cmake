@@ -820,7 +820,7 @@ function(fetchContents)
                     else ()
                         set (this_pkgname_DIR ${CMAKE_MODULE_PATH})
                     endif ()
-                    message(STATUS "set (${this_pkgname}_DIR ${this_pkgname_DIR}")
+                    message(STATUS "set (${this_pkgname}_DIR ${this_pkgname_DIR})")
                     message(STATUS "find_package(${this_pkgname} ${this_find_package_args})")
 
                     set (${this_pkgname}_DIR ${this_pkgname_DIR})
