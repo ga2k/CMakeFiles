@@ -259,7 +259,7 @@ install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}ConfigVersion.cmake"
+        "${OUTPUT_DIR}/${_TARGET}ConfigVersion.cmake"
         VERSION ${APP_VERSION}
         COMPATIBILITY SameMajorVersion
 )
@@ -279,13 +279,13 @@ set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 configure_package_config_file(
         ${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in
-        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
+        "${OUTPUT_DIR}/${_TARGET}Config.cmake"
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
 install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}Config.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/${_TARGET}ConfigVersion.cmake"
+        "${OUTPUT_DIR}/${_TARGET}Config.cmake"
+        "${OUTPUT_DIR}/${_TARGET}ConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
