@@ -40,13 +40,14 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
     CXX_STANDARD 23
   )
 endif()
+
 #include("${CMAKE_CURRENT_LIST_DIR}/@_TARGET@Target.cmake")
 #set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
 #  IMPORTED_LOCATION "${_hs_lib}"
 #  CXX_STANDARD 23
 #)
 
-include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
