@@ -200,14 +200,22 @@ function(addLibrary)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
-    #    # Link Core
-    if (CORE IN_LIST arg_USES AND (TARGET Core OR TARGET HoffSoft::Core))
-        target_link_libraries(${arg_NAME}       PRIVATE Core)
+    # Link Core
+    if (CORE IN_LIST arg_USES)
+        if (TARGET HoffSoft::Core)
+            target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Core)
+        elseif(TARGET Core)
+            target_link_libraries(${arg_NAME}       PRIVATE Core)
+        endif ()
     endif ()
 
-    #    # Link Gfx
-    if (GFX IN_LIST arg_USES AND (TARGET Gfx OR TARGET HoffSoft::Gfx))
-        target_link_libraries(${arg_NAME}       PRIVATE Gfx)
+    # Link Gfx
+    if (GFX IN_LIST arg_USES)
+        if (TARGET HoffSoft::Gfx)
+            target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
+        elseif(TARGET Gfx)
+            target_link_libraries(${arg_NAME}       PRIVATE Gfx)
+        endif ()
     endif ()
 
     # Link Widgets
