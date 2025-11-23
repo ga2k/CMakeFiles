@@ -3,49 +3,16 @@
 
 include(CMakeFindDependencyMacro)
 
-# We expose an imported target HoffSoft::<lib>> and keep third-party deps internal.
-# This lets consumers just link HoffSoft::<lib> without needing to locate deps at configure time.
-
 # Resolve installed library path (cover common layouts)
-set(_hs_prefix "${PACKAGE_PREFIX_DIR}")
-
-set(_candidates
-  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@"
-#  "${PACKAGE_PREFIX_DIR}/lib/lib@APP_VENDOR_LC@_@APP_NAME_LC@.so"
-#  "${PACKAGE_PREFIX_DIR}/lib64/lib@APP_VENDOR_LC@_@APP_NAME_LC@.so"
-#  "${PACKAGE_PREFIX_DIR}/lib/lib@APP_VENDOR_LC@_@APP_NAME_LC@.dynlib"
-#  "${PACKAGE_PREFIX_DIR}/lib/@APP_VENDOR_LC@_@APP_NAME_LC@.dynlib"
-#  "${PACKAGE_PREFIX_DIR}/bin/@APP_VENDOR_LC@_@APP_NAME_LC@.dll"
-#  "${PACKAGE_PREFIX_DIR}/lib/@APP_VENDOR_LC@_@APP_NAME_LC@.dll"
-)
-
-unset(_hs_lib)
-
-foreach(_c ${_candidates})
-  if(EXISTS "${_c}")
-    set(_hs_lib "${_c}")
-    break()
-  endif()
-endforeach()
-
-if(NOT _hs_lib)
+set(_lib "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+if(NOT EXISTS "${_lib})
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
-
-#if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-#  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-#    IMPORTED_LOCATION "${_hs_lib}"
-#    CXX_STANDARD 23
-#  )
-#endif()
-#
-#include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@_TARGET@Target.cmake")
 
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_hs_lib}"
+    IMPORTED_LOCATION "${_lib}"
     CXX_STANDARD 23
     INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
   )
@@ -75,15 +42,20 @@ set(@_TARGET@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
 set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
 set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
 
+# Plugin and resource directories
+
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
+  # If the app creates plugins, set the plugin directory
   set(@APP_VENDOR@_PLUGIN_DIR "${PACKAGE_PREFIX_DIR}/lib64/@APP_VENDOR@/@APP_NAME@/plugins")
   set(@APP_VENDOR@_PLUGIN_DIR "${PACKAGE_PREFIX_DIR}/lib64/@APP_VENDOR@/@APP_NAME@/plugins" PARENT_SCOPE)
 endif()
+
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
+  # If the app supplies resources, set the resource directory
   set(@_TARGET@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
   set(@_TARGET@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
-endif()
-if (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
-set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
-set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
+elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
+  # If the app consumes resources, set the resource directory
+  set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
+  set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
 endif()
