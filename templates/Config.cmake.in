@@ -5,7 +5,7 @@ include(CMakeFindDependencyMacro)
 
 # Resolve installed library path (cover common layouts)
 set(_lib "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
-if(NOT EXISTS "${_lib})
+if(NOT EXISTS "${_lib}")
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
 
