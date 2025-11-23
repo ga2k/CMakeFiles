@@ -19,7 +19,7 @@ set(PROJECT_ROOT "${PROJECT_SOURCE_DIR}")
 
 # Ensure environment/output dirs are prepared for this specific project
 include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
-check_environment("${PROJECT_ROOT}")
+check_environment("${CMAKE_SOURCE_DIR}")
 
 # Feature-scoped extras for this project
 if (WIDGETS IN_LIST APP_FEATURES)
@@ -44,24 +44,6 @@ set(HS_LibrariesList "")
 set(HS_LibraryPathsList "")
 set(HS_LinkOptionsList "")
 set(HS_PrefixPathsList "")
-
-# Default library search paths for runtime
-list(APPEND extra_LibraryPaths
-        "${OUTPUT_DIR}/bin"
-        "${OUTPUT_DIR}/lib"
-        "${OUTPUT_DIR}/dll"
-#        "${OUTPUT_DIR}/bin/plugins"
-#        "${OUTPUT_DIR}/lib/plugins"
-#        "${OUTPUT_DIR}/dll/plugins"
-)
-
-list(APPEND extra_LibraryPaths
-        "${CMAKE_INSTALL_PREFIX}")
-
-if (EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-    list(APPEND extra_LibraryPaths
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-endif ()
 
 # Platform/environment-driven defines
 if (THEY_ARE_INSTALLED)
@@ -102,6 +84,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             list(APPEND FIND_PACKAGE_ARGS ${hint})
         endforeach ()
     endif ()
+
     if (FIND_PACKAGE_PATHS)
 
         if (NOT CMAKE_INSTALL_LIBDIR)
@@ -114,8 +97,10 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             endif ()
         endif ()
         # Define the paths to the two configuration files
-        set(INSTALLED_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-        set(STAGED_PATH    "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        set(INSTALLED_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+
+        set(STAGED_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        set(DEVELOPMENT_PATH "${OUTPUT_DIR}")
 
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
             string(FIND "${hint}" "{" openBrace)
@@ -128,13 +113,22 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
             string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
 
+            if("${DEVELOPMENT_PATH}/${pkgName}Config.cmake" IS_NEWER_THAN "${STAGED_PATH}/${pkgName}Config.cmake")
+                set (local_DIR "${DEVELOPMENT_PATH}")
+            else()
+                set (local_DIR "${STAGED_PATH}")
+            endif ()
+
+            message(STATUS "Stage 1: Local file is : ${DEVELOPMENT_PATH}/${pkgName}Config.cmake")
+
             # Check which one is newer
+
             # Logic: Returns true if file1 is newer than file2, or if file2 does not exist.
-            if("${STAGED_PATH}/${pkgName}Config.cmake" IS_NEWER_THAN "${INSTALLED_PATH}/${pkgName}Config.cmake")
-                message(STATUS "Found newer staged config. Using: ${STAGED_PATH}/${pkgName}Config.cmake")
+            if("${local_DIR}/${pkgName}Config.cmake" IS_NEWER_THAN "${INSTALLED_PATH}/${pkgName}Config.cmake")
+                message(STATUS "Found newer staged config. Using: ${local_DIR}/${pkgName}Config.cmake")
 
                 # Point CMake to the directory containing the staged config
-                set (config_DIR "${STAGED_PATH}")
+                set (config_DIR "${local_DIR}")
             else()
                 message(STATUS "Using installed config (staged is older or missing).")
 
@@ -291,13 +285,6 @@ install(DIRECTORY
 
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
-## Dynamic libraries (copy built dlls)
-#install(DIRECTORY ${OUTPUT_DIR}/dll/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
-## Executables (copy built exes)
-#install(DIRECTORY ${OUTPUT_DIR}/bin/ DESTINATION ${CMAKE_INSTALL_BINDIR})
-## Headers
-#install(FILES FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-#install(FILES INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # PCM/PCM-like files
 install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/

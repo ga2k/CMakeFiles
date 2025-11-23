@@ -62,6 +62,47 @@ set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 #
 function(check_environment PROJECT_ROOT)
 
+    unset (BUILDING)
+    unset (BUILD_DEBUG)
+    unset (BUILD_DIR)
+    unset (BUILD_FLAG)
+    unset (BUILD_RELEASE)
+    unset (BUILD_SHARED_LIBS)
+    unset (BUILD_TYPE)
+    unset (BUILD_TYPE_LC)
+    unset (BUILD_TYPE_UC)
+    unset (COMPANY)
+    unset (DEBUGSTRING)
+    unset (DM_FLAG)
+    unset (EXTERNALS_DIR)
+    unset (INSTALL_DIR)
+    unset (LINK_FLAG)
+    unset (LINK_SHARED)
+    unset (LINK_STATIC)
+    unset (LINK_TYPE)
+    unset (LINK_TYPE_LC)
+    unset (LINK_TYPE_UC)
+    unset (LOCAL_CMAKE)
+    unset (LOCAL_CMAKE_SCRIPTS)
+    unset (OUTPUT_DIR)
+    unset (SHARED_LIBS_OPTIONS)
+    unset (SHARESTRING)
+    unset (STAGING)
+    unset (STAGING_DIR)
+    unset (SUDO)
+    unset (SsngfnHHNJLKN)
+    unset (THEY_ARE_INSTALLED)
+    unset (VARIANT)
+    unset (WE_ARE_INSTALLED)
+    unset (buildDir)
+    unset (buildTail)
+    unset (buildType)
+    unset (debugFlags)
+    unset (hoffsoft_CMAKE)
+    unset (linkType)
+    unset (stemPath)
+    unset (wxWidgets_USE_DEBUG)
+
     # Specify build type
     forceSet(CMAKE_BUILD_TYPE buildType Debug STRING)
 
@@ -164,14 +205,6 @@ function(check_environment PROJECT_ROOT)
 
     # Set the output directory for static libraries
     forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/lib" FILEPATH)
-
-    # Ensure subdirectories inherit these settings
-    foreach (OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-        string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-        forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "" ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} FILEPATH)
-        forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} FILEPATH)
-        forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} FILEPATH)
-    endforeach ()
 
     # Check if our dependent libs are installed or local
     unset(THEY_ARE_INSTALLED)

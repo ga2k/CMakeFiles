@@ -161,21 +161,15 @@ function(addLibrary)
         set(LIB_SUF ${CMAKE_${arg_LINK}_LIBRARY_SUFFIX})
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
-    set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-    set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-    set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
-            ARCHIVE_OUTPUT_DIRECTORY    "${LIB_ARCHIVE_DIR}"
             CXX_EXTENSIONS              OFF
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
-            LIBRARY_OUTPUT_DIRECTORY    "${LIB_LIBRARY_DIR}"
             OUTPUT_NAME                 "${LIB_OUTPUT_NAME}"
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
-            RUNTIME_OUTPUT_DIRECTORY    "${LIB_RUNTIME_DIR}"
             SOVERSION                   "${arg_VERSION}"
             SUFFIX                      "${LIB_SUF}"
             VERSION                     "${arg_VERSION}"
