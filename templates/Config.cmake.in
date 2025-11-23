@@ -32,11 +32,22 @@ if(NOT _hs_lib)
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
 
+#if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+#  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#    IMPORTED_LOCATION "${_hs_lib}"
+#    CXX_STANDARD 23
+#  )
+#endif()
+#
+#include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@_TARGET@Target.cmake")
+
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
     IMPORTED_LOCATION "${_hs_lib}"
     CXX_STANDARD 23
+    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
   )
 endif()
 
@@ -46,6 +57,13 @@ include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
     "-fprebuilt-module-path=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@"
+  )
+endif()
+  
+# For GCC, you may need similar flags
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+    "-fmodule-mapper=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@"
   )
 endif()
 
