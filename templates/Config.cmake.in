@@ -47,7 +47,7 @@ endif()
 #  CXX_STANDARD 23
 #)
 
-# include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@_TARGET@Target.cmake")
+include("${_hs_prefix}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@_TARGET@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
