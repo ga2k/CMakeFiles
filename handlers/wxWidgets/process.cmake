@@ -1,4 +1,9 @@
 function(wxWidgets_process incs libs defs)
+
+    if (TARGET Widgets)
+        return()
+    endif ()
+
     set(GLLibs)
 
     if (LINUX)
@@ -179,6 +184,7 @@ function(wxWidgets_process incs libs defs)
     #        include(${wxWidgets_USE_FILE})
     #    endif ()
     #
+
     add_library(Widgets INTERFACE)
 #    target_sources(Widgets PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/Gfx/Widgets.h")
 
