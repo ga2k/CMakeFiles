@@ -233,8 +233,7 @@ else ()
     set(_TARGET ${APP_NAME})
 endif ()
 #
-install(TARGETS                  ${APP_NAME} yaml-cpp eventpp magic_enum
-#install(TARGETS                  ${_TARGET}
+install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         EXPORT                   ${_TARGET}Target
         CONFIGURATIONS           Debug Release
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
