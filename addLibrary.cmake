@@ -9,7 +9,7 @@ function(addLibrary)
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
 
     if (NOT arg_HEADER_VISIBILITY)
-        set(arg_HEADER_VISIBILITY "PRIVATE")
+        set(arg_HEADER_VISIBILITY "PUBLIC")
     else ()
         string(TOUPPER ${arg_HEADER_VISIBILITY} arg_HEADER_VISIBILITY)
     endif ()
@@ -21,17 +21,17 @@ function(addLibrary)
     endif ()
 
     if (NOT arg_MODULE_VISIBILITY)
-        set(arg_MODULE_VISIBILITY "PRIVATE")
+        set(arg_MODULE_VISIBILITY "PUBLIC")
     else ()
         string(TOUPPER ${arg_MODULE_VISIBILITY} arg_MODULE_VISIBILITY)
     endif ()
 
-    if (arg_SOURCES)
-        list(APPEND arg_SOURCE ${arg_SOURCES})
+    if (arg_SOURCE)
+        list(APPEND arg_SOURCES ${arg_SOURCE})
     endif ()
 
-    if (arg_DEPENDS)
-        list(APPEND arg_LIBS ${arg_DEPENDS})
+    if (arg_LIBS)
+        list(APPEND arg_DEPENDS ${arg_LIBS})
     endif ()
 
     if (NOT arg_NAME)
@@ -127,24 +127,24 @@ function(addLibrary)
         # Public headers from the source/include tree
         # Use generator expressions in BASE_DIRS so build-tree (source) paths do not leak into the install export
         target_sources(${arg_NAME}
-                PUBLIC FILE_SET HEADERS
+                ${arg_HEADER_VISIBILITY} FILE_SET HEADERS
                 BASE_DIRS
                 ${HEADER_BASE_DIRS}
                 FILES
                 ${arg_HEADERS}
         )
     endif ()
-    if (arg_SOURCE)
+    if (arg_SOURCES)
         target_sources(${arg_NAME}
-                PRIVATE #${arg_SOURCE_VISIBILITY}
-                ${arg_SOURCE}
+                ${arg_SOURCE_VISIBILITY}
+                ${arg_SOURCES}
         )
     endif ()
     if (arg_MODULES)
         # Register C++20 modules with a dedicated FILE_SET so CMake knows about BMI/PCM generation and installation.
         # Keep BASE_DIRS empty (from CXX_BASE_DIRS) to avoid exporting source-tree paths; install handles PCM separately.
         target_sources(${arg_NAME}
-                PUBLIC FILE_SET CXX_MODULES
+                ${arg_MODULE_VISIBILITY} FILE_SET CXX_MODULES
                 BASE_DIRS ${CXX_BASE_DIRS}
                 FILES
                 ${arg_MODULES}
@@ -155,16 +155,10 @@ function(addLibrary)
     if (arg_PLUGIN)
         set(LIB_PRE "")
         set(LIB_SUF ".plugin")
-        #        set(LIB_ARCHIVE_DIR "${OUTPUT_DIR}/plugins")
-        #        set(LIB_LIBRARY_DIR "${OUTPUT_DIR}/plugins")
-        #        set(LIB_RUNTIME_DIR "${OUTPUT_DIR}/plugins")
         set(LIB_OUTPUT_NAME "${arg_NAME}")
     else ()
         set(LIB_PRE ${CMAKE_${arg_LINK}_LIBRARY_PREFIX})
         set(LIB_SUF ${CMAKE_${arg_LINK}_LIBRARY_SUFFIX})
-        #        set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-        #        set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-        #        set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
     set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
@@ -178,7 +172,7 @@ function(addLibrary)
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
             LIBRARY_OUTPUT_DIRECTORY    "${LIB_LIBRARY_DIR}"
-            OUTPUT_NAME                 "${LIB_OUTPUT_NAME}${MULTI_LIB_DECLARATOR}"
+            OUTPUT_NAME                 "${LIB_OUTPUT_NAME}"
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             RUNTIME_OUTPUT_DIRECTORY    "${LIB_RUNTIME_DIR}"
@@ -203,17 +197,17 @@ function(addLibrary)
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
-    target_link_libraries(${arg_NAME}           PRIVATE ${arg_LIBS})
+    target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
     #    # Link Core
-    if (CORE IN_LIST arg_USES AND TARGET HoffSoft::Core)
-        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Core)
+    if (CORE IN_LIST arg_USES AND (TARGET Core OR TARGET HoffSoft::Core))
+        target_link_libraries(${arg_NAME}       PRIVATE Core)
     endif ()
 
     #    # Link Gfx
-    if (GFX IN_LIST arg_USES AND TARGET HoffSoft::Gfx)
-        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
+    if (GFX IN_LIST arg_USES AND (TARGET Gfx OR TARGET HoffSoft::Gfx))
+        target_link_libraries(${arg_NAME}       PRIVATE Gfx)
     endif ()
 
     # Link Widgets
