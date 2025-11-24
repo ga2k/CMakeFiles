@@ -18,7 +18,7 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   )
 endif()
 
-include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@_TARGET@Target.cmake")
+include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -35,12 +35,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 # Convenience variables
-set(@_TARGET@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include")
-set(@_TARGET@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
-set(@_TARGET@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
-set(@_TARGET@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
-set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
-set(@_TARGET@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
+set(@APP_NAME@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include")
+set(@APP_NAME@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
+set(@APP_NAME@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
+set(@APP_NAME@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
+set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
+set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
 
 # Plugin and resource directories
 
@@ -52,8 +52,8 @@ endif()
 
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
   # If the app supplies resources, set the resource directory
-  set(@_TARGET@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
-  set(@_TARGET@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
+  set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
+  set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources" PARENT_SCOPE)
 elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
   # If the app consumes resources, set the resource directory
   set(@APP_NAME@_RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
