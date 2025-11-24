@@ -9,14 +9,14 @@ if(NOT EXISTS "${_lib}")
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
 
-if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_lib}"
-    CXX_STANDARD 23
-    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
-  )
-endif()
+#if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+#  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#    IMPORTED_LOCATION "${_lib}"
+#    CXX_STANDARD 23
+#    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+#  )
+#endif()
 
 include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/@APP_NAME@Target.cmake")
 include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
