@@ -9,6 +9,14 @@ if(NOT EXISTS "${_lib}")
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
 
+if (DATABASE IN LISTS APP_FEATURES)
+  find_dependency(SOCI REQUIRED)
+endif
+
+if (SSL IN LISTS APP_FEATURES)
+  find_dependency(OpenSSL REQUIRED)
+endif
+
 #if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
 #  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
 #  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
