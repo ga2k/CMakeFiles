@@ -53,6 +53,7 @@ endif ()
 # Define set: magic_enum override and general include paths
 list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
 string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
+list(REMOVE_ITEM extra_Definitions "PLUGINS")
 list(APPEND extra_Definitions "PLUGINS=${PI}")
 
 # Ensure overrides path is highest priority for build tree
