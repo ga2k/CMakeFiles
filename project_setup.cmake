@@ -96,11 +96,10 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 message(FATAL_ERROR "Fix here")
             endif ()
         endif ()
-        # Define the paths to the two configuration files
-        set(INSTALLED_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
+        # Define the paths to the two configuration files
+        set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
         set(STAGED_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-        set(DEVELOPMENT_PATH "${OUTPUT_DIR}")
 
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
             string(FIND "${hint}" "{" openBrace)
@@ -113,29 +112,88 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
             string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
 
-            if("${DEVELOPMENT_PATH}/${pkgName}Config.cmake" IS_NEWER_THAN "${STAGED_PATH}/${pkgName}Config.cmake")
-                set (local_DIR "${DEVELOPMENT_PATH}")
-            else()
-                set (local_DIR "${STAGED_PATH}")
+            string(REGEX REPLACE "${APP_NAME}" "${pkgName}" SOURCE_PATH "${OUTPUT_DIR}")
+
+            set(pkgName "${pkgName}Config.cmake")
+
+            set (actualSourceFile "${SOURCE_PATH}/${pkgName}")
+            if (NOT EXISTS "${actualSourceFile}")
+                set (actualSourceFile "(not found)")
             endif ()
 
-            message(STATUS "Stage 1: Local file is : ${DEVELOPMENT_PATH}/${pkgName}Config.cmake")
+            set (actualStagedFile "${STAGED_PATH}/${pkgName}")
+            if (NOT EXISTS "${actualStagedFile}")
+                set (actualStagedFile "(not found)")
+            endif ()
 
-            # Check which one is newer
+            set (actualSystemFile "${SYSTEM_PATH}/${pkgName}")
+            if (NOT EXISTS "${actualSystemFile}")
+                set (actualSystemFile "(not found)")
+            endif ()
 
-            # Logic: Returns true if file1 is newer than file2, or if file2 does not exist.
-            if("${local_DIR}/${pkgName}Config.cmake" IS_NEWER_THAN "${INSTALLED_PATH}/${pkgName}Config.cmake")
-                message(STATUS "Found newer staged config. Using: ${local_DIR}/${pkgName}Config.cmake")
-
-                # Point CMake to the directory containing the staged config
-                set (config_DIR "${local_DIR}")
-            else()
-                message(STATUS "Using installed config (staged is older or missing).")
-
-                # Point CMake to the directory containing the installed config
-                set (config_DIR "${INSTALLED_PATH}")
-            endif()
-
+            if ("${actualSourceFile}" STREQUAL "(not found)" AND
+                "${actualStagedFile}" STREQUAL "(not found)" AND
+                "${actualSystemFile}" STREQUAL "(not found)")
+                message(FATAL_ERROR "${APP_NAME} depends on ${pkgName}, which has not been built")
+            elseif ("${actualSourceFile}" STREQUAL "(not found)" AND
+                    "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)")
+                message(STATUS "No local ${pkgName} file found. Using ${actualSystemFile}")
+                set (config_DIR "${SYSTEM_PATH}")
+            else ()
+                message(STATUS " Source file is : ${actualSourceFile}")
+                message(STATUS " Staged file is : ${actualStagedFile}")
+                message(STATUS " System file is : ${actualSystemFile}")
+                if ("${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)")
+                    if ("${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
+                        message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                        set (config_DIR "${STAGED_PATH}")
+                    else ()
+                        message(STATUS "System file is newest. Using ${actualSystemFile}")
+                        set (config_DIR "${SYSTEM_PATH}")
+                    endif ()
+                elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" STREQUAL "(not found)" AND
+                        NOT "${actualSystemFile}" STREQUAL "(not found)")
+                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
+                        message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                        set (config_DIR "${SOURCE_PATH}")
+                    else ()
+                        message(STATUS "System file is newest. Using ${actualSystemFile}")
+                        set (config_DIR "${SYSTEM_PATH}")
+                    endif ()
+                elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                        NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" STREQUAL "(not found)")
+                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
+                        message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                        set (config_DIR "${SOURCE_PATH}")
+                    else ()
+                        message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                        set (config_DIR "${STAGED_PATH}")
+                    endif ()
+                else ()
+                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
+                        if ("${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
+                            message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                            set (config_DIR "${SOURCE_PATH}")
+                        else ()
+                            message(STATUS "System file is newest. Using ${actualSystemFile}")
+                            set (config_DIR "${SYSTEM_PATH}")
+                        endif ()
+                    else ()
+                        if ("${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
+                            message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                            set (config_DIR "${STAGED_PATH}")
+                        else ()
+                            message(STATUS "System file is newest. Using ${actualSystemFile}")
+                            set (config_DIR "${SYSTEM_PATH}")
+                        endif ()
+                    endif ()
+                endif ()
+            endif ()
             string(REGEX REPLACE "\{.*\}" "${config_DIR}" hint "${hint}")
             list(APPEND FIND_PACKAGE_ARGS ${hint})
         endforeach ()
@@ -231,11 +289,6 @@ if (APP_GENERATE_UI_CLASSES)
 endif ()
 
 # ========================= Install & packaging =========================
-if ("${APP_NAME}" STREQUAL "Core")
-    set(_TARGET ${APP_VENDOR})
-else ()
-    set(_TARGET ${APP_NAME})
-endif ()
 #
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         EXPORT                   ${_TARGET}Target

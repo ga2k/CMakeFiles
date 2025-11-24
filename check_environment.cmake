@@ -71,37 +71,21 @@ function(check_environment PROJECT_ROOT)
     unset (BUILD_TYPE)
     unset (BUILD_TYPE_LC)
     unset (BUILD_TYPE_UC)
-    unset (COMPANY)
-    unset (DEBUGSTRING)
     unset (DM_FLAG)
     unset (EXTERNALS_DIR)
-    unset (INSTALL_DIR)
     unset (LINK_FLAG)
     unset (LINK_SHARED)
     unset (LINK_STATIC)
     unset (LINK_TYPE)
     unset (LINK_TYPE_LC)
     unset (LINK_TYPE_UC)
-    unset (LOCAL_CMAKE)
-    unset (LOCAL_CMAKE_SCRIPTS)
     unset (OUTPUT_DIR)
     unset (SHARED_LIBS_OPTIONS)
-    unset (SHARESTRING)
     unset (STAGING)
-    unset (STAGING_DIR)
     unset (SUDO)
-    unset (SsngfnHHNJLKN)
     unset (THEY_ARE_INSTALLED)
-    unset (VARIANT)
     unset (WE_ARE_INSTALLED)
-    unset (buildDir)
-    unset (buildTail)
-    unset (buildType)
     unset (debugFlags)
-    unset (hoffsoft_CMAKE)
-    unset (linkType)
-    unset (stemPath)
-    unset (wxWidgets_USE_DEBUG)
 
     # Specify build type
     forceSet(CMAKE_BUILD_TYPE buildType Debug STRING)
@@ -145,8 +129,6 @@ function(check_environment PROJECT_ROOT)
     endif ()
     string(TOLOWER "${LINK_TYPE}" LINK_TYPE_LC)
 
-    set(debugFlags "")
-
     # Set various transmutations required in different places around the traps
     if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
         set(BUILD_TYPE Debug)
@@ -176,14 +158,6 @@ function(check_environment PROJECT_ROOT)
 
     string(TOLOWER ${BUILD_TYPE} BUILD_TYPE_LC)
     string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
-
-    # library suffixes. I don't think we need these, now we know what we're doing a bit more
-    # formatter: off
-    getVariant(
-            OUT VARIANT
-            SHARE SHARESTRING
-            DEBUG DEBUGSTRING
-    )
     # formatter: on
 
     # Set the build directory
@@ -207,14 +181,12 @@ function(check_environment PROJECT_ROOT)
     forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/lib" FILEPATH)
 
     # Check if our dependent libs are installed or local
-    unset(THEY_ARE_INSTALLED)
     if (("${STAGE_DIR}" AND EXISTS "${STAGE_DIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}") OR
         (NOT "${STAGE_DIR}" AND EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"))
         set(THEY_ARE_INSTALLED ON)
     endif ()
 
     # Check if WE are installed or local
-    unset(WE_ARE_INSTALLED)
     if (("${STAGE_DIR}" AND EXISTS "${STAGE_DIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${APP_NAME}") OR
         (NOT "${STAGE_DIR}" AND EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${APP_NAME}"))
         set(WE_ARE_INSTALLED ON)
@@ -246,40 +218,28 @@ function(check_environment PROJECT_ROOT)
     set(CMAKE_CXX_COMPILER ${CMAKE_CXX_COMPILER} PARENT_SCOPE)
     set(CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD} PARENT_SCOPE)
     set(COMPANY ${COMPANY} PARENT_SCOPE)
-    set(DEBUGSTRING ${DEBUGSTRING} PARENT_SCOPE)
     set(DM_FLAG ${DM_FLAG} PARENT_SCOPE)
-    set(INSTALL_DIR ${INSTALL_DIR} PARENT_SCOPE)
     set(LINK_SHARED ${LINK_SHARED} PARENT_SCOPE)
     set(LINK_STATIC ${LINK_STATIC} PARENT_SCOPE)
     set(LINK_TYPE ${LINK_TYPE} PARENT_SCOPE)
     set(LINK_TYPE_LC ${LINK_TYPE_LC} PARENT_SCOPE)
     set(LINK_TYPE_UC ${LINK_TYPE_UC} PARENT_SCOPE)
     set(LINK_FLAG ${LINK_FLAG} PARENT_SCOPE)
-    set(LOCAL_CMAKE ${LOCAL_CMAKE} PARENT_SCOPE)
-    set(LOCAL_CMAKE_SCRIPTS ${LOCAL_CMAKE_SCRIPTS} PARENT_SCOPE)
-    set(SHARESTRING ${SHARESTRING} PARENT_SCOPE)
-    set(STAGING ${STAGING} PARENT_SCOPE)
-    set(STAGING_DIR ${STAGING_DIR} PARENT_SCOPE)
     set(SUDO ${SUDO} PARENT_SCOPE)
-    set(VARIANT ${VARIANT} PARENT_SCOPE)
     set(stemPath ${stemPath} PARENT_SCOPE)
-    set(buildDir ${buildDir} PARENT_SCOPE)
-    set(buildTail ${buildTail} PARENT_SCOPE)
     set(buildType ${buildType} PARENT_SCOPE)
     set(debugFlags ${debugFlags} PARENT_SCOPE)
-    set(hoffsoft_CMAKE ${hoffsoft_CMAKE} PARENT_SCOPE)
     set(linkType ${linkType} PARENT_SCOPE)
-    set(wxWidgets_USE_DEBUG ${wxWidgets_USE_DEBUG} PARENT_SCOPE)
 
     #    log(TITLE "As seen on TV" VARS
     #            BUILDING                BUILD_DEBUG             BUILD_RELEASE           BUILD_TYPE
     #            BUILD_TYPE_LC           BUILD_TYPE_UC           CMAKE_CXX_COMPILER      CMAKE_CXX_STANDARD
-    #            CMAKE_INSTALL_PREFIX    COMPANY                 DEBUGSTRING             INSTALL_DIR
-    #            LINK_SHARED             LINK_STATIC             LINK_TYPE               LINK_TYPE_LC
-    #            LINK_TYPE_UC            LOCAL_CMAKE             LOCAL_CMAKE_SCRIPTS     SHARESTRING
-    #            STAGING_DIR             SUDO                    VARIANT                 stemPath
-    #            buildDir                buildTail               buildType               debugFlags
-    #            hoffsoft_CMAKE          linkType                wxWidgets_USE_DEBUG
+    #            CMAKE_INSTALL_PREFIX    COMPANY                 LINK_SHARED             LINK_STATIC
+    #            LINK_TYPE               LINK_TYPE_LC
+    #            LINK_TYPE_UC
+    #            SUDO                    stemPath
+    #            buildType               debugFlags
+    #            linkType
     #    )
 
 
@@ -289,7 +249,6 @@ function(check_environment PROJECT_ROOT)
     #    log(TITLE "             Contents of BUILD_TYPE : " "${BUILD_TYPE}")
     #    log(TITLE "            Contents of BUILD_DEBUG : " "${BUILD_DEBUG}")
     #    log(TITLE "          Contents of BUILD_RELEASE : " "${BUILD_RELEASE}")
-    #    log(TITLE "              Contents of buildTail : " "${buildTail}")
     #    log(TITLE "     Contents of CMAKE_CXX_COMPILER : " "${CMAKE_CXX_COMPILER}")
     #    log(TITLE "     Contents of CMAKE_CXX_STANDARD : " "${CMAKE_CXX_STANDARD}")
     #    log(TITLE "                Contents of COMPANY : " "${COMPANY}")
@@ -298,10 +257,6 @@ function(check_environment PROJECT_ROOT)
     #    log(TITLE "              Contents of LINK_TYPE : " "${LINK_TYPE}")
     #    log(TITLE "            Contents of LINK_SHARED : " "${LINK_SHARED}")
     #    log(TITLE "            Contents of LINK_STATIC : " "${LINK_STATIC}")
-    #    log(TITLE "            Contents of LOCAL_CMAKE : " "${LOCAL_CMAKE}")
-    #    log(TITLE "    Contents of LOCAL_CMAKE_SCRIPTS : " "${LOCAL_CMAKE_SCRIPTS}")
-    #    log(TITLE "            Contents of STAGING_DIR : " "${STAGING_DIR}")
-    #    log(TITLE "            Contents of INSTALL_DIR : " "${INSTALL_DIR}")
     #    log(TITLE "   Contents of CMAKE_INSTALL_PREFIX : " "${CMAKE_INSTALL_PREFIX}")
 
 endfunction()
