@@ -1,6 +1,15 @@
 # Per-project setup. This file MUST NOT use include_guard(GLOBAL).
 # It is intended to be included once for each subproject (Core, Gfx, MyCare).
 
+include(GenerateExportHeader)
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
+    set(_generated_export_header "${CMAKE_SOURCE_DIR}/include/HoffSoft/core_export.h")
+else ()
+    set(_generated_export_header "${CMAKE_SOURCE_DIR}/HoffSoft/include/HoffSoft/core_export.h")
+endif ()
+generate_export_header(HoffSoft EXPORT_FILE_NAME ${_generated_export_header})
+target_sources(HoffSoft PUBLIC FILE_SET HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
+
 # Derive common strings for this project scope
 string(TOUPPER ${APP_NAME} APP_NAME_UC)
 string(TOLOWER ${APP_NAME} APP_NAME_LC)
