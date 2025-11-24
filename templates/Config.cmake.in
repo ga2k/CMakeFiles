@@ -18,6 +18,7 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   )
 endif()
 
+include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/@APP_NAME@Target.cmake")
 include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
