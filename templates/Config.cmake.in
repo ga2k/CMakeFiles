@@ -9,11 +9,11 @@ if(NOT EXISTS "${_lib}")
   message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
 endif()
 
-if (@APP_FEATURES@ MATCHES DATABASE)
+if ("DATABASE" IN "@APP_FEATURES@")
   find_dependency(SOCI REQUIRED)
 endif()
 
-if (@APP_FEATURES@ MATCHES SSL)
+if ("SSL" IN "@APP_FEATURES@")
   find_dependency(OpenSSL REQUIRED)
 endif()
 
