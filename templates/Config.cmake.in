@@ -11,11 +11,11 @@ endif()
 
 if (DATABASE IN LISTS APP_FEATURES)
   find_dependency(SOCI REQUIRED)
-endif
+endif()
 
 if (SSL IN LISTS APP_FEATURES)
   find_dependency(OpenSSL REQUIRED)
-endif
+endif()
 
 #if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
 #  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
