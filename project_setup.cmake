@@ -54,7 +54,9 @@ endif ()
 list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
 string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
 list(REMOVE_ITEM extra_Definitions "PLUGINS")
-list(APPEND extra_Definitions "PLUGINS=${PI}")
+if (NOT "${PI}" STREQUAL "")
+    list(APPEND extra_Definitions "PLUGINS=${PI}")
+endif ()
 
 # Ensure overrides path is highest priority for build tree
 list(PREPEND extra_IncludePaths
