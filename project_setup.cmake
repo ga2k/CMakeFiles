@@ -220,18 +220,18 @@ message(STATUS "=== Configuring Components ===")
 
 # Track if Core already exists before this project adds sources
 set(ALREADY_HAVE_CORE OFF)
-if (TARGET HoffSoft::Core)
+if (TARGET HoffSoft::HoffSoft)
     set(ALREADY_HAVE_CORE ON)
 endif ()
 
 # Enter the project's src folder (defines targets)
 add_subdirectory(src)
 
-# Consumer workaround for yaml-cpp when consuming HoffSoft::Core install package
+# Consumer workaround for yaml-cpp when consuming HoffSoft::HoffSoft install package
 if (ALREADY_HAVE_CORE)
     find_package(yaml-cpp CONFIG QUIET)
     if (TARGET yaml-cpp::yaml-cpp)
-        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::Core package")
+        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::HoffSoft package")
         if (TARGET main)
             target_link_libraries(main LINK_PRIVATE yaml-cpp::yaml-cpp)
         endif ()
