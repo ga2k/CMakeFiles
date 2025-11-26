@@ -13,7 +13,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
         list(APPEND includePathsList "${buildDir}/include")
     endif ()
 
-    list(APPEND SOCI_PLUGINS_HANDLED soci_core soci_empty soci_odbc soci_mysql soci_sqlite3)
+    list(APPEND SOCI_PLUGINS_HANDLED soci_core soci_sqlite3)
     foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
         if (TARGET ${target})               # Prefer dynamic library ...
             addTarget(${target} soci ON "${components}")
