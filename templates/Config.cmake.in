@@ -61,7 +61,7 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
   # If the app creates plugins, set the plugin directory
   if (InDevelopment)
-    set(PLUGIN_DIR "${OUTPUT_DIR}/plugins")
+    set(PLUGIN_DIR "@OUTPUT_DIR@/plugins")
   else ()
     set(PLUGIN_DIR "${PACKAGE_PREFIX_DIR}/lib64/@APP_VENDOR@/@APP_NAME@/plugins")
   endif ()
