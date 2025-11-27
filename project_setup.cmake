@@ -124,9 +124,9 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             set(pkgName "${pkgName}Config.cmake")
 
             set (actualSourceFile "${SOURCE_PATH}/${pkgName}")
-#            if (NOT EXISTS "${actualSourceFile}")
+            if (NOT EXISTS "${actualSourceFile}")
                 set (actualSourceFile "(not found)")
-#            endif ()
+            endif ()
 
             set (actualStagedFile "${STAGED_PATH}/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
