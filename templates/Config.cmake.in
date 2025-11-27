@@ -30,7 +30,9 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
     INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
   )
 endif()
-include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+if(NOT @APP_NAME@_DEVELOP)
+  include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+endif()
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
