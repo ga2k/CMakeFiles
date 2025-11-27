@@ -3,6 +3,9 @@
 
 include(CMakeFindDependencyMacro)
 
+message(STATUS "@APP_VENDOR@::@APP_NAME@  @APP_NAME@_SOURCE_DIR=${@APP_NAME@_SOURCE_DIR} ")
+message(STATUS "@APP_VENDOR@::@APP_NAME@  PROJECT_SOURCE_DIR=${@PROJECT_SOURCE_DIR@} ")
+
 # Resolve installed library path (cover common layouts)
 set(_lib "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 if(NOT EXISTS "${_lib}")
