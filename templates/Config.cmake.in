@@ -3,13 +3,23 @@
 
 include(CMakeFindDependencyMacro)
 
-message(STATUS "@APP_VENDOR@::@APP_NAME@  @APP_NAME@_SOURCE_DIR=${@APP_NAME@_SOURCE_DIR} ")
-message(STATUS "@APP_VENDOR@::@APP_NAME@  PROJECT_SOURCE_DIR=${@PROJECT_SOURCE_DIR@} ")
+message(STATUS "@APP_VENDOR@::@APP_NAME@  PROJECT_SOURCE_DIR=@PROJECT_SOURCE_DIR@ ")
 
 # Resolve installed library path (cover common layouts)
-set(_lib "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
-if(NOT EXISTS "${_lib}")
-  message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR}")
+set(_libdir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
+set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+if(EXISTS "${_lib}")
+  set(@APP_NAME@_DEVELOP OFF)
+else()
+  set(_libdir "$@OUTPUT_DIR@/@CMAKE_INSTALL_LIBDIR@")
+  set(_incdir "$@OUTPUT_DIR@/include")
+  set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+  if(EXISTS "${_lib}")
+    set(@APP_NAME@_DEVELOP ON)
+  else()
+    message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR} or @OUTPUT_DIR@")
+  endif()
 endif()
 
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
@@ -17,32 +27,37 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
     IMPORTED_LOCATION "${_lib}"
     CXX_STANDARD 23
-    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+    INTERFACE_INCLUDE_DIRECTORIES "${incdir}"
   )
 endif()
 include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@"
-  )
+  if(@APP_NAME@_DEVELOP)
+    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+      "-fprebuilt-module-path=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir"
+  else()
+    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+    "-fprebuilt-module-path=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+  endif()
 endif()
   
 # For GCC, you may need similar flags
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fmodule-mapper=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@"
-  )
+  if(@APP_NAME@_DEVELOP)
+    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+      "-fmodule-mapper=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir"
+  else()
+    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+      "-fmodule-mapper=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+  endif()
 endif()
 
 # Convenience variables
-set(@APP_NAME@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include")
-set(@APP_NAME@_INCLUDE_DIR  "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
-set(@APP_NAME@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
-set(@APP_NAME@_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include" PARENT_SCOPE)
-set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@)
+set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" PARENT_SCOPE)
 set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
+set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE))
 
 # Plugin and resource directories
 
