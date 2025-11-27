@@ -27,37 +27,32 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
     IMPORTED_LOCATION "${_lib}"
     CXX_STANDARD 23
-    INTERFACE_INCLUDE_DIRECTORIES "${incdir}"
+    INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
   )
 endif()
 include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 
 # For Clang consumers of modules, provide prebuilt-module path automatically
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  if(@APP_NAME@_DEVELOP)
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "-fprebuilt-module-path=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir"
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(fmodule_cmd "-fprebuilt-module-path")
   else()
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-    "-fprebuilt-module-path=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+    set(fmodule_cmd "-fmodule-mapper")
   endif()
-endif()
-  
-# For GCC, you may need similar flags
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+
   if(@APP_NAME@_DEVELOP)
     target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "-fmodule-mapper=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir"
+      "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
   else()
     target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "-fmodule-mapper=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+      "${fmodule_cmd}=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
   endif()
 endif()
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" PARENT_SCOPE)
 set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
-set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE))
+set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
 
 # Plugin and resource directories
 
