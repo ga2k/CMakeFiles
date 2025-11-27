@@ -12,7 +12,7 @@ set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@
 if(EXISTS "${_lib}")
   set(@APP_NAME@_DEVELOP OFF)
 else()
-  set(_libdir "@OUTPUT_DIR@/lib")
+  set(_libdir "@OUTPUT_DIR@/dll")
   set(_incdir "@OUTPUT_DIR@/include")
   set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
   if(EXISTS "${_lib}")
