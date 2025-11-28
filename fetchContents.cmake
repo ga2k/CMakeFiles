@@ -1,6 +1,6 @@
 include(FetchContent)
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/ThirdParty.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/thirdParty.cmake)
 
 set(SystemCategoryData)
 set(UserCategoryData)
