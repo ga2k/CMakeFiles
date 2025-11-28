@@ -69,10 +69,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/platform.cmake)
 initialiseFeatureHandlers()
 
 # Make CMake find_package prefer our install libdir
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_LIBDIR})
-
-# Fetch common third-party dependencies controlled by APP_FEATURES from each project
-# We leave the actual fetchContents() call to per-project setup so projects can pass hints.
+list(APPEND CMAKE_MODULE_PATH
+        ${CMAKE_INSTALL_LIBDIR})
 
 # Testing helpers available globally
 include(GoogleTest)

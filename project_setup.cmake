@@ -145,7 +145,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             if ("${actualSourceFile}" STREQUAL "(not found)" AND
                 "${actualStagedFile}" STREQUAL "(not found)" AND
                 "${actualSystemFile}" STREQUAL "(not found)")
-                message(FATAL_ERROR "${APP_NAME} depends on ${pkgName}, which has not been built")
+                message(WARNING "${APP_NAME} depends on ${pkgName}, which has not been built")
             elseif ("${actualSourceFile}" STREQUAL "(not found)" AND
                     "${actualStagedFile}" STREQUAL "(not found)" AND
                     NOT "${actualSystemFile}" STREQUAL "(not found)")
@@ -290,19 +290,19 @@ endif ()
 include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
 if (APP_GENERATE_RECORDSETS)
     generateRecordsets(
-            ${CMAKE_SOURCE_DIR}/src/generated/rs
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/rs
             ${APP_GENERATE_RECORDSETS})
 endif ()
 if (APP_GENERATE_UI_CLASSES)
     generateUIClasses(
-            ${CMAKE_SOURCE_DIR}/src/generated/ui
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ui
             ${APP_GENERATE_UI_CLASSES})
 endif ()
 
 # ========================= Install & packaging =========================
 #
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
-        EXPORT                   ${_TARGET}Target
+        EXPORT                   ${APP_NAME}Target
         CONFIGURATIONS           Debug Release
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -313,8 +313,8 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT ${_TARGET}Target
-        FILE ${_TARGET}Target.cmake
+install(EXPORT ${APP_NAME}Target
+        FILE ${APP_NAME}Target.cmake
         NAMESPACE ${APP_VENDOR}::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
@@ -357,7 +357,7 @@ install(DIRECTORY ${CMAKE_BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-        "${OUTPUT_DIR}/${_TARGET}ConfigVersion.cmake"
+        "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
         VERSION ${APP_VERSION}
         COMPATIBILITY SameMajorVersion
 )
@@ -377,13 +377,13 @@ set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 configure_package_config_file(
         ${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in
-        "${OUTPUT_DIR}/${_TARGET}Config.cmake"
+        "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
 install(FILES
-        "${OUTPUT_DIR}/${_TARGET}Config.cmake"
-        "${OUTPUT_DIR}/${_TARGET}ConfigVersion.cmake"
+        "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
+        "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
@@ -392,7 +392,7 @@ include(GNUInstallDirs)
 # User guide, if present
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
-            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${_TARGET}")
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${APP_NAME}")
 endif ()
 
 # Resources directory (fonts, images, etc.)
