@@ -119,7 +119,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
             string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
 
-            string(REGEX REPLACE "${APP_NAME}" "${pkgName}" SOURCE_PATH "${OUTPUT_DIR}")
+            if (MEGABUILD)
+                set (SOURCE_PATH "${OUTPUT_DIR}")
+            else ()
+                string(REGEX REPLACE "${APP_NAME}" "${pkgName}" SOURCE_PATH "${OUTPUT_DIR}")
+            endif ()
 
             set(pkgName "${pkgName}Config.cmake")
 
