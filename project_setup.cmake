@@ -122,7 +122,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             if (SUPERBUILD)
                 set (SOURCE_PATH "${OUTPUT_DIR}")
             else ()
-                string(REGEX REPLACE "${APP_NAME}" "${pkgName}" SOURCE_PATH "${OUTPUT_DIR}")
+                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
 
             set(pkgName "${pkgName}Config.cmake")
