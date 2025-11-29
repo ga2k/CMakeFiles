@@ -3,23 +3,23 @@
 
 include(CMakeFindDependencyMacro)
 
-# --- Transitive dependencies ---------------------------------------------------
-# If this package exposes headers/APIs that rely on third‑party libraries,
-# declare them here so downstream `find_package(@APP_VENDOR@::@APP_NAME@)`
-# pulls in the same instance instead of each consumer fetching its own copy.
+## --- Transitive dependencies ---------------------------------------------------
+## If this package exposes headers/APIs that rely on third‑party libraries,
+## declare them here so downstream `find_package(@APP_VENDOR@::@APP_NAME@)`
+## pulls in the same instance instead of each consumer fetching its own copy.
+##
+## Reflection (magic_enum) — header‑only. Must be UNIQUE across module TUs.
+## Signal (eventpp) — header‑only.
+## Testing (GTest) — linkable targets.
+## YAML (yaml-cpp) — linkable target.
+## We keep them QUIET to allow consumers that don’t need them; when required,
+## consumers must ensure resolvable via CMAKE_PREFIX_PATH.
+#find_dependency(magic_enum QUIET)
+#find_dependency(eventpp    QUIET)
+#find_dependency(GTest      QUIET)
+#find_dependency(yaml-cpp   QUIET)
 #
-# Reflection (magic_enum) — header‑only. Must be UNIQUE across module TUs.
-# Signal (eventpp) — header‑only.
-# Testing (GTest) — linkable targets.
-# YAML (yaml-cpp) — linkable target.
-# We keep them QUIET to allow consumers that don’t need them; when required,
-# consumers must ensure resolvable via CMAKE_PREFIX_PATH.
-find_dependency(magic_enum QUIET)
-find_dependency(eventpp    QUIET)
-find_dependency(GTest      QUIET)
-find_dependency(yaml-cpp   QUIET)
-
-message(STATUS "@APP_VENDOR@::@APP_NAME@  PROJECT_SOURCE_DIR=@PROJECT_SOURCE_DIR@ ")
+#message(STATUS "@APP_VENDOR@::@APP_NAME@  PROJECT_SOURCE_DIR=@PROJECT_SOURCE_DIR@ ")
 
 # Resolve installed library path (cover common layouts)
 set(_libdir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
