@@ -142,72 +142,84 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set (actualSystemFile "(not found)")
             endif ()
 
-            if ("${actualSourceFile}" STREQUAL "(not found)" AND
-                "${actualStagedFile}" STREQUAL "(not found)" AND
-                "${actualSystemFile}" STREQUAL "(not found)")
-                message(WARNING "${APP_NAME} depends on ${pkgName}, which has not been built")
-            elseif ("${actualSourceFile}" STREQUAL "(not found)" AND
-                    "${actualStagedFile}" STREQUAL "(not found)" AND
-                    NOT "${actualSystemFile}" STREQUAL "(not found)")
-                message(STATUS "No local ${pkgName} file found. Using ${actualSystemFile}")
-                set (config_DIR "${SYSTEM_PATH}")
-            else ()
-                message(STATUS "Source file is : ${actualSourceFile}")
-                message(STATUS "Staged file is : ${actualStagedFile}")
-                message(STATUS "System file is : ${actualSystemFile}")
-                if ("${actualSourceFile}" STREQUAL "(not found)" AND
-                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
-                    NOT "${actualSystemFile}" STREQUAL "(not found)")
-                    if ("${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                        message(STATUS "Staged file is newest. Using ${actualStagedFile}")
-                        set (config_DIR "${STAGED_PATH}")
-                    else ()
-                        message(STATUS "System file is newest. Using ${actualSystemFile}")
-                        set (config_DIR "${SYSTEM_PATH}")
-                    endif ()
-                elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+            # formatter: off
+            if (        "${actualSourceFile}" STREQUAL "(not found)" AND
                         "${actualStagedFile}" STREQUAL "(not found)" AND
-                        NOT "${actualSystemFile}" STREQUAL "(not found)")
-                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
-                        message(STATUS "Source file is newest. Using ${actualSourceFile}")
-                        set (config_DIR "${SOURCE_PATH}")
-                    else ()
-                        message(STATUS "System file is newest. Using ${actualSystemFile}")
-                        set (config_DIR "${SYSTEM_PATH}")
-                    endif ()
-                elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
-                        NOT "${actualStagedFile}" STREQUAL "(not found)" AND
                         "${actualSystemFile}" STREQUAL "(not found)")
-                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
-                        message(STATUS "Source file is newest. Using ${actualSourceFile}")
-                        set (config_DIR "${SOURCE_PATH}")
-                    else ()
-                        message(STATUS "Staged file is newest. Using ${actualStagedFile}")
-                        set (config_DIR "${STAGED_PATH}")
-                    endif ()
-                else ()
-                    if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
-                        if ("${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
-                            message(STATUS "Source file is newest. Using ${actualSourceFile}")
-                            set (config_DIR "${SOURCE_PATH}")
-                        else ()
-                            message(STATUS "System file is newest. Using ${actualSystemFile}")
-                            set (config_DIR "${SYSTEM_PATH}")
-                        endif ()
-                    else ()
-                        if ("${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                            message(STATUS "Staged file is newest. Using ${actualStagedFile}")
-                            set (config_DIR "${STAGED_PATH}")
-                        else ()
-                            message(STATUS "System file is newest. Using ${actualSystemFile}")
-                            set (config_DIR "${SYSTEM_PATH}")
-                        endif ()
-                    endif ()
-                endif ()
+                    message(WARNING "${APP_NAME} depends on ${pkgName}, which has not been built")
+            elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" STREQUAL "(not found)")
+                    message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                    set (config_DIR "${SOURCE_PATH}")
+            elseif (    "${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" STREQUAL "(not found)")
+                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    set (config_DIR "${STAGED_PATH}")
+            elseif (    "${actualSourceFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)")
+                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+                    set (config_DIR "${SYSTEM_PATH}")
+            elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
+                    message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                    set (config_DIR "${SOURCE_PATH}")
+            elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
+                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    set (config_DIR "${STAGED_PATH}")
+            elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
+                    message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                    set (config_DIR "${SOURCE_PATH}")
+            elseif (NOT "${actualSourceFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" IS_NEWER_THAN "${actualSourceFile}")
+                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+                    set (config_DIR "${SYSTEM_PATH}")
+            elseif (    "${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
+                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    set (config_DIR "${STAGED_PATH}")
+            elseif (    "${actualSourceFile}" STREQUAL "(not found)" AND
+                    NOT "${actualStagedFile}" STREQUAL "(not found)" AND
+                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
+                        "${actualSystemFile}" IS_NEWER_THAN "${actualStagedFile}")
+                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+                    set (config_DIR "${SYSTEM_PATH}")
+            elseif ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}" AND
+                    "${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
+                    message(STATUS "Source file is newest. Using ${actualSourceFile}")
+                    set (config_DIR "${SOURCE_PATH}")
+            elseif ("${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}" AND
+                    "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
+                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    set (config_DIR "${STAGED_PATH}")
+            elseif ("${actualSystemFile}" IS_NEWER_THAN "${actualSourceFile}" AND
+                    "${actualSystemFile}" IS_NEWER_THAN "${actualStagedFile}")
+                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+                    set (config_DIR "${SYSTEM_PATH}")
+            else ()
+                message(FATAL_ERROR "Impossible situation exists comparing modification times of Source file / Staged file / System file")
             endif ()
+            # formatter: on
+
             string(REGEX REPLACE "\{.*\}" "${config_DIR}" hint "${hint}")
             list(APPEND FIND_PACKAGE_ARGS ${hint})
+
         endforeach ()
+
     endif ()
 
     fetchContents(
