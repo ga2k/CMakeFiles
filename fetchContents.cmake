@@ -2,8 +2,8 @@ include(FetchContent)
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/thirdParty.cmake)
 
-set(SystemCategoryData)
-set(UserCategoryData)
+set(SystemFeatureData)
+set(UserFeatureData)
 
 macro(call_handler fn pkg)
     set(fn ${fn})
@@ -108,7 +108,7 @@ endfunction()
 ###################################################################################################################
 function(addPackageData)
     set(switches SYSTEM;USER)
-    set(args METHOD;CATEGORY;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
+    set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
     set(arrays COMPONENTS;ARGS)
 
     cmake_parse_arguments("aoc" "${switches}" "${args}" "${arrays}" ${ARGN})
@@ -173,7 +173,7 @@ function(addPackageData)
         string(APPEND entry "|")
     endif ()
 
-    string(JOIN "|" entry "${entry}" ${aoc_METHOD} )
+    string(JOIN "|" entry "${entry}" ${aoc_METHOD})
 
     if (aoc_GIT_REPOSITORY)
         string(JOIN "|" entry "${entry}" "${aoc_GIT_REPOSITORY}")
@@ -224,20 +224,20 @@ function(addPackageData)
     set(pkgIndex)
 
     if (aoc_USER OR NOT aoc_SYSTEM)
-        set(activeArray UserCategoryData)
+        set(activeArray UserFeatureData)
     else ()
-        set(activeArray SystemCategoryData)
+        set(activeArray SystemFeatureData)
     endif ()
-    getCatIndex(${activeArray} ${aoc_CATEGORY} pkgIndex)
+    getFeatureIndex(${activeArray} ${aoc_FEATURE} pkgIndex)
     if (${pkgIndex} EQUAL -1)
-        set(newEntry "${aoc_CATEGORY}|${entry}")
+        set(newEntry "${aoc_FEATURE}|${entry}")
         list(APPEND ${activeArray} "${newEntry}")
         set(${activeArray} "${${activeArray}}" PARENT_SCOPE)
     else ()
-        list(GET ${activeArray} ${pkgIndex} catLine)
-        string(JOIN "," cat_line "${catLine}" "${entry}")
+        list(GET ${activeArray} ${pkgIndex} featureLine)
+        string(JOIN "," feature_line "${featureLine}" "${entry}")
         list(REMOVE_AT ${activeArray} ${pkgIndex})
-        list(INSERT ${activeArray} ${pkgIndex} "${cat_line}")
+        list(INSERT ${activeArray} ${pkgIndex} "${feature_line}")
         set(${activeArray} "${${activeArray}}" PARENT_SCOPE)
     endif ()
 
@@ -248,9 +248,9 @@ endfunction()
 function(createStandardPackageData)
 
     # 1          2          3            4        5                6                     7          8                                            9
-    # CATEGORY | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
 
-    #   [1] CATEGORY is the name of a group of package alternatives (eg BOOST)
+    #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
     #   [4] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
@@ -260,7 +260,7 @@ function(createStandardPackageData)
     #   [5] One or the other of
     #       ----------------------------------------------------------------------------------------------------
     #       GIT_REPOSITORY is the git url where the package can be found
-    #       URL is the location of a .zip, .tar, or .gz file, either remote or local
+    #       URL is the lofeatureion of a .zip, .tar, or .gz file, either remote or local
     #       ----------------------------------------------------------------------------------------------------
     #   or
     #       ----------------------------------------------------------------------------------------------------
@@ -280,26 +280,26 @@ function(createStandardPackageData)
     #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
     #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
 
-    #   [, ...] More packages in the same category, if any
-#
-#    addPackageData(SYSTEM CATEGORY "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
-#            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-#            COMPONENT "cpptrace" ARG REQUIRED)
+    #   [, ...] More packages in the same feature, if any
+    #
+    #    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
+    #            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
+    #            COMPONENT "cpptrace" ARG REQUIRED)
 
-    addPackageData(SYSTEM CATEGORY "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM CATEGORY "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM CATEGORY "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
             ARGS REQUIRED NAMES GTest googletest)
 
-    addPackageData(SYSTEM CATEGORY "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             COMPONENT "yaml-cpp"
             ARG REQUIRED)
@@ -309,51 +309,51 @@ function(createStandardPackageData)
     ##
     #
 
-    addPackageData(CATEGORY "CORE" PKGNAME "HoffSoft"  METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+    addPackageData(FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG)
-    addPackageData(CATEGORY "GFX"  PKGNAME "Gfx"   METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+    addPackageData(FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG)
 
-    addPackageData(CATEGORY "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENT system date_time regex url algorithm
             ARGS NAMES Boost)
 
-    addPackageData(CATEGORY "BZIP" PKGNAME "bz2" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "BZIP" PKGNAME "bz2" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://gitlab.com/bzip2/bzip2" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(CATEGORY "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    #    addPackageData(CATEGORY "SQLITE3" PKGNAME "sqlite3"
+    #    addPackageData(FEATURE "SQLITE3" PKGNAME "sqlite3"
     #            URL "https://www.sqlite.org/2025/sqlite-amalgamation-3500200.zip"
     #            INCDIR "[BUILD]/sqlite3/include"
     #            COMPONENT "sqlite3" ARG REQUIRED)
 
-    addPackageData(CATEGORY "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(CATEGORY "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
-#            GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
-#            ARG REQUIRED)
+    addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
+    #            GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
+    #            ARG REQUIRED)
 
-    addPackageData(CATEGORY "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/madler/zlib" GIT_TAG "master"
-            COMPONENT "ZLIB" 
+            COMPONENT "ZLIB"
             ARG REQUIRED)
 
-    addPackageData(CATEGORY "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "wxyz" GIT_TAG "master"
             COMPONENT tomlplusplus
             ARG REQUIRED)
 
-    addPackageData(CATEGORY "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
+    addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
 
-    set(SystemCategoryData "${SystemCategoryData}" PARENT_SCOPE)
-    set(UserCategoryData "${UserCategoryData}" PARENT_SCOPE)
+    set(SystemFeatureData "${SystemFeatureData}" PARENT_SCOPE)
+    set(UserFeatureData "${UserFeatureData}" PARENT_SCOPE)
 
 endfunction()
 ###################################################################################################################
@@ -402,17 +402,17 @@ function(fetchContents)
     set(_wxLibraryPaths ${${AUE_PREFIX}_wxLibraryPaths})
     set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
 
-    set(CatIX 0)
-    set(CatPkgNameIX 1)
-    set(CatNamespaceIX 2)
-    set(CatMethodIX 3)
-    set(CatUrlIX 4)
-    set(CatGitTagIX 5)
-    set(CatSrcDirIX 4)
-    set(CatBuildDirIX 5)
-    set(CatIncDirIX 6)
-    set(CatComponentsIX 7)
-    set(CatArgsIX 8)
+    set(FeatureIX 0)
+    set(FeaturePkgNameIX 1)
+    set(FeatureNamespaceIX 2)
+    set(FeatureMethodIX 3)
+    set(FeatureUrlIX 4)
+    set(FeatureGitTagIX 5)
+    set(FeatureSrcDirIX 4)
+    set(FeatureBuildDirIX 5)
+    set(FeatureIncDirIX 6)
+    set(FeatureComponentsIX 7)
+    set(FeatureArgsIX 8)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
@@ -425,19 +425,19 @@ function(fetchContents)
     set(PkgComponentsIX 6)
     set(PkgArgsIX 7)
 
-    foreach (line IN LISTS SystemCategoryData)
-        SplitAt(${line} "|" acat dc)
-        list(APPEND SystemCategories ${acat})
+    foreach (line IN LISTS SystemFeatureData)
+        SplitAt(${line} "|" afeature dc)
+        list(APPEND SystemFeatures ${afeature})
     endforeach ()
 
-    foreach (line IN LISTS UserCategoryData)
-        SplitAt(${line} "|" acat dc)
-        list(APPEND OptionalCategories ${acat})
+    foreach (line IN LISTS UserFeatureData)
+        SplitAt(${line} "|" afeature dc)
+        list(APPEND OptionalFeatures ${afeature})
     endforeach ()
 
-    list(APPEND AllPackageData ${SystemCategoryData} ${UserCategoryData})
+    list(APPEND AllPackageData ${SystemFeatureData} ${UserFeatureData})
 
-    list(APPEND PseudoCatagories
+    list(APPEND PseudoFeatureagories
             APPEARANCE
             PRINT
             LOGGER
@@ -454,7 +454,7 @@ function(fetchContents)
     endif ()
 
     # We don't search for pseudo packages
-    foreach (pseudoLibrary IN LISTS PseudoCatagories)
+    foreach (pseudoLibrary IN LISTS PseudoFeatureagories)
         if (${pseudoLibrary} IN_LIST AUE_USE)
             list(REMOVE_ITEM AUE_USE ${pseudoLibrary})
             list(APPEND _DefinesList USING_${pseudoLibrary})
@@ -462,21 +462,21 @@ function(fetchContents)
     endforeach ()
 
     # We don't search for system packages this way
-    list(REMOVE_ITEM AUE_USE ${SystemCategories})
+    list(REMOVE_ITEM AUE_USE ${SystemFeatures})
 
     set(unifiedComponentList)
     set(unifiedArgumentList)
-    set(unifiedCategoryList)
+    set(unifiedFeatureList)
 
     # ensure the caller is using the system libraries
-    foreach (sys_cat IN LISTS SystemCategories)
-        string(APPEND sys_cat ".0")
-        list(APPEND unifiedCategoryList "${sys_cat}")
+    foreach (sys_feature IN LISTS SystemFeatures)
+        string(APPEND sys_feature ".0")
+        list(APPEND unifiedFeatureList "${sys_feature}")
     endforeach ()
 
     ## combine the caller's and the system's components and arguments into unified lists
     ##
-    foreach (cat IN LISTS SystemCategories)
+    foreach (feature IN LISTS SystemFeatures)
         ##
         unset(callerArguments)
         unset(callerComponents)
@@ -489,11 +489,11 @@ function(fetchContents)
         unset(temp)
 
         ###########################################################
-        ## get the component and argument details for this category
+        ## get the component and argument details for this feature
         ##
         ##
-        parsePackage(SystemCategoryData
-                CAT ${cat}
+        parsePackage(SystemFeatureData
+                FEATURE ${feature}
                 LIST pkgs
                 COMPONENTS sysComponents
                 ARGS sysArguments)
@@ -503,25 +503,25 @@ function(fetchContents)
         ## All system packages are REQUIRED
         list(APPEND combinedArguments "REQUIRED")
         ##
-        findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${cat} " " callerComponents index)
+        findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${feature} " " callerComponents index)
         combine("${sysComponents}" "${callerComponents}" combinedComponents)
         if (index GREATER_EQUAL 0)
             list(REMOVE_AT AUE_FIND_PACKAGE_COMPONENTS ${index})
         endif ()
-        string(JOIN " " temp ${cat} ${combinedComponents})
-        if (NOT "${temp}" STREQUAL ${cat})
+        string(JOIN " " temp ${feature} ${combinedComponents})
+        if (NOT "${temp}" STREQUAL ${feature})
             list(APPEND unifiedComponentList "${temp}")
         endif ()
         ##
-        findInList("${AUE_FIND_PACKAGE_ARGS}" ${cat} " " callerArguments index)
+        findInList("${AUE_FIND_PACKAGE_ARGS}" ${feature} " " callerArguments index)
         # Caller cannot tell us to make a system package optional
         list(REMOVE_ITEM callerArguments "OPTIONAL")
         combine("${sysArguments}" "${callerArguments}" combinedArguments OFF)
         if (index GREATER_EQUAL 0)
             list(REMOVE_AT AUE_FIND_PACKAGE_ARGS ${index})
         endif ()
-        string(JOIN " " temp ${cat} ${combinedArguments})
-        if (NOT "${temp}" STREQUAL ${cat})
+        string(JOIN " " temp ${feature} ${combinedArguments})
+        if (NOT "${temp}" STREQUAL ${feature})
             list(APPEND unifiedArgumentList "${temp}")
         endif ()
     endforeach ()
@@ -543,8 +543,8 @@ function(fetchContents)
     unset(FIND_PACKAGE_ARGS_ALL)
     unset(TARGET_LINE)
     foreach (package_line IN LISTS AUE_FIND_PACKAGE_ARGS)
-        SplitAt("${package_line}" " " this_cat pkg_args)
-        if ("${this_cat}" STREQUAL "ALL")
+        SplitAt("${package_line}" " " this_feature pkg_args)
+        if ("${this_feature}" STREQUAL "ALL")
             set(FIND_PACKAGE_ARGS_ALL "${pkg_args}")
             set(TARGET_LINE "${package_line}")
             break()
@@ -555,18 +555,18 @@ function(fetchContents)
     endif ()
 
     if (USE_ALL)
-        list(APPEND AUE_USE ${OptionalCategories})
+        list(APPEND AUE_USE ${OptionalFeatures})
     endif ()
 
     list(REMOVE_DUPLICATES AUE_USE)
     #    list(SORT AUE_USE)
 
-    foreach (cat IN LISTS AUE_NOT)
-        # remove any categories excluded by the AUE_NOT list
-        if (NOT ${cat} IN_LIST SystemCategories)
-            list(REMOVE_ITEM AUE_USE ${cat})
-            list(FILTER AUE_FIND_PACKAGE_ARGS EXCLUDE REGEX "${cat}.*")
-            list(FILTER AUE_FIND_PACKAGE_COMPONENTS EXCLUDE REGEX "${cat}.*")
+    foreach (feature IN LISTS AUE_NOT)
+        # remove any features excluded by the AUE_NOT list
+        if (NOT ${feature} IN_LIST SystemFeatures)
+            list(REMOVE_ITEM AUE_USE ${feature})
+            list(FILTER AUE_FIND_PACKAGE_ARGS EXCLUDE REGEX "${feature}.*")
+            list(FILTER AUE_FIND_PACKAGE_COMPONENTS EXCLUDE REGEX "${feature}.*")
         endif ()
     endforeach ()
     set(AUE_NOT "")
@@ -574,27 +574,27 @@ function(fetchContents)
     ####################################################################################
     ## combine the caller's and the optional components and arguments into unified lists
     ##
-    unset(deadCats)
+    unset(deadFeatures)
 
-    foreach (cat IN LISTS AUE_USE)
+    foreach (feature IN LISTS AUE_USE)
 
-        SplitAt(${cat} "=" kat pkg)
+        SplitAt(${feature} "=" kat pkg)
         if (pkg)
-            getCatPkgList("${UserCategoryData}" ${kat} pkg_list)
+            getFeaturePkgList("${UserFeatureData}" ${kat} pkg_list)
             list(FIND pkg_list ${pkg} this_pkgindex)
             if (${this_pkgindex} EQUAL -1)
-                message(FATAL_ERROR "No pkg named '${pkg}' in category '${cat}'")
+                message(FATAL_ERROR "No pkg named '${pkg}' in feature '${feature}'")
                 continue()
             endif ()
-            list(APPEND deadCats ${cat})
-            set(cat ${kat})
+            list(APPEND deadFeatures ${feature})
+            set(feature ${kat})
         else ()
             set(this_pkgindex 0)
         endif ()
 
         ##
         ###########################################################
-        ## get the component and argument details for this category
+        ## get the component and argument details for this feature
         ##
         unset(callerArguments)
         unset(callerComponents)
@@ -606,27 +606,27 @@ function(fetchContents)
         unset(sysComponents)
         unset(temp)
         ##
-        parsePackage(UserCategoryData
-                CAT ${cat}
+        parsePackage(UserFeatureData
+                FEATURE ${feature}
                 PKG_INDEX ${this_pkgindex}
                 LIST pkg
                 COMPONENTS optComponents
                 ARGS optArguments)
         ##
         if (NOT "${pkg}" STREQUAL "")
-            findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${cat} " " callerComponents index)
+            findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${feature} " " callerComponents index)
             combine("${callerComponents}" "${optComponents}" combinedComponents)
             if (DEFINED index)
-                if("${index}" GREATER_EQUAL 0)
+                if ("${index}" GREATER_EQUAL 0)
                     list(REMOVE_AT AUE_FIND_PACKAGE_COMPONENTS ${index})
                 endif ()
             endif ()
-            string(JOIN " " temp ${cat} ${combinedComponents})
-            if (NOT "${temp}" STREQUAL ${cat})
+            string(JOIN " " temp ${feature} ${combinedComponents})
+            if (NOT "${temp}" STREQUAL ${feature})
                 list(APPEND unifiedComponentList "${temp}")
             endif ()
             ##
-            findInList("${AUE_FIND_PACKAGE_ARGS}" ${cat} " " callerArguments index)
+            findInList("${AUE_FIND_PACKAGE_ARGS}" ${feature} " " callerArguments index)
             if (FIND_PACKAGE_ARGS_ALL)
                 list(APPEND callerArguments "${FIND_PACKAGE_ARGS_ALL}")
             endif ()
@@ -636,30 +636,30 @@ function(fetchContents)
             endif ()
             combine("${callerArguments}" "${optArguments}" combinedArguments OFF)
             if (DEFINED index)
-                if("${index}" GREATER_EQUAL 0)
+                if ("${index}" GREATER_EQUAL 0)
                     list(REMOVE_AT AUE_FIND_PACKAGE_ARGS ${index})
                 endif ()
             endif ()
-            string(JOIN " " temp ${cat} ${combinedArguments})
-            if (NOT "${temp}" STREQUAL ${cat})
+            string(JOIN " " temp ${feature} ${combinedArguments})
+            if (NOT "${temp}" STREQUAL ${feature})
                 list(APPEND unifiedArgumentList "${temp}")
             endif ()
 
-            list(APPEND unifiedCategoryList ${cat}.${this_pkgindex})
-            list(APPEND deadCats ${cat})
+            list(APPEND unifiedFeatureList ${feature}.${this_pkgindex})
+            list(APPEND deadFeatures ${feature})
         endif ()
     endforeach ()
 
-    list(REMOVE_ITEM AUE_USE ${deadCats})
+    list(REMOVE_ITEM AUE_USE ${deadFeatures})
 
     foreach (item IN LISTS AUE_USE)
         if (NOT ${item} STREQUAL ${kat})
-            message("Unknown category: ${item}")
+            message("Unknown feature: ${item}")
         endif ()
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_COMPONENTS)
-        message("Unknown find_package_categories: ${item}")
+        message("Unknown find_package_featureegories: ${item}")
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_ARGS)
@@ -667,14 +667,14 @@ function(fetchContents)
     endforeach ()
     message(" ")
     if (AUE_DEBUG)
-        log(TITLE "After tampering" LISTS unifiedCategoryList unifiedArgumentList unifiedComponentList)
+        log(TITLE "After tampering" LISTS unifiedFeatureList unifiedArgumentList unifiedComponentList)
     endif ()
     #
     ####################################################################################################################
     #                                            B I G     L O O P                                                     #
     ####################################################################################################################
     #
-    list(LENGTH unifiedCategoryList numWanted)
+    list(LENGTH unifiedFeatureList numWanted)
     set(numFailed 0)
     if (${numWanted} EQUAL 1)
         message(CHECK_START "Fetching library")
@@ -685,11 +685,11 @@ function(fetchContents)
 
     set(fail OFF)
 
-    foreach (this_cat IN LISTS unifiedCategoryList)
+    foreach (this_feature IN LISTS unifiedFeatureList)
 
-        SplitAt(${this_cat} "." this_cat this_pkgindex)
+        SplitAt(${this_feature} "." this_feature this_pkgindex)
         message(" ")
-        message(CHECK_START "${this_cat}")
+        message(CHECK_START "${this_feature}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(pkg_details)
@@ -712,7 +712,7 @@ function(fetchContents)
         unset(COMPONENTS_KEYWORD)
 
         parsePackage(AllPackageData
-                CAT ${this_cat}
+                FEATURE ${this_feature}
                 PKG_INDEX ${this_pkgindex}
                 METHOD this_method
                 LIST pkg_details
@@ -724,8 +724,8 @@ function(fetchContents)
                 INC_DIR this_inc
         )
 
-        findInList("${unifiedComponentList}" ${this_cat} " " this_find_package_components)
-        findInList("${unifiedArgumentList}" ${this_cat} " " this_find_package_args)
+        findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
+        findInList("${unifiedArgumentList}" ${this_feature} " " this_find_package_args)
 
         list(POP_FRONT pkg_details this_pkgname this_namespace)
         list(LENGTH this_find_package_components num_components)
@@ -808,11 +808,36 @@ function(fetchContents)
                 if (${this_method} STREQUAL "FETCH_CONTENTS")
                     # If a canonical target already exists for always-on deps, skip declaring/fetching again
                     if (("${this_pkgname}" STREQUAL "magic_enum" AND TARGET magic_enum::magic_enum)
-                        OR ("${this_pkgname}" STREQUAL "eventpp" AND TARGET eventpp::eventpp)
-                        OR ("${this_pkgname}" STREQUAL "gtest" AND TARGET GTest::gtest)
-                        OR ("${this_pkgname}" STREQUAL "yaml-cpp" AND TARGET yaml-cpp))
+                            OR ("${this_pkgname}" STREQUAL "eventpp" AND TARGET eventpp::eventpp)
+                            OR ("${this_pkgname}" STREQUAL "gtest" AND TARGET GTest::gtest)
+                            OR ("${this_pkgname}" STREQUAL "yaml-cpp" AND TARGET yaml-cpp))
                         set(this_fetch OFF)
-                    endif()
+
+                        # Ensure canonical targets exist for header-only deps when fetched directly
+                        if ("${this_pkgname}" STREQUAL "magic_enum")
+                            if (NOT TARGET magic_enum::magic_enum)
+                                add_library(magic_enum INTERFACE)
+                                add_library(magic_enum::magic_enum ALIAS magic_enum)
+                            endif ()
+                            set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                            if (EXISTS "${this_src}/include")
+                                target_include_directories(magic_enum INTERFACE "${this_src}/include")
+                                list(APPEND _IncludePathsList "${this_src}/include")
+                            endif ()
+                            target_compile_definitions(magic_enum INTERFACE MAGIC_ENUM_NO_MODULE)
+                        elseif ("${this_pkgname}" STREQUAL "eventpp")
+                            if (NOT TARGET eventpp::eventpp)
+                                add_library(eventpp INTERFACE)
+                                add_library(eventpp::eventpp ALIAS eventpp)
+                            endif ()
+                            set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                            if (EXISTS "${this_src}/include")
+                                target_include_directories(eventpp INTERFACE "${this_src}/include")
+                                list(APPEND _IncludePathsList "${this_src}/include")
+                            endif ()
+                        endif ()
+
+                    endif ()
                     if (NOT this_fetch)
                         message("FetchContent_Declare not required for ${this_pkgname}")
                     else ()
@@ -824,7 +849,6 @@ function(fetchContents)
                         endif ()
                     endif ()
                 else ()
-
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
                         list(FIND this_find_package_args "PATHS" pinx)
                         if (${pinx} GREATER_EQUAL 0)
@@ -837,12 +861,12 @@ function(fetchContents)
                         endif ()
                         message(STATUS "find_package(${this_pkgname} ${this_find_package_args})") # HINTS ${CMAKE_MODULE_PATH})")
                         find_package(${this_pkgname} ${this_find_package_args}) # HINTS ${CMAKE_MODULE_PATH})
-                        set (add_Libraries ${${this_pkgname}_LIBRARIES})
-                        list(APPEND _LibrariesList    ${add_Libraries})
-                        set (add_Includes ${${this_pkgname}_INCLUDE_DIR})
+                        set(add_Libraries ${${this_pkgname}_LIBRARIES})
+                        list(APPEND _LibrariesList ${add_Libraries})
+                        set(add_Includes ${${this_pkgname}_INCLUDE_DIR})
                         list(APPEND _IncludePathsList ${add_Includes})
                     endif ()
-                    set (HANDLED ON)
+                    set(HANDLED ON)
                 endif ()
             endif ()
             ###########################################################################################################
@@ -862,7 +886,7 @@ function(fetchContents)
                 ########################################################################################################
                 if (${this_method} STREQUAL "FETCH_CONTENTS") ##########################################################
                     call_handler(preMakeAvailable ${this_pkgname}) #####################################################
-                endif() ################################################################################################
+                endif () ################################################################################################
                 ########################################################################################################
                 ########################################################################################################
                 ########################################################################################################
@@ -902,27 +926,29 @@ function(fetchContents)
                 ############################################################################################################
                 ############################################################################################################
 
-                # Ensure canonical targets exist for header-only deps when fetched directly
-                if ("${this_pkgname}" STREQUAL "magic_enum")
-                    if (NOT TARGET magic_enum::magic_enum)
-                        add_library(magic_enum INTERFACE)
-                        add_library(magic_enum::magic_enum ALIAS magic_enum)
-                        if (EXISTS "${this_src}/include")
-                            target_include_directories(magic_enum INTERFACE "${this_src}/include")
-                        endif()
-                        target_compile_definitions(magic_enum INTERFACE MAGIC_ENUM_NO_MODULE)
-                    endif()
-                elseif ("${this_pkgname}" STREQUAL "eventpp")
-                    if (NOT TARGET eventpp::eventpp)
-                        add_library(eventpp INTERFACE)
-                        add_library(eventpp::eventpp ALIAS eventpp)
-                        if (EXISTS "${this_src}/include")
-                            target_include_directories(eventpp INTERFACE "${this_src}/include")
-                        endif()
-                    endif()
-                endif()
+                #                # Ensure canonical targets exist for header-only deps when fetched directly
+                #                if ("${this_pkgname}" STREQUAL "magic_enum")
+                #                    if (NOT TARGET magic_enum::magic_enum)
+                #                        add_library(magic_enum INTERFACE)
+                #                        add_library(magic_enum::magic_enum ALIAS magic_enum)
+                #                        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                #                        if (EXISTS "${this_src}/include")
+                #                            target_include_directories(magic_enum INTERFACE "${this_src}/include")
+                #                        endif()
+                #                        target_compile_definitions(magic_enum INTERFACE MAGIC_ENUM_NO_MODULE)
+                #                    endif()
+                #                elseif ("${this_pkgname}" STREQUAL "eventpp")
+                #                    if (NOT TARGET eventpp::eventpp)
+                #                        add_library(eventpp INTERFACE)
+                #                        add_library(eventpp::eventpp ALIAS eventpp)
+                #                        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                #                        if (EXISTS "${this_src}/include")
+                #                            target_include_directories(eventpp INTERFACE "${this_src}/include")
+                #                        endif()
+                #                    endif()
+                #                endif()
 
-                if (NOT HANDLED AND NOT ${this_cat} STREQUAL TESTING)
+                if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
                     if (${this_pkgname}_POPULATED
                             OR ${this_pkglc}_POPULATED
                             OR ${this_pkgname}_FOUND
@@ -943,49 +969,49 @@ function(fetchContents)
 
                             # Work out an include dir by ourselves
 
-                            # Avoid manually appending include paths for canonical deps when their targets exist.
-                            set(_skip_includes OFF)
-                            if (("${this_pkgname}" STREQUAL "magic_enum" AND TARGET magic_enum::magic_enum)
-                                OR ("${this_pkgname}" STREQUAL "eventpp" AND TARGET eventpp::eventpp)
-                                OR ("${this_pkgname}" STREQUAL "gtest" AND TARGET GTest::gtest)
-                                OR ("${this_pkgname}" STREQUAL "yaml-cpp" AND TARGET yaml-cpp))
-                                set(_skip_includes ON)
-                            endif()
+                            #                            # Avoid manually appending include paths for canonical deps when their targets exist.
+                            #                            set(_skip_includes OFF)
+                            #                            if (("${this_pkgname}" STREQUAL "magic_enum" AND TARGET magic_enum::magic_enum)
+                            #                                OR ("${this_pkgname}" STREQUAL "eventpp" AND TARGET eventpp::eventpp)
+                            #                                OR ("${this_pkgname}" STREQUAL "gtest" AND TARGET GTest::gtest)
+                            #                                OR ("${this_pkgname}" STREQUAL "yaml-cpp" AND TARGET yaml-cpp))
+                            #                                set(_skip_includes ON)
+                            #                            endif()
 
-                            if (NOT _skip_includes)
-                                if (${this_pkgname}_INCLUDE_DIRS)
-                                    list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIRS})
-                                endif ()
-                                if (${this_pkguc}_INCLUDE_DIRS)
-                                    list(APPEND _IncludePathsList ${${this_pkguc}_INCLUDE_DIRS})
-                                endif ()
-                                if (${this_pkgname}_INCLUDE_DIR)
-                                    list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
-                                    if (EXISTS ${${this_pkglc}_BINARY_DIR}/include)
-                                        list(APPEND _IncludePathsList ${${this_pkglc}_BINARY_DIR}/include)
-                                    endif ()
-                                endif ()
-                                if (${this_pkguc}_INCLUDE_DIR)
-                                    list(APPEND _IncludePathsList ${${this_pkguc}_INCLUDE_DIR})
-                                    if (EXISTS ${${this_pkguc}_BINARY_DIR}/include)
-                                        list(APPEND _IncludePathsList ${${this_pkguc}_BINARY_DIR}/include)
-                                    endif ()
-                                endif ()
-                                if (EXISTS ${${this_pkglc}_SOURCE_DIR}/include)
-                                    list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR}/include)
-                                endif ()
+                            #                            if (NOT _skip_includes)
+                            if (${this_pkgname}_INCLUDE_DIRS)
+                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIRS})
+                            endif ()
+                            if (${this_pkguc}_INCLUDE_DIRS)
+                                list(APPEND _IncludePathsList ${${this_pkguc}_INCLUDE_DIRS})
+                            endif ()
+                            if (${this_pkgname}_INCLUDE_DIR)
+                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
                                 if (EXISTS ${${this_pkglc}_BINARY_DIR}/include)
                                     list(APPEND _IncludePathsList ${${this_pkglc}_BINARY_DIR}/include)
                                 endif ()
-                                if (EXISTS ${${this_pkglc}_SOURCE_DIR}/${this_pkglc}.h OR
-                                        EXISTS ${${this_pkglc}_SOURCE_DIR}/${this_pkgname}.h)
-                                    list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR})
+                            endif ()
+                            if (${this_pkguc}_INCLUDE_DIR)
+                                list(APPEND _IncludePathsList ${${this_pkguc}_INCLUDE_DIR})
+                                if (EXISTS ${${this_pkguc}_BINARY_DIR}/include)
+                                    list(APPEND _IncludePathsList ${${this_pkguc}_BINARY_DIR}/include)
                                 endif ()
-                                if (EXISTS ${${this_pkglc}_BINARY_DIR}/${this_pkglc}.h OR
-                                        EXISTS ${${this_pkglc}_BINARY_DIR}/${this_pkgname}.h)
-                                    list(APPEND _IncludePathsList ${${this_pkglc}_BINARY_DIR})
-                                endif ()
-                            endif()
+                            endif ()
+                            if (EXISTS ${${this_pkglc}_SOURCE_DIR}/include)
+                                list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR}/include)
+                            endif ()
+                            if (EXISTS ${${this_pkglc}_BINARY_DIR}/include)
+                                list(APPEND _IncludePathsList ${${this_pkglc}_BINARY_DIR}/include)
+                            endif ()
+                            if (EXISTS ${${this_pkglc}_SOURCE_DIR}/${this_pkglc}.h OR
+                                    EXISTS ${${this_pkglc}_SOURCE_DIR}/${this_pkgname}.h)
+                                list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR})
+                            endif ()
+                            if (EXISTS ${${this_pkglc}_BINARY_DIR}/${this_pkglc}.h OR
+                                    EXISTS ${${this_pkglc}_BINARY_DIR}/${this_pkgname}.h)
+                                list(APPEND _IncludePathsList ${${this_pkglc}_BINARY_DIR})
+                            endif ()
+                            #                            endif()
                         endif ()
                     endif ()
 
@@ -994,7 +1020,7 @@ function(fetchContents)
                     set(anyTargetFound OFF)
 
                     if (NOT ${this_pkgname} IN_LIST NoLibPackages)
-                        list(APPEND _DefinesList USING_${this_cat})
+                        list(APPEND _DefinesList USING_${this_feature})
                         string(REPLACE "-" "_" temppkgname ${this_pkgname})
                         list(APPEND _DefinesList USING_${temppkgname})
 
@@ -1029,8 +1055,8 @@ function(fetchContents)
                             elseif ("${this_pkgname}" STREQUAL "yaml-cpp" AND TARGET yaml-cpp)
                                 addTarget(yaml-cpp ${this_pkgname} ON "")
                                 set(anyTargetFound ON)
-                            endif()
-                        endif()
+                            endif ()
+                        endif ()
 
                         if (TARGET ${this_pkgname})
                             addTarget(${this_pkgname} ${this_pkgname} ON "")
@@ -1156,21 +1182,21 @@ function(fetchContents)
 
     # @formatter:on
 
-#    log(TITLE "Leaving Las Vegas" LISTS
-#            HS_CompileOptionsList
-#            HS_DefinesList
-#            HS_DependenciesList
-#            HS_ExportedDependencies
-#            HS_IncludePathsList
-#            HS_LibrariesList
-#            HS_LibraryPathsList
-#            HS_LinkOptionsList
-#            HS_PrefixPathsList
-#            HS_wxCompilerOptions
-#            HS_wxDefines
-#            HS_wxIncludePaths
-#            HS_wxLibraryPaths
-#            HS_wxLibraries
-#            HS_wxFrameworks
-#    )
+    #    log(TITLE "Leaving Las Vegas" LISTS
+    #            HS_CompileOptionsList
+    #            HS_DefinesList
+    #            HS_DependenciesList
+    #            HS_ExportedDependencies
+    #            HS_IncludePathsList
+    #            HS_LibrariesList
+    #            HS_LibraryPathsList
+    #            HS_LinkOptionsList
+    #            HS_PrefixPathsList
+    #            HS_wxCompilerOptions
+    #            HS_wxDefines
+    #            HS_wxIncludePaths
+    #            HS_wxLibraryPaths
+    #            HS_wxLibraries
+    #            HS_wxFrameworks
+    #    )
 endfunction()
