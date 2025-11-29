@@ -215,7 +215,6 @@ function(check_environment PROJECT_ROOT)
     set(BUILD_TYPE_LC ${BUILD_TYPE_LC} PARENT_SCOPE)
     set(BUILD_TYPE_UC ${BUILD_TYPE_UC} PARENT_SCOPE)
     set(BUILD_FLAG ${BUILD_FLAG} PARENT_SCOPE)
-    set(CMAKE_CXX_COMPILER ${CMAKE_CXX_COMPILER} PARENT_SCOPE)
     set(CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD} PARENT_SCOPE)
     set(COMPANY ${COMPANY} PARENT_SCOPE)
     set(DM_FLAG ${DM_FLAG} PARENT_SCOPE)
@@ -233,7 +232,7 @@ function(check_environment PROJECT_ROOT)
 
     #    log(TITLE "As seen on TV" VARS
     #            BUILDING                BUILD_DEBUG             BUILD_RELEASE           BUILD_TYPE
-    #            BUILD_TYPE_LC           BUILD_TYPE_UC           CMAKE_CXX_COMPILER      CMAKE_CXX_STANDARD
+    #            BUILD_TYPE_LC           BUILD_TYPE_UC           CMAKE_CXX_STANDARD
     #            CMAKE_INSTALL_PREFIX    COMPANY                 LINK_SHARED             LINK_STATIC
     #            LINK_TYPE               LINK_TYPE_LC
     #            LINK_TYPE_UC
