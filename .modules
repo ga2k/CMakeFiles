@@ -1,0 +1,11 @@
+# .modules configuration file
+# Module build system configuration
+
+# Modules in dependency order (required)
+MODULES := cmake HoffSoft Gfx MyCare
+
+# Staging directory (optional - defaults to ~/dev/stage)
+STAGEDIR := ~/dev/stage
+
+# CMake preset to use (optional - defaults to "default")
+PRESET := "Linux x64 (Debug Shared)"
