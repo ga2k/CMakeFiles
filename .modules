@@ -2,7 +2,7 @@
 # Module build system configuration
 
 # Modules in dependency order (required)
-MODULES := cmake HoffSoft Gfx MyCare
+MODULES := HoffSoft Gfx MyCare
 
 # Staging directory (optional - defaults to ~/dev/stage)
 STAGEDIR := ~/dev/stage

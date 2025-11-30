@@ -156,13 +156,13 @@ ifeq ($(MODE),superbuild)
 	@cd $(word 1,$(MODULES)) && $(MAKE) build-All
 else
 	@echo -e "$(GREEN)Building current module: $(CURRENT_DIR) with preset $(PRESET)$(NC)"
-	@cmake --build --preset $(PRESET) || (echo "$(RED)Build failed for $(CURRENT_DIR)$(NC)" && exit 1)
+	@cmake --build --preset "$(PRESET)" || (echo "$(RED)Build failed for $(CURRENT_DIR)$(NC)" && exit 1)
 endif
 
 define build_module
 	@echo -e "$(GREEN)Building module: $(1) with preset $(PRESET)$(NC)"
 	@if [ -d "$(MODULE_PREFIX)/$(1)" ]; then \
-		cd $(MODULE_PREFIX)/$(1) && cmake --build --preset $(PRESET) || \
+		cd $(MODULE_PREFIX)/$(1) && cmake --build --preset "$(PRESET)" || \
 		(echo "$(RED)Build failed for $(1)$(NC)" && exit 1); \
 	else \
 		echo -e "$(YELLOW)Warning: Module $(1) does not exist, skipping$(NC)"; \
@@ -209,7 +209,7 @@ ifeq ($(MODE),superbuild)
 else
 	@echo -e "$(GREEN)Staging current module: $(CURRENT_DIR) to $(STAGEDIR)/$(CURRENT_DIR)$(NC)"
 	@mkdir -p $(STAGEDIR)/$(CURRENT_DIR)
-	@DESTDIR=$(STAGEDIR)/$(CURRENT_DIR) cmake --build --preset $(PRESET) --target install || \
+	@DESTDIR=$(STAGEDIR)/$(CURRENT_DIR) cmake --build --preset "$(PRESET)" --target install || \
 		(echo "$(RED)Stage failed for $(CURRENT_DIR)$(NC)" && exit 1)
 endif
 
@@ -218,7 +218,7 @@ define stage_module
 	@if [ -d "$(MODULE_PREFIX)/$(1)" ]; then \
 		mkdir -p $(STAGEDIR)/$(1) && \
 		cd $(MODULE_PREFIX)/$(1) && \
-		DESTDIR=$(STAGEDIR)/$(1) cmake --build --preset $(PRESET) --target install || \
+		DESTDIR=$(STAGEDIR)/$(1) cmake --build --preset "$(PRESET)" --target install || \
 		(echo "$(RED)Stage failed for $(1)$(NC)" && exit 1); \
 	else \
 		echo -e "$(YELLOW)Warning: Module $(1) does not exist, skipping$(NC)"; \
@@ -264,7 +264,7 @@ ifeq ($(MODE),superbuild)
 	@cd $(word 1,$(MODULES)) && $(MAKE) install-All
 else
 	@echo -e "$(GREEN)Installing current module: $(CURRENT_DIR) (requires sudo)$(NC)"
-	@sudo cmake --build --preset $(PRESET) --target install || \
+	@sudo cmake --build --preset "$(PRESET)" --target install || \
 		(echo "$(RED)Install failed for $(CURRENT_DIR)$(NC)" && exit 1)
 endif
 
@@ -272,7 +272,7 @@ define install_module
 	@echo -e "$(GREEN)Installing module: $(1) (requires sudo)$(NC)"
 	@if [ -d "$(MODULE_PREFIX)/$(1)" ]; then \
 		cd $(MODULE_PREFIX)/$(1) && \
-		sudo cmake --build --preset $(PRESET) --target install || \
+		sudo cmake --build --preset "$(PRESET)" --target install || \
 		(echo "$(RED)Install failed for $(1)$(NC)" && exit 1); \
 	else \
 		echo -e "$(YELLOW)Warning: Module $(1) does not exist, skipping$(NC)"; \
