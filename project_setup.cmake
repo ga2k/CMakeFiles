@@ -303,12 +303,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
 if (APP_GENERATE_RECORDSETS)
     generateRecordsets(
             ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/rs
-            ${APP_GENERATE_RECORDSETS})
+            ${APP_GENERATE_RECORDSETS}
+            ${APP_NAME})
 endif ()
 if (APP_GENERATE_UI_CLASSES)
     generateUIClasses(
             ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ui
-            ${APP_GENERATE_UI_CLASSES})
+            ${APP_GENERATE_UI_CLASSES}
+            ${APP_NAME})
 endif ()
 
 # ========================= Install & packaging =========================
