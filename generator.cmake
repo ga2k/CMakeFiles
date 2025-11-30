@@ -1,7 +1,7 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-function(generateUIClasses OUT_DIR SOURCE_DIR)
+function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET)
 
     set (generator "yaml2ui.py")
 
@@ -50,19 +50,19 @@ function(generateUIClasses OUT_DIR SOURCE_DIR)
     add_custom_target(generate_ui ALL DEPENDS "${UI_CLASSES_STAMP}")
 
     # Ensure your target waits for the generation step
-    add_dependencies(main generate_ui)
+    add_dependencies(${TRRGET} generate_ui)
 
     # Add generated sources
-    target_sources(main
+    target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
             FILES ${UI_CLASS_FILES}
     )
 
-    target_include_directories(main PRIVATE "${OUT_DIR}")
+    target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
 
 endfunction()
 
-function(generateRecordsets OUT_DIR SOURCE_DIR)
+function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
 
     set (generator "yaml2rs.py")
 
@@ -109,10 +109,10 @@ function(generateRecordsets OUT_DIR SOURCE_DIR)
     add_custom_target(generate_rs ALL DEPENDS "${RS_CLASSES_STAMP}")
 
     # Ensure your target waits for the generation step
-    add_dependencies(main generate_rs)
+    add_dependencies(${TRRGET} generate_rs)
 
     # Add generated sources
-    target_sources(main
+    target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
             FILES ${RS_CLASS_FILES}
     )
