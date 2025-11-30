@@ -103,6 +103,8 @@ def save_json(file_path, data):
 def main(in_file, out_file):
     """Process the presets from the input file and save to the output file."""
     data = read_json(in_file)
+    
+    # Process configurePresets
     presets = data.get("configurePresets", [])  # Access the correct section
 
     # Combine steps 1 and 2 into a single step
@@ -116,6 +118,21 @@ def main(in_file, out_file):
 
     # Step 5: Save the new JSON to the output file
     data["configurePresets"] = final_presets  # Update the presets section
+    
+    # Process buildPresets if they exist
+    if "buildPresets" in data:
+        build_presets = data.get("buildPresets", [])
+        # Get the names of the filtered configurePresets (non-hidden)
+        valid_configure_preset_names = [preset["name"] for preset in presets]
+        
+        # Filter buildPresets to only include those whose configurePreset is in the valid list
+        filtered_build_presets = [
+            bp for bp in build_presets 
+            if bp.get("configurePreset") in valid_configure_preset_names
+        ]
+        
+        data["buildPresets"] = filtered_build_presets
+    
     save_json(out_file, data)
 
 
