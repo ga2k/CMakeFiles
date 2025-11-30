@@ -120,7 +120,7 @@ function(addLibrary)
         if (arg_PLUGIN)
             add_library(${arg_NAME} SHARED)
         elseif (arg_EXECUTABLE)
-            add_executable(${APP_NAME} ${PlatformFlag})
+            add_executable(${arg_NAME} ${PlatformFlag})
         else ()
             add_library(${arg_NAME} ${arg_LINK})
             if (arg_PRIMARY)
@@ -160,11 +160,9 @@ function(addLibrary)
 
     # Configure the library
     if (arg_PLUGIN)
-        set(LIB_PRE "")
         set(LIB_SUF ".plugin")
         set(LIB_OUTPUT_NAME "${arg_NAME}")
     elseif (arg_EXECUTABLE)
-        set(LIB_PRE '')
         set(LIB_SUF ${CMAKE_EXECUTABLE_SUFFIX})
         set(LIB_OUTPUT_NAME "${arg_NAME}")
     else ()
@@ -178,12 +176,12 @@ function(addLibrary)
             CXX_EXTENSIONS              OFF
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
-            OUTPUT_NAME                 "${LIB_OUTPUT_NAME}"
+            OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
-            SOVERSION                   "${arg_VERSION}"
+            SOVERSION                   ${arg_VERSION}
             SUFFIX                      "${LIB_SUF}"
-            VERSION                     "${arg_VERSION}"
+            VERSION                     ${arg_VERSION}
     )
 
     # Compile and link options
