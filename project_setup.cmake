@@ -57,13 +57,14 @@ list(REMOVE_ITEM extra_Definitions "PLUGINS")
 if (NOT "${PI}" STREQUAL "")
     list(APPEND extra_Definitions "PLUGINS=${PI}")
 endif ()
+#
+## Ensure overrides path is highest priority for build tree
+#if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
+#    list(PREPEND extra_IncludePaths ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
+#endif (
+#
+#)
 
-# Ensure overrides path is highest priority for build tree
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
-    list(PREPEND extra_IncludePaths ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
-endif (
-
-)
 list(APPEND extra_IncludePaths
         ${HEADER_BASE_DIRS}
         ${CMAKE_INSTALL_PREFIX}/include
@@ -266,13 +267,13 @@ set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/bin")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
-# Ensure no link directories leak to INTERFACE and publish overrides include dir to installed consumers
-if (TARGET ${APP_NAME})
-    set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
-    target_include_directories(${APP_NAME} INTERFACE
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_NAME}/overrides/magic_enum/include>
-    )
-endif ()
+## Ensure no link directories leak to INTERFACE and publish overrides include dir to installed consumers
+#if (TARGET ${APP_NAME})
+#    set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
+#    target_include_directories(${APP_NAME} INTERFACE
+#            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_NAME}/overrides/magic_enum/include>
+#    )
+#endif ()
 
 # Optional resources fetching per project
 include(ExternalProject)
@@ -356,11 +357,11 @@ install(CODE "
     file(REMOVE ${junk})
   endif()
 ")
-
-install(DIRECTORY
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/overrides
-        DESTINATION
-        ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR})
+#
+#install(DIRECTORY
+#        ${CMAKE_CURRENT_SOURCE_DIR}/include/overrides
+#        DESTINATION
+#        ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR})
 
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
