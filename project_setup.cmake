@@ -59,10 +59,11 @@ if (NOT "${PI}" STREQUAL "")
 endif ()
 
 # Ensure overrides path is highest priority for build tree
-list(PREPEND extra_IncludePaths
-        ${CMAKE_CURRENT_SOURCE_DIR}/HoffSoft/overrides/magic_enum/include
-)
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
+    list(PREPEND extra_IncludePaths ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
+endif (
 
+)
 list(APPEND extra_IncludePaths
         ${HEADER_BASE_DIRS}
         ${CMAKE_INSTALL_PREFIX}/include
@@ -269,7 +270,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 if (TARGET ${APP_NAME})
     set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
     target_include_directories(${APP_NAME} INTERFACE
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_NAME}/overrides/magic_enum/include>
     )
 endif ()
 
