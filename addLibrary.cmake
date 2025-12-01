@@ -179,10 +179,16 @@ function(addLibrary)
             OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
-            SOVERSION                   ${arg_VERSION}
             SUFFIX                      "${LIB_SUF}"
-            VERSION                     ${arg_VERSION}
     )
+
+    # Only set version properties for libraries, not executables
+    if(NOT arg_EXECUTABLE)
+        set_target_properties(${arg_NAME} PROPERTIES
+                SOVERSION                   ${arg_VERSION}
+                VERSION                     ${arg_VERSION}
+        )
+    endif()
 
     # Compile and link options
     string(TOUPPER ${arg_NAME} arg_NAME_UC)
