@@ -156,6 +156,9 @@ function(addLibrary)
                 FILES
                 ${arg_MODULES}
         )
+        # Do not try to use PCH for module interface/source units; this can crash or be unsupported.
+        # CMake/Clang support skipping PCH per-source via this property.
+        set_source_files_properties(${arg_MODULES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
     endif ()
 
     # Configure the library
@@ -238,6 +241,12 @@ function(addLibrary)
             WXUSINGDLL
             _FILE_OFFSET_BITS=64
         )
+        # Enable wxWidgets precompiled header usage
+        target_compile_definitions(${arg_NAME}  PRIVATE WX_PRECOMP)
+        # Use the umbrella header from the Gfx package as the PCH entry point
+        # Assumes the Gfx include directory is already on the include path (it is via HS_IncludePathsList)
+        # Use angle-include so CMake doesn't try to resolve it inside this source tree
+        target_precompile_headers(${arg_NAME} PRIVATE <Gfx/wx.h>)
         if (${BUILD_TYPE} STREQUAL "Debug")
             target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
         else ()
