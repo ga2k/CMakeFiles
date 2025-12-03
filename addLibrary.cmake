@@ -229,9 +229,20 @@ function(addLibrary)
         endif ()
     endif ()
 
-    # Link Widgets
+    # Link wxWidgets directly (no Widgets wrapper library)
     if (WIDGETS IN_LIST arg_USES AND WIDGETS IN_LIST APP_FEATURES)
-        target_compile_definitions(${arg_NAME}  PRIVATE ${HS_wxDefines})
+        target_compile_definitions(${arg_NAME}  PRIVATE 
+            ${HS_wxDefines}
+            USING_WIDGETS
+            USING_wxWidgets
+            WXUSINGDLL
+            _FILE_OFFSET_BITS=64
+        )
+        if (${BUILD_TYPE} STREQUAL "Debug")
+            target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
+        else ()
+            target_compile_definitions(${arg_NAME}  PRIVATE NDEBUG)
+        endif ()
         target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
         target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
         target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})

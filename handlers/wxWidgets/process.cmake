@@ -181,55 +181,8 @@ function(wxWidgets_process incs libs defs)
     #    endif ()
     #
 
-    if (NOT TARGET Widgets)
-        add_library(Widgets INTERFACE)
-    endif ()
-#    target_sources(Widgets PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/Gfx/Widgets.h")
-
-    # @formatter:off
-    target_compile_options(Widgets      INTERFACE ${wxWidgets_COMPILER_OPTIONS})
-    target_link_directories(Widgets     INTERFACE ${wxWidgets_LIBRARY_PATHS})
-    target_link_libraries(Widgets       INTERFACE ${wxWidgets_LIBRARIES})
-    target_include_directories(Widgets  INTERFACE ${wxWidgets_INCLUDE_DIRS})
-    if (LINUX)
-        target_link_libraries(Widgets   INTERFACE ${GLLibs} ${LinuxLibs})
-    endif ()
-    # @formatter:on
-
-    target_compile_definitions(Widgets INTERFACE
-            USING_WIDGETS
-            USING_wxWidgets
-            WXUSINGDLL
-            _FILE_OFFSET_BITS=64
-    )
-    if (${BUILD_TYPE} STREQUAL "Debug")
-        target_compile_definitions(Widgets INTERFACE DEBUG _DEBUG)
-    else ()
-        target_compile_definitions(Widgets INTERFACE NDEBUG)
-    endif ()
-
-    set(LiB_PRE ${CMAKE_SHARED_LIBRARY_PREFIX})
-    #message("LiB_PRE=${LiB_PRE}")
-    set(LiB_SUF ${CMAKE_SHARED_LIBRARY_SUFFIX})
-    #message("LiB_SUF=${LiB_SUF}")
-    set(LIB_ARCHIVE_DIR "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
-    set(LIB_LIBRARY_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-    set(LIB_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-
-    #-------------------------------------------------------------------------------------------------------------------
-    # @formatter:off
-    set_target_properties(Widgets   PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY    "${LIB_ARCHIVE_DIR}"
-        COMPILE_FEATURES            cxx_std_23
-        CXX_EXTENSIONS              OFF
-        LIBRARY_OUTPUT_DIRECTORY    "${LIB_LIBRARY_DIR}"
-        POSITION_INDEPENDENT_CODE   ON
-        PREFIX                      "${LiB_PRE}"
-        RUNTIME_OUTPUT_DIRECTORY    "${LIB_RUNTIME_DIR}"
-        SUFFIX                      "${LiB_SUF}"
-        SOVERSION                   ${LIB_VERSION}
-        VERSION                     ${LIB_VERSION}
-    )
+    # Widgets library removed - consumers link directly to wxWidgets
+    # All necessary variables are exported to parent scope below
 
     set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_COMPILER_OPTIONS}   PARENT_SCOPE)
     set(wxWidgets_DEFINES           ${wxWidgets_DEFINES}            PARENT_SCOPE)
