@@ -35,6 +35,12 @@ if (APPLE)
 
     list(APPEND extra_Definitions __WXOSX_COCOA__)
 
+    # Link Objective-C runtime for macOS-specific code
+    find_library(OBJC_LIBRARY objc)
+    if(OBJC_LIBRARY)
+        list(APPEND extra_LibrariesList ${OBJC_LIBRARY})
+    endif()
+
     # Shared CMake module paths (stage + repo cmake directory)
     list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
     list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
