@@ -1,5 +1,14 @@
 include_guard(GLOBAL)
 
+# Shared feature/platform setup and environment checks
+include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/fetchContents.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/addLibrary.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
+
+# The environment check validates OUTPUT_DIR etc.; call once globally
+check_environment("${CMAKE_SOURCE_DIR}")
+
 # Derivations of common metadata (safe globally)
 string(TOUPPER ${APP_NAME} APP_NAME_UC)
 string(TOLOWER ${APP_NAME} APP_NAME_LC)
@@ -60,15 +69,6 @@ endif ()
 if ("${compiler_version}" MATCHES "clang")
     list(APPEND extra_CompileOptions "-fno-implicit-modules;-fno-implicit-module-maps")
 endif ()
-
-# Shared feature/platform setup and environment checks
-include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/fetchContents.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/addLibrary.cmake)
-
-# The environment check validates OUTPUT_DIR etc.; call once globally
-check_environment("${CMAKE_SOURCE_DIR}")
 
 include(${CMAKE_SOURCE_DIR}/cmake/platform.cmake)
 initialiseFeatureHandlers()
