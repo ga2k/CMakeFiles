@@ -80,10 +80,10 @@ function(wxWidgets_process incs libs defs)
     # Prefer a real wx-config on PATH, prioritizing native Homebrew on Apple Silicon
     find_program(wx_config NAMES wx-config
             HINTS
-            /opt/homebrew/bin
-            /usr/local/bin
-            /usr/bin
-    )
+                /opt/homebrew/bin
+                /usr/local/bin
+                /usr/bin
+            )
     if (EXISTS "${wx_config}")
         execute_process(
                 COMMAND ${wx_config} ${toolkit_used} --cxxflags --libs all
