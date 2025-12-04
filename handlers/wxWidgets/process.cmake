@@ -77,7 +77,13 @@ function(wxWidgets_process incs libs defs)
         endif ()
     endif ()
 
-    set(wx_config "${CMAKE_INSTALL_PREFIX}/bin/wx-config")
+    # Prefer a real wx-config on PATH, prioritizing native Homebrew on Apple Silicon
+    find_program(wx_config NAMES wx-config
+            HINTS
+                /opt/homebrew/bin
+                /usr/local/bin
+                /usr/bin
+            )
     if (EXISTS "${wx_config}")
         execute_process(
                 COMMAND ${wx_config} ${toolkit_used} --cxxflags --libs all
@@ -161,6 +167,47 @@ function(wxWidgets_process incs libs defs)
                 endif ()
             endif ()
         endforeach ()
+
+        # Deduplicate and normalize discovered values to avoid duplicate header spellings
+        if (wxw_includePaths)
+            list(REMOVE_DUPLICATES wxw_includePaths)
+        endif()
+        if (wxw_libraryPaths)
+            list(REMOVE_DUPLICATES wxw_libraryPaths)
+        endif()
+        if (wxw_libraries)
+            list(REMOVE_DUPLICATES wxw_libraries)
+        endif()
+        if (wxw_frameworks)
+            list(REMOVE_DUPLICATES wxw_frameworks)
+        endif()
+        if (wxw_defines)
+            list(REMOVE_DUPLICATES wxw_defines)
+        endif()
+        if (wxw_compilerOptions)
+            list(REMOVE_DUPLICATES wxw_compilerOptions)
+        endif()
+
+        # On Apple Silicon, prefer /opt/homebrew include roots over /usr/local to avoid mixing Intel headers.
+        if (APPLE)
+            set(_have_opt_homebrew FALSE)
+            foreach(p IN LISTS wxw_includePaths)
+                if (p MATCHES "/opt/homebrew/include")
+                    set(_have_opt_homebrew TRUE)
+                endif()
+            endforeach()
+            if (_have_opt_homebrew)
+                set(_filtered_includes)
+                foreach(p IN LISTS wxw_includePaths)
+                    if (p MATCHES "/usr/local/include")
+                        message(STATUS "Dropping duplicate/intel include root: ${p}")
+                    else()
+                        list(APPEND _filtered_includes ${p})
+                    endif()
+                endforeach()
+                set(wxw_includePaths ${_filtered_includes})
+            endif()
+        endif()
 
         # @formatter:off
         set(wxWidgets_COMPILER_OPTIONS  ${wxw_compilerOptions})
