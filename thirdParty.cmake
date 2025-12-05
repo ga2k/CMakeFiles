@@ -5,7 +5,7 @@ include_guard(GLOBAL)
 # If they aren’t provided yet, create minimal INTERFACE wrappers that point
 # at HoffSoft/external include dirs (and adjust if your FetchContent names differ).
 
-if(SUPERBUILD)
+if(MONOREPO)
     set(_external_dir "${CMAKE_SOURCE_DIR}/HoffSoft/external")
 else ()
     set(_external_dir "${CMAKE_SOURCE_DIR}/external")

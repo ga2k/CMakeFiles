@@ -1,4 +1,4 @@
-# Makefile for multi-module CMake project with superbuild support
+# Makefile for multi-module CMake project with monorepo support
 # Requires .modules configuration file
 
 .PHONY: help clean build stage install push pull
@@ -20,7 +20,7 @@ $(error $(RED)ERROR: .modules file not found in current directory$(NC))
 endif
 
 # Parse .modules file
-SUPERBUILD := $(shell grep -E '^SUPERBUILD\s*:=' .modules 2>/dev/null | sed 's/.*:=\s*\([^ \t#]*\).*/\1/')
+MONOREPO := $(shell grep -E '^MONOREPO\s*:=' .modules 2>/dev/null | sed 's/.*:=\s*\([^ \t#]*\).*/\1/')
 MODULES := $(shell grep -E '^MODULES\s*:=' .modules 2>/dev/null | sed 's/.*:=\s*\([^#]*\).*/\1/')
 STAGEDIR := $(shell grep -E '^STAGEDIR\s*:=' .modules 2>/dev/null | sed 's/.*:=\s*\([^ \t#]*\).*/\1/')
 PRESET_FILE := $(shell grep -E '^PRESET\s*:=' .modules 2>/dev/null | sed 's/.*:=\s*\(.*\)/\1/' | sed 's/^"\(.*\)"$$/\1/' | sed "s/^'\(.*\)'$$/\1/" | sed 's/[ \t]*#.*//' | sed 's/[ \t]*$$//')
@@ -36,23 +36,23 @@ STAGEDIR := $(shell echo $(STAGEDIR))
 CURRENT_DIR := $(notdir $(CURDIR))
 
 # Validate current directory
-ifeq ($(SUPERBUILD),)
-    # Non-superbuild mode: current dir must be in MODULES
+ifeq ($(MONOREPO),)
+    # Non-monorepo mode: current dir must be in MODULES
     ifeq (,$(filter $(CURRENT_DIR),$(MODULES)))
         $(error $(RED)ERROR: Current directory '$(CURRENT_DIR)' is not listed in MODULES$(NC))
     endif
-    MODE := non-superbuild
+    MODE := non-monorepo
     MODULE_PREFIX := ..
 else
-    # Superbuild mode: check if we're in superbuild or module dir
-    ifeq ($(CURRENT_DIR),$(SUPERBUILD))
-        MODE := superbuild
+    # Monorepo mode: check if we're in monorepo or module dir
+    ifeq ($(CURRENT_DIR),$(MONOREPO))
+        MODE := monorepo
         MODULE_PREFIX := .
     else ifeq (,$(filter $(CURRENT_DIR),$(MODULES)))
-        $(error $(RED)ERROR: Current directory '$(CURRENT_DIR)' must be '$(SUPERBUILD)' or one of: $(MODULES)$(NC))
+        $(error $(RED)ERROR: Current directory '$(CURRENT_DIR)' must be '$(MONOREPO)' or one of: $(MODULES)$(NC))
     else
-        # We're in a module dir within superbuild - treat as non-superbuild
-        MODE := non-superbuild
+        # We're in a module dir within monorepo - treat as non-monorepo
+        MODE := non-monorepo
         MODULE_PREFIX := ..
     endif
 endif
@@ -98,7 +98,7 @@ help:
 # CLEAN targets
 #
 clean:
-ifeq ($(MODE),superbuild)
+ifeq ($(MODE),monorepo)
 	@echo -e "$(YELLOW)Delegating to first module for clean-All...$(NC)"
 	@cd $(word 1,$(MODULES)) && $(MAKE) clean-All
 else
@@ -117,7 +117,7 @@ endef
 
 clean-%:
 	$(call validate_module,$*)
-ifeq ($(MODE),superbuild)
+ifeq ($(MODE),monorepo)
 ifeq ($*,All)
 	@echo -e "$(YELLOW)Delegating to first module for clean-All...$(NC)"
 	@cd $(word 1,$(MODULES)) && $(MAKE) clean-All
