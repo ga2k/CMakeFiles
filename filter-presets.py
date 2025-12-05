@@ -113,6 +113,24 @@ def main(in_file, out_file):
     # Step 3: Filter presets based on their conditions
     presets = filter_presets_by_conditions(presets)
 
+    # Step 3.5: Rename visible configure presets to concise names
+    # Example: "Linux x64 (Debug Shared)" -> "Debug Shared"
+    #          "macOS arm64 (Release Static)" -> "Release Static"
+    # We also keep a name mapping to update buildPresets accordingly.
+    import re
+    name_map = {}
+    concise_pattern = re.compile(r"\((Debug|Release)\s+(Shared|Static)\)")
+    for preset in presets:
+        orig_name = preset.get("name", "")
+        m = concise_pattern.search(orig_name)
+        if m:
+            concise = f"{m.group(1)} {m.group(2)}"
+            if concise != orig_name:
+                name_map[orig_name] = concise
+                preset["name"] = concise
+                # Optionally set displayName for IDEs that show it
+                preset["displayName"] = concise
+
     # Step 4: Add the hidden presets back to the final list
     final_presets = hidden_presets + presets
 
@@ -122,7 +140,12 @@ def main(in_file, out_file):
     # Process buildPresets if they exist
     if "buildPresets" in data:
         build_presets = data.get("buildPresets", [])
-        # Get the names of the filtered configurePresets (non-hidden)
+        # Update build presets' configurePreset names according to the rename map
+        for bp in build_presets:
+            cfg = bp.get("configurePreset")
+            if cfg in name_map:
+                bp["configurePreset"] = name_map[cfg]
+        # Get the names of the filtered (and possibly renamed) configurePresets (non-hidden)
         valid_configure_preset_names = [preset["name"] for preset in presets]
         
         # Filter buildPresets to only include those whose configurePreset is in the valid list
