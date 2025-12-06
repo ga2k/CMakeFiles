@@ -140,20 +140,43 @@ def main(in_file, out_file):
     # Process buildPresets if they exist
     if "buildPresets" in data:
         build_presets = data.get("buildPresets", [])
+
         # Update build presets' configurePreset names according to the rename map
         for bp in build_presets:
             cfg = bp.get("configurePreset")
             if cfg in name_map:
                 bp["configurePreset"] = name_map[cfg]
+
+        # Ensure build preset names align with their configurePreset names and are concise
+        # Example: a build preset named "Linux x64 (Debug Shared)" becomes "Debug Shared"
+        # and we also set displayName for better IDE visibility.
+        concise_pattern = re.compile(r"\((Debug|Release)\s+(Shared|Static)\)")
+        for bp in build_presets:
+            bp_name = bp.get("name", "")
+            # First, try direct rename via map if the full name was in the map
+            if bp_name in name_map:
+                new_name = name_map[bp_name]
+            else:
+                # Try to parse the concise part from parentheses
+                m = concise_pattern.search(bp_name)
+                if m:
+                    new_name = f"{m.group(1)} {m.group(2)}"
+                else:
+                    # As a last resort, align to the (possibly renamed) configurePreset
+                    new_name = bp.get("configurePreset", bp_name)
+            # Apply name and displayName
+            bp["name"] = new_name
+            bp["displayName"] = new_name
+
         # Get the names of the filtered (and possibly renamed) configurePresets (non-hidden)
         valid_configure_preset_names = [preset["name"] for preset in presets]
-        
+
         # Filter buildPresets to only include those whose configurePreset is in the valid list
         filtered_build_presets = [
-            bp for bp in build_presets 
+            bp for bp in build_presets
             if bp.get("configurePreset") in valid_configure_preset_names
         ]
-        
+
         data["buildPresets"] = filtered_build_presets
     
     save_json(out_file, data)
