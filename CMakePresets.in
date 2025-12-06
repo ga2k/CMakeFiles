@@ -110,8 +110,6 @@
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
         "CMAKE_OSX_SYSROOT": "macosx",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "13.6",
-#        "CMAKE_SHARED_LINKER_FLAGS": "-L/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++abi.dylib",
-#        "CMAKE_EXE_LINKER_FLAGS":    "-L/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++abi.dylib",
         "OPENSSL_ROOT_DIR": "/opt/local",
         "OPENSSL_PATH": "/opt/local/libexec/openssl3/lib/cmake/OpenSSL",
         "OPENSSL_INCLUDE_DIR": "/opt/local/include/openssl-3",
