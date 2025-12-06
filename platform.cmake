@@ -19,7 +19,7 @@ if (APPLE)
     if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
         # If no deployment target has been set default to the minimum supported
         # OS version (this has to be set before the first project() call)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0 CACHE STRING "macOS Deployment Target")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "macOS Deployment Target" FORCE)
     endif ()
     list(APPEND extra_Definitions BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
     list(APPEND extra_CompileOptions "-fPIC")
