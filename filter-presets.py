@@ -185,12 +185,12 @@ def main(in_file, out_file):
 if (len(sys.argv) >= 2 and not sys.argv[1] is None and not sys.argv[1] == ''):
     input_file = sys.argv[1]
 else:
-    input_file = 'CMakePresets.in'
+    input_file = './CMakePresets.in'
 
 if (len(sys.argv) >= 3 and not sys.argv[2] is None and not sys.argv[2] == ''):
     output_file = sys.argv[2]
 else:
-    output_file = 'CMakePresets.json'
+    output_file = '../CMakePresets.json'
 
 main(input_file, output_file)
 
