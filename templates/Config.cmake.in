@@ -50,24 +50,40 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
     INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
   )
 endif()
-if(NOT InDevelopment)
+if(InDevelopment)
+  # In development (monorepo) include the build-tree export of module FILE_SET mappings
+  file(GLOB _DEV_MODULE_EXPORT
+       "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+  if(_DEV_MODULE_EXPORT)
+    list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
+    include("${_DEV_MODULE_EXPORT_FILE}")
+  endif()
+else()
   include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
-# For Clang consumers of modules, provide prebuilt-module path automatically
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(fmodule_cmd "-fprebuilt-module-path")
-  else()
-    set(fmodule_cmd "-fmodule-mapper")
-  endif()
+# For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
+# This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
+if(NOT DEFINED USE_PREBUILT_MODULES)
+  # Default to ON to preserve existing behavior unless explicitly overridden.
+  set(USE_PREBUILT_MODULES ON)
+endif()
 
-  if(InDevelopment)
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
-  else()
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "${fmodule_cmd}=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+if(USE_PREBUILT_MODULES)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set(fmodule_cmd "-fprebuilt-module-path")
+    else()
+      set(fmodule_cmd "-fmodule-mapper")
+    endif()
+
+    if(InDevelopment)
+      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+        "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
+    else()
+      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+        "${fmodule_cmd}=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+    endif()
   endif()
 endif()
 
