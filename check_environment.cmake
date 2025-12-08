@@ -79,7 +79,6 @@ function(check_environment PROJECT_ROOT)
     unset (LINK_TYPE)
     unset (LINK_TYPE_LC)
     unset (LINK_TYPE_UC)
-    unset (OUTPUT_DIR)
     unset (SHARED_LIBS_OPTIONS)
     unset (STAGING)
     unset (SUDO)
@@ -166,7 +165,10 @@ function(check_environment PROJECT_ROOT)
 
     # Set the binary (output)  directory
     forceSet(CMAKE_CURRENT_BINARY_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
-    forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
+
+    if(NOT OUTPUT_DIR)
+        forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
+    endif ()
 
     # Set the external module path
     forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
