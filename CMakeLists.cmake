@@ -20,6 +20,6 @@ if ("${APP_FEATURES}" MATCHES "PRINT")
 endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/project_setup.cmake)
-
-return()
+if (NOT MONOREPO OR DEFINED MONOREPO_PROCESSED)
+    include(${CMAKE_SOURCE_DIR}/cmake/project_setup.cmake)
+endif ()
