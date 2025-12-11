@@ -166,11 +166,11 @@ function(check_environment PROJECT_ROOT)
     # Set the binary (output)  directory
 #    forceSet(CMAKE_CURRENT_BINARY_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
 
-    if (NOT BUILD_DIR OR DEFINED MONOREPO)
+    if (NOT BUILD_DIR)
         forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
     endif ()
 
-    if(NOT OUTPUT_DIR OR DEFINED MONOREPO)
+    if(NOT OUTPUT_DIR)
         forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
     endif ()
 
