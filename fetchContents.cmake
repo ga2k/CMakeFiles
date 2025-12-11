@@ -254,8 +254,8 @@ endfunction()
 ###################################################################################################################
 function(createStandardPackageData)
 
-    # 1          2          3            4        5                6                     7          8                           9                                            10
-    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [NO_OVERRIDE_FIND_PACKAGE | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # 1          2          3            4        5                6                     7                        8                                            9
+    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | {              [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
@@ -284,10 +284,8 @@ function(createStandardPackageData)
     #
     #   [7] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
     #
-    #   [8] NO_OVERRIDE_FIND_PACKAGE or empty
-    #
-    #   [9]  COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
-    #   [10] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
+    #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
+    #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
 
     #   [, ...] More packages in the same feature, if any
     #
@@ -420,9 +418,8 @@ function(fetchContents)
     set(FeatureSrcDirIX 4)
     set(FeatureBuildDirIX 5)
     set(FeatureIncDirIX 6)
-    set(FeatureNoOverrideFindPackageIX 7)
-    set(FeatureComponentsIX 8)
-    set(FeatureArgsIX 9)
+    set(FeatureComponentsIX 7)
+    set(FeatureArgsIX 8)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
@@ -432,9 +429,8 @@ function(fetchContents)
     set(PkgSrcDirIX 3)
     set(PkgBuildDirIX 4)
     set(PkgIncDirIX 5)
-    set(PkgNoOverrideFindPackageIX 6)
-    set(PkgComponentsIX 7)
-    set(PkgArgsIX 8)
+    set(PkgComponentsIX 6)
+    set(PkgArgsIX 7)
 
     foreach (line IN LISTS SystemFeatureData)
         SplitAt(${line} "|" afeature dc)
@@ -670,7 +666,7 @@ function(fetchContents)
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_COMPONENTS)
-        message("Unknown find_package_categories: ${item}")
+        message("Unknown find_package_featureegories: ${item}")
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_ARGS)
@@ -715,7 +711,6 @@ function(fetchContents)
         unset(this_build)
         unset(this_inc)
         unset(this_out)
-        unset(this_no_override_find_package)
         unset(this_find_package_components)
         unset(this_namespace_package_components)
         unset(this_find_package_args)
@@ -734,7 +729,6 @@ function(fetchContents)
                 BUILD_DIR this_build
                 FETCH_FLAG this_fetch
                 INC_DIR this_inc
-                NO_OVERRIDE_FIND_PACKAGE this_no_override_find_package
         )
 
         findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
@@ -771,7 +765,7 @@ function(fetchContents)
 
             endif ()
 
-            if (num_args OR num_components)
+            if ((num_args OR num_components) AND NOT this_no_override_package)
                 set(this_override_find_package ON)
             else ()
                 set(this_override_find_package OFF)
@@ -827,9 +821,6 @@ function(fetchContents)
                             message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname})")
                             FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname})
                         else ()
-                            if ("${this_no_override_find_package}" STREQUAL "ON")
-#                                unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
-                            endif ()
                             message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
                             FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})
                         endif ()
