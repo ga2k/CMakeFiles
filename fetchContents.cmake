@@ -107,7 +107,7 @@ endfunction()
 ###################################################################################################################
 ###################################################################################################################
 function(addPackageData)
-    set(switches SYSTEM;USER;NO_OVERRIDE_FIND_PACKAGE)
+    set(switches SYSTEM;USER)
     set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
     set(arrays COMPONENTS;ARGS)
 
@@ -161,7 +161,6 @@ function(addPackageData)
         unset(aoc_GIT_TAG)
         unset(aoc_BINDIR)
         unset(aoc_INCDIR)
-        unset(aoc_NO_OVERRIDE_FIND_PACKAGE)
         unset(aoc_COMPONENT)
         unset(aoc_ARG)
         unset(aoc_COMPONENTS)
@@ -196,12 +195,6 @@ function(addPackageData)
 
     if (aoc_INCDIR)
         string(JOIN "|" entry "${entry}" "${aoc_INCDIR}")
-    else ()
-        string(APPEND entry "|")
-    endif ()
-
-    if (aoc_NO_OVERRIDE_FIND_PACKAGE)
-        string(JOIN "|" entry "${entry}" "NO_OVERRIDE_FIND_PACKAGE")
     else ()
         string(APPEND entry "|")
     endif ()
@@ -254,8 +247,8 @@ endfunction()
 ###################################################################################################################
 function(createStandardPackageData)
 
-    # 1          2          3            4        5                6                     7                        8                                            9
-    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | {              [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # 1          2          3            4        5                6                     7          8                                            9
+    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
@@ -308,7 +301,6 @@ function(createStandardPackageData)
 
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
-            NO_OVERRIDE_FIND_PACKAGE
             ARG REQUIRED)
 
     ##
@@ -765,7 +757,7 @@ function(fetchContents)
 
             endif ()
 
-            if ((num_args OR num_components) AND NOT this_no_override_package)
+            if (num_args OR num_components)
                 set(this_override_find_package ON)
             else ()
                 set(this_override_find_package OFF)
