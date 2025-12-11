@@ -64,7 +64,7 @@ function(check_environment PROJECT_ROOT)
 
     unset (BUILDING)
     unset (BUILD_DEBUG)
-    unset (BUILD_DIR)
+#    unset (BUILD_DIR)
     unset (BUILD_FLAG)
     unset (BUILD_RELEASE)
     unset (BUILD_SHARED_LIBS)
@@ -161,14 +161,14 @@ function(check_environment PROJECT_ROOT)
 
     # Set the build directory
 #    forceSet(CMAKE_BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
-    forceSet(BUILD_DIR "" "${CMAKE_BUILD_DIR}" FILEPATH)
+#    forceSet(BUILD_DIR "" "${CMAKE_BUILD_DIR}" FILEPATH)
 
     # Set the binary (output)  directory
 #    forceSet(CMAKE_CURRENT_BINARY_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
 
-#    if (NOT BUILD_DIR)
-#        forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
-#    endif ()
+    if (NOT BUILD_DIR)
+        forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
+    endif ()
 
     if(NOT OUTPUT_DIR)
         forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
