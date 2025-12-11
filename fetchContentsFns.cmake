@@ -320,7 +320,7 @@ function(parsePackage pkgArray)
 
     if (A_PP_NO_OVERRIDE_FIND_PACKAGE AND ${PkgNoOverrideFindPackageIX} LESS ${length})
         list(GET pkg_deets ${PkgNoOverrideFindPackageIX} temp)
-        set(${A_PP_NO_OVERRIDE_FIND_PACKAGE} "ON")
+        set(${A_PP_NO_OVERRIDE_FIND_PACKAGE} "ON" PARENT_SCOPE)
     endif ()
 
     if (A_PP_COMPONENTS)
