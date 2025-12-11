@@ -771,7 +771,7 @@ function(fetchContents)
 
             endif ()
 
-            if ((num_args OR num_components) AND NOT "${this_no_override_find_package}" EQUAL ON)
+            if ((num_args OR num_components) AND NOT "${this_no_override_find_package}" STREQUAL "ON")
                 set(this_override_find_package ON)
             else ()
                 set(this_override_find_package OFF)
