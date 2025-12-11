@@ -301,7 +301,6 @@ function(createStandardPackageData)
 
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
-            COMPONENT "yaml-cpp"
             ARG REQUIRED)
 
     ##
