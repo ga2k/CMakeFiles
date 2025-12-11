@@ -771,7 +771,7 @@ function(fetchContents)
 
             endif ()
 
-            if ((num_args OR num_components) AND NOT "${this_no_override_find_package}" STREQUAL "ON")
+            if (num_args OR num_components)
                 set(this_override_find_package ON)
             else ()
                 set(this_override_find_package OFF)
@@ -779,7 +779,9 @@ function(fetchContents)
 
             if (num_args OR num_components)
 
-                set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                if (NOT "${this_no_override_find_package}" STREQUAL "ON")
+                    set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                endif ()
                 if (num_args)
                     list(APPEND this_hint ${this_find_package_args})
                 endif ()
