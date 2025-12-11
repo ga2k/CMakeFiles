@@ -764,7 +764,7 @@ function(fetchContents)
             endif ()
 
             if (num_args OR num_components)
-#                set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
                 if (num_args)
                     list(APPEND this_hint ${this_find_package_args})
                 endif ()
@@ -859,6 +859,7 @@ function(fetchContents)
                 ########################################################################################################
                 ########################################################################################################
                 if (NOT HANDLED) # AND NOT TARGET ${this_pkgname})
+                    message("FetchContent_MakeAvailable(${this_pkgname}")
                     FetchContent_MakeAvailable(${this_pkgname})
                 endif ()
                 set(cs "${this_find_package_components}")
