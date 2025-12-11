@@ -107,7 +107,7 @@ endfunction()
 ###################################################################################################################
 ###################################################################################################################
 function(addPackageData)
-    set(switches SYSTEM;USER)
+    set(switches SYSTEM;USER;NO_OVERRIDE_FIND_PACKAGE)
     set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
     set(arrays COMPONENTS;ARGS)
 
@@ -161,6 +161,7 @@ function(addPackageData)
         unset(aoc_GIT_TAG)
         unset(aoc_BINDIR)
         unset(aoc_INCDIR)
+        unset(aoc_NO_OVERRIDE_FIND_PACKAGE)
         unset(aoc_COMPONENT)
         unset(aoc_ARG)
         unset(aoc_COMPONENTS)
@@ -195,6 +196,12 @@ function(addPackageData)
 
     if (aoc_INCDIR)
         string(JOIN "|" entry "${entry}" "${aoc_INCDIR}")
+    else ()
+        string(APPEND entry "|")
+    endif ()
+
+    if (aoc_NO_OVERRIDE_FIND_PACKAGE)
+        string(JOIN "|" entry "${entry}" "NO_OVERRIDE_FIND_PACKAGE")
     else ()
         string(APPEND entry "|")
     endif ()
@@ -247,8 +254,8 @@ endfunction()
 ###################################################################################################################
 function(createStandardPackageData)
 
-    # 1          2          3            4        5                6                     7          8                                            9
-    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # 1          2          3            4        5                6                     7          8                           9                                            10
+    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [NO_OVERRIDE_FIND_PACKAGE | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
@@ -277,8 +284,10 @@ function(createStandardPackageData)
     #
     #   [7] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
     #
-    #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
-    #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
+    #   [8] NO_OVERRIDE_FIND_PACKAGE or empty
+    #
+    #   [9]  COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
+    #   [10] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
 
     #   [, ...] More packages in the same feature, if any
     #
@@ -301,6 +310,7 @@ function(createStandardPackageData)
 
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
+            NO_OVERRIDE_FIND_PACKAGE
             ARG REQUIRED)
 
     ##
@@ -410,8 +420,9 @@ function(fetchContents)
     set(FeatureSrcDirIX 4)
     set(FeatureBuildDirIX 5)
     set(FeatureIncDirIX 6)
-    set(FeatureComponentsIX 7)
-    set(FeatureArgsIX 8)
+    set(FeatureNoOverrideFindPackageIX 7)
+    set(FeatureComponentsIX 8)
+    set(FeatureArgsIX 9)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
@@ -421,8 +432,9 @@ function(fetchContents)
     set(PkgSrcDirIX 3)
     set(PkgBuildDirIX 4)
     set(PkgIncDirIX 5)
-    set(PkgComponentsIX 6)
-    set(PkgArgsIX 7)
+    set(PkgNoOverrideFindPackageIX 6)
+    set(PkgComponentsIX 7)
+    set(PkgArgsIX 8)
 
     foreach (line IN LISTS SystemFeatureData)
         SplitAt(${line} "|" afeature dc)
@@ -658,7 +670,7 @@ function(fetchContents)
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_COMPONENTS)
-        message("Unknown find_package_featureegories: ${item}")
+        message("Unknown find_package_categories: ${item}")
     endforeach ()
 
     foreach (item IN LISTS AUE_FIND_PACKAGE_ARGS)
@@ -703,6 +715,7 @@ function(fetchContents)
         unset(this_build)
         unset(this_inc)
         unset(this_out)
+        unset(this_no_override_find_package)
         unset(this_find_package_components)
         unset(this_namespace_package_components)
         unset(this_find_package_args)
@@ -721,6 +734,7 @@ function(fetchContents)
                 BUILD_DIR this_build
                 FETCH_FLAG this_fetch
                 INC_DIR this_inc
+                NO_OVERRIDE_FIND_PACKAGE this_no_override_find_package
         )
 
         findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
@@ -757,13 +771,14 @@ function(fetchContents)
 
             endif ()
 
-            if (num_args OR num_components)
+            if ((num_args OR num_components) AND NOT this_no_override_find_package)
                 set(this_override_find_package ON)
             else ()
                 set(this_override_find_package OFF)
             endif ()
 
             if (num_args OR num_components)
+
                 set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
                 if (num_args)
                     list(APPEND this_hint ${this_find_package_args})

@@ -140,7 +140,7 @@ endfunction()
 ##
 function(parsePackage pkgArray)
     set(options)
-    set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST METHOD)
+    set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST METHOD NO_OVERRIDE_FIND_PACKAGE)
     set(multi_value_args)
 
     # Parse the arguments
@@ -174,6 +174,7 @@ function(parsePackage pkgArray)
     set(${A_PP_BUILD_DIR} "" PARENT_SCOPE)
     set(${A_PP_FETCH_FLAG} ON PARENT_SCOPE)
     set(${A_PP_INC_DIR} "" PARENT_SCOPE)
+    set(${A_PP_NO_OVERRIDE_FIND_PACKAGE} "" PARENT_SCOPE)
     set(${A_PP_COMPONENTS} "" PARENT_SCOPE)
     set(${A_PP_ARGS} "" PARENT_SCOPE)
 
@@ -315,6 +316,11 @@ function(parsePackage pkgArray)
         else ()
             set(inc_ok ON)
         endif ()
+    endif ()
+
+    if (A_PP_NO_OVERRIDE_FIND_PACKAGE AND ${PkgNoOverrideFindPackageIX} LESS ${length})
+        list(GET pkg_deets ${PkgNoOverrideFindPackageIX} temp)
+        set(${A_PP_NO_OVERRIDE_FIND_PACKAGE} ON)
     endif ()
 
     if (A_PP_COMPONENTS)
