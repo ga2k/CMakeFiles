@@ -2,7 +2,7 @@ function(addLibrary)
     cmake_parse_arguments(arg
             "PLUGIN;STATIC;SHARED;MULTI_LIBS;PRIMARY;EXECUTABLE"
             "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
-            "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES"
+            "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES;BASE_DIRS;CXX_BASE_DIRS"
             ${ARGN}
     )
     get_filename_component(LIB_PATH ${CMAKE_PARENT_LIST_FILE} DIRECTORY)
@@ -46,6 +46,14 @@ function(addLibrary)
         set(arg_VERSION "1.0.0")
     endif ()
 
+    if (NOT arg_BASE_DIRS)
+        set(arg_BASE_DIRS ${HEADER_BASE_DIRS})
+    endif ()
+
+    if (NOT arg_CXX_BASE_DIRS)
+        set(arg_CXX_BASE_DIRS "")
+    endif ()
+
     string(TOUPPER "${arg_USES}" arg_USES)
 
     if(NOT arg_EXECUTABLE)
@@ -71,46 +79,50 @@ function(addLibrary)
                 if (NOT arg_SHARED)
                     message(WARNING "Plugins must be 'SHARED' libraries, SHARED has been set")
                     set(arg_SHARED ON)
-                    set(arg_LINK SHARED)
+                    set(arg_LINK " SHARED")
                 else ()
-                    set(arg_LINK SHARED)
+                    set(arg_LINK " SHARED")
                 endif ()
             elseif (arg_STATIC AND arg_SHARED)
                 message(FATAL_ERROR "Only 'PLUGIN SHARED', 'SHARED', or 'STATIC' allowed")
             elseif (arg_SHARED)
-                set(arg_LINK SHARED)
+                set(arg_LINK " SHARED")
             else ()
-                set(arg_LINK STATIC)
+                set(arg_LINK " STATIC")
             endif ()
         endif ()
-
-        if (arg_PLUGIN)
-            set(PLUGIN_ENNUCIATOR "plug-in")
-        else ()
-            set(PLUGIN_ENNUCIATOR "library")
-        endif ()
-
-        # Diagnostic logging
-        string(LENGTH ${arg_NAME} THIS_LEN)
-        if (NOT DEFINED LONGEST_LIBRARY_NAME_SO_FAR)
-            string(LENGTH "Appearance" LONGEST_LIBRARY_NAME_SO_FAR)
-            set(LONGEST_LIBRARY_NAME_SO_FAR ${LONGEST_LIBRARY_NAME_SO_FAR} CACHE STRING "")
-        endif ()
-        if (${THIS_LEN} GREATER ${LONGEST_LIBRARY_NAME_SO_FAR})
-            set(LONGEST_LIBRARY_NAME_SO_FAR ${THIS_LEN})
-            set(LONGEST_LIBRARY_NAME_SO_FAR ${LONGEST_LIBRARY_NAME_SO_FAR} CACHE STRING "" FORCE)
-        endif ()
-        math(EXPR NUM_SPACES_REQD "${LONGEST_LIBRARY_NAME_SO_FAR} - ${THIS_LEN}")
-        if (${NUM_SPACES_REQD} LESS 0)
-            set(NUM_SPACES_REQD 0)
-        endif ()
-        set(GAP_CHARS "                                                ")
-        string(SUBSTRING "${GAP_CHARS}" 0 ${NUM_SPACES_REQD} THE_SPACES)
-        message("Creating ${arg_LINK} ${PLUGIN_ENNUCIATOR} ${THE_SPACES}'${arg_NAME}' Version ${arg_VERSION}")
-
     else ()
-        message("Creating Executable '${arg_NAME}' Version ${arg_VERSION}")
+        set(arg_SHARED OFF)
+        set(arg_STATIC OFF)
+        set(arg_PLUGIN OFF)
+        set(arg_LINK "")
     endif ()
+
+    if (arg_PLUGIN)
+        set(PLUGIN_ENNUCIATOR "plug-in")
+    elseif(arg_EXECUTABLE)
+        set(PLUGIN_ENNUCIATOR "executable app")
+    else ()
+        set(PLUGIN_ENNUCIATOR "library")
+    endif ()
+
+    # Diagnostic logging
+    string(LENGTH ${arg_NAME} THIS_LEN)
+    if (NOT DEFINED LONGEST_LIBRARY_NAME_SO_FAR)
+        string(LENGTH "Appearance" LONGEST_LIBRARY_NAME_SO_FAR)
+        set(LONGEST_LIBRARY_NAME_SO_FAR ${LONGEST_LIBRARY_NAME_SO_FAR} CACHE STRING "")
+    endif ()
+    if (${THIS_LEN} GREATER ${LONGEST_LIBRARY_NAME_SO_FAR})
+        set(LONGEST_LIBRARY_NAME_SO_FAR ${THIS_LEN})
+        set(LONGEST_LIBRARY_NAME_SO_FAR ${LONGEST_LIBRARY_NAME_SO_FAR} CACHE STRING "" FORCE)
+    endif ()
+    math(EXPR NUM_SPACES_REQD "${LONGEST_LIBRARY_NAME_SO_FAR} - ${THIS_LEN}")
+    if (${NUM_SPACES_REQD} LESS 0)
+        set(NUM_SPACES_REQD 0)
+    endif ()
+    set(GAP_CHARS "                                                ")
+    string(SUBSTRING "${GAP_CHARS}" 0 ${NUM_SPACES_REQD} THE_SPACES)
+    message("Creating${arg_LINK} ${PLUGIN_ENNUCIATOR} ${THE_SPACES}'${arg_NAME}' Version ${arg_VERSION}")
 
     string(TOLOWER ${arg_NAME} arg_NAME_LC)
     string(TOLOWER ${APP_VENDOR} arg_VENDOR_LC)
@@ -135,10 +147,8 @@ function(addLibrary)
         # Use generator expressions in BASE_DIRS so build-tree (source) paths do not leak into the install export
         target_sources(${arg_NAME}
                 ${arg_HEADER_VISIBILITY} FILE_SET HEADERS
-                BASE_DIRS
-                ${HEADER_BASE_DIRS}
-                FILES
-                ${arg_HEADERS}
+                BASE_DIRS ${arg_BASE_DIRS}
+                FILES ${arg_HEADERS}
         )
     endif ()
     if (arg_SOURCES)
@@ -152,9 +162,8 @@ function(addLibrary)
         # Keep BASE_DIRS empty (from CXX_BASE_DIRS) to avoid exporting source-tree paths; install handles PCM separately.
         target_sources(${arg_NAME}
                 ${arg_MODULE_VISIBILITY} FILE_SET CXX_MODULES
-                BASE_DIRS ${CXX_BASE_DIRS}
-                FILES
-                ${arg_MODULES}
+                BASE_DIRS ${arg_CXX_BASE_DIRS}
+                FILES ${arg_MODULES}
         )
         # Do not try to use PCH for module interface/source units; this can crash or be unsupported.
         # CMake/Clang support skipping PCH per-source via this property.
@@ -188,7 +197,7 @@ function(addLibrary)
     # Only set version properties for libraries, not executables
     if(NOT arg_EXECUTABLE)
         set_target_properties(${arg_NAME} PROPERTIES
-                SOVERSION                   ${arg_VERSION}
+#                SOVERSION                   ${arg_VERSION}
                 VERSION                     ${arg_VERSION}
         )
     endif()
@@ -241,12 +250,7 @@ function(addLibrary)
             WXUSINGDLL
             _FILE_OFFSET_BITS=64
         )
-        # Enable wxWidgets precompiled header usage
-        target_compile_definitions(${arg_NAME}  PRIVATE WX_PRECOMP)
-        # Use the umbrella header from the Gfx package as the PCH entry point
-        # Assumes the Gfx include directory is already on the include path (it is via HS_IncludePathsList)
-        # Use angle-include so CMake doesn't try to resolve it inside this source tree
-        target_precompile_headers(${arg_NAME} PRIVATE <Gfx/wx.h>)
+        # NOTE: PCH disabled project-wide by request; do not define WX_PRECOMP or set target_precompile_headers here
         if (${BUILD_TYPE} STREQUAL "Debug")
             target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
         else ()

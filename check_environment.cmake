@@ -175,7 +175,9 @@ function(check_environment PROJECT_ROOT)
     endif ()
 
     # Set the external module path
-    forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
+    if(NOT EXTERNALS_DIR)
+        forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
+    endif ()
 
     # Set the output directories for runtime binaries (DLLs, executables)
     forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/bin" FILEPATH)
