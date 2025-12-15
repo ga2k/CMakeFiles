@@ -241,12 +241,7 @@ function(addLibrary)
             WXUSINGDLL
             _FILE_OFFSET_BITS=64
         )
-        # Enable wxWidgets precompiled header usage
-        target_compile_definitions(${arg_NAME}  PRIVATE WX_PRECOMP)
-        # Use the umbrella header from the Gfx package as the PCH entry point
-        # Assumes the Gfx include directory is already on the include path (it is via HS_IncludePathsList)
-        # Use angle-include so CMake doesn't try to resolve it inside this source tree
-        target_precompile_headers(${arg_NAME} PRIVATE <Gfx/wx.h>)
+        # NOTE: PCH disabled project-wide by request; do not define WX_PRECOMP or set target_precompile_headers here
         if (${BUILD_TYPE} STREQUAL "Debug")
             target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
         else ()
