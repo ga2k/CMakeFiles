@@ -204,7 +204,7 @@ function(addLibrary)
     # Only set version properties for libraries, not executables
     if(NOT arg_EXECUTABLE)
         set_target_properties(${arg_NAME} PROPERTIES
-#                SOVERSION                   ${arg_VERSION}
+                SOVERSION                   ${arg_VERSION}
                 VERSION                     ${arg_VERSION}
         )
     endif()
@@ -220,7 +220,6 @@ function(addLibrary)
             ${HS_IncludePathsList}
             PUBLIC
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-#            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/overrides/magic_enum/include>
     )
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
@@ -228,28 +227,14 @@ function(addLibrary)
 
     # Link Core
     if (CORE IN_LIST arg_USES)
-#        if (TARGET HoffSoft::HoffSoft)
-            target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::HoffSoft)
-            add_dependencies(${arg_NAME}                    HoffSoft::HoffSoft)
-#        elseif(TARGET HoffSoft)
-#            target_link_libraries(${arg_NAME}       PRIVATE HoffSoft)
-#            add_dependencies(${arg_NAME}                    HoffSoft)
-#        else ()
-#            message(FATAL_ERROR "CORE requested but target [HoffSoft::]HoffSoft doesn't exist (yet)")
-#        endif ()
+        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::HoffSoft)
+        add_dependencies(${arg_NAME}                    HoffSoft::HoffSoft)
     endif ()
 
     # Link Gfx
     if (GFX IN_LIST arg_USES)
-#        if (TARGET HoffSoft::Gfx)
-            target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
-            add_dependencies(${arg_NAME}                    HoffSoft::Gfx)
-#        elseif(TARGET Gfx)
-#            target_link_libraries(${arg_NAME}       PRIVATE Gfx)
-#            add_dependencies(${arg_NAME}                    Gfx)
-#        else ()
-#            message(FATAL_ERROR "GFX requested but target [HoffSoft::]Gfx doesn't exist (yet)")
-#        endif ()
+        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
+        add_dependencies(${arg_NAME}                    HoffSoft::Gfx)
     endif ()
 
     # Link wxWidgets directly (no Widgets wrapper library)
