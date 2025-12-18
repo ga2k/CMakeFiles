@@ -8,7 +8,7 @@ if (TARGET HoffSoft::HoffSoft)
 endif ()
 
 # Enter the project's src folder (defines targets)
-if (MONOREPO AND APPLE)
+if (MONOREPO AND MONOBUILD)
     # This is done in the root CMakeLists.txt
 else ()
     add_subdirectory(src)

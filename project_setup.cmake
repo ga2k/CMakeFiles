@@ -185,7 +185,7 @@ else ()
             USE ${APP_FEATURES})
 endif ()
 
-if (MONOREPO AND APPLE)
+if (MONOREPO AND MONOBUILD)
     return()
 endif ()
 
