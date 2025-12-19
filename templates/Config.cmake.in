@@ -3,36 +3,50 @@
 
 include(CMakeFindDependencyMacro)
 
+# Include folder is easy...
+set(_incdir   "${PACKAGE_PREFIX_DIR}/include")
+set(_inDevelopment ON)
+
 # Resolve installed library path (cover common layouts)
-set(_libdir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
-set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
-if(EXISTS "${_lib}")
-  set(InDevelopment OFF)
-else()
+unset(_libdir)
+foreach(_dir IN LISTS "${PACKAGE_PREFIX_DIR}/lib";"${PACKAGE_PREFIX_DIR}/lib64")
+  set(_lib "${_dir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+  if(EXISTS "${_lib}")
+    set(_inDevelopment OFF)
+    set(_libdir "${_dir}")
+    break()
+  endif()
+endforeach()
+
+# If the library wasn't found, try the build tree.
+if(NOT DEFINED _libdir)
   set(_libdir "@OUTPUT_DIR@/dll")
+
   if (@MONOREPO@)
     set(_incdir "@CMAKE_SOURCE_DIR@/@APP_NAME@/include")
   else()
     set(_incdir "@CMAKE_SOURCE_DIR@/include")
   endif()
-  set(_lib "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+
+  set(_lib   "${_libdir}/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
   if(EXISTS "${_lib}")
-    set(InDevelopment ON)
+    set(_inDevelopment ON)
   else()
     message(FATAL_ERROR "@APP_VENDOR@::@APP_NAME@ library not found under ${PACKAGE_PREFIX_DIR} or @OUTPUT_DIR@")
   endif()
 endif()
 
+# Create imported target
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_lib}"
+    IMPORTED_LOCATION "${_libdir}"
     CXX_STANDARD 23
     INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
   )
 endif()
-if(InDevelopment)
+
+if(_inDevelopment EQUAL ON)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
   file(GLOB _DEV_MODULE_EXPORT
        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
@@ -41,7 +55,7 @@ if(InDevelopment)
     include("${_DEV_MODULE_EXPORT_FILE}")
   endif()
 else()
-  include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+  include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
@@ -59,12 +73,12 @@ if(USE_PREBUILT_MODULES)
       set(fmodule_cmd "-fmodule-mapper")
     endif()
 
-    if(InDevelopment)
+    if(_inDevelopment)
       target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
         "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
     else()
       target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-        "${fmodule_cmd}=${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+        "${fmodule_cmd}=${libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
     endif()
   endif()
 endif()
@@ -96,17 +110,17 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
 
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
   # If the app creates plugins, set the plugin directory
-  if (InDevelopment)
+  if (_inDevelopment)
     set(PLUGIN_DIR "@OUTPUT_DIR@/plugins")
   else ()
-    set(PLUGIN_DIR "${PACKAGE_PREFIX_DIR}/lib64/@APP_VENDOR@/@APP_NAME@/plugins")
+    set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
   endif ()
   set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}" PARENT_SCOPE)
 endif()
 
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
   # If the app supplies resources, set the resource directory
-  if (InDevelopment)
+  if (_inDevelopment)
     set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
   else ()
     set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
@@ -114,10 +128,18 @@ if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
   set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
 elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
   # If the app consumes resources, set the resource directory
-  if (InDevelopment)
+  if (_inDevelopment)
     set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
   else ()
     set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
   endif ()
 set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
 endif()
+
+unset(_inDevelopment)
+unset(_incdir)
+unset(_libdir)
+unset(_lib)
+unset(_dir)
+unset(_DEV_MODULE_EXPORT)
+unset(_DEV_MODULE_EXPORT_FILE)
