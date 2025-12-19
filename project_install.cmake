@@ -86,6 +86,19 @@ endif ()
 
 # ========================= Install & packaging =========================
 #
+if ("${APP_TYPE}" STREQUAL "Library")
+    install(FILES
+            "${OUTPUT_DIR}/dll/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+else ()
+    install(FILES
+            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif ()
+set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
+
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         EXPORT                   ${APP_NAME}Target
         CONFIGURATIONS           Debug Release
@@ -147,19 +160,6 @@ write_basic_package_version_file(
         VERSION ${APP_VERSION}
         COMPATIBILITY SameMajorVersion
 )
-
-if ("${APP_TYPE}" STREQUAL "Library")
-    install(FILES
-            "${OUTPUT_DIR}/dll/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
-else ()
-    install(FILES
-            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
-            DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-endif ()
-set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 configure_package_config_file(
         ${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in
