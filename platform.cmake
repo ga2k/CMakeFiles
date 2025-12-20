@@ -48,6 +48,8 @@ if (APPLE)
     if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
         list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
     endif ()
+    
+    add_compile_options(-gline-tables-only)
 
 elseif(LINUX)
 
