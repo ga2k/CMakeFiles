@@ -40,7 +40,7 @@ endif()
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_libdir}"
+    IMPORTED_LOCATION "${_lib}"
     CXX_STANDARD 23
     INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
   )
