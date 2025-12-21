@@ -149,7 +149,7 @@
       "name": "VisualStudio",
       "hidden": true,
       "description": "Visual Studio generator",
-      "toolset": "host=x64,version=14.39",
+      "toolset": "host=x64",
       "generator": "Visual Studio 17 2022",
       "environment": {
         "generatorType": "VS",

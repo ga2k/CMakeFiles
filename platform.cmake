@@ -85,6 +85,10 @@ elseif (WIN32)
     set(GNUTLS_LIBRARIES    ${GNUTLS_ROOT}bin;${GNUTLS_ROOT}lib)
     set(ICU_ROOT            ${CMAKE_CURRENT_SOURCE_DIR}/windows/ICU)
     set(ICU_LIBRARIES       ${ICU_ROOT}/bin64;${ICU_ROOT}/lib64)
+    set(SQLite3_ROOT        ${CMAKE_CURRENT_SOURCE_DIR}/windows/SQLite3)
+    set(SQLite3_LIBRARY     ${SQLite3_ROOT})
+    set(SQLite3_INCLUDE_DIR ${SQLite3_ROOT})
+
     set(OPENSSL_CRYPTO_LIBRARY C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib)
 
     if (LINK_SHARED)
@@ -96,6 +100,10 @@ elseif (WIN32)
         set(GNUTLS_LIBRARY  ${GNUTLS_ROOT}/lib/libgnutls.a)
         set(ICU_LIBRARY     ${ICU_ROOT}/bin64/icuuc.lib)
     endif ()
+
+    message(NOTICE "SQLite3_ROOT=${SQLite3_ROOT}")
+    message(NOTICE "SQLite3_LIBRARY=${SQLite3_LIBRARY}")
+    message(NOTICE "SQLite3_INCLUDE_DIR=${SQLite3_INCLUDE_DIR}")
 
     set(PlatformFlag "WIN32")
     set(DYN_FLAG ws2_32)
