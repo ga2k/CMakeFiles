@@ -1,6 +1,12 @@
 function(soci_preDownload pkgname url tag srcDir)
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
 
+    message(NOTICE "set(SOCI_SQLITE3_AUTO ON)")
+    set(SOCI_SQLITE3_AUTO ON)
+    message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in SQLite3 library' FORCE)")
+    set(SOCI_SQLITE3_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in SQLite3 library" FORCE)
+    set(SOCI_SQLITE3_BUILTIN ON)
+
     forceSet(WITH_BOOST "" OFF BOOL)
     forceSet(SOCI_TESTS "" OFF BOOL)
     forceSet(SOCI_HAVE_BOOST "" OFF BOOL)
