@@ -860,7 +860,7 @@ function(fetchContents)
                 ########################################################################################################
                 ########################################################################################################
                 if (NOT HANDLED) # AND NOT TARGET ${this_pkgname})
-                    message("FetchContent_MakeAvailable(${this_pkgname}")
+                    message("FetchContent_MakeAvailable(${this_pkgname})")
                     FetchContent_MakeAvailable(${this_pkgname})
                 endif ()
                 set(cs "${this_find_package_components}")
