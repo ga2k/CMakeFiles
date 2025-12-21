@@ -102,7 +102,6 @@ elseif (WIN32)
     endif ()
 
     if(DATABASE IN_LIST APP_FEATURES)
-        message(NOTICE "set(CMAKE_POLICY_DEFAULT_CMP0077 ""NEW"")")
         set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
         message(NOTICE "set(SOCI_SQLITE3_AUTO ON)")
         set(SOCI_SQLITE3_AUTO ON)
