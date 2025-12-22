@@ -646,7 +646,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # Format the default value based on the C++ type
         if cpp_type == 'std::string':
             return f'"{default_val}"'
-        elif cpp_type == 'hs_boolean':
+        elif cpp_type == 'boolean':
             return 'hs_boolean(true)' if default_val else 'hs_boolean(false)'
         elif cpp_type == 'hs_id':
             return str(default_val)
