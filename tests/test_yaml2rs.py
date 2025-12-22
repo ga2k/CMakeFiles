@@ -571,7 +571,7 @@ class TestYaml2Rs(unittest.TestCase):
         mappings = [
             ('integer', 'int'),
             ('string', 'std::string'),
-            ('hs_boolean', 'hs_boolean'),
+            ('boolean', 'boolean'),
             ('float', 'float'),
             ('double', 'double'),
             ('text', 'std::string'),
