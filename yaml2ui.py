@@ -1843,7 +1843,7 @@ class CppGroupGenerator:
         if t == "bool":
             return "true" if bool(val) else "false"
 
-        # If type not explicitly provided, infer common boolean strings
+
         if not t and isinstance(val, str):
             s = val.strip().lower()
             if s in ("true", "false"):
