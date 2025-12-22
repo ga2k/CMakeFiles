@@ -4,12 +4,28 @@ YAML to C++ Module Generator
 Generates C++ module files from YAML table definitions.
 """
 
-import yaml
 import sys
+import subprocess
 import argparse
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import datetime
+
+def ensure_yaml():
+    try:
+        import yaml
+        return yaml
+    except ImportError:
+        print("pyyaml not found, attempting to install...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "--break-system-packages"])
+            import yaml
+            return yaml
+        except Exception as e:
+            print(f"Failed to install pyyaml: {e}")
+            sys.exit(1)
+
+yaml = ensure_yaml()
 
 class CppModuleGenerator:
     now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")

@@ -4,13 +4,29 @@ YAML to C++ Group Generator
 Generates C++ Group module files from YAML form definitions.
 """
 
-import yaml
 import sys
+import subprocess
 import argparse
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 import datetime
 from dataclasses import dataclass
+
+def ensure_yaml():
+    try:
+        import yaml
+        return yaml
+    except ImportError:
+        print("pyyaml not found, attempting to install...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "--break-system-packages"])
+            import yaml
+            return yaml
+        except Exception as e:
+            print(f"Failed to install pyyaml: {e}")
+            sys.exit(1)
+
+yaml = ensure_yaml()
 
 
 class CppGroupGenerator:
