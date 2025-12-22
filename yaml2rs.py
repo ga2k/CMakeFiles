@@ -20,7 +20,7 @@ class CppModuleGenerator:
         self.type_mapping = {
             'integer': 'int',
             'string': 'std::string',
-            'boolean': 'hs_boolean',
+            'hs_boolean': 'hs_boolean',
             'float': 'float',
             'double': 'double',
             'text': 'std::string',
