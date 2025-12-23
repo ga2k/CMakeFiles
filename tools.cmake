@@ -32,7 +32,9 @@ function(forceSet VAR_NAME ENV_NAME VALUE TYPE)
     set(${VAR_NAME} "${VALUE}")
 
     # Set in parent scope
-    set(${VAR_NAME} "${VALUE}" PARENT_SCOPE)
+    if(CMAKE_CURRENT_FUNCTION)
+        set(${VAR_NAME} "${VALUE}" PARENT_SCOPE)
+    endif()
 
     # Set in process environment
     set(ENV{${_ENV_NAME}} "${VALUE}")
@@ -995,7 +997,9 @@ endfunction()
 ## @param PARAM_TYPE is the type of CACHE variable to create (STRING, BOOL, FILEPATH, etc)
 macro(forceUnset PARAM_TARGET)
     unset(${PARAM_TARGET})
-    unset(${PARAM_TARGET} PARENT_SCOPE)
+    if(CMAKE_CURRENT_FUNCTION)
+        unset(${PARAM_TARGET} PARENT_SCOPE)
+    endif ()
     unset(${PARAM_TARGET} CACHE)
 endmacro()
 macro(forceSet PARAM_TARGET PARAM_VAR PARAM_VALUE PARAM_TYPE)

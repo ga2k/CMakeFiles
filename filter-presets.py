@@ -103,7 +103,7 @@ def save_json(file_path, data):
 def main(in_file, out_file):
     """Process the presets from the input file and save to the output file."""
     data = read_json(in_file)
-    
+
     # Process configurePresets
     presets = data.get("configurePresets", [])  # Access the correct section
 
@@ -116,15 +116,22 @@ def main(in_file, out_file):
     # Step 3.5: Rename visible configure presets to concise names
     # Example: "Linux x64 (Debug Shared)" -> "Debug Shared"
     #          "macOS arm64 (Release Static)" -> "Release Static"
+    #          "Windows (Staged Debug Static)" -> "Staged Debug Static"
     # We also keep a name mapping to update buildPresets accordingly.
     import re
     name_map = {}
-    concise_pattern = re.compile(r"\((Debug|Release)\s+(Shared|Static)\)")
+    # Updated pattern to handle both regular and staged presets
+    concise_pattern = re.compile(r"\((Staged\s+)?(Debug|Release)\s+(Shared|Static)\)")
     for preset in presets:
         orig_name = preset.get("name", "")
         m = concise_pattern.search(orig_name)
         if m:
-            concise = f"{m.group(1)} {m.group(2)}"
+            # Extract the parts: optional "Staged ", build type, and link type
+            staged_part = m.group(1) if m.group(1) else ""
+            build_type = m.group(2)
+            link_type = m.group(3)
+            # Construct concise name: "Staged Debug Static" or "Debug Static"
+            concise = f"{staged_part}{build_type} {link_type}".strip()
             if concise != orig_name:
                 name_map[orig_name] = concise
                 preset["name"] = concise
@@ -136,7 +143,7 @@ def main(in_file, out_file):
 
     # Step 5: Save the new JSON to the output file
     data["configurePresets"] = final_presets  # Update the presets section
-    
+
     # Process buildPresets if they exist
     if "buildPresets" in data:
         build_presets = data.get("buildPresets", [])
@@ -150,7 +157,7 @@ def main(in_file, out_file):
         # Ensure build preset names align with their configurePreset names and are concise
         # Example: a build preset named "Linux x64 (Debug Shared)" becomes "Debug Shared"
         # and we also set displayName for better IDE visibility.
-        concise_pattern = re.compile(r"\((Debug|Release)\s+(Shared|Static)\)")
+        concise_pattern = re.compile(r"\((Staged\s+)?(Debug|Release)\s+(Shared|Static)\)")
         for bp in build_presets:
             bp_name = bp.get("name", "")
             # First, try direct rename via map if the full name was in the map
@@ -160,7 +167,10 @@ def main(in_file, out_file):
                 # Try to parse the concise part from parentheses
                 m = concise_pattern.search(bp_name)
                 if m:
-                    new_name = f"{m.group(1)} {m.group(2)}"
+                    staged_part = m.group(1) if m.group(1) else ""
+                    build_type = m.group(2)
+                    link_type = m.group(3)
+                    new_name = f"{staged_part}{build_type} {link_type}".strip()
                 else:
                     # As a last resort, align to the (possibly renamed) configurePreset
                     new_name = bp.get("configurePreset", bp_name)
@@ -178,7 +188,7 @@ def main(in_file, out_file):
         ]
 
         data["buildPresets"] = filtered_build_presets
-    
+
     save_json(out_file, data)
 
 
@@ -197,4 +207,3 @@ else:
     output_file = "CMakePresets.json"
 
 main(input_file, output_file)
-

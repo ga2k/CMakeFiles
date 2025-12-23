@@ -191,9 +191,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else ()
 
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
+    if(config_DIR)
+        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
+        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
+    endif ()
 
     list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
 

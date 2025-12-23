@@ -54,6 +54,17 @@
       }
     },
     {
+      "name": "Staged",
+      "hidden": true,
+      "description": "Create a staged build with STAGE_OUTPUT enabled",
+      "cacheVariables": {
+        "STAGE_OUTPUT": "ON"
+      },
+      "environment": {
+        "stagePath": "/staged"
+      }
+    },
+    {
       "name": "Windows",
       "hidden": true,
       "description": "Windows build for x64 processors",
@@ -72,6 +83,8 @@
           }
         ]
       },
+      "toolset": "host=x64",
+      "generator": "Visual Studio 17 2022",
       "environment": {
         "hostType": "Windows",
         "hostPath": "/windows",
@@ -99,11 +112,13 @@
           }
         ]
       },
+      "generator": "Ninja",
       "environment": {
         "hostType": "macOS",
         "hostPath": "/macos",
         "archType": "arm64",
-        "archPath": "/arm64"
+        "archPath": "/arm64",
+        "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
         "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
@@ -138,52 +153,17 @@
           }
         ]
       },
+      "generator": "Ninja",
       "environment": {
         "hostType": "Linux",
         "hostPath": "/linux",
         "archType": "x64",
-        "archPath": "/x64"
-      }
-    },
-    {
-      "name": "VisualStudio",
-      "hidden": true,
-      "description": "Visual Studio generator",
-      "toolset": "host=x64",
-      "generator": "Visual Studio 17 2022",
-      "environment": {
-        "generatorType": "VS",
-        "generatorPath": "/vs"
-      }
-    },
-    {
-      "name": "LLVM",
-      "hidden": true,
-      "description": "LLVM/Clang/Ninja Toolchain",
-      "generator": "Ninja",
-      "environment": {
-        "generatorType": "Ninja",
-        "generatorPath": "/ninja",
+        "archPath": "/x64",
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
         "CMAKE_C_COMPILER": "/usr/bin/clang",
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
-      }
-    },
-    {
-      "name": "LLVM-macOS",
-      "hidden": true,
-      "description": "LLVM/Clang/Ninja Toolchain",
-      "generator": "Ninja",
-      "environment": {
-        "generatorType": "Ninja",
-        "generatorPath": "/ninja",
-        "CMAKE_NINJA_FLAGS": "-k 0"
-      },
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
-        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
       }
     },
     {
@@ -195,8 +175,7 @@
       "inherits": [
         "Windows",
         "Debug",
-        "Static",
-        "VisualStudio"
+        "Static"
       ]
     },
     {
@@ -208,8 +187,7 @@
       "inherits": [
         "Windows",
         "Debug",
-        "Shared",
-        "VisualStudio"
+        "Shared"
       ]
     },
     {
@@ -221,8 +199,7 @@
       "inherits": [
         "Windows",
         "Release",
-        "Static",
-        "VisualStudio"
+        "Static"
       ]
     },
     {
@@ -234,8 +211,59 @@
       "inherits": [
         "Windows",
         "Release",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows (Staged Debug Static)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows",
+        "Debug",
+        "Static",
+        "Staged"
+      ]
+    },
+    {
+      "name": "Windows (Staged Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows",
+        "Debug",
         "Shared",
-        "VisualStudio"
+        "Staged"
+      ]
+    },
+    {
+      "name": "Windows (Staged Release Static)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows",
+        "Release",
+        "Static",
+        "Staged"
+      ]
+    },
+    {
+      "name": "Windows (Staged Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows",
+        "Release",
+        "Shared",
+        "Staged"
       ]
     },
     {
@@ -247,8 +275,7 @@
       "inherits": [
         "macOS",
         "Debug",
-        "Static",
-        "LLVM-macOS"
+        "Static"
       ]
     },
     {
@@ -260,8 +287,7 @@
       "inherits": [
         "macOS",
         "Debug",
-        "Shared",
-        "LLVM-macOS"
+        "Shared"
       ]
     },
     {
@@ -273,8 +299,7 @@
       "inherits": [
         "macOS",
         "Release",
-        "Static",
-        "LLVM-macOS"
+        "Static"
       ]
     },
     {
@@ -286,8 +311,7 @@
       "inherits": [
         "macOS",
         "Release",
-        "Shared",
-        "LLVM-macOS"
+        "Shared"
       ]
     },
     {
@@ -299,8 +323,7 @@
       "inherits": [
         "Linux",
         "Debug",
-        "Shared",
-        "LLVM"
+        "Shared"
       ]
     },
     {
@@ -312,8 +335,7 @@
       "inherits": [
         "Linux",
         "Release",
-        "Shared",
-        "LLVM"
+        "Shared"
       ]
     }
   ],
@@ -333,6 +355,22 @@
     {
       "name": "Windows (Release Shared)",
       "configurePreset": "Windows (Release Shared)"
+    },
+    {
+      "name": "Windows (Staged Debug Static)",
+      "configurePreset": "Windows (Staged Debug Static)"
+    },
+    {
+      "name": "Windows (Staged Debug Shared)",
+      "configurePreset": "Windows (Staged Debug Shared)"
+    },
+    {
+      "name": "Windows (Staged Release Static)",
+      "configurePreset": "Windows (Staged Release Static)"
+    },
+    {
+      "name": "Windows (Staged Release Shared)",
+      "configurePreset": "Windows (Staged Release Shared)"
     },
     {
       "name": "MacOS (Debug Static)",
