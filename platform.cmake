@@ -144,10 +144,6 @@ elseif (WIN32)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nologo")
     set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /nologo")
 
-    string(SUBSTRING "${CMAKE_GENERATOR}" 0 13 Visual_Studio)
-    if ("${Visual_Studio}" STREQUAL "Visual Studio")
-        set(CMAKE_GENERATOR_TOOLSET "host=x64")
-    endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
 endif ()

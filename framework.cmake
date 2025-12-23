@@ -24,7 +24,7 @@ execute_process(
 
 # Global policy/verbosity/tooling
 set(CMAKE_WARN_UNINITIALIZED ON)
-set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE CACHE STRING "Log Level" FORCE)
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE CACHE STRING "Log Level")
 
 # Disable automatic RPATH to avoid circular dependencies
 set(CMAKE_SKIP_BUILD_RPATH FALSE)

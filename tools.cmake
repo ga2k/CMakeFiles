@@ -275,7 +275,7 @@ endfunction()
 #
 # Required parameters :-
 #
-# LIST        The NAME of the list to work on
+# VAR         The NAME of the list to work on
 # FINDSTR     The text to find in each entry
 # REPLACESTR  The test to replace FINDSTR with
 #
@@ -664,11 +664,11 @@ function(find_lib LIBNAME)
 
     if (FIND_LIB_LOCAL)
         log("Looking for ${LIBNAME} locally only...")
-        find_package(${LIBNAME} PATHS "${STAGING_DIR}/lib64/cmake" NO_DEFAULT_PATH REQUIRED)
+        find_package(${LIBNAME} PATHS "${STAGED_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake" NO_DEFAULT_PATH REQUIRED)
         return()
     elseif (FIND_LIB_LOCALFIRST)
         log("Looking for ${LIBNAME} locally first...")
-        find_package(${LIBNAME} PATHS "${STAGING_DIR}/lib64/cmake" NO_DEFAULT_PATH)
+        find_package(${LIBNAME} PATHS "${STAGED_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake" NO_DEFAULT_PATH)
 
         if (${LIBNAME}_FOUND)
             log(TITLE "Found OK")

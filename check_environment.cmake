@@ -60,7 +60,7 @@ set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 # Required args - PROJECT_ROOT - The complete path up to the root CMakeLists.txt's folder
 # Optional args - None
 #
-function(check_environment PROJECT_ROOT)
+macro(check_environment PROJECT_ROOT)
 
     unset (BUILDING)
     unset (BUILD_DEBUG)
@@ -179,17 +179,76 @@ function(check_environment PROJECT_ROOT)
     # Set the output directory for static libraries
     forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/lib" FILEPATH)
 
-    # Check if our dependent libs are installed or local
-    if (("${STAGE_DIR}" AND EXISTS "${STAGE_DIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}") OR
-        (NOT "${STAGE_DIR}" AND EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"))
-        set(THEY_ARE_INSTALLED ON)
-    endif ()
+#    # Set sensible cross-platform install defaults
+#    if(WIN32)
+#        # Check if we're staging (developer build) or installing for real
+#        if(DEFINED ENV{STAGING_BUILD} OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+#            # Staging build - use HOME/dev/stage
+#            if(DEFINED ENV{HOME})
+#                set(DEFAULT_INSTALL_PREFIX "$ENV{HOME}/dev/stage")
+#            elseif(DEFINED ENV{USERPROFILE})
+#                set(DEFAULT_INSTALL_PREFIX "$ENV{USERPROFILE}/dev/stage")
+#            else()
+#                set(DEFAULT_INSTALL_PREFIX "C:/dev/stage")
+#            endif()
+#        else()
+#            # Release install - use APPDATA
+#            if(DEFINED ENV{APPDATA})
+#                set(DEFAULT_INSTALL_PREFIX "$ENV{APPDATA}/HoffSoft")
+#            else()
+#                set(DEFAULT_INSTALL_PREFIX "$ENV{USERPROFILE}/AppData/Roaming/HoffSoft")
+#            endif()
+#        endif()
+#
+#        # Override CMAKE_INSTALL_PREFIX if it's still the default junk
+#        if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR
+#                CMAKE_INSTALL_PREFIX MATCHES "Program Files" OR
+#                CMAKE_INSTALL_PREFIX MATCHES "Git/usr/local")
+#            set(CMAKE_INSTALL_PREFIX "${DEFAULT_INSTALL_PREFIX}" CACHE PATH "Install prefix" FORCE)
+#            message(STATUS "Set CMAKE_INSTALL_PREFIX to: ${CMAKE_INSTALL_PREFIX}")
+#        endif()
+#    else()
+#        # Linux/Mac - use standard /usr/local (already the default)
+#        if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+#            set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Install prefix" FORCE)
+#        endif()
+#    endif()
+    # Set sensible cross-platform install defaults
+    if(WIN32)
+        if(DEFINED ENV{STAGE_DIR})
+            set(STAGED_PATH "$ENV{STAGE_DIR}")
+        elseif (DEFINED DEST_DIR)
+            set(STAGED_PATH "${DEST_DIR}")
+        else()
+            if(DEFINED ENV{HOME})
+                set(STAGED_PATH "$ENV{HOME}/dev/stage")
+            elseif(DEFINED ENV{USERPROFILE})
+                set(STAGED_PATH "$ENV{USERPROFILE}/dev/stage")
+            else()
+                set(STAGED_PATH "C:/dev/stage")
+            endif()
+        endif ()
 
-    # Check if WE are installed or local
-    if (("${STAGE_DIR}" AND EXISTS "${STAGE_DIR}/${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${APP_NAME}") OR
-        (NOT "${STAGE_DIR}" AND EXISTS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}/${APP_NAME}"))
-        set(WE_ARE_INSTALLED ON)
-    endif ()
+        # Release install - use APPDATA
+        if(DEFINED ENV{APPDATA})
+            set(SYSTEM_PATH "$ENV{APPDATA}/HoffSoft")
+        else()
+            set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/HoffSoft")
+        endif()
+
+        string(REPLACE "\\" "/" STAGED_PATH "${STAGED_PATH}")
+        string(REPLACE "\\" "/" SYSTEM_PATH "${SYSTEM_PATH}")
+
+    else()
+        if(DEFINED ENV{STAGE_DIR})
+            set(STAGED_PATH "$ENV{STAGE_DIR}")
+        elseif (DEFINED DEST_DIR)
+            set(STAGED_PATH "${DEST_DIR}")
+        else()
+            set(STAGED_PATH "~/dev/stage")
+        endif ()
+        set(SYSTEM_PATH "/usr/local")
+    endif()
 
     if (UNIX AND NOT STAGING)
         set(SUDO sudo)
@@ -207,55 +266,40 @@ function(check_environment PROJECT_ROOT)
 
     list(REMOVE_DUPLICATES debugFlags)
 
-    set(BUILDING ${BUILDING} PARENT_SCOPE)
-    set(BUILD_DEBUG ${BUILD_DEBUG} PARENT_SCOPE)
-    set(BUILD_RELEASE ${BUILD_RELEASE} PARENT_SCOPE)
-    set(BUILD_TYPE ${BUILD_TYPE} PARENT_SCOPE)
-    set(BUILD_TYPE_LC ${BUILD_TYPE_LC} PARENT_SCOPE)
-    set(BUILD_TYPE_UC ${BUILD_TYPE_UC} PARENT_SCOPE)
-    set(BUILD_FLAG ${BUILD_FLAG} PARENT_SCOPE)
-    set(CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD} PARENT_SCOPE)
-    set(COMPANY ${COMPANY} PARENT_SCOPE)
-    set(DM_FLAG ${DM_FLAG} PARENT_SCOPE)
-    set(LINK_SHARED ${LINK_SHARED} PARENT_SCOPE)
-    set(LINK_STATIC ${LINK_STATIC} PARENT_SCOPE)
-    set(LINK_TYPE ${LINK_TYPE} PARENT_SCOPE)
-    set(LINK_TYPE_LC ${LINK_TYPE_LC} PARENT_SCOPE)
-    set(LINK_TYPE_UC ${LINK_TYPE_UC} PARENT_SCOPE)
-    set(LINK_FLAG ${LINK_FLAG} PARENT_SCOPE)
-    set(SUDO ${SUDO} PARENT_SCOPE)
-    set(stemPath ${stemPath} PARENT_SCOPE)
-    set(buildType ${buildType} PARENT_SCOPE)
-    set(debugFlags ${debugFlags} PARENT_SCOPE)
-    set(linkType ${linkType} PARENT_SCOPE)
+    # @formatter:off
+#    set(BUILDING            ${BUILDING}             PARENT_SCOPE)
+#    set(BUILD_DEBUG         ${BUILD_DEBUG}          PARENT_SCOPE)
+#    set(BUILD_RELEASE       ${BUILD_RELEASE}        PARENT_SCOPE)
+#    set(BUILD_TYPE          ${BUILD_TYPE}           PARENT_SCOPE)
+#    set(BUILD_TYPE_LC       ${BUILD_TYPE_LC}        PARENT_SCOPE)
+#    set(BUILD_TYPE_UC       ${BUILD_TYPE_UC}        PARENT_SCOPE)
+#    set(BUILD_FLAG          ${BUILD_FLAG}           PARENT_SCOPE)
+#    set(CMAKE_CXX_STANDARD  ${CMAKE_CXX_STANDARD}   PARENT_SCOPE)
+#    set(COMPANY             ${COMPANY}              PARENT_SCOPE)
+#    set(DM_FLAG             ${DM_FLAG}              PARENT_SCOPE)
+#    set(LINK_SHARED         ${LINK_SHARED}          PARENT_SCOPE)
+#    set(LINK_STATIC         ${LINK_STATIC}          PARENT_SCOPE)
+#    set(LINK_TYPE           ${LINK_TYPE}            PARENT_SCOPE)
+#    set(LINK_TYPE_LC        ${LINK_TYPE_LC}         PARENT_SCOPE)
+#    set(LINK_TYPE_UC        ${LINK_TYPE_UC}         PARENT_SCOPE)
+#    set(LINK_FLAG           ${LINK_FLAG}            PARENT_SCOPE)
+#    set(STAGED_DIR          ${STAGED_DIR}           PARENT_SCOPE)
+#    set(SYSTEM_DIR          ${SYSTEM_DIR}           PARENT_SCOPE)
+#    set(SUDO                ${SUDO}                 PARENT_SCOPE)
+#    set(stemPath            ${stemPath}             PARENT_SCOPE)
+#    set(buildType           ${buildType}            PARENT_SCOPE)
+#    set(debugFlags          ${debugFlags}           PARENT_SCOPE)
+#    set(linkType            ${linkType}             PARENT_SCOPE)
 
-    #    log(TITLE "As seen on TV" VARS
-    #            BUILDING                BUILD_DEBUG             BUILD_RELEASE           BUILD_TYPE
-    #            BUILD_TYPE_LC           BUILD_TYPE_UC           CMAKE_CXX_STANDARD
-    #            CMAKE_INSTALL_PREFIX    COMPANY                 LINK_SHARED             LINK_STATIC
-    #            LINK_TYPE               LINK_TYPE_LC
-    #            LINK_TYPE_UC
-    #            SUDO                    stemPath
-    #            buildType               debugFlags
-    #            linkType
-    #    )
+#    log(TITLE "As seen on TV"   VARS
+#        BUILDING                BUILD_DEBUG                 BUILD_RELEASE
+#        BUILD_TYPE              BUILD_TYPE_LC               BUILD_TYPE_UC
+#        CMAKE_CXX_STANDARD      CMAKE_INSTALL_PREFIX        COMPANY
+#        LINK_SHARED             LINK_STATIC                 LINK_TYPE
+#        LINK_TYPE_LC            LINK_TYPE_UC                STAGED_DIR
+#        SYSTEM_DIR              SUDO                        stemPath
+#        buildType               debugFlags                  linkType)
+    # @formatter:on
 
-
-    #    log(TITLE "             Contents of debugFlags : " "${debugFlags}" LF)
-    #    log(TITLE "          Contents of BUILD_TYPE_LC : " "${BUILD_TYPE_LC}")
-    #    log(TITLE "          Contents of BUILD_TYPE_UC : " "${BUILD_TYPE_UC}")
-    #    log(TITLE "             Contents of BUILD_TYPE : " "${BUILD_TYPE}")
-    #    log(TITLE "            Contents of BUILD_DEBUG : " "${BUILD_DEBUG}")
-    #    log(TITLE "          Contents of BUILD_RELEASE : " "${BUILD_RELEASE}")
-    #    log(TITLE "     Contents of CMAKE_CXX_COMPILER : " "${CMAKE_CXX_COMPILER}")
-    #    log(TITLE "     Contents of CMAKE_CXX_STANDARD : " "${CMAKE_CXX_STANDARD}")
-    #    log(TITLE "                Contents of COMPANY : " "${COMPANY}")
-    #    log(TITLE "           Contents of LINK_TYPE_LC : " "${LINK_TYPE_LC}")
-    #    log(TITLE "           Contents of LINK_TYPE_UC : " "${LINK_TYPE_UC}")
-    #    log(TITLE "              Contents of LINK_TYPE : " "${LINK_TYPE}")
-    #    log(TITLE "            Contents of LINK_SHARED : " "${LINK_SHARED}")
-    #    log(TITLE "            Contents of LINK_STATIC : " "${LINK_STATIC}")
-    #    log(TITLE "   Contents of CMAKE_INSTALL_PREFIX : " "${CMAKE_INSTALL_PREFIX}")
-
-endfunction()
+endmacro()
 

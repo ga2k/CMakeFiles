@@ -97,26 +97,18 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
         if (NOT CMAKE_INSTALL_LIBDIR)
             if (APPLE)
                 set(CMAKE_INSTALL_LIBDIR "lib")
-            elseif(LINUX)
+            elseif (LINUX)
                 set(CMAKE_INSTALL_LIBDIR "lib64")
-            elseif(WINDOWS)
+            elseif (WINDOWS)
                 message(FATAL_ERROR "Fix here")
             endif ()
         endif ()
 
-#        list(PREPEND CMAKE_MODULE_PATH
-#                "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake"
-#                "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        #        list(PREPEND CMAKE_MODULE_PATH
+        #                "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake"
+        #                "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
         # Define the paths to the two configuration files
-	if(WIN32)
-            set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-            string(SUBSTRING "${CMAKE_INSTALL_PREFIX}" 3 -1 STAGED_ROOT)
-            set(STAGED_PATH "$ENV{HOME}/dev/stage/${STAGED_ROOT}/${CMAKE_INSTALL_LIBDIR}/cmake")
-        else()
-            set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-            set(STAGED_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")   
-        endif()
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
             string(FIND "${hint}" "{" openBrace)
             string(FIND "${hint}" "}" closeBrace)
@@ -129,21 +121,21 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
 
             if (MONOREPO)
-                set (SOURCE_PATH "${OUTPUT_DIR}")
+                set(SOURCE_PATH "${OUTPUT_DIR}")
             else ()
                 string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
 
             set(pkgName "${pkgName}Config.cmake")
 
-            set (actualStagedFile "${STAGED_PATH}/${pkgName}")
+            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
-                set (actualStagedFile "(not found)")
+                set(actualStagedFile "(not found)")
             endif ()
 
-            set (actualSystemFile "${SYSTEM_PATH}/${pkgName}")
+            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/${pkgName}")
             if (NOT EXISTS "${actualSystemFile}")
-                set (actualSystemFile "(not found)")
+                set(actualSystemFile "(not found)")
             endif ()
 
             # @formatter:off
@@ -205,4 +197,4 @@ if (MONOREPO AND MONOBUILD)
     return()
 endif ()
 
-include (${CMAKE_SOURCE_DIR}/cmake/project_install.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/project_install.cmake)
