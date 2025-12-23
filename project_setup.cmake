@@ -81,6 +81,8 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
+set(config_DIR "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}")
+
 # fetchContents per project (after resolving hints using CMAKE_MODULE_PATH)
 if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     set(FIND_PACKAGE_ARGS)
@@ -173,24 +175,33 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             # string(REPLACE "${MATCH_STR}" "${config_DIR}" hint "${hint}")
             message(STATUS "hint  after modification : '${hint}'")
 
-            set(CMAKE_INSTALL_PREFIX "${config_DIR}")
-
-            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/${CMAKE_INSTALL_LIBDIR}")
-            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
-            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
-
             list(APPEND FIND_PACKAGE_ARGS "${hint}")
 
         endforeach ()
-
+#
+#        set(CMAKE_INSTALL_PREFIX "${config_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
+#
     endif ()
+
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
 
     fetchContents(
             PREFIX HS
             USE ${APP_FEATURES}
             FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else ()
+
+    unset(CMAKE_PREFIX_PATH)
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
+
+    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+
+    set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE STRING "?")
+
     fetchContents(
             PREFIX HS
             USE ${APP_FEATURES})
@@ -199,5 +210,7 @@ endif ()
 if (MONOREPO AND MONOBUILD)
     return()
 endif ()
+
+set(CMAKE_INSTALL_PREFIX "${config_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
 
 include(${CMAKE_SOURCE_DIR}/cmake/project_install.cmake)
