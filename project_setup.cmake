@@ -109,9 +109,14 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 #                "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
         # Define the paths to the two configuration files
-        set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-        set(STAGED_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-
+	if(WIN32)
+            set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+            string(SUBSTRING "${CMAKE_INSTALL_PREFIX}" 3 -1 STAGED_ROOT)
+            set(STAGED_PATH "$ENV{HOME}/dev/stage/${STAGED_ROOT}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        else()
+            set(SYSTEM_PATH   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
+            set(STAGED_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")   
+        endif()
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
             string(FIND "${hint}" "{" openBrace)
             string(FIND "${hint}" "}" closeBrace)
@@ -141,10 +146,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set (actualSystemFile "(not found)")
             endif ()
 
-            # formatter: off
+            # @formatter:off
             if (        "${actualStagedFile}" STREQUAL "(not found)" AND
                         "${actualSystemFile}" STREQUAL "(not found)")
-                    message(WARNING "${APP_NAME} depends on ${pkgName}, which has not been built")
+                    message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
+                    message(NOTICE "Looked for ${pkgName} in ${SYSTEM_PATH} and in ${STAGED_PATH}")
             elseif (NOT "${actualStagedFile}" STREQUAL "(not found)" AND
                         "${actualSystemFile}" STREQUAL "(not found)")
                     message(STATUS "Staged file is newest. Using ${actualStagedFile}")
@@ -166,10 +172,20 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             else ()
                 message(FATAL_ERROR "Impossible situation exists comparing modification times of Staged file / System file")
             endif ()
-            # formatter: on
+            # @formatter:on
 
-            string(REGEX REPLACE "\{.*\}" "${config_DIR}" hint "${hint}")
-            list(APPEND FIND_PACKAGE_ARGS ${hint})
+            message(STATUS "hint before modification : '${hint}'")
+            string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
+            message(STATUS "matched portion of input : '${MATCH_STR}'")
+            string(REPLACE "${MATCH_STR}" "" hint "${hint}")
+            # string(REPLACE "${MATCH_STR}" "${config_DIR}" hint "${hint}")
+            message(STATUS "hint  after modification : '${hint}'")
+
+            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
+            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
+
+            list(APPEND FIND_PACKAGE_ARGS "${hint}")
 
         endforeach ()
 

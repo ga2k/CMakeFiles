@@ -120,7 +120,7 @@ class TestYaml2Group(unittest.TestCase):
                  functions:
                    f1:
                      const: "yes"
-             """, "const must be a boolean"),
+             """, "const must be a hs_bool"),
             ("""
              groups:
                g:
@@ -128,7 +128,7 @@ class TestYaml2Group(unittest.TestCase):
                  functions:
                    f1:
                      noexcept: 123
-             """, "noexcept must be a boolean or string"),
+             """, "noexcept must be a hs_bool or string"),
             ("""
              groups:
                g:

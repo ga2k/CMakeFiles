@@ -36,14 +36,6 @@ set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/bin")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
-## Ensure no link directories leak to INTERFACE and publish overrides include dir to installed consumers
-#if (TARGET ${APP_NAME})
-#    set_property(TARGET ${APP_NAME} PROPERTY INTERFACE_LINK_DIRECTORIES "")
-#    target_include_directories(${APP_NAME} INTERFACE
-#            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${APP_NAME}/overrides/magic_enum/include>
-#    )
-#endif ()
-
 # Optional resources fetching per project
 include(ExternalProject)
 if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
@@ -121,12 +113,12 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT ${APP_NAME}Target
-        FILE ${APP_NAME}Target.cmake
-        NAMESPACE ${APP_VENDOR}::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
-)
+#install(EXPORT ${APP_NAME}Target
+#        FILE ${APP_NAME}Target.cmake
+#        NAMESPACE ${APP_VENDOR}::
+#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+#        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+#)
 
 if (APP_CREATES_PLUGINS)
     install(TARGETS              ${APP_CREATES_PLUGINS}
@@ -149,11 +141,6 @@ install(CODE "
     file(REMOVE ${junk})
   endif()
 ")
-#
-#install(DIRECTORY
-#        ${CMAKE_CURRENT_SOURCE_DIR}/include/overrides
-#        DESTINATION
-#        ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR})
 
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
