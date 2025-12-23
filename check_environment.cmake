@@ -157,7 +157,6 @@ function(check_environment PROJECT_ROOT)
 
     string(TOLOWER ${BUILD_TYPE} BUILD_TYPE_LC)
     string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
-    # formatter: on
 
 #    if (NOT BUILD_DIR)
         forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
