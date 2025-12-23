@@ -1521,7 +1521,7 @@ class CppGroupGenerator:
         # Extract is_group: if true, ensure Group flag is included
         is_group = elements.get('is_group', False)
         if not isinstance(is_group, bool):
-            print(f"Warning: 'is_group' for '{element_name}' must be boolean ({yaml_file})",
+            print(f"Warning: 'is_group' for '{element_name}' must be hs_bool ({yaml_file})",
                   file=sys.stderr)
             is_group = False
 
@@ -1592,7 +1592,7 @@ class CppGroupGenerator:
                 inner = f'"{s}"'
             return f'std::string{{{inner}}}'
 
-        if t in ("bool", "boolean", "boolean"):
+        if t in ("bool", "hs_bool", "hs_bool"):
             v = str(val).strip().lower()
             return "true" if v in ("1", "true", "yes") else "false"
 
@@ -1855,7 +1855,7 @@ class CppGroupGenerator:
         """
         t = (ty or "").strip().lower()
 
-        # Explicit boolean type
+        # Explicit hs_bool type
         if t == "bool":
             return "true" if bool(val) else "false"
 
@@ -1863,7 +1863,7 @@ class CppGroupGenerator:
         if not t and isinstance(val, str):
             s = val.strip().lower()
             if s in ("true", "false"):
-                return s  # unquoted boolean literal
+                return s  # unquoted hs_bool literal
 
         # Strings
         if t in ("string", "std::string"):
@@ -1926,7 +1926,7 @@ class CppGroupGenerator:
                 file=sys.stderr)
 
         known_types = {
-            "bool", "boolean", "boolean",
+            "bool", "hs_bool", "hs_bool",
             "string", "std::string",
             "int", "long", "long long", "unsigned", "unsigned int",
             "double", "float",
@@ -2014,16 +2014,16 @@ class CppGroupGenerator:
 
             # Validate bool/string fields
             if 'const' in fdef and not isinstance(fdef['const'], bool):
-                raise ValueError(f"functions.{fname}.const must be a boolean")
+                raise ValueError(f"functions.{fname}.const must be a hs_bool")
 
             if 'static' in fdef and not isinstance(fdef['static'], bool):
-                raise ValueError(f"functions.{fname}.static must be a boolean")
+                raise ValueError(f"functions.{fname}.static must be a hs_bool")
 
             if 'noexcept' in fdef and not (isinstance(fdef['noexcept'], (bool, str))):
-                raise ValueError(f"functions.{fname}.noexcept must be a boolean or string")
+                raise ValueError(f"functions.{fname}.noexcept must be a hs_bool or string")
 
             if 'override' in fdef and not (isinstance(fdef['override'], (bool, str))):
-                raise ValueError(f"functions.{fname}.override must be a boolean or string")
+                raise ValueError(f"functions.{fname}.override must be a hs_bool or string")
 
             # Access
             access = fdef.get('access', 'public')
@@ -2080,7 +2080,7 @@ class CppGroupGenerator:
             # Honor run_generator flag (default true)
             run_gen = class_def.get('run_generator', True)
             if not isinstance(run_gen, bool):
-                print(f"Warning: target '{target_name}': 'run_generator' must be boolean; defaulting to true",
+                print(f"Warning: target '{target_name}': 'run_generator' must be hs_bool; defaulting to true",
                       file=sys.stderr)
                 run_gen = True
             if not run_gen:

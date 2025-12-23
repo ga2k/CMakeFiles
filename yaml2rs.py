@@ -36,7 +36,7 @@ class CppModuleGenerator:
         self.type_mapping = {
             'integer': 'int',
             'string': 'std::string',
-            'boolean': 'boolean',
+            'hs_bool': 'hs_bool',
             'float': 'float',
             'double': 'double',
             'text': 'std::string',
@@ -662,8 +662,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # Format the default value based on the C++ type
         if cpp_type == 'std::string':
             return f'"{default_val}"'
-        elif cpp_type == 'boolean':
-            return 'boolean(true)' if default_val else 'boolean(false)'
+        elif cpp_type == 'hs_bool':
+            return 'hs_bool(true)' if default_val else 'hs_bool(false)'
         elif cpp_type == 'hs_id':
             return str(default_val)
         elif cpp_type in ['int', 'float', 'double']:
@@ -847,8 +847,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if 'default' in field_def:
                     init_value = f"{{{self.format_default_value(field_def, cpp_type)}}}"
                 else:
-                    if cpp_type == 'boolean':
-                        init_value = "{boolean(false)}"
+                    if cpp_type == 'hs_bool':
+                        init_value = "{hs_bool(false)}"
                     elif cpp_type == 'hs_id':
                         init_value = "{hs_id(ID::Null)}"
                     else:
@@ -968,8 +968,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """Default literal for a mapped C++ type."""
         if cpp_type in ("int", "long", "long long", "unsigned long long", "unsigned int", "double", "float"):
             return "0"
-        if cpp_type == "boolean":
-            return "boolean(false)"
+        if cpp_type == "hs_bool":
+            return "hs_bool(false)"
         if cpp_type == "std::tm":
             return "{}"
         if cpp_type == "hs_id":
