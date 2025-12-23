@@ -315,6 +315,58 @@
       ]
     },
     {
+      "name": "MacOS (Staged Debug Static)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "macOS",
+        "Debug",
+        "Static",
+        "Staged"
+      ]
+    },
+    {
+      "name": "MacOS (Staged Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "macOS",
+        "Debug",
+        "Shared",
+        "Staged"
+      ]
+    },
+    {
+      "name": "MacOS (Staged Release Static)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "macOS",
+        "Release",
+        "Static",
+        "Staged"
+      ]
+    },
+    {
+      "name": "MacOS (Staged Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "macOS",
+        "Release",
+        "Shared",
+        "Staged"
+      ]
+    },
+    {
       "name": "Linux (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
@@ -336,6 +388,32 @@
         "Linux",
         "Release",
         "Shared"
+      ]
+    },
+    {
+      "name": "Linux (Staged Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Linux",
+        "Debug",
+        "Shared",
+        "Staged"
+      ]
+    },
+    {
+      "name": "Linux (Staged Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Linux",
+        "Release",
+        "Shared",
+        "Staged"
       ]
     }
   ],
@@ -389,12 +467,36 @@
       "configurePreset": "MacOS (Release Shared)"
     },
     {
+      "name": "MacOS (Staged Debug Static)",
+      "configurePreset": "MacOS (Staged Debug Static)"
+    },
+    {
+      "name": "MacOS (Staged Debug Shared)",
+      "configurePreset": "MacOS (Staged Debug Shared)"
+    },
+    {
+      "name": "MacOS (Staged Release Static)",
+      "configurePreset": "MacOS (Staged Release Static)"
+    },
+    {
+      "name": "MacOS (Staged Release Shared)",
+      "configurePreset": "MacOS (Staged Release Shared)"
+    },
+    {
       "name": "Linux (Debug Shared)",
       "configurePreset": "Linux (Debug Shared)"
     },
     {
       "name": "Linux (Release Shared)",
       "configurePreset": "Linux (Release Shared)"
+    },
+    {
+      "name": "Linux (Staged Debug Shared)",
+      "configurePreset": "Linux (Staged Debug Shared)"
+    },
+    {
+      "name": "Linux (Staged Release Shared)",
+      "configurePreset": "Linux (Staged Release Shared)"
     }
   ]
 }
