@@ -173,7 +173,10 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             # string(REPLACE "${MATCH_STR}" "${config_DIR}" hint "${hint}")
             message(STATUS "hint  after modification : '${hint}'")
 
+            set(CMAKE_INSTALL_PREFIX "${config_DIR}")
+
             list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+            list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/${CMAKE_INSTALL_LIBDIR}")
             list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
             list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
 
