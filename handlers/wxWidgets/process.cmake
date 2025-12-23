@@ -221,7 +221,7 @@ function(wxWidgets_process incs libs defs)
     else () # Windows?
     
         # On Windows, use CMake's FindwxWidgets module
-        set(wxWidgets_USE_STATIC ${LINK_STATIC)
+        set(wxWidgets_USE_STATIC ${LINK_STATIC})
         set(wxWidgets_USE_UNICODE ON)
         set(wxWidgets_USE_DEBUG ${BUILD_DEBUG})
     
