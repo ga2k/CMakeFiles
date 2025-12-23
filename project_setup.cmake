@@ -81,8 +81,6 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
-set(config_DIR "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}")
-
 # fetchContents per project (after resolving hints using CMAKE_MODULE_PATH)
 if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     set(FIND_PACKAGE_ARGS)
@@ -193,7 +191,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else ()
 
-    unset(CMAKE_PREFIX_PATH)
     list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
     list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
     list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
@@ -207,10 +204,14 @@ else ()
             USE ${APP_FEATURES})
 endif ()
 
+if(STAGE_OUTPUT)
+    set(CMAKE_INSTALL_PREFIX "${STAGED_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
+else ()
+    set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
+endif ()
+
 if (MONOREPO AND MONOBUILD)
     return()
 endif ()
-
-set(CMAKE_INSTALL_PREFIX "${config_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
 
 include(${CMAKE_SOURCE_DIR}/cmake/project_install.cmake)

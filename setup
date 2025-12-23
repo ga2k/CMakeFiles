@@ -1,5 +1,5 @@
 #!/bin/bash
 
 # Run the Python script to update CMakePresets.json
-python3 cmake/filter-presets.py cmake/CMakePresets.in ./CMakePresets.json
-echo "CMake presets have been set up!"
+python3 cmake/filter-presets.py cmake/templates/CMakePresets.in CMakePresets.json
+(( $? == 0 )) && echo "CMake presets have been set UP!"
