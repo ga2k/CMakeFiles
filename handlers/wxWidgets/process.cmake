@@ -1,7 +1,8 @@
 function(wxWidgets_process incs libs defs)
 
     set(GLLibs)
-
+    set(toolkit_used "")
+    
     if (LINUX)
         set(OpenGL_GL_PREFERENCE GLVND)
         # Find OpenGL
@@ -52,18 +53,6 @@ function(wxWidgets_process incs libs defs)
         list(APPEND GLLibs TIFF::TIFF)
         find_package(EXPAT REQUIRED)
         list(APPEND GLLibs EXPAT::EXPAT)
-    endif ()
-    # Find wxWidgets dependencies
-
-    set(wxw_compilerOptions ${_compilerOptions})
-    set(wxw_defines ${_defines})
-    set(wxw_includePaths ${_includePaths})
-    set(wxw_libraryPaths ${_libraryPaths})
-    set(wxw_libraries ${_libraries})
-    set(wxw_frameworks ${_frameworks})
-
-    set(toolkit_used "")
-    if(LINUX)
         set(toolkit_used --toolkit=qt)
 
         find_package(Qt6 COMPONENTS Core DBus Gui Widgets REQUIRED)
@@ -76,21 +65,31 @@ function(wxWidgets_process incs libs defs)
                     ${Qt6DBus_INCLUDE_DIRS})
         endif ()
     endif ()
+    
+    # Find wxWidgets dependencies
+
+    set(wxw_compilerOptions ${_compilerOptions})
+    set(wxw_defines ${_defines})
+    set(wxw_includePaths ${_includePaths})
+    set(wxw_libraryPaths ${_libraryPaths})
+    set(wxw_libraries ${_libraries})
+    set(wxw_frameworks ${_frameworks})
+
 
     # Prefer a real wx-config on PATH, prioritizing native Homebrew on Apple Silicon
     find_program(wx_config NAMES wx-config
             HINTS
                 /opt/homebrew/bin
                 /usr/local/bin
-                /usr/bin
-            )
-    if (EXISTS "${wx_config}")
+                /usr/bin)
+    
+    if (EXISTS "${wx_config}")  # Should for Linux and macOS
         execute_process(
                 COMMAND ${wx_config} ${toolkit_used} --cxxflags --libs all
                 RESULT_VARIABLE oops
                 OUTPUT_VARIABLE cool
-                ERROR_VARIABLE what
-        )
+                ERROR_VARIABLE what)
+                
         if (NOT ${oops} EQUAL 0)
             if ("${what}" STREQUAL "")
                 message(WARNING "Failed to read from wx-config: returned ${oops}")
@@ -219,18 +218,41 @@ function(wxWidgets_process incs libs defs)
 
         log(TITLE "Contents of wxWidgets variables found using wx-config" LISTS wxWidgets_COMPILER_OPTIONS wxWidgets_DEFINES wxWidgets_INCLUDE_DIRS wxWidgets_LIBRARY_PATHS wxWidgets_LIBRARIES)
 
-    else ()
-        message(FATAL_ERROR "wx-config not found. Can't configure the library")
+    else () # Windows?
+    
+        # On Windows, use CMake's FindwxWidgets module
+        set(wxWidgets_USE_STATIC ${LINK_STATIC})
+        set(wxWidgets_USE_UNICODE ON)
+        set(wxWidgets_USE_DEBUG ${BUILD_DEBUG})
+    
+        # Specify which wxWidgets libraries you need
+        find_package(wxWidgets REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+    
+        if(wxWidgets_FOUND)
+            # The FindwxWidgets module provides these variables:
+            # wxWidgets_INCLUDE_DIRS
+            # wxWidgets_LIBRARIES
+            # wxWidgets_LIBRARY_DIRS (not always set)
+            # wxWidgets_DEFINITIONS
+            # wxWidgets_CXX_FLAGS
+        
+            set(wxWidgets_COMPILER_OPTIONS ${wxWidgets_CXX_FLAGS})
+            set(wxWidgets_DEFINES ${wxWidgets_DEFINITIONS})
+            # wxWidgets_INCLUDE_DIRS is already set
+            set(wxWidgets_LIBRARY_PATHS ${wxWidgets_LIBRARY_DIRS})
+            # wxWidgets_LIBRARIES is already set
+        
+            log(TITLE "Contents of wxWidgets variables found using FindwxWidgets" 
+                LISTS wxWidgets_COMPILER_OPTIONS wxWidgets_DEFINES 
+                      wxWidgets_INCLUDE_DIRS wxWidgets_LIBRARY_PATHS 
+                      wxWidgets_LIBRARIES)
+        else()
+            message(FATAL_ERROR "wxWidgets not found on Windows. Please install wxWidgets and set wxWidgets_ROOT_DIR if needed.")
+        endif()
     endif ()
-    #    else ()
-    #        find_package(wxWidgets REQUIRED COMPONENTS aui core base)
-    #        include(${wxWidgets_USE_FILE})
-    #    endif ()
-    #
-
-    # Widgets library removed - consumers link directly to wxWidgets
+    
     # All necessary variables are exported to parent scope below
-
+    
     set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_COMPILER_OPTIONS}   PARENT_SCOPE)
     set(wxWidgets_DEFINES           ${wxWidgets_DEFINES}            PARENT_SCOPE)
     set(wxWidgets_INCLUDE_DIRS      ${wxWidgets_INCLUDE_DIRS}       PARENT_SCOPE)
