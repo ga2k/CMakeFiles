@@ -150,6 +150,10 @@ install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
         FILES_MATCHING PATTERN *.pcm
 )
+install(DIRECTORY ${BUILD_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}/
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+        FILES_MATCHING PATTERN *.ifc
+)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
