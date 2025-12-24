@@ -128,12 +128,12 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
             set(pkgName "${pkgName}Config.cmake")
 
-            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/${pkgName}")
+            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
                 set(actualStagedFile "(not found)")
             endif ()
 
-            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/${pkgName}")
+            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualSystemFile}")
                 set(actualSystemFile "(not found)")
             endif ()

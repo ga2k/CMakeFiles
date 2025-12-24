@@ -224,9 +224,9 @@ function(wxWidgets_process incs libs defs)
         set(wxWidgets_USE_STATIC ${LINK_STATIC})
         set(wxWidgets_USE_UNICODE ON)
         set(wxWidgets_USE_DEBUG ${BUILD_DEBUG})
-    
+
         # Specify which wxWidgets libraries you need
-        find_package(wxWidgets REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
     
         if(wxWidgets_FOUND)
             # The FindwxWidgets module provides these variables:
