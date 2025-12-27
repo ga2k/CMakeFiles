@@ -159,7 +159,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
             newestFile("newest" "${filesToCheck}"  newOrder)
 
-            log(VAR newest LIST newOrder)
+            log(LIST newOrder)
 
             message(FATAL_ERROR "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
