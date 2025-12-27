@@ -130,9 +130,12 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(SYSTEM_FOLDER "${SYSTEM_PATH}")
             endif ()
 
-            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+            set(_stagedPath "${STAGED_PATH}")
+
+            set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
-                set(actualStagedFile "${STAGED_PATH}/${SYSTEM_FOLDER}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+                set(_stagedPath "${STAGED_PATH}/${SYSTEM_FOLDER}")
+                set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
                 if (NOT EXISTS "${actualStagedFile}")
                     set(stagedFileFound OFF)
                 else ()
@@ -157,7 +160,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             elseif (    "${stagedFileFound}" AND
                     NOT "${systemFileFound}")
                     message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    set (config_DIR "${STAGED_PATH}")
+                    set (config_DIR "${_stagedPath}")
             elseif (NOT "${stagedFileFound}" AND
                         "${systemFileFound}")
                     message(STATUS "system file is newest. Using ${actualSystemFile}")
@@ -166,7 +169,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                         "${systemFileFound}" AND
                         "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
                     message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    set (config_DIR "${STAGED_PATH}")
+                    set (config_DIR "${_stagedPath}")
             elseif (    "${stagedFileFound}" AND
                         "${systemFileFound}" AND
                         "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
