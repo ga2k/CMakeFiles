@@ -157,7 +157,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             set (newOrder)
 
             list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
-            newestFile(newestFile "${filesToCheck}"  newOrder)
+            newest("newestFile" "${filesToCheck}"  newOrder)
 
             log(VAR newestFile LIST newOrder)
 
