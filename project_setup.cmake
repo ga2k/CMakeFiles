@@ -142,7 +142,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             if (        "${actualStagedFile}" STREQUAL "(not found)" AND
                         "${actualSystemFile}" STREQUAL "(not found)")
                     message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
-                    message(NOTICE "Looked for ${pkgName} in ${SYSTEM_PATH} and in ${STAGED_PATH}")
+                    message(NOTICE "Looked for ${actualStagedFile} and ${actualSystemFile}")
             elseif (NOT "${actualStagedFile}" STREQUAL "(not found)" AND
                         "${actualSystemFile}" STREQUAL "(not found)")
                     message(STATUS "Staged file is newest. Using ${actualStagedFile}")
