@@ -61,7 +61,7 @@ endif()
 
 if(WIN32)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-  IMPORTED_IMPLIB "${_lib}/_winImpLibName")
+  IMPORTED_IMPLIB "${_lib}/${_winImpLibName}")
 endif()
 
 if(_inDevelopment EQUAL ON)
