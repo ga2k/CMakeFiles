@@ -161,56 +161,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 #
 #            log(VAR newestFile LIST newOrder)
 
-            # @formatter:off
-            if (    NOT "${stagedFileFound}" AND
-                    NOT "${systemFileFound}" AND
-                    NOT "${sourceFileFound}")
-                    message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
-                    message(FATAL_ERROR "Looked for ${actualStagedFile}, ${actualSystemFile}, and ${actualSourceFile}")
-
-            if (        "${sourceFileFound}" AND
-                        "${stagedFileFound}" AND
-                        "${systemFileFound}")
-
-                if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}" AND "${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
-                    message(STATUS "source file is newest. Using ${actualSourceFile}")
-                    if ("${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                        list (APPEND CMAKE_PREFIX_PATH "${actualSourceFile}" "${actualStagedFile}" "${actualSystemFile}")
-                    else ()
-                        list (APPEND CMAKE_PREFIX_PATH "${actualSourceFile}" "${actualSystemFile}" "${actualStagedFile}")
-                    endif ()
-                endif ()
-
-            else ()
-
-                if ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}" AND "${actualSourceFile}" IS_NEWER_THAN "${actualSystemFile}")
-
-
-                    if (        "${sourceFileFound}" AND
-                        "${stagedFileFound}"
-                if (    "${stagedFileFound}" AND
-                    NOT "${systemFileFound}")
-                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
-            elseif (NOT "${stagedFileFound}" AND
-                        "${systemFileFound}")
-                    message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-            elseif (    "${stagedFileFound}" AND
-                        "${systemFileFound}" AND
-                        "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
-            elseif (    "${stagedFileFound}" AND
-                        "${systemFileFound}" AND
-                        "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
-                    message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-            else ()
-                message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
-            endif ()
-            # @formatter:on
-
             message(STATUS "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
             message(STATUS "matched portion of input : '${MATCH_STR}'")
