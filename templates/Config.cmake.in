@@ -3,53 +3,43 @@
 
 include(CMakeFindDependencyMacro)
 
-# Include folder is easy...
-set(_incdir   "${PACKAGE_PREFIX_DIR}/include")
-set(_inDevelopment ON)
+get_filename_component(FULL_PACKAGE_DIR "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
+if ("${FULL_PACKAGE_DIR}" STREQUAL "%OUTPUT_DIR@")
+  set(_incdir "${PACKAGE_PREFIX_DIR}/../include")
+  set(PACKAGE_PREFIX_DIR "${FULL_PACKAGE_DIR}")
+  set(_inDevelopment ON)
+else ()
+  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+  set(_inDevelopment OF)
+endif ()
 
 # Resolve installed library path (cover common layouts)
 unset(_libdir)
-list(APPEND _searchDirs 
+list(APPEND _searchDirs
   "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
-  "@OUTPUT_DIR@/@CMAKE_INSTALL_LIBDIR@"
-  "@OUTPUT_DIR@/@CMAKE_INSTALL_BINDIR@"
-  "@OUTPUT_DIR@/@CMAKE_INSTALL_LIBDIR@/@BUILD_TYPE@"
-  "@OUTPUT_DIR@/@CMAKE_INSTALL_BINDIR@/@BUILD_TYPE@"
+  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@"
+  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@BUILD_TYPE@"
+  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@/@BUILD_TYPE@"
 )
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
-set(_winImpLibName "../lib/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@.lib")
+set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@.lib")
 
 foreach(_dir IN LISTS _searchDirs)
-  set(_lib "${_dir}/${_actualLibName}")
-  if(EXISTS "${_lib}")
-    set(_inDevelopment OFF)
+  if(EXISTS "${_dir}/${_actualLibName}")
+    set(_lib    "${_dir}/${_actualLibName}")
     set(_libdir "${_dir}")
+    set(_impdir "${_dir}/../lib")
     break()
   endif()
 endforeach()
 
-# If the library wasn't found, try the build tree.
-if(NOT _libdir)
-  set(_libdir "@OUTPUT_DIR@/dll")
-
-  if (@MONOREPO@)
-    set(_incdir "@CMAKE_SOURCE_DIR@/@APP_NAME@/include")
-  else()
-    set(_incdir "@CMAKE_SOURCE_DIR@/include")
-  endif()
-
-  set(_lib   "${_libdir}/${_actualLibName}")
-  if(EXISTS "${_lib}")
-    set(_inDevelopment ON)
-  else()
-    message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualLibName}) not found using")
-    foreach(_dir IN LISTS _searchDirs)
-      message(NOTICE "${_dir}/${_actualLibName}")
-    endforeach()
-    message(NOTICE "@OUTPUT_DIR@/${_actualLibName}")
-    message(FATAL_ERROR "Halted")
-  endif()
+if(NOT _lib)
+  message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualLibName}) not found using")
+  foreach(_dir IN LISTS _searchDirs)
+    message(NOTICE "${_dir}/${_actualLibName}")
+  endforeach()
+  message(FATAL_ERROR "Halted")
 endif()
 
 # Create imported target
