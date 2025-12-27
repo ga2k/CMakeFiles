@@ -81,7 +81,13 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
-# fetchContents per project (after resolving hints using CMAKE_MODULE_PATH)
+if(WIN32)
+    string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _systemFolder)
+else ()
+    set(_systemFolder "${SYSTEM_PATH}")
+endif ()
+set(_stagedFolder "${STAGED_PATH}${_systemFolder}")
+
 if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     set(FIND_PACKAGE_ARGS)
     if (FIND_PACKAGE_HINTS)
@@ -91,14 +97,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             list(APPEND FIND_PACKAGE_ARGS ${hint})
         endforeach ()
     endif ()
-
-    if(WIN32)
-        string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _systemFolder)
-    else ()
-        set(_systemFolder "${SYSTEM_PATH}")
-    endif ()
-
-    set(_stagedPath "${STAGED_PATH}${_systemFolder}")
 
     if (FIND_PACKAGE_PATHS)
 
@@ -130,55 +128,57 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
 
-            set(pkgName "${pkgName}Config.cmake")
+            list (APPEND CMAKE_PREFIX_PATH "${SOURCE_PATH}")
 
-            set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-            if (NOT EXISTS "${actualStagedFile}")
-#                set(_stagedPath "${STAGED_PATH}")
-#                set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-#                if (NOT EXISTS "${actualStagedFile}")
-                    set(stagedFileFound OFF)
-#                else ()
-#                    set(stagedFileFound ON)
-#                endif ()
-            else ()
-                set(stagedFileFound ON)
-            endif ()
-
-            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-            if (NOT EXISTS "${actualSystemFile}")
-                set(systemFileFound OFF)
-            else ()
-                set(systemFileFound ON)
-            endif ()
-
-            # @formatter:off
-            if (    NOT "${stagedFileFound}" AND
-                    NOT "${systemFileFound}")
-                    message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
-                    message(NOTICE "Looked for ${actualStagedFile} and ${actualSystemFile}")
-            elseif (    "${stagedFileFound}" AND
-                    NOT "${systemFileFound}")
-                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${_stagedPath}")
-            elseif (NOT "${stagedFileFound}" AND
-                        "${systemFileFound}")
-                    message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-            elseif (    "${stagedFileFound}" AND
-                        "${systemFileFound}" AND
-                        "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${_stagedPath}")
-            elseif (    "${stagedFileFound}" AND
-                        "${systemFileFound}" AND
-                        "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
-                    message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-            else ()
-                message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
-            endif ()
-            # @formatter:on
+#                                    set(pkgName "${pkgName}Config.cmake")
+#
+#                                    set(actualStagedFile "${_stagedFolder}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#                                    if (NOT EXISTS "${actualStagedFile}")
+#                        #                set(_stagedFolder "${STAGED_PATH}")
+#                        #                set(actualStagedFile "${_stagedFolder}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#                        #                if (NOT EXISTS "${actualStagedFile}")
+#                                            set(stagedFileFound OFF)
+#                        #                else ()
+#                        #                    set(stagedFileFound ON)
+#                        #                endif ()
+#                                    else ()
+#                                        set(stagedFileFound ON)
+#                                    endif ()
+#
+#                                    set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#                                    if (NOT EXISTS "${actualSystemFile}")
+#                                        set(systemFileFound OFF)
+#                                    else ()
+#                                        set(systemFileFound ON)
+#                                    endif ()
+#
+#                                    # @formatter:off
+#                                    if (    NOT "${stagedFileFound}" AND
+#                                            NOT "${systemFileFound}")
+#                                            message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
+#                                            message(NOTICE "Looked for ${actualStagedFile} and ${actualSystemFile}")
+#                                    elseif (    "${stagedFileFound}" AND
+#                                            NOT "${systemFileFound}")
+#                                            message(STATUS "staged file is newest. Using ${actualStagedFile}")
+#                                            list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
+#                                    elseif (NOT "${stagedFileFound}" AND
+#                                                "${systemFileFound}")
+#                                            message(STATUS "system file is newest. Using ${actualSystemFile}")
+#                                            list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
+#                                    elseif (    "${stagedFileFound}" AND
+#                                                "${systemFileFound}" AND
+#                                                "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
+#                                            message(STATUS "staged file is newest. Using ${actualStagedFile}")
+#                                            list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
+#                                    elseif (    "${stagedFileFound}" AND
+#                                                "${systemFileFound}" AND
+#                                                "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
+#                                            message(STATUS "system file is newest. Using ${actualSystemFile}")
+#                                            list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
+#                                    else ()
+#                                        message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
+#                                    endif ()
+#                                    # @formatter:on
 
             message(STATUS "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
@@ -188,9 +188,12 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
             list(APPEND FIND_PACKAGE_ARGS "${hint}")
 
-#            set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
-
         endforeach ()
+
+        list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
+        list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
+
+        set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
 #
     endif ()
 
@@ -201,10 +204,15 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 else ()
 
 #    if(config_DIR)
-        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
+#        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
 #    endif ()
 #
 #    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+
+    list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
+    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
+
+    set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
 
     fetchContents(
             PREFIX HS
@@ -212,7 +220,7 @@ else ()
 endif ()
 
 if(STAGE_OUTPUT)
-    set(CMAKE_INSTALL_PREFIX "${_stagedPath}" CACHE PATH "CMake Install Prefix" FORCE)
+    set(CMAKE_INSTALL_PREFIX "${_stagedFolder}" CACHE PATH "CMake Install Prefix" FORCE)
 else ()
     set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
 endif ()
