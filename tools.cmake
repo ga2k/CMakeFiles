@@ -1039,7 +1039,7 @@ macro(generateExportHeader _target)
 
 endmacro()
 
-function(newest OUT_VAR_NAME IN_LIST OUT_LIST)
+function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
     unset (${OUT_VAR_NAME})
     unset (${OUT_LIST})
