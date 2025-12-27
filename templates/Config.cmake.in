@@ -4,13 +4,13 @@
 include(CMakeFindDependencyMacro)
 
 get_filename_component(FULL_PACKAGE_DIR "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
-if ("${FULL_PACKAGE_DIR}" STREQUAL "%OUTPUT_DIR@")
+if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
   set(_incdir "${PACKAGE_PREFIX_DIR}/../include")
   set(PACKAGE_PREFIX_DIR "${FULL_PACKAGE_DIR}")
   set(_inDevelopment ON)
 else ()
   set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-  set(_inDevelopment OF)
+  set(_inDevelopment OFF)
 endif ()
 
 # Resolve installed library path (cover common layouts)
