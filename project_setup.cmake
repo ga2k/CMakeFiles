@@ -159,7 +159,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             log(LIST inOrder)
             list (APPEND CMAKE_PREFIX_PATH "${inOrder}")
 
-            message(FATAL_ERROR "hint before modification : '${hint}'")
+            message(STATUS "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
             message(STATUS "matched portion of input : '${MATCH_STR}'")
             string(REPLACE "${MATCH_STR}" "" hint "${hint}")
