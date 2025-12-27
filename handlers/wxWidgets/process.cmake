@@ -226,8 +226,9 @@ function(wxWidgets_process incs libs defs)
         set(wxWidgets_USE_DEBUG ${BUILD_DEBUG})
 
         # Specify which wxWidgets libraries you need
-        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
-    
+#        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base)
+
         if(wxWidgets_FOUND)
             # The FindwxWidgets module provides these variables:
             # wxWidgets_INCLUDE_DIRS
@@ -235,15 +236,55 @@ function(wxWidgets_process incs libs defs)
             # wxWidgets_LIBRARY_DIRS (not always set)
             # wxWidgets_DEFINITIONS
             # wxWidgets_CXX_FLAGS
-        
-            set(wxWidgets_COMPILER_OPTIONS ${wxWidgets_CXX_FLAGS})
-            set(wxWidgets_DEFINES ${wxWidgets_DEFINITIONS})
-            # wxWidgets_INCLUDE_DIRS is already set
+
+            # Extract Compiler Options
+            if(NOT wxWidgets_CXX_FLAGS)
+                get_target_property(_raw_options wx::core INTERFACE_COMPILE_OPTIONS)
+                if(_raw_options)
+                    foreach(_opt IN LISTS _raw_options)
+                        # Clean up generator expressions if they exist
+                        string(REGEX REPLACE "\\$<.*>" "" _clean_opt "${_opt}")
+                        if(_clean_opt)
+                            list(APPEND wxWidgets_CXX_FLAGS "${_clean_opt}")
+                        endif()
+                    endforeach()
+                endif()
+            endif()
+
+            # Extract Compile Definitions (like UNICODE, __WXMSW__, etc.)
+            if(NOT wxWidgets_DEFINITIONS)
+                get_target_property(_raw_defs wx::core INTERFACE_COMPILE_DEFINITIONS)
+                if(_raw_defs)
+                    foreach(_def IN LISTS _raw_defs)
+                        string(REGEX REPLACE "\\$<.*>" "" _clean_def "${_def}")
+                        if(_clean_def)
+                            list(APPEND wxWidgets_DEFINITIONS "${_clean_def}")
+                        endif()
+                    endforeach()
+                endif()
+            endif()
+            if(NOT wxWidgets_INCLUDE_DIRS)
+                get_target_property(_raw_includes wx::core INTERFACE_INCLUDE_DIRECTORIES)
+
+                # Generator expressions like $<CONFIG:Debug> cause issues in raw variables.
+                # We'll filter for the actual include directory and the base library include.
+                foreach(_path IN LISTS _raw_includes)
+                    if(_path MATCHES "include$")
+                        list(APPEND wxWidgets_INCLUDE_DIRS "${_path}")
+                    elseif(_path MATCHES "mswu")
+                        # Manually resolve the common setup header path if possible
+                        # or just strip the generator expression for the variable
+                        string(REGEX REPLACE "\\$<.*>" "" _clean_path "${_path}")
+                        list(APPEND wxWidgets_INCLUDE_DIRS "${_clean_path}")
+                    endif()
+                endforeach()
+            endif()
+
             set(wxWidgets_LIBRARY_PATHS ${wxWidgets_LIBRARY_DIRS})
             # wxWidgets_LIBRARIES is already set
         
             log(TITLE "Contents of wxWidgets variables found using FindwxWidgets" 
-                LISTS wxWidgets_COMPILER_OPTIONS wxWidgets_DEFINES 
+                LISTS wxWidgets_CXX_FLAGS wxWidgets_DEFINITIONS
                       wxWidgets_INCLUDE_DIRS wxWidgets_LIBRARY_PATHS 
                       wxWidgets_LIBRARIES)
         else()
@@ -253,8 +294,8 @@ function(wxWidgets_process incs libs defs)
     
     # All necessary variables are exported to parent scope below
     
-    set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_COMPILER_OPTIONS}   PARENT_SCOPE)
-    set(wxWidgets_DEFINES           ${wxWidgets_DEFINES}            PARENT_SCOPE)
+    set(wxWidgets_COMPILER_OPTIONS  ${wxWidgets_CXX_FLAGS}          PARENT_SCOPE)
+    set(wxWidgets_DEFINES           ${wxWidgets_DEFINITIONS}        PARENT_SCOPE)
     set(wxWidgets_INCLUDE_DIRS      ${wxWidgets_INCLUDE_DIRS}       PARENT_SCOPE)
     set(wxWidgets_LIBRARY_PATHS     ${wxWidgets_LIBRARY_PATHS}      PARENT_SCOPE)
     set(wxWidgets_LIBRARIES         ${wxWidgets_LIBRARIES}          PARENT_SCOPE)

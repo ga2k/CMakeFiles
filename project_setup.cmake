@@ -181,9 +181,9 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 #
     endif ()
 
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64/cmake")
 
     fetchContents(
             PREFIX HS
