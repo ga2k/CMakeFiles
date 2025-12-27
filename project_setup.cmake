@@ -212,7 +212,7 @@ else ()
 endif ()
 
 if(STAGE_OUTPUT)
-    set(CMAKE_INSTALL_PREFIX "${STAGED_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
+    set(CMAKE_INSTALL_PREFIX "${_stagedPath}" CACHE PATH "CMake Install Prefix" FORCE)
 else ()
     set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
 endif ()
