@@ -153,13 +153,13 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(systemFileFound ON)
             endif ()
 
-            set (newestFile)
-            set (newOrder)
-
-            list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
-            newestFile(newestFile "${filesToCheck}"  newOrder)
-
-            log(VAR newestFile LIST newOrder)
+#            set (newestFile)
+#            set (newOrder)
+#
+#            list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
+#            newestFile(newestFile "${filesToCheck}"  newOrder)
+#
+#            log(VAR newestFile LIST newOrder)
 
             # @formatter:off
             if (    NOT "${stagedFileFound}" AND
