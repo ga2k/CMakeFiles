@@ -1039,37 +1039,37 @@ macro(generateExportHeader _target)
 
 endmacro()
 
-function(newestFile OUT_VAR_NAME IN_NAMES_LIST OUT_ORDER)
+function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
     unset (${OUT_VAR_NAME})
-    unset (${OUT_ORDER})
+    unset (${OUT_LIST})
 
     set (saved OFF)
 
-    foreach (file IN LISTS IN_NAMES_LIST)
-        if (EXISTS "${file}")
-            list(APPEND tempList "${file}")
-        endif ()
-    endforeach ()
-
-    while (tempList)
-        unset (newest)
-        foreach (folder IN LISTS tempList)
-            if ("${folder}" IS_NEWER_THAN "${newest}")
-                set (newest "${folder}")
-            endif ()
-        endforeach ()
-
-        if (NOT SAVED)
-            set ("${${OUT_VAR_NAME}}" "${newest}")
-            set (saved ON)
-        endif ()
-
-        list(APPEND ${OUT_ORDER} "${newest}")
-        list (REMOVE_ITEM tempList "${newest}")
-
-    endwhile ()
-
+#    foreach (file IN LISTS IN_LIST)
+#        if (EXISTS "${file}")
+#            list(APPEND tempList "${file}")
+#        endif ()
+#    endforeach ()
+#
+#    while (tempList)
+#        unset (newest)
+#        foreach (folder IN LISTS tempList)
+#            if ("${folder}" IS_NEWER_THAN "${newest}")
+#                set (newest "${folder}")
+#            endif ()
+#        endforeach ()
+#
+#        if (NOT SAVED)
+#            set ("${${OUT_VAR_NAME}}" "${newest}")
+#            set (saved ON)
+#        endif ()
+#
+#        list(APPEND ${OUT_LIST} "${newest}")
+#        list (REMOVE_ITEM tempList "${newest}")
+#
+#    endwhile ()
+#
 
 endfunction()
 
