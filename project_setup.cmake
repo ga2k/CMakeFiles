@@ -153,15 +153,15 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(systemFileFound ON)
             endif ()
 
-#            set (newestFile)
-#            set (newOrder)
-#
-#            list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
-#            newestFile(newestFile "${filesToCheck}"  newOrder)
-#
-#            log(VAR newestFile LIST newOrder)
+            set (newestFile)
+            set (newOrder)
 
-            message(STATUS "hint before modification : '${hint}'")
+            list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
+            newestFile(newestFile "${filesToCheck}"  newOrder)
+
+            log(VAR newestFile LIST newOrder)
+
+            message(FATAL_ERROR "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
             message(STATUS "matched portion of input : '${MATCH_STR}'")
             string(REPLACE "${MATCH_STR}" "" hint "${hint}")
