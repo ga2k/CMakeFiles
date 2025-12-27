@@ -1043,8 +1043,8 @@ function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
     log(LISTS IN_LIST)
 
-    unset (${OUT_VAR_NAME})
-    unset (${OUT_LIST})
+    unset (OUT_VAR_NAME PARENT_SCOPE)
+    unset (OUT_LIST PARENT_SCOPE)
 
     set (saved OFF)
 
