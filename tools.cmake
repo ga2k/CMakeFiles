@@ -1041,6 +1041,8 @@ endmacro()
 
 function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
+    log(LISTS IN_LIST)
+
     unset (${OUT_VAR_NAME})
     unset (${OUT_LIST})
 
@@ -1070,7 +1072,7 @@ function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
     endwhile ()
 
-
+    log(LISTS OUT_LIST)
 endfunction()
 
 set(CPYRGHT "# ##############################################################################
