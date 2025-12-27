@@ -211,7 +211,7 @@ if(STAGE_OUTPUT)
 else ()
     set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
 endif ()
-
+message(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 if (MONOREPO AND MONOBUILD)
     return()
 endif ()
