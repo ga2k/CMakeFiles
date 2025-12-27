@@ -1072,7 +1072,8 @@ function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
 
     endwhile ()
 
-    log(LISTS OUT_LIST)
+    log(LISTS ${OUT_LIST})
+
 endfunction()
 
 set(CPYRGHT "# ##############################################################################
