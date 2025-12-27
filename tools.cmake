@@ -1065,7 +1065,7 @@ function(newestFile IN_LIST OUT_LIST)
     endwhile ()
 
     log(LISTS new_list)
-
+    set (${OUT_LIST} ${new_list} PARENT_SCOPE)
 endfunction()
 
 set(CPYRGHT "# ##############################################################################
