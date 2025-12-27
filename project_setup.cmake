@@ -193,9 +193,13 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
         list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
         list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
 
+        list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+
         set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
 #
     endif ()
+
+    log(LIST CMAKE_PREFIX_PATH)
 
     fetchContents(
             PREFIX HS
@@ -212,7 +216,11 @@ else ()
     list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
     list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
 
+    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+
     set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
+
+    log(LIST CMAKE_PREFIX_PATH)
 
     fetchContents(
             PREFIX HS
