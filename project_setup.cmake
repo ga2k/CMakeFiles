@@ -92,6 +92,14 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
         endforeach ()
     endif ()
 
+    if(WIN32)
+        string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _systemFolder)
+    else ()
+        set(_systemFolder "${SYSTEM_PATH}")
+    endif ()
+
+    set(_stagedPath "${STAGED_PATH}${_systemFolder}")
+
     if (FIND_PACKAGE_PATHS)
 
         if (NOT CMAKE_INSTALL_LIBDIR)
@@ -124,24 +132,16 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
             set(pkgName "${pkgName}Config.cmake")
 
-            if(WIN32)
-                string(SUBSTRING "${SYSTEM_PATH}" 2 -1 SYSTEM_FOLDER)
-            else ()
-                set(SYSTEM_FOLDER "${SYSTEM_PATH}")
-            endif ()
-
-            set(_stagedPath "${STAGED_PATH}")
-
             set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
-                set(_stagedPath "${STAGED_PATH}/${SYSTEM_FOLDER}")
-                set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-                if (NOT EXISTS "${actualStagedFile}")
-                    set(stagedFileFound OFF)
-                else ()
-                    set(stagedFileFound ON)
-                endif ()
-            else ()
+#                set(_stagedPath "${STAGED_PATH}")
+#                set(actualStagedFile "${_stagedPath}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#                if (NOT EXISTS "${actualStagedFile}")
+#                    set(stagedFileFound OFF)
+#                else ()
+#                    set(stagedFileFound ON)
+#                endif ()
+#            else ()
                 set(stagedFileFound ON)
             endif ()
 
@@ -160,21 +160,21 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             elseif (    "${stagedFileFound}" AND
                     NOT "${systemFileFound}")
                     message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    set (config_DIR "${_stagedPath}")
+                    list (APPEND CMAKE_PREFIX_PATH "${_stagedPath}")
             elseif (NOT "${stagedFileFound}" AND
                         "${systemFileFound}")
                     message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    set (config_DIR "${SYSTEM_PATH}")
+                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
             elseif (    "${stagedFileFound}" AND
                         "${systemFileFound}" AND
                         "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
                     message(STATUS "staged file is newest. Using ${actualStagedFile}")
-                    set (config_DIR "${_stagedPath}")
+                    list (APPEND CMAKE_PREFIX_PATH "${_stagedPath}")
             elseif (    "${stagedFileFound}" AND
                         "${systemFileFound}" AND
                         "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
                     message(STATUS "system file is newest. Using ${actualSystemFile}")
-                    set (config_DIR "${SYSTEM_PATH}")
+                    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
             else ()
                 message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
             endif ()
@@ -188,11 +188,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
             list(APPEND FIND_PACKAGE_ARGS "${hint}")
 
+#            set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
+
         endforeach ()
 #
     endif ()
-
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
 
     fetchContents(
             PREFIX HS
@@ -200,11 +200,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else ()
 
-    if(config_DIR)
+#    if(config_DIR)
         list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-    endif ()
-
-    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+#    endif ()
+#
+#    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
 
     fetchContents(
             PREFIX HS
@@ -217,6 +217,7 @@ else ()
     set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
 endif ()
 message(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
 if (MONOREPO AND MONOBUILD)
     return()
 endif ()
