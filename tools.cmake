@@ -1039,14 +1039,11 @@ macro(generateExportHeader _target)
 
 endmacro()
 
-function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
+function(newestFile IN_LIST OUT_LIST)
 
     log(LISTS IN_LIST)
-
-    unset (OUT_VAR_NAME PARENT_SCOPE)
-    unset (OUT_LIST PARENT_SCOPE)
-
-    set (saved OFF)
+    unset (${OUT_LIST} PARENT_SCOPE)
+    unset (new_list)
 
     foreach (file IN LISTS IN_LIST)
         if (EXISTS "${file}")
@@ -1062,17 +1059,12 @@ function(newestFile OUT_VAR_NAME IN_LIST OUT_LIST)
             endif ()
         endforeach ()
 
-        if (NOT SAVED)
-            set ("${${OUT_VAR_NAME}}" "${newest}")
-            set (saved ON)
-        endif ()
-
-        list(APPEND ${OUT_LIST} "${newest}")
+        list(APPEND new_list "${newest}")
         list (REMOVE_ITEM tempList "${newest}")
 
     endwhile ()
 
-    log(LISTS ${OUT_LIST})
+    log(LISTS new_list)
 
 endfunction()
 
