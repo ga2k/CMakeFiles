@@ -40,7 +40,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 include(ExternalProject)
 if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
     set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-    if (APP_SUPPLIES_RESOURCES AND NOT APPLE)
+    if (APP_SUPPLIES_RESOURCES)
         ExternalProject_Add(${APP_NAME}ResourceRepo
                 GIT_REPOSITORY "${APP_SUPPLIES_RESOURCES}"
                 GIT_TAG master
