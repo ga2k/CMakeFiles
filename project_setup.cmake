@@ -130,39 +130,43 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
             set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
-                set(actualStagedFile "(not found)")
+                set(stagedFileFound OFF)
+            else ()
+                set(stagedFileFound ON)
             endif ()
 
             set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualSystemFile}")
-                set(actualSystemFile "(not found)")
+                set(systemFileFound OFF)
+            else ()
+                set(systemFileFound ON)
             endif ()
 
             # @formatter:off
-            if (        "${actualStagedFile}" STREQUAL "(not found)" AND
-                        "${actualSystemFile}" STREQUAL "(not found)")
+            if (    NOT "${stagedFileFound}" STREQUAL "(not found)" AND
+                    NOT "${systemFileFound}" STREQUAL "(not found)")
                     message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
-                    message(NOTICE "Looked for ${actualStagedFile} and ${actualSystemFile}")
-            elseif (NOT "${actualStagedFile}" STREQUAL "(not found)" AND
-                        "${actualSystemFile}" STREQUAL "(not found)")
-                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    message(NOTICE "Looked for ${acutalStagedFile} and ${acutalSystemFile}")
+            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
+                    NOT "${systemFileFound}" STREQUAL "(not found)")
+                    message(STATUS "staged file is newest. Using ${acutalStagedFile}")
                     set (config_DIR "${STAGED_PATH}")
-            elseif (    "${actualStagedFile}" STREQUAL "(not found)" AND
-                    NOT "${actualSystemFile}" STREQUAL "(not found)")
-                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+            elseif (NOT "${stagedFileFound}" STREQUAL "(not found)" AND
+                        "${systemFileFound}" STREQUAL "(not found)")
+                    message(STATUS "system file is newest. Using ${acutalSystemFile}")
                     set (config_DIR "${SYSTEM_PATH}")
-            elseif (NOT "${actualStagedFile}" STREQUAL "(not found)" AND
-                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
+            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
+                        "${systemFileFound}" STREQUAL "(not found)" AND
                         "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                    message(STATUS "Staged file is newest. Using ${actualStagedFile}")
+                    message(STATUS "staged file is newest. Using ${acutalStagedFile}")
                     set (config_DIR "${STAGED_PATH}")
-            elseif (NOT "${actualStagedFile}" STREQUAL "(not found)" AND
-                    NOT "${actualSystemFile}" STREQUAL "(not found)" AND
-                        "${actualSystemFile}" IS_NEWER_THAN "${actualStagedFile}")
-                    message(STATUS "System file is newest. Using ${actualSystemFile}")
+            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
+                        "${systemFileFound}" STREQUAL "(not found)" AND
+                        "${acutalSystemFileFound}" IS_NEWER_THAN "${acutalStagedFileFound}")
+                    message(STATUS "system file is newest. Using ${acutalSystemFile}")
                     set (config_DIR "${SYSTEM_PATH}")
             else ()
-                message(FATAL_ERROR "Impossible situation exists comparing modification times of Staged file / System file")
+                message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
             endif ()
             # @formatter:on
 
