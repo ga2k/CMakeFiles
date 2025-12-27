@@ -104,10 +104,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             endif ()
         endif ()
 
-        #        list(PREPEND CMAKE_MODULE_PATH
-        #                "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake"
-        #                "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake")
-
         # Define the paths to the two configuration files
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
             string(FIND "${hint}" "{" openBrace)
@@ -174,20 +170,15 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
             message(STATUS "matched portion of input : '${MATCH_STR}'")
             string(REPLACE "${MATCH_STR}" "" hint "${hint}")
-            # string(REPLACE "${MATCH_STR}" "${config_DIR}" hint "${hint}")
             message(STATUS "hint  after modification : '${hint}'")
 
             list(APPEND FIND_PACKAGE_ARGS "${hint}")
 
         endforeach ()
 #
-#        set(CMAKE_INSTALL_PREFIX "${config_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
-#
     endif ()
 
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/cmake")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib/cmake")
-    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
 
     fetchContents(
             PREFIX HS
@@ -197,13 +188,9 @@ else ()
 
     if(config_DIR)
         list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib")
-        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}/lib64")
     endif ()
 
     list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
-
-    set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE STRING "?")
 
     fetchContents(
             PREFIX HS
