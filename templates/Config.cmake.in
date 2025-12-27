@@ -10,9 +10,12 @@ set(_inDevelopment ON)
 # Resolve installed library path (cover common layouts)
 unset(_libdir)
 list(APPEND _searchDirs 
+  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
   "${PACKAGE_PREFIX_DIR}/lib"
   "${PACKAGE_PREFIX_DIR}/lib64"
-  "${PACKAGE_PREFIX_DIR}/bin")
+  "${PACKAGE_PREFIX_DIR}/bin"
+  "@OUTPUT_DIR@/@CMAKE_INSTALL_LIBDIR@"
+)
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "../lib/@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@.lib")
