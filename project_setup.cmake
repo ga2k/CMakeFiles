@@ -153,13 +153,11 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(systemFileFound ON)
             endif ()
 
-            set (newestFile)
-            set (newOrder "")
-
             list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
-            newestFile("${filesToCheck}" newOrder)
+            newestFile("${filesToCheck}" inOrder)
 
-            log(LIST newOrder)
+            log(LIST inOrder)
+            list (APPEND CMAKE_PREFIX_PATH "${inOrder}")
 
             message(FATAL_ERROR "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
@@ -171,12 +169,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
 
         endforeach ()
 
-        list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
-        list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-
-
         list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
-
         set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
 #
     endif ()
@@ -188,21 +181,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             USE ${APP_FEATURES}
             FIND_PACKAGE_ARGS ${FIND_PACKAGE_ARGS})
 else ()
-
-#    if(config_DIR)
-#        list(APPEND CMAKE_PREFIX_PATH "${config_DIR}")
-#    endif ()
-#
-#    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
-
-    list (APPEND CMAKE_PREFIX_PATH "${_stagedFolder}")
-    list (APPEND CMAKE_PREFIX_PATH "${SYSTEM_PATH}")
-
-    list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
-
-    set (CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE FILEPATH "Look here")
-
-    log(LIST CMAKE_PREFIX_PATH)
 
     fetchContents(
             PREFIX HS

@@ -1041,7 +1041,6 @@ endmacro()
 
 function(newestFile IN_LIST OUT_LIST)
 
-    log(LISTS IN_LIST)
     unset (${OUT_LIST} PARENT_SCOPE)
     unset (new_list)
 
@@ -1064,7 +1063,6 @@ function(newestFile IN_LIST OUT_LIST)
 
     endwhile ()
 
-    log(LISTS new_list)
     set (${OUT_LIST} ${new_list} PARENT_SCOPE)
 endfunction()
 
