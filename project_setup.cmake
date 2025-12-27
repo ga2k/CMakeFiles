@@ -143,27 +143,27 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             endif ()
 
             # @formatter:off
-            if (    NOT "${stagedFileFound}" STREQUAL "(not found)" AND
-                    NOT "${systemFileFound}" STREQUAL "(not found)")
+            if (    NOT "${stagedFileFound}" AND
+                    NOT "${systemFileFound}")
                     message(NOTICE "${APP_NAME} depends on ${pkgName}, which has not been built")
-                    message(NOTICE "Looked for ${acutalStagedFile} and ${acutalSystemFile}")
-            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
-                    NOT "${systemFileFound}" STREQUAL "(not found)")
-                    message(STATUS "staged file is newest. Using ${acutalStagedFile}")
+                    message(NOTICE "Looked for ${actualStagedFile} and ${actualSystemFile}")
+            elseif (    "${stagedFileFound}" AND
+                    NOT "${systemFileFound}")
+                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
                     set (config_DIR "${STAGED_PATH}")
-            elseif (NOT "${stagedFileFound}" STREQUAL "(not found)" AND
-                        "${systemFileFound}" STREQUAL "(not found)")
-                    message(STATUS "system file is newest. Using ${acutalSystemFile}")
+            elseif (NOT "${stagedFileFound}" AND
+                        "${systemFileFound}")
+                    message(STATUS "system file is newest. Using ${actualSystemFile}")
                     set (config_DIR "${SYSTEM_PATH}")
-            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
-                        "${systemFileFound}" STREQUAL "(not found)" AND
+            elseif (    "${stagedFileFound}" AND
+                        "${systemFileFound}" AND
                         "${actualStagedFile}" IS_NEWER_THAN "${actualSystemFile}")
-                    message(STATUS "staged file is newest. Using ${acutalStagedFile}")
+                    message(STATUS "staged file is newest. Using ${actualStagedFile}")
                     set (config_DIR "${STAGED_PATH}")
-            elseif (    "${stagedFileFound}" STREQUAL "(not found)" AND
-                        "${systemFileFound}" STREQUAL "(not found)" AND
-                        "${acutalSystemFileFound}" IS_NEWER_THAN "${acutalStagedFileFound}")
-                    message(STATUS "system file is newest. Using ${acutalSystemFile}")
+            elseif (    "${stagedFileFound}" AND
+                        "${systemFileFound}" AND
+                        "${actualSystemFileFound}" IS_NEWER_THAN "${actualStagedFileFound}")
+                    message(STATUS "system file is newest. Using ${actualSystemFile}")
                     set (config_DIR "${SYSTEM_PATH}")
             else ()
                 message(FATAL_ERROR "Impossible situation exists comparing modification times of staged file / system file")
