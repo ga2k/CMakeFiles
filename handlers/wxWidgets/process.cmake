@@ -231,8 +231,8 @@ function(wxWidgets_process incs libs defs)
         set(wxWidgets_USE_DEBUG ${BUILD_DEBUG})
 
         # Specify which wxWidgets libraries you need
-#        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
-        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base)
+        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+#        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base)
 
         if(wxWidgets_FOUND)
             # The FindwxWidgets module provides these variables:
