@@ -3,14 +3,24 @@
 
 include(CMakeFindDependencyMacro)
 
-get_filename_component(FULL_PACKAGE_DIR "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
+  message(NOTICE "In development")
   set(PACKAGE_PREFIX_DIR "${FULL_PACKAGE_DIR}")
-  set(_inDevelopment ON)
+
+  set(_inDevelopment  ON)
+  set(_inStaging      OFF)
+  set(_installed      OFF)
+
+  list(APPEND _searchDirs
+  "${PACKAGE_PREFIX_DIR}/lib"
+  "${PACKAGE_PREFIX_DIR}/bin"
+  "${PACKAGE_PREFIX_DIR}/lib/Debug"
+  "${PACKAGE_PREFIX_DIR}/bin/Debug"
+  )
 
   # Search upwards for the "include" directory
   set(_searchDir "${PACKAGE_PREFIX_DIR}")
-  set(_stopDir "@APP_NAME@")
+  set(_stopDir "HoffSoft")
   set(_foundInc OFF)
 
   while(NOT _foundInc)
@@ -30,19 +40,41 @@ if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
       set(_searchDir "${_parentDir}")
     endif()
   endwhile()
-else ()
-  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-  set(_inDevelopment OFF)
-endif ()
 
-# Resolve installed library path (cover common layouts)
-unset(_libdir)
-list(APPEND _searchDirs
-  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
-  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@"
-  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@BUILD_TYPE@"
-  "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@/@BUILD_TYPE@"
-)
+elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
+  message(NOTICE "Staged")
+
+  set(_inDevelopment  OFF)
+  set(_inStaging      ON)
+  set(_installed      OFF)
+
+  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+
+  list(APPEND _searchDirs
+    "${PACKAGE_PREFIX_DIR}/lib"
+    "${PACKAGE_PREFIX_DIR}/bin"
+    "${PACKAGE_PREFIX_DIR}/lib/Debug"
+    "${PACKAGE_PREFIX_DIR}/bin/Debug"
+  )
+
+elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
+  message(NOTICE "Installed")
+
+  set(_inDevelopment  OFF)
+  set(_inStaging      OFF)
+  set(_installed      ON)
+  
+  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+  
+  list(APPEND _searchDirs
+    "${PACKAGE_PREFIX_DIR}/lib"
+    "${PACKAGE_PREFIX_DIR}/bin"
+    "${PACKAGE_PREFIX_DIR}/lib/Debug"
+    "${PACKAGE_PREFIX_DIR}/bin/Debug"
+  )
+else ()
+  message(FATAL_ERROR "Illegal installation")
+endif ()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@.lib")
