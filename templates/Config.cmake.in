@@ -19,13 +19,14 @@ if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
       set(_foundInc ON)
       break()
     else()
-      get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
-      get_filename_component(_justDir "${_parentDir}" NAME)
-
       # Fail if we go higher than the parent of HoffSoft or hit root
       if("${_justDir}" STREQUAL "${_stopDir}")
         message(FATAL_ERROR "Could not find 'include' directory within development tree limits.")
       endif()
+
+      get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
+      get_filename_component(_justDir "${_parentDir}" NAME)
+
       set(_searchDir "${_parentDir}")
     endif()
   endwhile()
