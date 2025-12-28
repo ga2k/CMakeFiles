@@ -20,7 +20,7 @@ if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
       break()
     else()
       get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
-      get_filename_component(_justDir "${_parentDir}" FILENAME)
+      get_filename_component(_justDir "${_parentDir}" NAME)
 
       # Fail if we go higher than the parent of HoffSoft or hit root
       if("${_justDir}" STREQUAL "${_stopDir}")
