@@ -132,7 +132,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(sourceFileFound ON)
             endif ()
 
-            set(actualStagedFile "${STAGED_FOLDER}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
             if (NOT EXISTS "${actualStagedFile}")
                 set(stagedFileFound OFF)
             else ()
