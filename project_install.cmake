@@ -107,7 +107,7 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 # @formatting:off
-install(TARGETS                         ${APP_NAME}
+install(TARGETS                         ${APP_NAME} ${HS_DependenciesList}
         EXPORT                          ${APP_NAME}Target
         RUNTIME DESTINATION             ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION             ${CMAKE_INSTALL_LIBDIR}
