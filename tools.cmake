@@ -1046,7 +1046,7 @@ function(newestFile IN_LIST OUT_LIST)
     log(TITLE "Provided list" LISTS IN_LIST)
 
     # 1. Filter only existing files
-    foreach(file IN LISTS ${IN_LIST})
+    foreach(file IN LISTS IN_LIST)
         if(EXISTS "${file}")
             list(APPEND working_list "${file}")
         endif()
