@@ -20,7 +20,7 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
 
   # Search upwards for the "include" directory
   set(_searchDir "${PACKAGE_PREFIX_DIR}")
-  set(_stopDir "HoffSoft")
+  set(_stopDir "@APP_NAME@")
   set(_foundInc OFF)
 
   while(NOT _foundInc)
