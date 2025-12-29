@@ -108,7 +108,7 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
 # @formatting:off
-install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
+install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         EXPORT                   ${APP_NAME}Target
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -119,7 +119,7 @@ install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT      ${APP_NAME}Target ${HS_DependenciesList}
+install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
