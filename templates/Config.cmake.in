@@ -107,8 +107,8 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
 endif()
 
 if(WIN32)
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-  IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+  set(_libdir "${_impdir}")
 endif()
 
 if(_inDevelopment EQUAL ON)
@@ -121,8 +121,8 @@ if(_inDevelopment EQUAL ON)
   endif()
 elseif(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
   include("${_libdir}/cmake/@APP_NAME@Target.cmake")
-#elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
-#  include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+  include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
