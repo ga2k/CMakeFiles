@@ -107,23 +107,24 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 # @formatting:off
-install(TARGETS                         ${APP_NAME} ${HS_DependenciesList}
-        EXPORT                          ${APP_NAME}Target
-        RUNTIME DESTINATION             ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION             ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION             ${CMAKE_INSTALL_LIBDIR}
-            # This tells CMake where to put the .ifc files in the install tree
-        CXX_MODULES_BMI DESTINATION      "${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}"
-            # This tells CMake which module sources are part of the public interface
-        FILE_SET CXX_MODULES DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}"
+install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
+        EXPORT                   ${APP_NAME}Target
+        CONFIGURATIONS           Debug Release
+        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
+        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 install(EXPORT      ${arg_NAME}Target
         FILE        ${arg_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${arg_NAME}"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
         # This matches the directory structure we want for module metadata
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${arg_NAME}"
+        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 # @formatting:on
 
