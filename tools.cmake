@@ -1043,12 +1043,16 @@ function(newestFile IN_LIST OUT_LIST)
     set(working_list "")
     set(sorted_list "")
 
+    log(TITLE "Provided list" LISTS IN_LIST)
+
     # 1. Filter only existing files
     foreach(file IN LISTS ${IN_LIST})
         if(EXISTS "${file}")
             list(APPEND working_list "${file}")
         endif()
     endforeach()
+
+    log(TITLE "Working list" LISTS working_list)
 
     # 2. Selection sort by timestamp
     while(working_list)
