@@ -1065,6 +1065,7 @@ function(newestFile IN_LIST OUT_LIST)
         list(REMOVE_ITEM working_list "${newest}")
     endwhile()
 
+    log(TITLE "Sorted by date order" LISTS sorted_list)
     set(${OUT_LIST} "${sorted_list}" PARENT_SCOPE)
 endfunction()
 
