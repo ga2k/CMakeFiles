@@ -95,16 +95,16 @@ include(GNUInstallDirs)
 
 if ("${APP_TYPE}" STREQUAL "Library")
     install(FILES
-            "${OUTPUT_DIR}/dll/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
+            "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else ()
     install(FILES
-            "${OUTPUT_DIR}/bin/${APP_NAME}.yaml"
+            "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml"
             DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif ()
-set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
+set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
 # @formatting:off
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
