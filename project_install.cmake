@@ -113,12 +113,12 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-#install(EXPORT ${APP_NAME}Target
-#        FILE ${APP_NAME}Target.cmake
-#        NAMESPACE ${APP_VENDOR}::
-#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-#        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
-#)
+install(EXPORT ${APP_NAME}Target
+        FILE ${APP_NAME}Target.cmake
+        NAMESPACE ${APP_VENDOR}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+)
 
 if (APP_CREATES_PLUGINS)
     install(TARGETS              ${APP_CREATES_PLUGINS}
