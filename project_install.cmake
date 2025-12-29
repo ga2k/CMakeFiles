@@ -145,15 +145,21 @@ install(CODE "
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-# PCM/PCM-like files
-install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILES_MATCHING PATTERN *.pcm
-)
-install(DIRECTORY ${BUILD_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}/
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILES_MATCHING PATTERN *.ifc
-)
+if (LINUX OR APPLE)
+    # PCM/PCM-like files
+    install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+            FILES_MATCHING
+            PATTERN "*.pcm"
+    )
+else ()
+    install(DIRECTORY ${BUILD_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}/
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+            FILES_MATCHING
+            PATTERN "*.ifc"
+            PATTERN "*.json"
+    )
+endif ()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

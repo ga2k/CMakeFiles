@@ -147,13 +147,16 @@ if(USE_PREBUILT_MODULES)
     endif()
   elseif(MSVC)
     if(_inDevelopment)
-    # MSVC looks for .ifc files. In development, they are usually in the build tree.
-    # CMake 3.28+ handles this via FILE_SETS, but we can add the search path explicitly:
-      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE 
+      # Use both the search dir and the reference for the primary module if possible
+      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
         "/ifcSearchDir:@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
     else()
+      set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
       target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-      "/ifcSearchDir:${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+        "/ifcSearchDir:${_bmiDir}")
+      # Tell MSVC this directory contains 'external' modules
+      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+        "/external:ifcDir:${_bmiDir}")
     endif()
   endif()
 endif()
