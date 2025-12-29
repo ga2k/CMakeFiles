@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
+include(GNUInstallDirs)
 
 ###############################################################################
 # Copyright (c) 2024 Hoffmann Systems. All rights reserved.
@@ -174,13 +175,13 @@ macro(check_environment PROJECT_ROOT)
     #    endif ()
 
         # Set the output directories for runtime binaries (DLLs, executables)
-        forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/bin" FILEPATH)
+        forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
 
         # Set the output directory for shared libraries (DLLs)
-        forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/dll" FILEPATH)
+        forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
 
         # Set the output directory for static libraries
-        forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/lib" FILEPATH)
+        forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
 
     #    # Set sensible cross-platform install defaults
     #    if(WIN32)
