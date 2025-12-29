@@ -156,11 +156,8 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                     AND ${actualSourceFile} IS_NEWER_THAN ${actualStagedFile}
                     AND ${actualStagedFile} IS_NEWER_THAN ${actualSourceFile})
 
-                list(PREPEND candidates "${actualStagedFile}")  # Staged in front of Source
-
-                if (systemFileFound)
-                    list(APPEND candidates "${actualSystemFile}")
-                endif ()
+                message(NOTICE "Source and Staged are the same. We'll use Staged.")
+                set (candidates "${actualStagedFile}")
             else ()
                 newestFile("${conditionals}" inOrder)
                 list(APPEND candidates "${inOrder}")
