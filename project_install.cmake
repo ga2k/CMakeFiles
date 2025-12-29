@@ -33,7 +33,7 @@ else ()
 endif ()
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 
-file(MAKE_DIRECTORY "${OUTPUT_DIR}/bin")
+file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
 # Optional resources fetching per project
@@ -170,7 +170,7 @@ install(CODE "
 ")
 
 # Static libraries (copy built libs)
-install(DIRECTORY ${OUTPUT_DIR}/lib/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # PCM/PCM-like files
 install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
