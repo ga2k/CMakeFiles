@@ -59,13 +59,6 @@ list(REMOVE_ITEM extra_Definitions "PLUGINS")
 if (NOT "${PI}" STREQUAL "")
     list(APPEND extra_Definitions "PLUGINS=${PI}")
 endif ()
-#
-## Ensure overrides path is highest priority for build tree
-#if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
-#    list(PREPEND extra_IncludePaths ${CMAKE_CURRENT_SOURCE_DIR}/overrides/magic_enum/include)
-#endif (
-#
-#)
 
 list(APPEND extra_IncludePaths
         ${HEADER_BASE_DIRS}
@@ -126,24 +119,30 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             set(pkgName "${pkgName}Config.cmake")
 
             set(actualSourceFile "${SOURCE_PATH}/${pkgName}")
-            if (NOT EXISTS "${actualSourceFile}")
-                set(sourceFileFound OFF)
-            else ()
+            if (EXISTS "${actualSourceFile}")
+                message(NOTICE "  Found ${actualSourceFile}")
                 set(sourceFileFound ON)
+            else ()
+                message(NOTICE "Missing ${actualSourceFile}")
+                set(sourceFileFound OFF)
             endif ()
 
             set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-            if (NOT EXISTS "${actualStagedFile}")
-                set(stagedFileFound OFF)
-            else ()
+            if (EXISTS "${actualStagedFile}")
+                message(NOTICE "  Found ${actualStagedFile}")
                 set(stagedFileFound ON)
+            else ()
+                message(NOTICE "Missing ${actualStagedFile}")
+                set(stagedFileFound OFF)
             endif ()
 
             set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-            if (NOT EXISTS "${actualSystemFile}")
-                set(systemFileFound OFF)
-            else ()
+            if (EXISTS "${actualSystemFile}")
+                message(NOTICE "  Found ${actualSystemFile}")
                 set(systemFileFound ON)
+            else ()
+                message(NOTICE "Missing ${actualSystemFile}")
+                set(systemFileFound OFF)
             endif ()
 
             list (APPEND filesToCheck "${actualStagedFile}" "${actualSystemFile}" "${actualSourceFile}")
