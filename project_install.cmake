@@ -120,7 +120,7 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
 )
 
 # PCM/PCM-like files
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir/${BUILD_TYPE}"
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
         FILES_MATCHING
         PATTERN "*.pcm"
