@@ -109,7 +109,6 @@ set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 # @formatting:off
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         EXPORT                   ${APP_NAME}Target
-        CONFIGURATIONS           Debug Release
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
         ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -119,8 +118,8 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT      ${arg_NAME}Target
-        FILE        ${arg_NAME}Target.cmake
+install(EXPORT      ${APP_NAME}Target
+        FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
         # This matches the directory structure we want for module metadata
