@@ -129,22 +129,30 @@ endif()
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_lib}"
-    CXX_STANDARD 23
-    INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
-  )
+      IMPORTED_LOCATION "${_lib}"
+      INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
+      CXX_EXTENSIONS "OFF"
+      CXX_MODULE_STD "23"
+      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
+      INTERFACE_COMPILE_FEATURES "cxx_std_23")
+
   if(WIN32)
     set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
-    set(_libdir "${_impdir}")
   endif()
+
+else()
+
+  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+      CXX_EXTENSIONS "OFF"
+      CXX_MODULE_STD "23"
+      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
+      INTERFACE_COMPILE_FEATURES "cxx_std_23")
+
 endif()
 
-# Force the C++ standard requirements on the imported target.
-# This solves the "no C++ standard found" error for the synthetic module target.
-set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-  INTERFACE_COMPILE_FEATURES "cxx_std_23"
-  INTERFACE_CXX_STANDARD 23
-)
+if(WIN32)
+  set(_libdir "${_impdir}")
+endif()
 
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
 # This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
