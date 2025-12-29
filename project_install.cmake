@@ -132,7 +132,7 @@ install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
+        CXX_MODULES_DIRECTORY "cxx"
 )
 
 if (APP_CREATES_PLUGINS)
