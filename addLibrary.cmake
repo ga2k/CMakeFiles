@@ -201,6 +201,9 @@ function(addLibrary)
             SUFFIX                      "${LIB_SUF}"
     )
 
+    # Explicitly add the compile feature to help the exporter
+    target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
+
     # Only set version properties for libraries, not executables
     if(NOT arg_EXECUTABLE)
         set_target_properties(${arg_NAME} PROPERTIES

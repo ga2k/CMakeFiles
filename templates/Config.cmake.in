@@ -139,6 +139,13 @@ if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
   endif()
 endif()
 
+# Force the C++ standard requirements on the imported target.
+# This solves the "no C++ standard found" error for the synthetic module target.
+set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+  INTERFACE_COMPILE_FEATURES "cxx_std_23"
+  INTERFACE_CXX_STANDARD 23
+)
+
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
 # This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
 if(NOT DEFINED USE_PREBUILT_MODULES)
@@ -167,7 +174,7 @@ if(USE_PREBUILT_MODULES)
     else()
       set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
     endif()
-#    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE "/ifcSearchDir:${_bmiDir}")
+    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
   endif()
 endif()
 
