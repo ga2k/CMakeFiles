@@ -108,7 +108,7 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
 # @formatting:off
-install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
+install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
         EXPORT                   ${APP_NAME}Target
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -119,41 +119,14 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-#export(EXPORT ${APP_NAME}Target
-#        FILE "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}Target.cmake"
-#        NAMESPACE ${APP_VENDOR}::
-#        CXX_MODULES_DIRECTORY "cxx"
-#)
-
 install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
         # This matches the directory structure we want for module metadata
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+        CXX_MODULES_DIRECTORY "cxx" # /${APP_VENDOR}/${APP_NAME}"
 )
-# @formatting:on
 
-#install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
-#        EXPORT                   ${APP_NAME}Target
-#        CONFIGURATIONS           Debug Release
-#        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
-#        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-#        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
-#        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#)
-#
-#install(EXPORT ${APP_NAME}Target
-#        FILE ${APP_NAME}Target.cmake
-#        NAMESPACE ${APP_VENDOR}::
-#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-#        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
-#)
-
-# @formatting:off
 if (APP_CREATES_PLUGINS)
     install(TARGETS                          ${APP_CREATES_PLUGINS}
             EXPORT                           ${APP_NAME}PluginTarget
@@ -179,14 +152,14 @@ install(CODE "
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-# PCM/PCM-like files
-install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILES_MATCHING
-        PATTERN "*.pcm"
-        PATTERN "*.ifc"
-        PATTERN "*.json"
-)
+## PCM/PCM-like files
+#install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
+#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+#        FILES_MATCHING
+#        PATTERN "*.pcm"
+#        PATTERN "*.ifc"
+#        PATTERN "*.json"
+#)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
