@@ -3,9 +3,9 @@
 
 include(CMakeFindDependencyMacro)
 
-if ("${FULL_PACKAGE_DIR}" STREQUAL "@OUTPUT_DIR@")
+if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   message(NOTICE "In development")
-  set(PACKAGE_PREFIX_DIR "${FULL_PACKAGE_DIR}")
+  set(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
   set(_inDevelopment  ON)
   set(_inStaging      OFF)
