@@ -12,10 +12,10 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   set(_installed      OFF)
 
   list(APPEND _searchDirs
-  "${PACKAGE_PREFIX_DIR}/lib"
-  "${PACKAGE_PREFIX_DIR}/bin"
-  "${PACKAGE_PREFIX_DIR}/lib/Debug"
-  "${PACKAGE_PREFIX_DIR}/bin/Debug"
+  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
   )
 
   # Search upwards for the "include" directory
@@ -51,10 +51,10 @@ elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
   set(_incdir "${PACKAGE_PREFIX_DIR}/include")
 
   list(APPEND _searchDirs
-    "${PACKAGE_PREFIX_DIR}/lib"
-    "${PACKAGE_PREFIX_DIR}/bin"
-    "${PACKAGE_PREFIX_DIR}/lib/Debug"
-    "${PACKAGE_PREFIX_DIR}/bin/Debug"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
   )
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
@@ -67,10 +67,10 @@ elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
   set(_incdir "${PACKAGE_PREFIX_DIR}/include")
   
   list(APPEND _searchDirs
-    "${PACKAGE_PREFIX_DIR}/lib"
-    "${PACKAGE_PREFIX_DIR}/bin"
-    "${PACKAGE_PREFIX_DIR}/lib/Debug"
-    "${PACKAGE_PREFIX_DIR}/bin/Debug"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
   )
 else ()
   message(FATAL_ERROR "Illegal installation")
@@ -83,7 +83,7 @@ foreach(_dir IN LISTS _searchDirs)
   if(EXISTS "${_dir}/${_actualLibName}")
     set(_lib    "${_dir}/${_actualLibName}")
     set(_libdir "${_dir}")
-    set(_impdir "${_dir}/../lib")
+    set(_impdir "${_dir}/..${CMAKE_INSTALL_LIBDIR}")
     break()
   endif()
 endforeach()
