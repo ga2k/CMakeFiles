@@ -151,8 +151,20 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 set(systemFileFound OFF)
             endif ()
 
-            newestFile("${conditionals}" inOrder)
-            list(APPEND candidates "${inOrder}")
+            # Staged and Source files are the same?
+            if (sourceFileFound AND stagedFileFound
+                    AND ${actualSourceFile} IS_NEWER_THAN ${actualStagedFile}
+                    AND ${actualStagedFile} IS_NEWER_THAN ${actualSourceFile})
+
+                list(PREPEND candidates "${actualStagedFile}")  # Staged in front of Source
+
+                if (systemFileFound)
+                    list(APPEND candidates "${actualSystemFile}")
+                endif ()
+            else ()
+                newestFile("${conditionals}" inOrder)
+                list(APPEND candidates "${inOrder}")
+            endif ()
 
             log(LIST candidates)
             list (PREPEND CMAKE_PREFIX_PATH "${candidates}")

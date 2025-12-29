@@ -119,8 +119,10 @@ if(_inDevelopment EQUAL ON)
     list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
     include("${_DEV_MODULE_EXPORT_FILE}")
   endif()
-elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
-  include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+elseif(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
+  include("${_libdir}/cmake/@APP_NAME@Target.cmake")
+#elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
+#  include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
