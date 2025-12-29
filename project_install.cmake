@@ -119,14 +119,14 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# PCM/PCM-like files
-install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILES_MATCHING
-        PATTERN "*.pcm"
-        PATTERN "*.ifc"
-        PATTERN "*.json"
-)
+## PCM/PCM-like files
+#install(DIRECTORY ${BUILD_DIR}/src/CMakeFiles/${APP_NAME}.dir/
+#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+#        FILES_MATCHING
+#        PATTERN "*.pcm"
+#        PATTERN "*.ifc"
+#        PATTERN "*.json"
+#)
 
 install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
