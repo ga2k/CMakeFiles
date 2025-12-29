@@ -122,7 +122,7 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
 export(EXPORT ${APP_NAME}Target
         FILE "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}Target.cmake"
         NAMESPACE ${APP_VENDOR}::
-        CXX_MODULES_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cxx"
+        CXX_MODULES_DIRECTORY "cxx"
 )
 
 install(EXPORT      ${APP_NAME}Target
