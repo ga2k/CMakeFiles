@@ -164,7 +164,14 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             endif ()
 
             log(LIST candidates)
-            list (PREPEND CMAKE_PREFIX_PATH "${candidates}")
+
+            set(listOfFolders)
+            foreach (candidate IN LISTS candidates)
+                get_filename_component(candidate "${candidate}" PATH)
+                list(APPEND listOfFolders "${candidate}")
+            endforeach ()
+
+            list (PREPEND CMAKE_PREFIX_PATH "${listOfFolders}")
 
             message(STATUS "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
