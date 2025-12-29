@@ -83,7 +83,6 @@
           }
         ]
       },
-      "toolset": "host=x64",
       "generator": "Ninja",
       "architecture": {
         "value": "x64",
