@@ -119,6 +119,12 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+export(EXPORT ${APP_NAME}Target
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}Target.cmake"
+        NAMESPACE ${APP_VENDOR}::
+        CXX_MODULES_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/cxx"
+)
+
 install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
