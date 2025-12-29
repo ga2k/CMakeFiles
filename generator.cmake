@@ -55,6 +55,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET)
     # Add generated sources
     target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
+            BASE_DIRS "${OUT_DIR}"
             FILES ${UI_CLASS_FILES}
     )
 
@@ -114,6 +115,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
     # Add generated sources
     target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
+            BASE_DIRS "${OUT_DIR}"
             FILES ${RS_CLASS_FILES}
     )
 endfunction()
