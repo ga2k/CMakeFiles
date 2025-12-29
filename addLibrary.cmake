@@ -51,7 +51,7 @@ function(addLibrary)
     endif ()
 
     if (NOT arg_CXX_BASE_DIRS)
-        set(arg_CXX_BASE_DIRS "")
+        set(arg_CXX_BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
     endif ()
 
     string(TOUPPER "${arg_USES}" arg_USES)
