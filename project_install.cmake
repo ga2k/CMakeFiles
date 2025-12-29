@@ -107,15 +107,15 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/bin/${APP_NAME}.yaml")
 
 # @formatting:off
-install(TARGETS                         ${arg_NAME}
-        EXPORT                          ${arg_NAME}Target
+install(TARGETS                         ${APP_NAME}
+        EXPORT                          ${APP_NAME}Target
         RUNTIME DESTINATION             ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION             ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION             ${CMAKE_INSTALL_LIBDIR}
             # This tells CMake where to put the .ifc files in the install tree
-        CXX_MODULES_BMI DESTINATION      "${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${arg_NAME}"
+        CXX_MODULES_BMI DESTINATION      "${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}"
             # This tells CMake which module sources are part of the public interface
-        FILE_SET CXX_MODULES DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${arg_NAME}"
+        FILE_SET CXX_MODULES DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
 install(EXPORT      ${arg_NAME}Target
