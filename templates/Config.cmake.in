@@ -96,20 +96,20 @@ if(NOT _lib)
   message(FATAL_ERROR "Halted")
 endif()
 
-# Create imported target
-if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-    IMPORTED_LOCATION "${_lib}"
-    CXX_STANDARD 23
-    INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
-  )
-endif()
-
-if(WIN32)
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
-  set(_libdir "${_impdir}")
-endif()
+## Create imported target
+#if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+#  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#    IMPORTED_LOCATION "${_lib}"
+#    CXX_STANDARD 23
+#    INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
+#  )
+#endif()
+#
+#if(WIN32)
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+#  set(_libdir "${_impdir}")
+#endif()
 
 if(_inDevelopment EQUAL ON)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
