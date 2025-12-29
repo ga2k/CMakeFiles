@@ -124,6 +124,20 @@ elseif(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
 elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
   include("${_libdir}/cmake/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
+  
+# Create imported target if not done already
+if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+    IMPORTED_LOCATION "${_lib}"
+    CXX_STANDARD 23
+    INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
+  )
+  if(WIN32)
+    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+    set(_libdir "${_impdir}")
+  endif()
+endif()
 
 # For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
 # This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
