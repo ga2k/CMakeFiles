@@ -1040,30 +1040,32 @@ macro(generateExportHeader _target)
 endmacro()
 
 function(newestFile IN_LIST OUT_LIST)
+    set(working_list "")
+    set(sorted_list "")
 
-    unset (${OUT_LIST} PARENT_SCOPE)
-    unset (new_list)
+    # 1. Filter only existing files
+    foreach(file IN LISTS ${IN_LIST})
+        if(EXISTS "${file}")
+            list(APPEND working_list "${file}")
+        endif()
+    endforeach()
 
-    foreach (file IN LISTS IN_LIST)
-        if (EXISTS "${file}")
-            list(APPEND tempList "${file}")
-        endif ()
-    endforeach ()
+    # 2. Selection sort by timestamp
+    while(working_list)
+        list(GET working_list 0 newest)
 
-    while (tempList)
-        unset (newest)
-        foreach (folder IN LISTS tempList)
-            if ("${folder}" IS_NEWER_THAN "${newest}")
-                set (newest "${folder}")
-            endif ()
-        endforeach ()
+        foreach(current_file IN LISTS working_list)
+            # If current_file is newer than our current 'newest', update 'newest'
+            if("${current_file}" IS_NEWER_THAN "${newest}")
+                set(newest "${current_file}")
+            endif()
+        endforeach()
 
-        list(APPEND new_list "${newest}")
-        list (REMOVE_ITEM tempList "${newest}")
+        list(APPEND sorted_list "${newest}")
+        list(REMOVE_ITEM working_list "${newest}")
+    endwhile()
 
-    endwhile ()
-
-    set (${OUT_LIST} ${new_list} PARENT_SCOPE)
+    set(${OUT_LIST} "${sorted_list}" PARENT_SCOPE)
 endfunction()
 
 set(CPYRGHT "# ##############################################################################
