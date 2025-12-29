@@ -119,7 +119,7 @@ install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT      ${APP_NAME}Target
+install(EXPORT      ${APP_NAME}Target ${HS_DependenciesList}
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
