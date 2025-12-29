@@ -119,8 +119,6 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(CODE "file(MAKE_DIRECTORY \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}/cxx/${APP_VENDOR}/${APP_NAME}\")")
-
 # PCM/PCM-like files
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
@@ -133,8 +131,8 @@ install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir"
 install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}"
-        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+        CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}"
 )
 
 if (APP_CREATES_PLUGINS)
