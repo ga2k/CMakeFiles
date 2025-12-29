@@ -182,7 +182,16 @@ if(USE_PREBUILT_MODULES)
     else()
       set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
     endif()
-    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
+  
+    # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
+    # This forces VS to rely solely on the /ifcSearchDir provided below.
+    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+        IMPORTED_CXX_MODULES_DEBUG ""
+        IMPORTED_CXX_MODULES_RELEASE "")
+
+    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+        INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
+
   endif()
 endif()
 
