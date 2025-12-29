@@ -68,11 +68,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
 
 if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 
-    if (MONOREPO)
-        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MyCare/src/generated)
-    else ()
-        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/generated)
-    endif ()
+#    if (MONOREPO)
+#        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MyCare/src/generated)
+#    else ()
+#        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/generated)
+#    endif ()
+    set(GEN_DEST_DIR ${BUILD_DIR}/generated)
 
     if (APP_GENERATE_RECORDSETS)
         generateRecordsets(
