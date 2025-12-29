@@ -151,11 +151,7 @@ if(USE_PREBUILT_MODULES)
     else()
       set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
     endif()
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-        "/ifcSearchDir:${_bmiDir}")
-    # Tell MSVC this directory contains 'external' modules
-    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-        "/external:ifcDir:${_bmiDir}")
+    target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE "/ifcSearchDir:${_bmiDir}")
   endif()
 endif()
 
