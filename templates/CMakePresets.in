@@ -94,6 +94,38 @@
       }
     },
     {
+      "name": "Windows-Ninja",
+      "hidden": true,
+      "description": "Windows build for x64 processors using Ninja (for C++20 modules)",
+      "condition": {
+        "type": "allOf",
+        "conditions": [
+          {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Windows"
+          },
+          {
+            "type": "equals",
+            "lhs": "$env{CPU}",
+            "rhs": "x86_64"
+          }
+        ]
+      },
+      "generator": "Ninja",
+      "environment": {
+        "hostType": "Windows",
+        "hostPath": "/windows",
+        "archType": "x64",
+        "archPath": "/x64",
+        "VCPKG_ROOT": "$env{USERPROFILE}/dev/sys/vcpkg"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      }
+    },
+    {
       "name": "macOS",
       "hidden": true,
       "description": "macOS build for arm64 processors",
@@ -264,6 +296,30 @@
         "Release",
         "Shared",
         "Staged"
+      ]
+    },
+    {
+      "name": "Windows Ninja (Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}"
+     },
+      "binaryDir": "build$env{buildPath}$env{linkPath}/ninja",
+      "inherits": [
+        "Windows-Ninja",
+        "Debug",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows Ninja (Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}"
+      },
+      "binaryDir": "build$env{buildPath}$env{linkPath}/ninja",
+      "inherits": [
+        "Windows-Ninja",
+        "Release",
+        "Shared"
       ]
     },
     {
@@ -449,6 +505,14 @@
     {
       "name": "Windows (Staged Release Shared)",
       "configurePreset": "Windows (Staged Release Shared)"
+    },
+    {
+      "name": "Windows Ninja (Debug Shared)",
+      "configurePreset": "Windows Ninja (Debug Shared)"
+    },
+    {
+      "name": "Windows Ninja (Release Shared)",
+      "configurePreset": "Windows Ninja (Release Shared)"
     },
     {
       "name": "MacOS (Debug Static)",
