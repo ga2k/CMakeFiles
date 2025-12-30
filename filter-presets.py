@@ -121,17 +121,16 @@ def main(in_file, out_file):
     import re
     name_map = {}
     # Updated pattern to handle both regular and staged presets
-    concise_pattern = re.compile(r"\((Staged\s+)?(Debug|Release)\s+(Shared|Static)\)")
+    concise_pattern = re.compile(r"\((Ninja\s+)?(Staged\s+)?(Debug|Release)\s+(Shared|Static)\)")
     for preset in presets:
         orig_name = preset.get("name", "")
         m = concise_pattern.search(orig_name)
         if m:
-            # Extract the parts: optional "Staged ", build type, and link type
-            staged_part = m.group(1) if m.group(1) else ""
-            build_type = m.group(2)
-            link_type = m.group(3)
-            # Construct concise name: "Staged Debug Static" or "Debug Static"
-            concise = f"{staged_part}{build_type} {link_type}".strip()
+            ninja_part = m.group(1) if m.group(1) else ""
+            staged_part = m.group(2) if m.group(2) else ""
+            build_type = m.group(3)
+            link_type = m.group(4)
+            concise = f"{ninja_part}{staged_part}{build_type} {link_type}".strip()            
             if concise != orig_name:
                 name_map[orig_name] = concise
                 preset["name"] = concise

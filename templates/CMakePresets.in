@@ -299,7 +299,7 @@
       ]
     },
     {
-      "name": "Windows Ninja (Debug Shared)",
+      "name": "Windows (Ninja Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
      },
@@ -311,7 +311,7 @@
       ]
     },
     {
-      "name": "Windows Ninja (Release Shared)",
+      "name": "Windows (Ninja Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
       },
@@ -507,12 +507,12 @@
       "configurePreset": "Windows (Staged Release Shared)"
     },
     {
-      "name": "Windows Ninja (Debug Shared)",
-      "configurePreset": "Windows Ninja (Debug Shared)"
+      "name": "Windows (Ninja Debug Shared)",
+      "configurePreset": "Windows (Ninja Debug Shared)"
     },
     {
-      "name": "Windows Ninja (Release Shared)",
-      "configurePreset": "Windows Ninja (Release Shared)"
+      "name": "Windows (Ninja Release Shared)",
+      "configurePreset": "Windows (Ninja Release Shared)"
     },
     {
       "name": "MacOS (Debug Static)",
