@@ -301,7 +301,7 @@
     {
       "name": "Windows (Ninja Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{buildPath}$env{linkPath}/ninja"
      },
       "binaryDir": "build$env{buildPath}$env{linkPath}/ninja",
       "inherits": [
