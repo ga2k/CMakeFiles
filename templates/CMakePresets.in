@@ -115,14 +115,14 @@
       "generator": "Ninja",
       "environment": {
         "hostType": "Windows",
-        "hostPath": "/windows",
+        "hostPath": "/winllvm",
         "archType": "x64",
         "archPath": "/x64",
-        "VCPKG_ROOT": "$env{USERPROFILE}/dev/sys/vcpkg"
+        "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe"
+        "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
+        "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe"
       }
     },
     {
