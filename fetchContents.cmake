@@ -294,15 +294,11 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
-            INCDIR "[SRC]/googletest/include"
-            ARGS REQUIRED NAMES GTest googletest)
-
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
+    #
     ##
     ####
     ##
@@ -310,44 +306,33 @@ function(createStandardPackageData)
 
     addPackageData(FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG)
+
     addPackageData(FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG)
+
+    addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
+            INCDIR "[SRC]/googletest/include"
+            ARGS REQUIRED NAMES GTest googletest)
 
     addPackageData(FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENT system date_time regex url algorithm
             ARGS NAMES Boost)
 
-    addPackageData(FEATURE "BZIP" PKGNAME "bz2" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://gitlab.com/bzip2/bzip2" GIT_TAG "master"
-            ARG REQUIRED)
-
     addPackageData(FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    #    addPackageData(FEATURE "SQLITE3" PKGNAME "sqlite3"
-    #            URL "https://www.sqlite.org/2025/sqlite-amalgamation-3500200.zip"
-    #            INCDIR "[BUILD]/sqlite3/include"
-    #            COMPONENT "sqlite3" ARG REQUIRED)
-
+    if (NOT WIN32)
     addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
+    else ()
+    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
+    endif ()
 
     addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
-    #            GIT_REPOSITORY "https://github.com/openssl/openssl.git" GIT_TAG "openssl-3.3.2"
-    #            ARG REQUIRED)
-
-    addPackageData(FEATURE "ZLIB" PKGNAME "zlib" NAMESPACE "ZLIB" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/madler/zlib" GIT_TAG "master"
-            COMPONENT "ZLIB"
-            ARG REQUIRED)
-
-    addPackageData(FEATURE "TOML" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "wxyz" GIT_TAG "master"
-            COMPONENT tomlplusplus
-            ARG REQUIRED)
 
     addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
 
