@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 
 message(STATUS "=== Configuring Components ===")
 
@@ -91,9 +92,6 @@ endif ()
 
 # ========================= Install & packaging =========================
 #
-
-include(GNUInstallDirs)
-
 if ("${APP_TYPE}" STREQUAL "Library")
     install(FILES
             "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"

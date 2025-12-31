@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 # Per-project setup. This file MUST NOT use include_guard(GLOBAL).
 # It is intended to be included once for each subproject (Core, Gfx, MyCare).
 
@@ -85,16 +87,6 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
     endif ()
 
     if (FIND_PACKAGE_PATHS)
-
-        if (NOT CMAKE_INSTALL_LIBDIR)
-            if (APPLE)
-                set(CMAKE_INSTALL_LIBDIR "lib")
-            elseif (LINUX)
-                set(CMAKE_INSTALL_LIBDIR "lib64")
-            elseif (WINDOWS)
-                set(CMAKE_INSTALL_LIBDIR "lib")
-            endif ()
-        endif ()
 
         # Define the paths to the two configuration files
         foreach (hint IN LISTS FIND_PACKAGE_PATHS)
