@@ -103,8 +103,9 @@ elseif (WIN32)
 #    set(SQLite3_LIBRARY     ${SQLite3_ROOT})
 #    set(SQLite3_INCLUDE_DIR ${SQLite3_ROOT})
 
-    set(OPENSSL_CRYPTO_LIBRARY C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib)
-    set(OPENSSL_ROOT_DIR C:/Program Files/OpenSSL-Win64)
+    set(OPENSSL_CRYPTO_LIBRARY C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib CACHE FILEPATH "Docstring")
+    set(OPENSSL_INCLUDE_DIR C:/Program Files/OpenSSL-Win64/include CACHE FILEPATH "Docstring")
+    set(OPENSSL_ROOT_DIR C:/Program Files/OpenSSL-Win64 CACHE FILEPATH "Docstring")
 
 #    if (LINK_SHARED)
 #        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.dll.a)
