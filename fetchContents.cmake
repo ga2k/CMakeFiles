@@ -64,7 +64,7 @@ function(addTarget target pkgname addToLists components)
 
     set_target_properties("${target}" PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}/bin
-            LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}/dll
+            LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
             ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
     )
 
