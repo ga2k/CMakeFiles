@@ -6,8 +6,10 @@ function(OpenSSL_process incs libs defs)
         find_library(OpenSSL_Crypto REQUIRED
                 NAMES crypto
                 PATHS "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
-        list(APPEND _LibrariesList OpenSSL OpenSSL_Crypto)
-        set (_LibrariesList ${_LibrariesList} PARENT_SCOPE)
+        list(APPEND libs  OpenSSL OpenSSL_Crypto)
+        list(APPEND incs "C:/Program Files/OpenSSL-Win64/include")
+        set (_LibrariesList ${libs} PARENT_SCOPE)
+        set (_IncludePathsList ${incs} PARENT_SCOPE)
     elseif (APPLE)
         set(ENV{OPENSSL_DIR} "${OPENSSL_PATH}")
         find_package(OpenSSL CONFIG REQUIRED)
