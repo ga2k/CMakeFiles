@@ -105,7 +105,7 @@ elseif (WIN32)
 
 #    set(ENV:OPENSSL_CRYPTO_LIBRARY "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib")
 #    set(ENV:OPENSSL_INCLUDE_DIR "C:/Program Files/OpenSSL-Win64/include")
-    set(ENV:OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
+#    set(ENV{OPENSSL_ROOT_DIR} "C:/Program Files/OpenSSL-Win64")
 
 #    if (LINK_SHARED)
 #        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.dll.a)

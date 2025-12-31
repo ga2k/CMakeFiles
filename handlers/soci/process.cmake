@@ -1,10 +1,8 @@
 function(soci_process incs libs defs)
-    find_package(soci CONFIG REQUIRED HINTS "C:/Program Files/Git/usr/local/lib/cmake/soci-4.2.0")
-    include(${soci_CONFIG})
+    find_package(soci CONFIG REQUIRED)
 
-    list(APPEND _LibrariesList soci::SSL soci::Crypto)
+    list(APPEND _LibrariesList SOCI::SOCI)
     set (_LibrariesList ${_LibrariesList} PARENT_SCOPE)
-    # @formatter:on
 endfunction()
 
 if (DATABASE IN_LIST APP_FEATURES)
