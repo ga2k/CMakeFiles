@@ -1043,7 +1043,6 @@ macro(generateExportHeader _target)
 
     # After generate_export_header
     set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules})
-    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules} PARENT_SCOPE)
 
     target_sources(${_target} PUBLIC FILE_SET HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
 
