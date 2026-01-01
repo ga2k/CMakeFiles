@@ -674,6 +674,7 @@ function(fetchContents)
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
     set(fail OFF)
+    set(featuresThatNeedFetchConContent_MakeAvailable "")
 
     foreach (this_feature IN LISTS unifiedFeatureList)
 
@@ -724,7 +725,7 @@ function(fetchContents)
         ################################################################################################################
         ################################################################################################################
         ################################################################################################################
-        if ("${this_method}" STREQUAL "PROCESS") ####################################################################
+        if ("${this_method}" STREQUAL "PROCESS") #######################################################################
             call_handler(process ${this_pkgname}) ######################################################################
         else () ########################################################################################################
             set(HANDLED OFF) ###########################################################################################
@@ -863,10 +864,8 @@ function(fetchContents)
                 ########################################################################################################
                 ########################################################################################################
                 if (NOT HANDLED) # AND NOT TARGET ${this_pkgname})
-                    set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
-                    message("FetchContent_MakeAvailable(${this_pkgname})")
-                    FetchContent_MakeAvailable(${this_pkgname});
-                    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
+                    message("FetchContent_MakeAvailable(${this_pkgname}) deferred to later")
+                    list(APPEND featuresThatNeedFetchConContent_MakeAvailable ${this_pkgname})
                 endif ()
                 set(cs "${this_find_package_components}")
                 ########################################################################################################
@@ -1024,6 +1023,14 @@ function(fetchContents)
         endif ()
     endforeach ()
 
+    if (NOT "${featuresThatNeedFetchConContent_MakeAvailable}" STREQUAL "")
+        set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
+        message(NOTICE "FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})")
+        FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})
+        set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
+    else ()
+        message(NOTICE "FetchContent_MakeAvailable() is not required")
+    endif ()
     set(ies "ies")
 
     if (numWanted EQUAL 1)
