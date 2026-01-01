@@ -213,7 +213,7 @@ function(addLibrary)
 
     # Compile and link options
     string(TOUPPER ${arg_NAME} arg_NAME_UC)
-    target_compile_definitions(${arg_NAME}      PUBLIC  BUILDING_${arg_NAME_UC} ${HS_DefinesList})
+    target_compile_definitions(${arg_NAME}      PUBLIC  ${arg_NAME}_EXPORTS ${HS_DefinesList})
     target_compile_options(${arg_NAME}          PUBLIC  ${HS_CompileOptionsList})
 
     # Expose only install-time include paths to consumers; keep build-time includes private to avoid leaking
@@ -264,4 +264,6 @@ function(addLibrary)
 
     unset(arg_NAME_UC)
     unset(arg_NAME_LC)
+
+    message(NOTICE "Leaving addLibrary(), CXX_SCAN_FOR_MODULES=${CXX_SCAN_FOR_MODULES}")
 endfunction()
