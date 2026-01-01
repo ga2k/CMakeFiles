@@ -27,8 +27,8 @@ function(soci_fix target tag sourceDir)
     # 1. Remove the inline default destructor and constructor from the header
     ReplaceInFile(${BLOB_H} "blob() = default;" "blob();")
     ReplaceInFile(${BLOB_H} "~blob() = default;" "~blob();")
-    ReplaceInFile(${BLOB_H} "blob(blob &&other) = default;" "blob(blob &&other);")
-    ReplaceInFile(${BLOB_H} "blob &operator=(blob &&other) = default;" "blob &operator=(blob &&other);")
+    ReplaceInFile(${BLOB_H} "blob(blob &&other) = default;" "blob(blob &&other) noexcept;")
+    ReplaceInFile(${BLOB_H} "blob &operator=(blob &&other) = default;" "blob &operator=(blob &&other) noexcept;")
 
     # 2. Add the implementations to the .cpp file where blob_backend is (usually) included or defined
     ReplaceInFile(${BLOB_CPP} "blob::~blob() = default;\n" "")
