@@ -1028,6 +1028,8 @@ function(fetchContents)
         message(NOTICE "FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})")
         FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})
         set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
+    else ()
+        message(NOTICE "FetchContent_MakeAvailable() is not required")
     endif ()
     set(ies "ies")
 
