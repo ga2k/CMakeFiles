@@ -324,13 +324,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    if (NOT WIN32)
+        #    if (NOT WIN32)
     addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
-    else ()
-    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
-    endif ()
+        #    else ()
+        #    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
+        #    endif ()
 
     if (WIN32 OR APPLE)
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
