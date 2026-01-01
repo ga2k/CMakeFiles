@@ -1023,7 +1023,7 @@ function(fetchContents)
         endif ()
     endforeach ()
 
-    if (NOT ${featuresThatNeedFetchConContent_MakeAvailable} STREQUAL "")
+    if (NOT "${featuresThatNeedFetchConContent_MakeAvailable}" STREQUAL "")
         set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
         message(NOTICE "FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})")
         FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})
