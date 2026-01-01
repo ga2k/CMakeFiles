@@ -265,5 +265,5 @@ function(addLibrary)
     unset(arg_NAME_UC)
     unset(arg_NAME_LC)
 
-    message(NOTICE "Leaving addLibrary(), CXX_SCAN_FOR_MODULES=${CXX_SCAN_FOR_MODULES}")
+    message(NOTICE "Leaving addLibrary(), CMAKE_CXX_SCAN_FOR_MODULES=${CMAKE_CXX_SCAN_FOR_MODULES}")
 endfunction()
