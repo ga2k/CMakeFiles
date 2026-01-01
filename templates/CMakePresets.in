@@ -124,7 +124,6 @@
         "CMAKE_C_COMPILER": "clang-cl",
         "CMAKE_CXX_COMPILER": "clang-cl",
         "CMAKE_LINKER": "lld-link",
-        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
         "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
       }
     },

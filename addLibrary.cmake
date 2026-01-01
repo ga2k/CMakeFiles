@@ -165,14 +165,17 @@ function(addLibrary)
         )
     endif ()
     if (arg_MODULES)
-        # Register C++20 modules with a dedicated FILE_SET so CMake knows about BMI/PCM generation and installation.
-        # Keep BASE_DIRS empty (from CXX_BASE_DIRS) to avoid exporting source-tree paths; install handles PCM separately.
+
         target_sources(${arg_NAME}
                 ${arg_MODULE_VISIBILITY} FILE_SET CXX_MODULES
                 BASE_DIRS ${arg_CXX_BASE_DIRS}
                 FILES ${arg_MODULES}
         )
-        set_source_files_properties(${arg_MODULES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+        set_source_files_properties(${arg_MODULES} PROPERTIES
+                SKIP_PRECOMPILE_HEADERS ON
+                CXX_SCAN_FOR_MODULES ON
+        )
     endif ()
 
     # Configure the library
@@ -193,7 +196,6 @@ function(addLibrary)
             CXX_EXTENSIONS              OFF
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
-            CXX_SCAN_FOR_MODULES        ON
             OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
