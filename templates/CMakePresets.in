@@ -121,8 +121,8 @@
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-cl",
-        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_LINKER": "lld-link",
         "CMAKE_CXX_SCAN_FOR_MODULES": "ON"
       }
