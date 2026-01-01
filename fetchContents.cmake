@@ -324,13 +324,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-        #    if (NOT WIN32)
+    #    if (NOT WIN32)
     addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
-        #    else ()
-        #    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
-        #    endif ()
+    #    else ()
+    #    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
+    #    endif ()
 
     if (WIN32 OR APPLE)
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
@@ -863,10 +863,13 @@ function(fetchContents)
                 ########################################################################################################
                 ########################################################################################################
                 if (NOT HANDLED) # AND NOT TARGET ${this_pkgname})
+                    set (_saved_scan ${CMAKE_CXX_SCAN_FOR_MODULES})
+                    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
                     set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
                     message("FetchContent_MakeAvailable(${this_pkgname})")
-                    FetchContent_MakeAvailable(${this_pkgname});
+                    FetchContent_MakeAvailable(${this_pkgname})
                     set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
+                    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan})
                 endif ()
                 set(cs "${this_find_package_components}")
                 ########################################################################################################
@@ -1014,7 +1017,6 @@ function(fetchContents)
             ########################################################################################################
 
         endif ()
-
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         if (fail)
             message(CHECK_FAIL "FAILED")
