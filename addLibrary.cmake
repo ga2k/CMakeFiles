@@ -172,8 +172,7 @@ function(addLibrary)
                 BASE_DIRS ${arg_CXX_BASE_DIRS}
                 FILES ${arg_MODULES}
         )
-        # Do not try to use PCH for module interface/source units; this can crash or be unsupported.
-        # CMake/Clang support skipping PCH per-source via this property.
+        set_target_properties(${arg_NAME} PROPERTIES CXX_SCAN_FOR_MODULES ON)
         set_source_files_properties(${arg_MODULES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
     endif ()
 
