@@ -1034,7 +1034,16 @@ macro(generateExportHeader _target)
     else ()
         set(_generated_export_header "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}/${_targetlc}_export.h")
     endif ()
+
+    # Before generate_export_header
+    set(_saved_scan_for_modules ${CMAKE_CXX_SCAN_FOR_MODULES})
+    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
     generate_export_header(${_target} EXPORT_FILE_NAME ${_generated_export_header})
+
+    # After generate_export_header
+    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules})
+
     target_sources(${_target} PUBLIC FILE_SET HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
 
 endmacro()
