@@ -172,7 +172,6 @@ function(addLibrary)
                 BASE_DIRS ${arg_CXX_BASE_DIRS}
                 FILES ${arg_MODULES}
         )
-        set_target_properties(${arg_NAME} PROPERTIES CXX_SCAN_FOR_MODULES ON)
         set_source_files_properties(${arg_MODULES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
     endif ()
 
@@ -194,6 +193,7 @@ function(addLibrary)
             CXX_EXTENSIONS              OFF
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
+            CXX_SCAN_FOR_MODULES        ON
             OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
