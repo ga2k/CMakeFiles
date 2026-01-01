@@ -1024,8 +1024,10 @@ function(fetchContents)
     endforeach ()
 
     if (NOT featuresThatNeedFetchConContent_MakeAvailable STREQUAL "")
+        set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
         message(NOTICE "FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})")
         FetchContent_MakeAvailable(${featuresThatNeedFetchConContent_MakeAvailable})
+        set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
     endif ()
     set(ies "ies")
 
