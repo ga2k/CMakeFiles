@@ -400,10 +400,10 @@ class CppGroupGenerator:
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
         code.append('#include "HoffSoft/HoffSoft.h"')
-
         code.append('#include "HoffSoft/CoreData.h"')
-        code.append('')
         code.append('#include "HoffSoft/Util.h"')
+        code.append('')
+        code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/Widgets.h"')
         code.append('#include "Gfx/wx.h"')
         code.append('')
