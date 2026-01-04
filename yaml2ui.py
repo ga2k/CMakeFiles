@@ -466,7 +466,7 @@ class CppGroupGenerator:
             for line in top_verbatim.rstrip().splitlines():
                 code.append(f"{line}")
 
-        code.append(f"export class GFX_EXPORT {cpp_class} : public {top_base_class} {{")
+        code.append(f"export class {cpp_class} : public {top_base_class} {{")
         code.append("   std::filesystem::path layoutPath;")
         code.append("   std::string layoutKey;")
 
