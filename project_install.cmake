@@ -86,7 +86,8 @@ if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
         generateUIClasses(
                 ${GEN_DEST_DIR}/ui
                 ${APP_GENERATE_UI_CLASSES}
-                ${APP_NAME})
+                ${APP_NAME}
+                ${APP_NAME}_EXPORTS)
     endif ()
 endif ()
 

@@ -1,15 +1,20 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET)
+function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
 
     set (generator "yaml2ui.py")
 
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
-            --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
+            COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_SOURCE_DIR}/cmake/${generator}"
+                    --quiet ${SHOW_SIZER_INFO_FLAG}
+                    --scan "${SOURCE_DIR}"
+                    --output "${OUT_DIR}"
+                    --app-target "${APP_NAME}"
+                    --export-var "${EXPORT_VAR}"
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
@@ -31,8 +36,13 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET)
             OUTPUT "${UI_CLASSES_STAMP}"
             BYPRODUCTS ${UI_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
-                    --quiet ${SHOW_SIZER_INFO_FLAG} --scan "${SOURCE_DIR}" --output "${OUT_DIR}" --app-target "${APP_NAME}"
+            COMMAND "${Python3_EXECUTABLE}"
+                        "${CMAKE_SOURCE_DIR}/cmake/${generator}"
+                        --quiet ${SHOW_SIZER_INFO_FLAG}
+                        --scan "${SOURCE_DIR}"
+                        --output "${OUT_DIR}"
+                        --app-target "${APP_NAME}"
+                        --export-var "${EXPORT_VAR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${UI_CLASSES_STAMP}"
             DEPENDS ${UI_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating ixx files from YAML specs (batch mode)"

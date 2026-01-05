@@ -38,6 +38,7 @@ class CppGroupGenerator:
     app_target: str = "pass_the_name_of_your_app_target_to_yaml2ui"
     now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")
     next_PageType: int = 1000
+    export_var: str = "GFX_EXPORT"
 
     @dataclass(frozen=True)
     class SizerProperties:
@@ -466,7 +467,7 @@ class CppGroupGenerator:
             for line in top_verbatim.rstrip().splitlines():
                 code.append(f"{line}")
 
-        code.append(f"export class GFX_EXPORT {cpp_class} : public {top_base_class} {{")
+        code.append(f"export class {self.export_var} {cpp_class} : public {top_base_class} {{")
         code.append("   std::filesystem::path layoutPath;")
         code.append("   std::string layoutKey;")
 
@@ -2210,6 +2211,7 @@ def main():
     parser.add_argument('-o', '--output', type=Path, help='Output directory or file path')
     parser.add_argument('--scan', type=Path, action='append',
                         help='Scan this directory recursively for *.yaml (can be used multiple times)')
+    parser.add_argument('-x', '--export-var', action='store', help='The name of the generated export variable like GFX_EXPORT')
     parser.add_argument('-f', '--first-pagetype', action='store', help='First page type to generate')
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
@@ -2220,6 +2222,7 @@ def main():
     generator.be_quiet(args.quiet)
     generator.be_verbose(args.verbose)
     generator.show_sizer_info(args.sizer_info)
+    generator.export_var = args.export_var
 
     if not args.first_pagetype is None:
         generator.next_PageType = args.first_pagetype
