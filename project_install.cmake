@@ -41,7 +41,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 # @formatting:off
 include(ExternalProject)
 if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
-    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resources")
+    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/global-resources")
     if (APP_CONSUMES_RESOURCES)
         ExternalProject_Add(${APP_NAME}ResourceRepo
                 GIT_REPOSITORY "${APP_CONSUMES_RESOURCES}"
