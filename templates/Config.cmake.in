@@ -111,7 +111,7 @@ if(WIN32)
   set(_libdir "${_impdir}")
 endif()
 
-if(_inDevelopment EQUAL ON)
+if(_inDevelopment)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
   file(GLOB _DEV_MODULE_EXPORT
        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/cxx-modules-@APP_NAME@Target.cmake")
