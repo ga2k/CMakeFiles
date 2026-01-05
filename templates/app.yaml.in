@@ -21,7 +21,7 @@ consumes:
   plugin_path:     "@PLUGIN_PATH@"
   plugins:          @PLUGIN_YAML_LIST@
   features:         @FEATURES_YAML_LIST@
-  resources:       "@APP_SUPPLIES_RESOURCES@"
+  resources:       "${@APP_NAME@_RESOURCES}"
   libs:             @HOFFSOFT_LIBS_YAML_LIST@
 
 supplies:
