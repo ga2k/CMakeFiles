@@ -82,12 +82,17 @@ if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
                 ${APP_GENERATE_RECORDSETS}
                 ${APP_NAME})
     endif ()
+    if("${APP_TYPE}" MATCHES "Executable")
+        set(EXPORTS_VAR "")
+    else ()
+        set(EXPORTS_VAR ${APP_NAME}_EXPORTS)
+    endif ()
     if (APP_GENERATE_UI_CLASSES)
         generateUIClasses(
                 ${GEN_DEST_DIR}/ui
                 ${APP_GENERATE_UI_CLASSES}
                 ${APP_NAME}
-                ${APP_NAME}_EXPORTS)
+                "${EXPORTS_VAR}")
     endif ()
 endif ()
 
