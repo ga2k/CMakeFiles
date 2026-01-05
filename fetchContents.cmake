@@ -332,7 +332,7 @@ function(createStandardPackageData)
     #    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
     #    endif ()
 
-    if (WIN32 OR APPLE)
+    if (WIN32 OR APPLE OR LINUX)
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
     else ()
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
