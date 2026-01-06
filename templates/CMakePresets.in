@@ -480,91 +480,113 @@
   "buildPresets": [
     {
       "name": "Windows (Debug Static)",
-      "configurePreset": "Windows (Debug Static)"
+      "configurePreset": "Windows (Debug Static)",
+      "hidden": true
     },
     {
       "name": "Windows (Debug Shared)",
-      "configurePreset": "Windows (Debug Shared)"
+      "configurePreset": "Windows (Debug Shared)",
+      "hidden": true
     },
     {
       "name": "Windows (Release Static)",
-      "configurePreset": "Windows (Release Static)"
+      "configurePreset": "Windows (Release Static)",
+      "hidden": true
     },
     {
       "name": "Windows (Release Shared)",
-      "configurePreset": "Windows (Release Shared)"
+      "configurePreset": "Windows (Release Shared)",
+      "hidden": true
     },
     {
       "name": "Windows (Staged Debug Static)",
-      "configurePreset": "Windows (Staged Debug Static)"
+      "configurePreset": "Windows (Staged Debug Static)",
+      "hidden": true
     },
     {
       "name": "Windows (Staged Debug Shared)",
-      "configurePreset": "Windows (Staged Debug Shared)"
+      "configurePreset": "Windows (Staged Debug Shared)",
+      "hidden": true
     },
     {
       "name": "Windows (Staged Release Static)",
-      "configurePreset": "Windows (Staged Release Static)"
+      "configurePreset": "Windows (Staged Release Static)",
+      "hidden": true
     },
     {
       "name": "Windows (Staged Release Shared)",
-      "configurePreset": "Windows (Staged Release Shared)"
+      "configurePreset": "Windows (Staged Release Shared)",
+      "hidden": true
     },
     {
       "name": "Windows (VS Debug Shared)",
-      "configurePreset": "Windows (VS Debug Shared)"
+      "configurePreset": "Windows (VS Debug Shared)",
+      "hidden": true
     },
     {
       "name": "Windows (VS Release Shared)",
-      "configurePreset": "Windows (VS Release Shared)"
+      "configurePreset": "Windows (VS Release Shared)",
+      "hidden": true
     },
     {
       "name": "MacOS (Debug Static)",
-      "configurePreset": "MacOS (Debug Static)"
+      "configurePreset": "MacOS (Debug Static)",
+      "hidden": true
     },
     {
       "name": "MacOS (Debug Shared)",
-      "configurePreset": "MacOS (Debug Shared)"
+      "configurePreset": "MacOS (Debug Shared)",
+      "hidden": true
     },
     {
       "name": "MacOS (Release Static)",
-      "configurePreset": "MacOS (Release Static)"
+      "configurePreset": "MacOS (Release Static)",
+      "hidden": true
     },
     {
       "name": "MacOS (Release Shared)",
-      "configurePreset": "MacOS (Release Shared)"
+      "configurePreset": "MacOS (Release Shared)",
+      "hidden": true
     },
     {
       "name": "MacOS (Staged Debug Static)",
-      "configurePreset": "MacOS (Staged Debug Static)"
+      "configurePreset": "MacOS (Staged Debug Static)",
+      "hidden": true
     },
     {
       "name": "MacOS (Staged Debug Shared)",
-      "configurePreset": "MacOS (Staged Debug Shared)"
+      "configurePreset": "MacOS (Staged Debug Shared)",
+      "hidden": true
     },
     {
       "name": "MacOS (Staged Release Static)",
-      "configurePreset": "MacOS (Staged Release Static)"
+      "configurePreset": "MacOS (Staged Release Static)",
+      "hidden": true
     },
     {
       "name": "MacOS (Staged Release Shared)",
-      "configurePreset": "MacOS (Staged Release Shared)"
+      "configurePreset": "MacOS (Staged Release Shared)",
+      "hidden": true
     },
     {
       "name": "Linux (Debug Shared)",
-      "configurePreset": "Linux (Debug Shared)"
+      "configurePreset": "Linux (Debug Shared)",
+      "hidden": true
     },
     {
       "name": "Linux (Release Shared)",
-      "configurePreset": "Linux (Release Shared)"
+      "configurePreset": "Linux (Release Shared)",
+      "hidden": true
     },
     {
       "name": "Linux (Staged Debug Shared)",
-      "configurePreset": "Linux (Staged Debug Shared)"
+      "configurePreset": "Linux (Staged Debug Shared)",
+      "hidden": true
     },
     {
       "name": "Linux (Staged Release Shared)",
-      "configurePreset": "Linux (Staged Release Shared)"
+      "configurePreset": "Linux (Staged Release Shared)",
+      "hidden": true
     }
   ]
 }
