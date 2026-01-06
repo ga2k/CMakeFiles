@@ -106,7 +106,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
 
-            list (APPEND CMAKE_PREFIX_PATH "${SOURCE_PATH}")
+#            list (APPEND CMAKE_PREFIX_PATH "${SOURCE_PATH}")
 
             set(pkgName "${pkgName}Config.cmake")
 
@@ -168,7 +168,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
             message(STATUS "hint before modification : '${hint}'")
             string(REGEX MATCH "PATHS \{.*\}" MATCH_STR "${hint}")
             message(STATUS "matched portion of input : '${MATCH_STR}'")
-            string(REPLACE "${MATCH_STR}" "" hint "${hint}")
+            string(REPLACE "${MATCH_STR}" "PATHS ${listOfFolders}" hint "${hint}")
             message(STATUS "hint  after modification : '${hint}'")
 
             list(APPEND FIND_PACKAGE_ARGS "${hint}")
