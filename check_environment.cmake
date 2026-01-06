@@ -162,17 +162,17 @@ macro(check_environment PROJECT_ROOT)
         string(TOLOWER ${BUILD_TYPE} BUILD_TYPE_LC)
         string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
 
-    #    if (NOT BUILD_DIR)
+        if (NOT BUILD_DIR)
             forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
-    #    endif ()
+        endif ()
 
-    #    if(NOT OUTPUT_DIR)
+        if(NOT OUTPUT_DIR)
             forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
-    #    endif ()
+        endif ()
 
-    #    if(NOT EXTERNALS_DIR)
+        if(NOT EXTERNALS_DIR)
             forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
-    #    endif ()
+        endif ()
 
         # Set the output directories for runtime binaries (DLLs, executables)
         forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
