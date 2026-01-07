@@ -31,6 +31,7 @@ if (APPLE)
     list(APPEND extra_CompileOptions "-fPIC")
     set(DYN_FLAG dl)
 
+    set(PlatformFlag "MACOSX_BUNDLE")
     if ("${LINK_TYPE_UC}" STREQUAL "SHARED")
         set(APP_DYN_FLAG ${DYN_FLAG})
     else ()
