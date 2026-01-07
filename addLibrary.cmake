@@ -266,6 +266,7 @@ function(addLibrary)
         else ()
             target_compile_definitions(${arg_NAME}  PRIVATE NDEBUG)
         endif ()
+
         target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
         target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
         target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})
