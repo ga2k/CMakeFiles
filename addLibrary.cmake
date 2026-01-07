@@ -1,12 +1,20 @@
 function(addLibrary)
     cmake_parse_arguments(arg
             "PLUGIN;STATIC;SHARED;MULTI_LIBS;PRIMARY;EXECUTABLE"
-            "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY"
+            "NAME;PATH;VERSION;LINK;HEADER_VISIBILITY;SOURCE_VISIBILITY;MODULE_VISIBILITY;CXX_MODULES_FILE_SET;HEADERS_FILE_SET"
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES;BASE_DIRS;CXX_BASE_DIRS"
             ${ARGN}
     )
     get_filename_component(LIB_PATH ${CMAKE_PARENT_LIST_FILE} DIRECTORY)
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
+
+    if (NOT arg_HEADERS_FILE_SET)
+        set (arg_HEADERS_FILE_SET "HEADERS")
+    endif ()
+
+    if (NOT arg_CXX_MODULES_FILE_SET)
+        set (arg_CXX_MODULES_FILE_SET "CXX_MODULES")
+    endif ()
 
     if (NOT arg_HEADER_VISIBILITY)
         set(arg_HEADER_VISIBILITY "PUBLIC")
@@ -153,7 +161,8 @@ function(addLibrary)
         # Public headers from the source/include tree
         # Use generator expressions in BASE_DIRS so build-tree (source) paths do not leak into the install export
         target_sources(${arg_NAME}
-                ${arg_HEADER_VISIBILITY} FILE_SET HEADERS
+                ${arg_HEADER_VISIBILITY}
+                FILE_SET ${arg_HEADERS_FILE_SET} TYPE HEADERS
                 BASE_DIRS ${arg_BASE_DIRS}
                 FILES ${arg_HEADERS}
         )
@@ -167,7 +176,8 @@ function(addLibrary)
     if (arg_MODULES)
 
         target_sources(${arg_NAME}
-                ${arg_MODULE_VISIBILITY} FILE_SET CXX_MODULES
+                ${arg_MODULE_VISIBILITY}
+                FILE_SET ${arg_CXX_MODULES_FILE_SET} TYPE CXX_MODULES
                 BASE_DIRS ${arg_CXX_BASE_DIRS}
                 FILES ${arg_MODULES}
         )

@@ -1027,24 +1027,42 @@ macro(forceSet PARAM_TARGET PARAM_VAR PARAM_VALUE PARAM_TYPE)
 endmacro()
 
 macro(generateExportHeader _target)
-    include(GenerateExportHeader)
-    string(TOLOWER "${_target}" _targetlc)
-    if ("${CMAKE_SOURCE_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
-        set(_generated_export_header "${CMAKE_SOURCE_DIR}/include/${_target}/${_targetlc}_export.h")
+    set(FLAGS "")
+    set(SINGLE_ARGS "TARGET;FILE_SET;DESTDIR")
+    set(MULTI_ARGS "")
+
+    cmake_parse_arguments(A_GEH "${FLAGS}" "${SINGLE_ARGS}" "${MULTI_ARGS}" ${ARGN})
+
+    if(NOT A_GEH_TARGET)
+        message(FATAL_ERROR "TARGET missing for generateExportHeader")
     else ()
-        set(_generated_export_header "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}/${_targetlc}_export.h")
+        set (_target ${A_GEH_TARGET})
+        string(TOLOWER "${_target}" _targetlc)
     endif ()
+
+    if(NOT A_GEH_FILE_SET)
+        set(A_GEH_FILE_SET HEADERS)
+    endif ()
+
+    if(NOT A_GEH_DESTDIR)
+        if ("${CMAKE_SOURCE_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
+            set(_generated_export_header "${CMAKE_SOURCE_DIR}/include/${_target}/${_targetlc}_export.h")
+        else ()
+            set(_generated_export_header "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}/${_targetlc}_export.h")
+        endif ()
+    else ()
+        set(_generated_export_header "${A_GEH_DESTDIR}/${_targetlc}_export.h")
+    endif ()
+
+    include(GenerateExportHeader)
 
     # Before generate_export_header
     set(_saved_scan_for_modules ${CMAKE_CXX_SCAN_FOR_MODULES})
     set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
-
     generate_export_header(${_target} EXPORT_FILE_NAME ${_generated_export_header})
-
-    # After generate_export_header
     set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules})
 
-    target_sources(${_target} PUBLIC FILE_SET HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
+    target_sources(${_target} PUBLIC FILE_SET ${A_GEH_FILE_SET} TYPE HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
 
 endmacro()
 
