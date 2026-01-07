@@ -1066,7 +1066,7 @@ macro(generateExportHeader)
             PUBLIC
             FILE_SET ${A_GEH_FILE_SET}
             TYPE HEADERS
-            BASE_DIRS ${A_GEH_DESTDIR}
+            BASE_DIRS ${HEADER_BASE_DIRS} ${A_GEH_DESTDIR}
             FILES ${_generated_export_header})
 
 endmacro()
