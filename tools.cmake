@@ -1046,9 +1046,9 @@ macro(generateExportHeader)
 
     if(NOT A_GEH_DESTDIR)
 #        if ("${CMAKE_SOURCE_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
-            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
+#            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
 #        else ()
-#            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
+            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
 #        endif ()
     endif ()
 
