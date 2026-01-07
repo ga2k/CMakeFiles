@@ -1026,7 +1026,7 @@ macro(forceSet PARAM_TARGET PARAM_VAR PARAM_VALUE PARAM_TYPE)
     unset(PARAM_TYPE)
 endmacro()
 
-macro(generateExportHeader _target)
+macro(generateExportHeader)
     set(FLAGS "")
     set(SINGLE_ARGS "TARGET;FILE_SET;DESTDIR")
     set(MULTI_ARGS "")
@@ -1046,13 +1046,13 @@ macro(generateExportHeader _target)
 
     if(NOT A_GEH_DESTDIR)
         if ("${CMAKE_SOURCE_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
-            set(_generated_export_header "${CMAKE_SOURCE_DIR}/include/${_target}/${_targetlc}_export.h")
+            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
         else ()
-            set(_generated_export_header "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}/${_targetlc}_export.h")
+            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
         endif ()
-    else ()
-        set(_generated_export_header "${A_GEH_DESTDIR}/${_targetlc}_export.h")
     endif ()
+
+    set(_generated_export_header "${A_GEH_DESTDIR}/${_targetlc}_export.h")
 
     include(GenerateExportHeader)
 
@@ -1062,7 +1062,12 @@ macro(generateExportHeader _target)
     generate_export_header(${_target} EXPORT_FILE_NAME ${_generated_export_header})
     set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules})
 
-    target_sources(${_target} PUBLIC FILE_SET ${A_GEH_FILE_SET} TYPE HEADERS BASE_DIRS ${HEADER_BASE_DIRS} FILES ${_generated_export_header})
+    target_sources(${_target}
+            PUBLIC
+            FILE_SET ${A_GEH_FILE_SET}
+            TYPE HEADERS
+            BASE_DIRS ${A_GEH_DESTDIR}
+            FILES ${_generated_export_header})
 
 endmacro()
 
