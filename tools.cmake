@@ -1046,9 +1046,9 @@ macro(generateExportHeader)
 
     if(NOT A_GEH_DESTDIR)
         if (MONOREPO)
-            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
-        else ()
             set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
+        else ()
+            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
         endif ()
     endif ()
 
