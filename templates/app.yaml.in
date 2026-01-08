@@ -26,4 +26,4 @@ consumes:
 supplies:
   plugins:          @CREATES_PLUGINS_YAML_LIST@
   app_resources:    @APP_LOCAL_RESOURCES@
-  global_resources: @APP_GLOBAL_RESOURCES@
+  global_resources: @GLOBAL_RESOURCES_DIR@
