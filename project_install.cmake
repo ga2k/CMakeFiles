@@ -179,8 +179,8 @@ configure_package_config_file(
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
-add_custom_target(${APP_NAME}CONFIG_IN_TARGET SOURCES "${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in")
-add_dependencies(${APP_NAME} ${APP_NAME}CONFIG)
+add_custom_target(${APP_NAME}Config SOURCES "${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in")
+add_dependencies(${APP_NAME} ${APP_NAME}Config)
 
 install(FILES
         "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
