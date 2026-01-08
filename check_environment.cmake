@@ -90,6 +90,9 @@ macro(check_environment PROJECT_ROOT)
         unset (_SYSPATH)
         unset (debugFlags)
 
+        string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
+        string(TOLOWER ${APP_NAME}   APP_NAME_LC)
+
         # Specify build type
         forceSet(CMAKE_BUILD_TYPE buildType Debug STRING)
 
@@ -182,41 +185,6 @@ macro(check_environment PROJECT_ROOT)
 
         # Set the output directory for static libraries
         forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
-
-    #    # Set sensible cross-platform install defaults
-    #    if(WIN32)
-    #        # Check if we're staging (developer build) or installing for real
-    #        if(DEFINED ENV{STAGING_BUILD} OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-    #            # Staging build - use HOME/dev/stage
-    #            if(DEFINED ENV{HOME})
-    #                set(DEFAULT_INSTALL_PREFIX "$ENV{HOME}/dev/stage")
-    #            elseif(DEFINED ENV{USERPROFILE})
-    #                set(DEFAULT_INSTALL_PREFIX "$ENV{USERPROFILE}/dev/stage")
-    #            else()
-    #                set(DEFAULT_INSTALL_PREFIX "C:/dev/stage")
-    #            endif()
-    #        else()
-    #            # Release install - use APPDATA
-    #            if(DEFINED ENV{APPDATA})
-    #                set(DEFAULT_INSTALL_PREFIX "$ENV{APPDATA}/HoffSoft")
-    #            else()
-    #                set(DEFAULT_INSTALL_PREFIX "$ENV{USERPROFILE}/AppData/Roaming/HoffSoft")
-    #            endif()
-    #        endif()
-    #
-    #        # Override CMAKE_INSTALL_PREFIX if it's still the default junk
-    #        if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT OR
-    #                CMAKE_INSTALL_PREFIX MATCHES "Program Files" OR
-    #                CMAKE_INSTALL_PREFIX MATCHES "Git/usr/local")
-    #            set(CMAKE_INSTALL_PREFIX "${DEFAULT_INSTALL_PREFIX}" CACHE PATH "Install prefix" FORCE)
-    #            message(STATUS "Set CMAKE_INSTALL_PREFIX to: ${CMAKE_INSTALL_PREFIX}")
-    #        endif()
-    #    else()
-    #        # Linux/Mac - use standard /usr/local (already the default)
-    #        if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    #            set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Install prefix" FORCE)
-    #        endif()
-    #    endif()
         # Set sensible cross-platform install defaults
         if(WIN32)
             if(DEFINED ENV{STAGE_DIR})
@@ -273,44 +241,37 @@ macro(check_environment PROJECT_ROOT)
         endif ()
 
         if (NOT DEFINED COMPANY)
-            set(COMPANY HoffSoft)
+            set(COMPANY ${APP_VENDOR})
         endif ()
 
         list(REMOVE_DUPLICATES debugFlags)
 
         # @formatter:off
-    #    set(BUILDING            ${BUILDING}             PARENT_SCOPE)
-    #    set(BUILD_DEBUG         ${BUILD_DEBUG}          PARENT_SCOPE)
-    #    set(BUILD_RELEASE       ${BUILD_RELEASE}        PARENT_SCOPE)
-    #    set(BUILD_TYPE          ${BUILD_TYPE}           PARENT_SCOPE)
-    #    set(BUILD_TYPE_LC       ${BUILD_TYPE_LC}        PARENT_SCOPE)
-    #    set(BUILD_TYPE_UC       ${BUILD_TYPE_UC}        PARENT_SCOPE)
-    #    set(BUILD_FLAG          ${BUILD_FLAG}           PARENT_SCOPE)
-    #    set(CMAKE_CXX_STANDARD  ${CMAKE_CXX_STANDARD}   PARENT_SCOPE)
-    #    set(COMPANY             ${COMPANY}              PARENT_SCOPE)
-    #    set(DM_FLAG             ${DM_FLAG}              PARENT_SCOPE)
-    #    set(LINK_SHARED         ${LINK_SHARED}          PARENT_SCOPE)
-    #    set(LINK_STATIC         ${LINK_STATIC}          PARENT_SCOPE)
-    #    set(LINK_TYPE           ${LINK_TYPE}            PARENT_SCOPE)
-    #    set(LINK_TYPE_LC        ${LINK_TYPE_LC}         PARENT_SCOPE)
-    #    set(LINK_TYPE_UC        ${LINK_TYPE_UC}         PARENT_SCOPE)
-    #    set(LINK_FLAG           ${LINK_FLAG}            PARENT_SCOPE)
-    #    set(STAGED_DIR          ${STAGED_DIR}           PARENT_SCOPE)
-    #    set(SYSTEM_DIR          ${SYSTEM_DIR}           PARENT_SCOPE)
-    #    set(SUDO                ${SUDO}                 PARENT_SCOPE)
-    #    set(stemPath            ${stemPath}             PARENT_SCOPE)
-    #    set(buildType           ${buildType}            PARENT_SCOPE)
-    #    set(debugFlags          ${debugFlags}           PARENT_SCOPE)
-    #    set(linkType            ${linkType}             PARENT_SCOPE)
-
-    #    log(TITLE "As seen on TV"   VARS
-    #        BUILDING                BUILD_DEBUG                 BUILD_RELEASE
-    #        BUILD_TYPE              BUILD_TYPE_LC               BUILD_TYPE_UC
-    #        CMAKE_CXX_STANDARD      CMAKE_INSTALL_PREFIX        COMPANY
-    #        LINK_SHARED             LINK_STATIC                 LINK_TYPE
-    #        LINK_TYPE_LC            LINK_TYPE_UC                STAGED_DIR
-    #        SYSTEM_DIR              SUDO                        stemPath
-    #        buildType               debugFlags                  linkType)
+        # set(APP_VENDOR_LC       ${APP_VENDOR_LC}        PARENT_SCOPE)
+        # set(APP_NAME_LC         ${APP_NAME_LC}          PARENT_SCOPE)
+        # set(BUILDING            ${BUILDING}             PARENT_SCOPE)
+        # set(BUILD_DEBUG         ${BUILD_DEBUG}          PARENT_SCOPE)
+        # set(BUILD_RELEASE       ${BUILD_RELEASE}        PARENT_SCOPE)
+        # set(BUILD_TYPE          ${BUILD_TYPE}           PARENT_SCOPE)
+        # set(BUILD_TYPE_LC       ${BUILD_TYPE_LC}        PARENT_SCOPE)
+        # set(BUILD_TYPE_UC       ${BUILD_TYPE_UC}        PARENT_SCOPE)
+        # set(BUILD_FLAG          ${BUILD_FLAG}           PARENT_SCOPE)
+        # set(CMAKE_CXX_STANDARD  ${CMAKE_CXX_STANDARD}   PARENT_SCOPE)
+        # set(COMPANY             ${COMPANY}              PARENT_SCOPE)
+        # set(DM_FLAG             ${DM_FLAG}              PARENT_SCOPE)
+        # set(LINK_SHARED         ${LINK_SHARED}          PARENT_SCOPE)
+        # set(LINK_STATIC         ${LINK_STATIC}          PARENT_SCOPE)
+        # set(LINK_TYPE           ${LINK_TYPE}            PARENT_SCOPE)
+        # set(LINK_TYPE_LC        ${LINK_TYPE_LC}         PARENT_SCOPE)
+        # set(LINK_TYPE_UC        ${LINK_TYPE_UC}         PARENT_SCOPE)
+        # set(LINK_FLAG           ${LINK_FLAG}            PARENT_SCOPE)
+        # set(STAGED_DIR          ${STAGED_DIR}           PARENT_SCOPE)
+        # set(SYSTEM_DIR          ${SYSTEM_DIR}           PARENT_SCOPE)
+        # set(SUDO                ${SUDO}                 PARENT_SCOPE)
+        # set(stemPath            ${stemPath}             PARENT_SCOPE)
+        # set(buildType           ${buildType}            PARENT_SCOPE)
+        # set(debugFlags          ${debugFlags}           PARENT_SCOPE)
+        # set(linkType            ${linkType}             PARENT_SCOPE)
         # @formatter:on
 
         set(checkCompleted ON)

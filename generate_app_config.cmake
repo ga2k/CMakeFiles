@@ -66,4 +66,6 @@ file(APPEND "${APP_YAML_PATH}" "${_APP_YAML_BODY_CONTENT}")
 file(REMOVE "${_APP_YAML_BODY_PATH}")
 
 message(STATUS "Generated app configuration with checksum: ${APP_YAML_PATH}")
-message(STATUS "Plugin path: ${PLUGIN_PATH} (${PLUGIN_PATH_TYPE})")
+if (PLUGIN_PATH)
+    message(STATUS "Plugin path: ${PLUGIN_PATH}")
+endif ()

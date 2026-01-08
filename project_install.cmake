@@ -2,11 +2,11 @@ include(GNUInstallDirs)
 
 message(STATUS "=== Configuring Components ===")
 
-# Track if Core already exists before this project adds sources
-set(ALREADY_HAVE_CORE OFF)
-if (TARGET HoffSoft::HoffSoft)
-    set(ALREADY_HAVE_CORE ON)
-endif ()
+## Track if Core already exists before this project adds sources
+#set(ALREADY_HAVE_CORE OFF)
+#if (TARGET HoffSoft::HoffSoft)
+#    set(ALREADY_HAVE_CORE ON)
+#endif ()
 
 # Enter the project's src folder (defines targets)
 if (MONOREPO AND MONOBUILD)
@@ -15,51 +15,43 @@ else ()
     add_subdirectory(src)
 endif ()
 
-# Consumer workaround for yaml-cpp when consuming HoffSoft::HoffSoft install package
-if (ALREADY_HAVE_CORE)
-    find_package(yaml-cpp CONFIG QUIET)
-    if (TARGET yaml-cpp::yaml-cpp)
-        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::HoffSoft package")
-        if (TARGET main)
-            target_link_libraries(main LINK_PRIVATE yaml-cpp::yaml-cpp)
-        endif ()
-    endif ()
-endif ()
+## Consumer workaround for yaml-cpp when consuming HoffSoft::HoffSoft install package
+#if (ALREADY_HAVE_CORE)
+#    find_package(yaml-cpp CONFIG QUIET)
+#    if (TARGET yaml-cpp::yaml-cpp)
+#        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::HoffSoft package")
+#        if (TARGET main)
+#            target_link_libraries(main LINK_PRIVATE yaml-cpp::yaml-cpp)
+#        endif ()
+#    endif ()
+#endif ()
 
 # App configuration (app.yaml) generation paths
-if (${APP_TYPE} STREQUAL "Library")
-    set(APP_YAML_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml")
-else ()
-    set(APP_YAML_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME}.yaml")
-endif ()
+set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_VENDOR}${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
-
-file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
 # Optional resources fetching per project
 # @formatting:off
 include(ExternalProject)
-if (APP_INCLUDES_RESOURCES OR APP_SUPPLIES_RESOURCES)
-    set(RES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/global-resources")
-    if (APP_CONSUMES_RESOURCES)
-        ExternalProject_Add(${APP_NAME}ResourceRepo
-                GIT_REPOSITORY "${APP_CONSUMES_RESOURCES}"
-                GIT_TAG master
-                GIT_SHALLOW TRUE
-                UPDATE_DISCONNECTED TRUE
-                CONFIGURE_COMMAND ""
-                BUILD_COMMAND ""
-                INSTALL_COMMAND ""
-                TEST_COMMAND ""
-                SOURCE_DIR "${RES_DIR}"
-                BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
-                COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
-        )
-        add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
-        if (TARGET ${APP_NAME})
-            add_dependencies(${APP_NAME} fetch_resources)
-        endif ()
+if (APP_GLOBAL_RESOURCES)
+    set(RES_DIR "${CMAKE_BINARY_DIR}/global-resources")
+    ExternalProject_Add(${APP_NAME}ResourceRepo
+            GIT_REPOSITORY "${APP_CONSUMES_RESOURCES}"
+            GIT_TAG master
+            GIT_SHALLOW TRUE
+            UPDATE_DISCONNECTED TRUE
+            CONFIGURE_COMMAND ""
+            BUILD_COMMAND ""
+            INSTALL_COMMAND ""
+            TEST_COMMAND ""
+            SOURCE_DIR "${RES_DIR}"
+            BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
+            COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
+    )
+    add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
+    if (TARGET ${APP_NAME})
+        add_dependencies(${APP_NAME} fetch_resources)
     endif ()
 endif ()
 # @formatting:on
@@ -124,6 +116,21 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         BUNDLE                   DESTINATION .
 
 )
+# Install Global Shared Resources
+if(APP_GLOBAL_RESOURCES)
+    if(APPLE)
+        # Shared resources go to Application Support
+        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}")
+    else()
+        # Linux/Windows fallback
+        set(GLOBAL_RES_DEST "share/${APP_VENDOR}")
+    endif()
+
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/global-resources/
+            DESTINATION ${GLOBAL_RES_DEST}
+            COMPONENT GlobalResources
+    )
+endif()
 
 # PCM/PCM-like files
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}"
