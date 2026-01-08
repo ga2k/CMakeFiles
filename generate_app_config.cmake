@@ -27,9 +27,9 @@ else ()
 endif ()
 
 set(HOFFSOFT_LIBS_YAML_LIST "")
-if (APP_HOFFSOFT_LIBS)
+if (REQD_LIBS)
     # Convert semicolon-separated list to individual items
-    string(REPLACE ";" "\n" HOFFSOFT_LIBS_ITEMS "${APP_HOFFSOFT_LIBS}")
+    string(REPLACE ";" "\n" HOFFSOFT_LIBS_ITEMS "${REQD_LIBS}")
     string(REPLACE "\n" "\n    - " HOFFSOFT_LIBS_YAML_LIST "${HOFFSOFT_LIBS_ITEMS}")
     set(HOFFSOFT_LIBS_YAML_LIST "\n    - ${HOFFSOFT_LIBS_YAML_LIST}\n")
 else ()
