@@ -179,6 +179,8 @@ configure_package_config_file(
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
+add_file_dependencies(${APP_NAME} "${OUTPUT_DIR}/${APP_NAME}Config.cmake")
+
 install(FILES
         "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
         "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"

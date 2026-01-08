@@ -98,6 +98,13 @@ if(NOT _lib)
 endif()
 
 if(WIN32)
+  if(NOT _lib)
+    message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualImpName}) not found using")
+    foreach(_dir IN LISTS _searchDirs)
+      message(NOTICE "${_dir}/${_actualLibName}")
+    endforeach()
+    message(FATAL_ERROR "Halted")
+  endif()
   set(_libdir "${_impdir}")
 endif()
 
