@@ -38,7 +38,7 @@ if (APP_GLOBAL_RESOURCES)
     set(RES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
     file(MAKE_DIRECTORY "${RES_DIR}")
     ExternalProject_Add(${APP_NAME}ResourceRepo
-            GIT_REPOSITORY "${APP_CONSUMES_RESOURCES}"
+            GIT_REPOSITORY "${APP_GLOBAL_RESOURCES}"
             GIT_TAG master
             GIT_SHALLOW TRUE
             UPDATE_DISCONNECTED TRUE
