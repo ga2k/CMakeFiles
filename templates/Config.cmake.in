@@ -98,7 +98,7 @@ if(NOT _lib)
 endif()
 
 if(WIN32)
-  if(NOT _lib)
+  if(NOT _imp)
     message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualImpName}) not found using")
     foreach(_dir IN LISTS _searchDirs)
       message(NOTICE "${_dir}/${_actualLibName}")
