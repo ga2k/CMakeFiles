@@ -195,23 +195,23 @@ if(USE_PREBUILT_MODULES)
   endif()
 endif()
 
-# Link transitive dependencies when available so consumers don’t create duplicates.
-if(TARGET magic_enum::magic_enum)
-  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-    INTERFACE_LINK_LIBRARIES magic_enum::magic_enum)
-endif()
-if(TARGET eventpp::eventpp)
-  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-    INTERFACE_LINK_LIBRARIES eventpp::eventpp)
-endif()
-if(TARGET GTest::gtest)
-  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-    INTERFACE_LINK_LIBRARIES GTest::gtest)
-endif()
-if(TARGET yaml-cpp)
-  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-    INTERFACE_LINK_LIBRARIES yaml-cpp)
-endif()
+## Link transitive dependencies when available so consumers don’t create duplicates.
+#if(TARGET magic_enum::magic_enum)
+#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+#    INTERFACE_LINK_LIBRARIES magic_enum::magic_enum)
+#endif()
+#if(TARGET eventpp::eventpp)
+#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+#    INTERFACE_LINK_LIBRARIES eventpp::eventpp)
+#endif()
+#if(TARGET GTest::gtest)
+#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+#    INTERFACE_LINK_LIBRARIES GTest::gtest)
+#endif()
+#if(TARGET yaml-cpp)
+#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+#    INTERFACE_LINK_LIBRARIES yaml-cpp)
+#endif()
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" PARENT_SCOPE)
