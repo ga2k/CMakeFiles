@@ -1028,7 +1028,7 @@ endmacro()
 
 macro(generateExportHeader)
     set(FLAGS "")
-    set(SINGLE_ARGS "TARGET;FILE_SET;DESTDIR")
+    set(SINGLE_ARGS "TARGET;FILE_SET;DESTDIR;BASE_DIR")
     set(MULTI_ARGS "")
 
     cmake_parse_arguments(A_GEH "${FLAGS}" "${SINGLE_ARGS}" "${MULTI_ARGS}" ${ARGN})
@@ -1052,6 +1052,8 @@ macro(generateExportHeader)
         endif ()
     endif ()
 
+    get_filename_component(A_GEH_DESTDIR "${A_GEH_DESTDIR}" ABSOLUTE)
+
     set(_generated_export_header "${A_GEH_DESTDIR}/${_targetlc}_export.h")
 
     include(GenerateExportHeader)
@@ -1066,7 +1068,7 @@ macro(generateExportHeader)
             PUBLIC
             FILE_SET ${A_GEH_FILE_SET}
             TYPE HEADERS
-            BASE_DIRS ${A_GEH_DESTDIR}
+#            BASE_DIRS ${A_GEH_DESTDIR}
             FILES ${_generated_export_header})
 
 endmacro()
