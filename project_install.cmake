@@ -56,7 +56,7 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
-install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Code generators (optional)
 include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
