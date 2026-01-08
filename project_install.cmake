@@ -201,6 +201,33 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
             DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${APP_NAME}")
 endif ()
 
+if (APP_LOCAL_RESOURCES)
+    set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
+
+    if (APPLE)
+        # Handled via RESOURCE property in the executable's CMakeLists.txt
+    else()
+        # Windows/Linux: Install to share/Vendor/AppName/resources
+        install(DIRECTORY "${LOCAL_RES_SRC}/"
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
+    endif()
+
+    # Handle Linux desktop files specifically
+    if (NOT APPLE AND NOT WIN32)
+        file(GLOB _hs_desktop_files "${LOCAL_RES_SRC}/*.desktop")
+        if (_hs_desktop_files)
+            install(FILES ${_hs_desktop_files}
+                    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
+        endif ()
+        unset(_hs_desktop_files)
+    endif()
+endif ()
+
+
+
+
+
+
 # Resources directory (fonts, images, etc.)
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources")
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
