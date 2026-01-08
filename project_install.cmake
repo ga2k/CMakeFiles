@@ -123,7 +123,7 @@ if(APP_GLOBAL_RESOURCES)
 endif()
 
 # PCM/PCM-like files
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/${APP_NAME}.dir/${BUILD_TYPE}"
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/${APP_NAME}.dir/"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
         FILES_MATCHING
         PATTERN "*.pcm"
@@ -135,7 +135,7 @@ install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-#        CXX_MODULES_DIRECTORY "cxx"
+        CXX_MODULES_DIRECTORY "cxx"
 )
 
 if (APP_CREATES_PLUGINS)
