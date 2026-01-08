@@ -26,11 +26,6 @@ endif ()
 #    endif ()
 #endif ()
 
-# App configuration (app.yaml) generation paths
-set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
-set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
-include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
-
 # Optional resources fetching per project
 # @formatting:off
 include(ExternalProject)
@@ -56,6 +51,11 @@ if (APP_GLOBAL_RESOURCES)
     endif ()
 endif ()
 # @formatting:on
+
+# App configuration (app.yaml) generation paths
+set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
+set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
+include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
 # Code generators (optional)
 include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
