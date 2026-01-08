@@ -35,7 +35,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 # @formatting:off
 include(ExternalProject)
 if (APP_GLOBAL_RESOURCES)
-    set(RES_DIR "${CMAKE_BINARY_DIR}/global-resources")
+    set(RES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
+    file(MAKE_DIRECTORY "${RES_DIR}")
     ExternalProject_Add(${APP_NAME}ResourceRepo
             GIT_REPOSITORY "${APP_CONSUMES_RESOURCES}"
             GIT_TAG master
@@ -222,11 +223,6 @@ if (APP_LOCAL_RESOURCES)
         unset(_hs_desktop_files)
     endif()
 endif ()
-
-
-
-
-
 
 # Resources directory (fonts, images, etc.)
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources")
