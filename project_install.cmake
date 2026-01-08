@@ -53,7 +53,7 @@ endif ()
 # @formatting:on
 
 # App configuration (app.yaml) generation paths
-set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
+set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
