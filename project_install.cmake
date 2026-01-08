@@ -121,6 +121,8 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
         FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        BUNDLE                   DESTINATION .
+
 )
 
 # PCM/PCM-like files
