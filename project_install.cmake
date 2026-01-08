@@ -56,6 +56,7 @@ endif ()
 set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
+install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Code generators (optional)
 include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
@@ -91,18 +92,6 @@ endif ()
 
 # ========================= Install & packaging =========================
 #
-if ("${APP_TYPE}" STREQUAL "Library")
-    install(FILES
-            "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR_LC}_${APP_NAME_LC}.yaml"
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
-else ()
-    install(FILES
-            "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml"
-            DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-endif ()
-set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
 # @formatting:off
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
