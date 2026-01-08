@@ -27,7 +27,7 @@ endif ()
 #endif ()
 
 # App configuration (app.yaml) generation paths
-set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_VENDOR}${APP_NAME}.yaml")
+set(APP_YAML_PATH "${OUTPUT_DIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 
@@ -35,8 +35,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 # @formatting:off
 include(ExternalProject)
 if (APP_GLOBAL_RESOURCES)
-    set(RES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
-    file(MAKE_DIRECTORY "${RES_DIR}")
+    set(GLOBAL_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
+    file(MAKE_DIRECTORY "${GLOBAL_RESOURCES_DIR}")
     ExternalProject_Add(${APP_NAME}ResourceRepo
             GIT_REPOSITORY "${APP_GLOBAL_RESOURCES}"
             GIT_TAG master
@@ -46,9 +46,9 @@ if (APP_GLOBAL_RESOURCES)
             BUILD_COMMAND ""
             INSTALL_COMMAND ""
             TEST_COMMAND ""
-            SOURCE_DIR "${RES_DIR}"
-            BUILD_BYPRODUCTS "${RES_DIR}/.fetched"
-            COMMAND ${CMAKE_COMMAND} -E touch "${RES_DIR}/.fetched"
+            SOURCE_DIR "${GLOBAL_RESOURCES_DIR}"
+            BUILD_BYPRODUCTS "${GLOBAL_RESOURCES_DIR}/.fetched"
+            COMMAND ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
     )
     add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
     if (TARGET ${APP_NAME})
