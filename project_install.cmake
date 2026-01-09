@@ -101,7 +101,6 @@ if (${APP_TYPE} MATCHES "Executable")
             COMMENT "Generating embedded config: ${GEN_OUTPUT}"
             VERBATIM
     )
-)
 endif ()
 
 # ========================= Install & packaging =========================
