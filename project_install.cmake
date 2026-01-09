@@ -90,6 +90,17 @@ if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
     endif ()
 endif ()
 
+if (${APP_TYPE} MATCHES "Executable")
+    # In your app's CMakeLists.txt
+    add_custom_command(
+            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp"
+            COMMAND ${CMAKE_COMMAND} -DINPUT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}.yaml"
+            -DOUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp"
+            -P "${CMAKE_SOURCE_DIR}/cmake/EmbedFile.cmake"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}.yaml"
+    )
+endif ()
+
 # ========================= Install & packaging =========================
 #
 set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
