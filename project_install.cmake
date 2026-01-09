@@ -204,8 +204,6 @@ if (APP_LOCAL_RESOURCES)
     if (APPLE)
         # Install directory directly into the bundle's Resources folder
         # This avoids the "install RESOURCE given directory" error
-        install(DIRECTORY "${LOCAL_RES_SRC}/"
-                DESTINATION "${APP_NAME}.app/Contents/Resources")
     else()
         # Windows/Linux: Install to share/Vendor/AppName/resources
         install(DIRECTORY "${LOCAL_RES_SRC}/"
