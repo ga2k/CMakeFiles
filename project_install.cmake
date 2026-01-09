@@ -91,6 +91,7 @@ if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 endif ()
 
 if (${APP_TYPE} MATCHES "Executable")
+    message("Executable!")
     set(GEN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp")
     add_custom_command(
             OUTPUT "${GEN_OUTPUT}"
