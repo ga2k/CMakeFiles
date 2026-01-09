@@ -2,6 +2,9 @@ include(GNUInstallDirs)
 
 message(STATUS "=== Configuring Components ===")
 
+# App configuration (app.yaml) generation paths
+set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
+
 ## Track if Core already exists before this project adds sources
 #set(ALREADY_HAVE_CORE OFF)
 #if (TARGET HoffSoft::HoffSoft)
@@ -52,8 +55,8 @@ if (APP_GLOBAL_RESOURCES)
 endif ()
 # @formatting:on
 
-# App configuration (app.yaml) generation paths
-set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
+## App configuration (app.yaml) generation paths
+#set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
