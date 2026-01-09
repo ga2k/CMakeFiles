@@ -92,6 +92,13 @@ endif ()
 
 # ========================= Install & packaging =========================
 #
+set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
+
+if (APP_LOCAL_RESOURCES)
+    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS ${APP_LOCAL_RESOURCES})
+else ()
+    set (resource_list "")
+endif ()
 
 # @formatting:off
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
@@ -104,7 +111,7 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         BUNDLE                   DESTINATION .
-        RESOURCE                 DESTINATION .
+        RESOURCE                 ${resource_list}
 )
 # Install Global Shared Resources
 if(APP_GLOBAL_RESOURCES)
@@ -195,7 +202,10 @@ if (APP_LOCAL_RESOURCES)
     set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
 
     if (APPLE)
-        # Handled via RESOURCE property in the executable's CMakeLists.txt
+        # Install directory directly into the bundle's Resources folder
+        # This avoids the "install RESOURCE given directory" error
+        install(DIRECTORY "${LOCAL_RES_SRC}/"
+                DESTINATION "${APP_NAME}.app/Contents/Resources")
     else()
         # Windows/Linux: Install to share/Vendor/AppName/resources
         install(DIRECTORY "${LOCAL_RES_SRC}/"
