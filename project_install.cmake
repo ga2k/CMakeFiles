@@ -92,6 +92,8 @@ endif ()
 
 if (${APP_TYPE} MATCHES "Executable")
     message("Executable!")
+    message("At Build, ${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp")
+
     set(GEN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp")
     add_custom_command(
             OUTPUT "${GEN_OUTPUT}"
