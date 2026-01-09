@@ -104,7 +104,6 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
         FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         BUNDLE                   DESTINATION .
-        RESOURCE                 DESTINATION ${CMAKE_INSTALL_SHAREDIR}/${APP_VENDOR}/${APP_NAME}
 )
 # Install Global Shared Resources
 if(APP_GLOBAL_RESOURCES)
