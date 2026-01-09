@@ -91,14 +91,17 @@ if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 endif ()
 
 if (${APP_TYPE} MATCHES "Executable")
-    # In your app's CMakeLists.txt
+    set(GEN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp")
     add_custom_command(
-            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp"
+            OUTPUT "${GEN_OUTPUT}"
             COMMAND ${CMAKE_COMMAND} -DINPUT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}.yaml"
-            -DOUTPUT_FILE="${CMAKE_CURRENT_BINARY_DIR}/AppConfigData.cpp"
+            -DOUTPUT_FILE="${GEN_OUTPUT}"
             -P "${CMAKE_SOURCE_DIR}/cmake/EmbedFile.cmake"
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}.yaml"
+            COMMENT "Generating embedded config: ${GEN_OUTPUT}"
+            VERBATIM
     )
+)
 endif ()
 
 # ========================= Install & packaging =========================
