@@ -6,6 +6,7 @@ endif ()
 
 set(PLUGIN_YAML_LIST "")
 if (PLUGINS)
+    list(REMOVE_DUPLICATES PLUGINS)
     # Convert semicolon-separated list to individual items
     string(REPLACE ";" "\n" PLUGIN_ITEMS "${PLUGINS}")
     string(REPLACE "\n" "\n    - " PLUGIN_YAML_LIST "${PLUGIN_ITEMS}")
@@ -18,6 +19,7 @@ endif ()
 
 set(FEATURES_YAML_LIST "")
 if (APP_FEATURES)
+    list(REMOVE_DUPLICATES APP_FEATURES)
     # Convert semicolon-separated list to individual items
     string(REPLACE ";" "\n" FEATURES_ITEMS "${APP_FEATURES}")
     string(REPLACE "\n" "\n    - " FEATURES_YAML_LIST "${FEATURES_ITEMS}")
@@ -28,6 +30,7 @@ endif ()
 
 set(HOFFSOFT_LIBS_YAML_LIST "")
 if (REQD_LIBS)
+    list(REMOVE_DUPLICATES REQD_LIBS)
     # Convert semicolon-separated list to individual items
     string(REPLACE ";" "\n" HOFFSOFT_LIBS_ITEMS "${REQD_LIBS}")
     string(REPLACE "\n" "\n    - " HOFFSOFT_LIBS_YAML_LIST "${HOFFSOFT_LIBS_ITEMS}")
@@ -38,6 +41,7 @@ endif ()
 
 set(CREATES_PLUGINS_YAML_LIST "")
 if (APP_CREATES_PLUGINS)
+    list(REMOVE_DUPLICATES APP_CREATES_PLUGINS)
     # Convert semicolon-separated list to individual items
     string(REPLACE ";" "\n" CREATES_PLUGINS_ITEMS "${APP_CREATES_PLUGINS}")
     string(REPLACE "\n" "\n    - " CREATES_PLUGINS_YAML_LIST "${CREATES_PLUGINS_ITEMS}")
