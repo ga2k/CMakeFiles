@@ -95,6 +95,11 @@ function(wxWidgets_export_variables pkgname)
                     target_include_directories(${_actualTarget} SYSTEM BEFORE INTERFACE
                             "$<BUILD_INTERFACE:${WX_OVERRIDE_PATH}>"
                     )
+
+                    # Wrap in BUILD_INTERFACE to avoid "prefixed in source directory" export errors
+                    target_include_directories(${_actualTarget} BEFORE INTERFACE
+                            "$<BUILD_INTERFACE:${WX_OVERRIDE_PATH}>"
+                    )
                     set(_dirSet ON)
                     break()
                 endif ()
