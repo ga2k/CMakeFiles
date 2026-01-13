@@ -111,6 +111,7 @@ function(wxWidgets_export_variables pkgname)
                                 "-Wno-deprecated-anon-enum-enum-conversion"
                                 "-Wno-deprecated-declarations"
                                 "-Wno-unused-lambda-capture"
+                                "-Wno-enum-compare-switch"
                         )
                     endif()
                     break()
