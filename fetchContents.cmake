@@ -340,7 +340,13 @@ function(createStandardPackageData)
                 ARG REQUIRED)
     endif ()
 
-    addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
+    if (BUILD_WX_FROM_SOURCE)
+        addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
+                GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "v3.2.6"
+                ARG REQUIRED)
+    else ()
+        addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
+    endif ()
 
     set(SystemFeatureData "${SystemFeatureData}" PARENT_SCOPE)
     set(UserFeatureData "${UserFeatureData}" PARENT_SCOPE)
