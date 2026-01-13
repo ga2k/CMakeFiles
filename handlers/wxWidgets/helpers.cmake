@@ -86,7 +86,7 @@ function(wxWidgets_export_variables pkgname)
             elseif (TARGET wx${lib} AND ${TYPE} STREQUAL "ALIAS")
                 target_include_directories(wx${lib} SYSTEM BEFORE INTERFACE "${WX_OVERRIDE_PATH}")
             else ()
-                message(FATAL_ERROR "Unknown library type '${TYPE}' for wxWidget library ${lib}")
+                message(FATAL_ERROR "Unknown library type '${TYPE}' for wxWidget library '${lib}'")
             endif()
         endforeach()
 
