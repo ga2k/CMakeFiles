@@ -74,25 +74,26 @@ function(wxWidgets_export_variables pkgname)
 
     set(WX_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
     if (EXISTS ${WX_OVERRIDE_PATH})
-        message(STATUS "wxWidgets: Deleting system headers that have local overrides...")
+        message(STATUS "wxWidgets: Patching system headers with local overrides...")
 
         # 1. Find all files in your override folder
         file(GLOB_RECURSE override_files RELATIVE "${WX_OVERRIDE_PATH}" "${WX_OVERRIDE_PATH}/*")
 
         foreach(file_rel_path IN LISTS override_files)
             set(system_file_path "${${pkglc}_SOURCE_DIR}/include/${file_rel_path}")
+            set(override_file_path "${WX_OVERRIDE_PATH}/${file_rel_path}")
 
             if (EXISTS "${system_file_path}")
-                message(STATUS "  Overriding: ${file_rel_path} (Deleted system copy)")
-                file(REMOVE "${system_file_path}")
+                # Overwrite the system file instead of deleting it
+                # This keeps the CMake file list valid while giving us the fixed code
+                message(STATUS "  Patching: ${file_rel_path}")
+                file(COPY_FILE "${override_file_path}" "${system_file_path}" COPY_ONLY)
             endif()
         endforeach()
 
-        # 1. Prepend to the variable for downstream logic
-        list(PREPEND local_includes "${WX_OVERRIDE_PATH}")
-
-        # 2. Get the original include path we want to "demote" or remove
-        set(ORIGINAL_WX_INC "${${pkglc}_SOURCE_DIR}/include")
+        # 2. We no longer need to mess with PREPEND or target_include_directories
+        # because we have physically patched the files in the wxWidgets source tree.
+        message(STATUS "wxWidgets: Source tree patched successfully.")
 
         foreach(lib ${components})
             foreach(_variant wx::${lib} wx${lib} ${lib})
@@ -103,26 +104,6 @@ function(wxWidgets_export_variables pkgname)
                         set(_actualTarget "${_aliasTarget}")
                     endif()
 
-                    # Read existing includes
-                    get_target_property(_existing_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
-
-                    if (_existing_incs)
-                        # Remove the original path if it exists in the list
-                        list(REMOVE_ITEM _existing_incs "${ORIGINAL_WX_INC}")
-                        # Re-set the property without the original path
-                        set_target_properties(${_actualTarget} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_existing_incs}")
-                    endif()
-
-                    # Now add our override path at the very beginning as SYSTEM
-                    target_include_directories(${_actualTarget} SYSTEM BEFORE INTERFACE
-                            "$<BUILD_INTERFACE:${WX_OVERRIDE_PATH}>"
-                    )
-
-                    # And add the original one back at the END so it's a last resort
-                    target_include_directories(${_actualTarget} SYSTEM AFTER INTERFACE
-                            "$<BUILD_INTERFACE:${ORIGINAL_WX_INC}>"
-                    )
-
                     # Explicitly silence common external warnings for this target
                     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
                         target_compile_options(${_actualTarget} INTERFACE
@@ -132,12 +113,10 @@ function(wxWidgets_export_variables pkgname)
                                 "-Wno-unused-lambda-capture"
                         )
                     endif()
-
                     break()
                 endif ()
             endforeach ()
         endforeach ()
-        message(STATUS "Force-prioritized wxWidgets include override: ${WX_OVERRIDE_PATH}")
     endif ()
 
     set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
