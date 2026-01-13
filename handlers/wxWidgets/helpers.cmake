@@ -74,6 +74,20 @@ function(wxWidgets_export_variables pkgname)
 
     set(WX_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
     if (EXISTS ${WX_OVERRIDE_PATH})
+        message(STATUS "wxWidgets: Deleting system headers that have local overrides...")
+
+        # 1. Find all files in your override folder
+        file(GLOB_RECURSE override_files RELATIVE "${WX_OVERRIDE_PATH}" "${WX_OVERRIDE_PATH}/*")
+
+        foreach(file_rel_path IN LISTS override_files)
+            set(system_file_path "${${pkglc}_SOURCE_DIR}/include/${file_rel_path}")
+
+            if (EXISTS "${system_file_path}")
+                message(STATUS "  Overriding: ${file_rel_path} (Deleted system copy)")
+                file(REMOVE "${system_file_path}")
+            endif()
+        endforeach()
+
         # 1. Prepend to the variable for downstream logic
         list(PREPEND local_includes "${WX_OVERRIDE_PATH}")
 
