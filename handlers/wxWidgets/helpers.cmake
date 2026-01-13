@@ -74,38 +74,45 @@ function(wxWidgets_export_variables pkgname)
 
     set(WX_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
     if (EXISTS ${WX_OVERRIDE_PATH})
-
         # 1. Prepend to the variable for downstream logic
         list(PREPEND local_includes "${WX_OVERRIDE_PATH}")
 
-        # 2. If targets already exist (e.g. from FetchContent), force it onto them immediately
+        # 2. Get the original include path we want to "demote" or remove
+        set(ORIGINAL_WX_INC "${${pkglc}_SOURCE_DIR}/include")
+
         foreach(lib ${components})
-            set(_dirSet OFF)
             foreach(_variant wx::${lib} wx${lib} ${lib})
                 if (TARGET ${_variant})
-                    # Resolve the real target if it is an alias
                     get_target_property(_aliasTarget "${_variant}" ALIASED_TARGET)
+                    set(_actualTarget "${_variant}")
                     if (_aliasTarget)
                         set(_actualTarget "${_aliasTarget}")
-                    else()
-                        set(_actualTarget "${_variant}")
                     endif()
 
-                    # Wrap in BUILD_INTERFACE to avoid "prefixed in source directory" export errors
+                    # Read existing includes
+                    get_target_property(_existing_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
+
+                    if (_existing_incs)
+                        # Remove the original path if it exists in the list
+                        list(REMOVE_ITEM _existing_incs "${ORIGINAL_WX_INC}")
+                        # Re-set the property without the original path
+                        set_target_properties(${_actualTarget} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_existing_incs}")
+                    endif()
+
+                    # Now add our override path at the very beginning as SYSTEM
                     target_include_directories(${_actualTarget} SYSTEM BEFORE INTERFACE
                             "$<BUILD_INTERFACE:${WX_OVERRIDE_PATH}>"
                     )
 
-                    # Wrap in BUILD_INTERFACE to avoid "prefixed in source directory" export errors
-                    target_include_directories(${_actualTarget} BEFORE INTERFACE
-                            "$<BUILD_INTERFACE:${WX_OVERRIDE_PATH}>"
+                    # And add the original one back at the END so it's a last resort
+                    target_include_directories(${_actualTarget} SYSTEM AFTER INTERFACE
+                            "$<BUILD_INTERFACE:${ORIGINAL_WX_INC}>"
                     )
-                    set(_dirSet ON)
                     break()
                 endif ()
             endforeach ()
         endforeach ()
-        message(STATUS "Applied wxWidgets include override: ${WX_OVERRIDE_PATH}")
+        message(STATUS "Force-prioritized wxWidgets include override: ${WX_OVERRIDE_PATH}")
     endif ()
 
     set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
