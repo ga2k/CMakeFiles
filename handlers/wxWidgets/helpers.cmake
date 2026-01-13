@@ -72,9 +72,20 @@ function(wxWidgets_export_variables pkgname)
         list(APPEND local_includes "${${pkglc}_BINARY_DIR}/lib/vc_x64_dll/mswu")
     endif()
 
-    if (EXISTS ${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets)
-        # Make sure locally modified patches are seen first
-        list(PREPEND local_includes "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
+    set(WX_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
+    if (EXISTS ${WX_OVERRIDE_PATH})
+
+        # 1. Prepend to the variable for downstream logic
+        list(PREPEND _wxIncludePaths "${WX_OVERRIDE_PATH}")
+
+        # 2. If targets already exist (e.g. from FetchContent), force it onto them immediately
+        foreach(lib core base gl net xml html aui ribbon richtext propgrid stc webview media)
+            if (TARGET wx::${lib})
+                target_include_directories(wx::${lib} SYSTEM BEFORE INTERFACE "${WX_OVERRIDE_PATH}")
+            endif()
+        endforeach()
+
+        message(STATUS "Applied wxWidgets include override: ${WX_OVERRIDE_PATH}")
     endif ()
 
     set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
