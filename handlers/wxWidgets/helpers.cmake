@@ -72,5 +72,11 @@ function(wxWidgets_export_variables pkgname)
         list(APPEND local_includes "${${pkglc}_BINARY_DIR}/lib/vc_x64_dll/mswu")
     endif()
 
+    if (EXISTS ${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets)
+        message(FATAL_ERROR "Bleep")
+        # Make sure locally modified patches are seen first
+        list(PREPEND local_includes "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets")
+    endif ()
+
     set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
 endfunction()
