@@ -95,7 +95,7 @@ function(wxWidgets_export_variables pkgname)
                 endif ()
             endforeach ()
             if (NOT _dirSet)
-                message(FATAL_ERROR "Unknown library variant target for wxWidget library '${lib}'")
+                message(WARNING "Unknown library variant target for wxWidget library '${lib}'")
             endif()
         endforeach()
 
