@@ -96,7 +96,7 @@ function(wxWidgets_export_variables pkgname)
                 endif ()
             endif ()
             if (NOT _dirSet)
-                message(FATAL_ERROR "Unknown library type '${TYPE}' for wxWidget library '${lib}'")
+                message(FATAL_ERROR "Unknown library type '${_targetType}' for wxWidget library '${lib}'")
             endif()
         endforeach()
 
