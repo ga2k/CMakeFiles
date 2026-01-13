@@ -24,7 +24,7 @@ function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
     # Components the project uses
-    set(components core base gl net xml html aui ribbon richtext propgrid stc webview media scintilla)
+    set(components core base gl net xml html aui ribbon richtext propgrid stc webview media scintilla lexilla)
 
     set(local_libs)
     foreach(comp IN LISTS components)
