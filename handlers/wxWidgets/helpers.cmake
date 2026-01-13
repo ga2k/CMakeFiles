@@ -94,7 +94,11 @@ function(wxWidgets_export_variables pkgname)
         # 2. We no longer need to mess with PREPEND or target_include_directories
         # because we have physically patched the files in the wxWidgets source tree.
         message(STATUS "wxWidgets: Source tree patched successfully.")
+        set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
+    endif ()
 
+    # Explicitly silence common external warnings for this target
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         foreach(lib ${components})
             foreach(_variant wx::${lib} wx${lib} ${lib})
                 if (TARGET ${_variant})
@@ -104,21 +108,17 @@ function(wxWidgets_export_variables pkgname)
                         set(_actualTarget "${_aliasTarget}")
                     endif()
 
-                    # Explicitly silence common external warnings for this target
-                    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-                        target_compile_options(${_actualTarget} INTERFACE
-                                "-Wno-deprecated-enum-enum-conversion"
-                                "-Wno-deprecated-anon-enum-enum-conversion"
-                                "-Wno-deprecated-declarations"
-                                "-Wno-unused-lambda-capture"
-                                "-Wno-enum-compare-switch"
-                        )
-                    endif()
-                    break()
-                endif ()
+                    target_compile_options(${_actualTarget} INTERFACE
+                            "-Wno-deprecated-enum-enum-conversion"
+                            "-Wno-deprecated-anon-enum-enum-conversion"
+                            "-Wno-deprecated-declarations"
+                            "-Wno-unused-lambda-capture"
+                            "-Wno-enum-compare-switch"
+                    )
+                endif()
+                break()
             endforeach ()
         endforeach ()
     endif ()
 
-    set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
 endfunction()
