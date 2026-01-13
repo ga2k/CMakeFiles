@@ -1115,21 +1115,21 @@ function(fetchContents)
 
     # @formatter:on
 
-    #    log(TITLE "Leaving Las Vegas" LISTS
-    #            HS_CompileOptionsList
-    #            HS_DefinesList
-    #            HS_DependenciesList
-    #            HS_ExportedDependencies
-    #            HS_IncludePathsList
-    #            HS_LibrariesList
-    #            HS_LibraryPathsList
-    #            HS_LinkOptionsList
-    #            HS_PrefixPathsList
-    #            HS_wxCompilerOptions
-    #            HS_wxDefines
-    #            HS_wxIncludePaths
-    #            HS_wxLibraryPaths
-    #            HS_wxLibraries
-    #            HS_wxFrameworks
-    #    )
+    log(TITLE "Leaving Las Vegas" LISTS
+            ${AUE_PREFIX}_CompileOptionsList
+            ${AUE_PREFIX}_DefinesList
+            ${AUE_PREFIX}_DependenciesList
+            ${AUE_PREFIX}_IncludePathsList
+            ${AUE_PREFIX}_LibrariesList
+            ${AUE_PREFIX}_LibraryPathsList
+            ${AUE_PREFIX}_LinkOptionsList
+            ${AUE_PREFIX}_PrefixPathsList
+
+            ${AUE_PREFIX}_wxCompilerOptions
+            ${AUE_PREFIX}_wxDefines
+            ${AUE_PREFIX}_wxIncludePaths
+            ${AUE_PREFIX}_wxLibraryPaths
+            ${AUE_PREFIX}_wxLibraries
+            ${AUE_PREFIX}_wxFrameworks
+    )
 endfunction()

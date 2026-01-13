@@ -2,11 +2,11 @@ function(wxWidgets_set_build_options)
     message(NOTICE "Configuring wxWidgets build options")
 
     # Common wxWidgets build options
-    set(wxBUILD_SHARED ON CACHE BOOL "" FORCE)
+    set(wxBUILD_SHARED   ON CACHE BOOL "" FORCE)
     set(wxBUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_DEMOS OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_INSTALL ON CACHE BOOL "" FORCE)
+    set(wxBUILD_TESTS   OFF CACHE BOOL "" FORCE)
+    set(wxBUILD_DEMOS   OFF CACHE BOOL "" FORCE)
+    set(wxBUILD_INSTALL  ON CACHE BOOL "" FORCE)
 
     if (LINUX)
         set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
