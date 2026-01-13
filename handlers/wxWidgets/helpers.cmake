@@ -108,6 +108,17 @@ function(wxWidgets_export_variables pkgname)
                     target_include_directories(${_actualTarget} SYSTEM AFTER INTERFACE
                             "$<BUILD_INTERFACE:${ORIGINAL_WX_INC}>"
                     )
+
+                    # Explicitly silence common external warnings for this target
+                    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+                        target_compile_options(${_actualTarget} INTERFACE
+                                "-Wno-deprecated-enum-enum-conversion"
+                                "-Wno-deprecated-anon-enum-enum-conversion"
+                                "-Wno-deprecated-declarations"
+                                "-Wno-unused-lambda-capture"
+                        )
+                    endif()
+
                     break()
                 endif ()
             endforeach ()
