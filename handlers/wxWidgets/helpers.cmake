@@ -76,7 +76,7 @@ function(wxWidgets_export_variables pkgname)
     if (EXISTS ${WX_OVERRIDE_PATH})
 
         # 1. Prepend to the variable for downstream logic
-        list(PREPEND _wxIncludePaths "${WX_OVERRIDE_PATH}")
+        list(PREPEND local_includes "${WX_OVERRIDE_PATH}")
 
         # 2. If targets already exist (e.g. from FetchContent), force it onto them immediately
         foreach(lib ${components})
