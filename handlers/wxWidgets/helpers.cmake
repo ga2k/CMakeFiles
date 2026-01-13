@@ -74,7 +74,7 @@ function(wxWidgets_export_variables pkgname)
 
     if (EXISTS ${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets)
         # Make sure locally modified patches are seen first
-        list(PREPEND local_includes "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets")
+        list(PREPEND local_includes "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
     endif ()
 
     set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
