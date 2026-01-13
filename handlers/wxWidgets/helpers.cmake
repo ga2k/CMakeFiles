@@ -7,6 +7,8 @@ function(wxWidgets_set_build_options)
     set(wxBUILD_TESTS   OFF CACHE BOOL "" FORCE)
     set(wxBUILD_DEMOS   OFF CACHE BOOL "" FORCE)
     set(wxBUILD_INSTALL  ON CACHE BOOL "" FORCE)
+    set(wxUSE_SCINTILLA OFF CACHE BOOL "" FORCE)
+    set(wxUSE_LEXILLA   OFF CACHE BOOL "" FORCE)
 
     if (LINUX)
         set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
