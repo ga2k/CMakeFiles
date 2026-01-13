@@ -1,6 +1,11 @@
 function(wxWidgets_process incs libs defs)
 
     if (BUILD_WX_FROM_SOURCE)
+
+        message("")
+        message("Building wxWidgets from source")
+        message("")
+
         include(${CMAKE_SOURCE_DIR}/cmake/handlers/wxWidgets/helpers.cmake OPTIONAL RESULT_VARIABLE helper_found)
         if (helper_found)
             wxWidgets_set_build_options()
@@ -21,6 +26,12 @@ function(wxWidgets_process incs libs defs)
                 return()
             endif()
         endif()
+    else ()
+
+        message("")
+        message("Linking wxWidgets from installed packages")
+        message("")
+
     endif()
 
     set(GLLibs)
