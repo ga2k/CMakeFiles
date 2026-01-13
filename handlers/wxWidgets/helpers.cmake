@@ -9,6 +9,7 @@ function(wxWidgets_set_build_options)
     set(wxBUILD_INSTALL  ON CACHE BOOL "" FORCE)
     set(wxUSE_SCINTILLA OFF CACHE BOOL "" FORCE)
     set(wxUSE_LEXILLA   OFF CACHE BOOL "" FORCE)
+    set(wxUSE_STC       OFF CACHE BOOL "" FORCE)
 
     if (LINUX)
         set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
@@ -26,7 +27,17 @@ function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
     # Components the project uses
-    set(components core base gl net xml html aui ribbon richtext propgrid stc webview media)
+    set(components core base gl net xml html aui ribbon richtext propgrid webview media)
+    
+    # Check both the CACHE variable and the local variable
+    set(stc_enabled OFF)
+    if (wxUSE_STC)
+        set(stc_enabled ON)
+    endif()
+    
+    if (stc_enabled)
+        list(APPEND components stc)
+    endif()
 
     set(local_libs)
     foreach(comp IN LISTS components)
