@@ -87,7 +87,7 @@ function(wxWidgets_export_variables pkgname)
                 # Overwrite the system file instead of deleting it
                 # This keeps the CMake file list valid while giving us the fixed code
                 message(STATUS "  Patching: ${file_rel_path}")
-                file(COPY_FILE "${override_file_path}" "${system_file_path}" COPY_ONLY)
+                file(COPY_FILE "${override_file_path}" "${system_file_path}")
             endif()
         endforeach()
 
