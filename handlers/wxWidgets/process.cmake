@@ -112,6 +112,7 @@ function(wxWidgets_process incs libs defs)
     # Prefer a real wx-config on PATH, prioritizing native Homebrew on Apple Silicon
     find_program(wx_config NAMES wx-config
             HINTS
+                ./build/_deps/wxwidgets-build
                 /opt/homebrew/bin
                 /usr/local/bin
                 /usr/bin)
