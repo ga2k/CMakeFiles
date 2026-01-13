@@ -22,7 +22,6 @@ function(wxWidgets_set_build_options)
         if (MSVC_RC)
             set(CMAKE_RC_COMPILER "${MSVC_RC}" CACHE FILEPATH "" FORCE)
         endif()
-message(FATAL_ERROR "FF")
         # Disable the problematic LLVM-RC preprocessing wrapper
         set(CMAKE_RC_USE_RESPONSE_FILE_FOR_INCLUDES ON CACHE BOOL "" FORCE)
         set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON CACHE BOOL "" FORCE)
