@@ -79,7 +79,7 @@ function(wxWidgets_export_variables pkgname)
         list(PREPEND _wxIncludePaths "${WX_OVERRIDE_PATH}")
 
         # 2. If targets already exist (e.g. from FetchContent), force it onto them immediately
-        foreach(lib core base gl net xml html aui ribbon richtext propgrid stc webview media)
+        foreach(lib ${components})
             if (TARGET wx::${lib})
                 target_include_directories(wx::${lib} SYSTEM BEFORE INTERFACE "${WX_OVERRIDE_PATH}")
             endif()
