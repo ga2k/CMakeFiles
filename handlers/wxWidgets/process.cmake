@@ -4,12 +4,11 @@ function(wxWidgets_process incs libs defs)
         include(${CMAKE_SOURCE_DIR}/cmake/handlers/wxWidgets/helpers.cmake OPTIONAL RESULT_VARIABLE helper_found)
         if (helper_found)
             wxWidgets_set_build_options()
-<<<<<<< HEAD
+
             # If we are in process.cmake but want source build, we must ensure FetchContent was handled.
             # However, fetchContents.cmake should have changed METHOD to FETCH_CONTENTS.
             # If for some reason it didn't, we can try to trigger export here if targets exist.
-=======
->>>>>>> 4e4119d2f549f147cda20aa8cd7c487de1f9cb29
+
             if (NOT _wxLibraries)
                  wxWidgets_export_variables("wxWidgets")
             endif()
@@ -197,24 +196,6 @@ function(wxWidgets_process incs libs defs)
         list(REMOVE_DUPLICATES local_frameworks)
         list(REMOVE_DUPLICATES local_defines)
         list(REMOVE_DUPLICATES local_compilerOptions)
-#        if (local_includePaths)
-#            list(REMOVE_DUPLICATES local_includePaths)
-#        endif()
-#        if (local_libraryPaths)
-#            list(REMOVE_DUPLICATES local_libraryPaths)
-#        endif()
-#        if (local_libraries)
-#            list(REMOVE_DUPLICATES local_libraries)
-#        endif()
-#        if (local_frameworks)
-#            list(REMOVE_DUPLICATES local_frameworks)
-#        endif()
-#        if (local_defines)
-#            list(REMOVE_DUPLICATES local_defines)
-#        endif()
-#        if (local_compilerOptions)
-#            list(REMOVE_DUPLICATES local_compilerOptions)
-#        endif()
 
         # On Apple Silicon, prefer /opt/homebrew include roots over /usr/local to avoid mixing Intel headers.
         if (APPLE)
@@ -258,7 +239,6 @@ function(wxWidgets_process incs libs defs)
 
         # Specify which wxWidgets libraries you need
         find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
-#        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base)
 
         if(wxWidgets_FOUND)
             # The FindwxWidgets module provides these variables:
