@@ -99,7 +99,7 @@ function(wxWidgets_export_variables pkgname)
                     break()
                 endif ()
             endforeach ()
-
+        endforeach ()
         message(STATUS "Applied wxWidgets include override: ${WX_OVERRIDE_PATH}")
     endif ()
 
