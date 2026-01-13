@@ -1,5 +1,26 @@
 function(wxWidgets_process incs libs defs)
 
+    if (BUILD_WX_FROM_SOURCE)
+        include(${CMAKE_SOURCE_DIR}/cmake/handlers/wxWidgets/helpers.cmake OPTIONAL RESULT_VARIABLE helper_found)
+        if (helper_found)
+            wxWidgets_set_build_options()
+            # If we are in process.cmake but want source build, we must ensure FetchContent was handled.
+            # However, fetchContents.cmake should have changed METHOD to FETCH_CONTENTS.
+            # If for some reason it didn't, we can try to trigger export here if targets exist.
+            if (NOT _wxLibraries)
+                 wxWidgets_export_variables("wxWidgets")
+            endif()
+            
+            if (_wxLibraries)
+                set(wxWidgets_INCLUDE_DIRS      ${_wxIncludePaths}       PARENT_SCOPE)
+                set(wxWidgets_LIBRARIES         ${_wxLibraries}          PARENT_SCOPE)
+                set(_wxIncludePaths             ${_wxIncludePaths}       PARENT_SCOPE)
+                set(_wxLibraries                ${_wxLibraries}          PARENT_SCOPE)
+                return()
+            endif()
+        endif()
+    endif()
+
     set(GLLibs)
     set(toolkit_used "")
 
