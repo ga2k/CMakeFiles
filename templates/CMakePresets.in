@@ -91,7 +91,11 @@
         "archType": "x64",
         "archPath": "/x64",
         "VCPKG_ROOT": "$env{USERPROFILE}/dev/sys/vcpkg"
+      },
+      "cacheVariables": {
+        "BUILD_WX_FROM_SOURCE:BOOL": "ON"
       }
+
     },
     {
       "name": "Windows",
@@ -126,7 +130,9 @@
         "CMAKE_LINKER": "C:/Program Files/LLVM/bin/lld-link.exe",
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_SYSTEM_PROCESSOR": "AMD64",
-        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe"
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe",
+        "BUILD_WX_FROM_SOURCE:BOOL": "ON"
+
       }
     },
     {
@@ -167,7 +173,8 @@
         "OPENSSL_PATH": "/opt/local/libexec/openssl3/lib/cmake/OpenSSL",
         "OPENSSL_INCLUDE_DIR": "/opt/local/include/openssl-3",
         "OPENSSL_CRYPTO_LIBRARY": "/opt/local/lib/openssl-3/libcrypto.dylib",
-        "OPENSSL_SSL_LIBRARY": "/opt/local/lib/openssl-3/libssl.dylib"
+        "OPENSSL_SSL_LIBRARY": "/opt/local/lib/openssl-3/libssl.dylib",
+        "BUILD_WX_FROM_SOURCE:BOOL": "ON"
       }
     },
     {
@@ -199,7 +206,8 @@
       },
       "cacheVariables": {
         "CMAKE_C_COMPILER": "/usr/bin/clang",
-        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+        "BUILD_WX_FROM_SOURCE:BOOL": "ON"
       }
     },
     {
