@@ -1,3 +1,4 @@
+enable_language(CXX)
 include(GNUInstallDirs)
 
 message(STATUS "=== Configuring Components ===")

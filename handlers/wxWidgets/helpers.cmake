@@ -11,7 +11,7 @@ function(wxWidgets_set_build_options)
     set(wxUSE_LEXILLA   OFF CACHE BOOL "" FORCE)
     set(wxUSE_STC       OFF CACHE BOOL "" FORCE)
     set(wxUSE_GRID      OFF CACHE BOOL "" FORCE)
-    
+
     if (LINUX)
         set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
     elseif (APPLE)
