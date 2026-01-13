@@ -108,11 +108,11 @@ function(wxWidgets_process incs libs defs)
     endif ()
     
     # Find wxWidgets dependencies
-
+    message(AUTHOR_WARNING "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}")
     # Prefer a real wx-config on PATH, prioritizing native Homebrew on Apple Silicon
     find_program(wx_config NAMES wx-config
             HINTS
-                ./build/_deps/wxwidgets-build
+                ${CMAKE_BINARY_DIR}/_deps/wxwidgets-build
                 /opt/homebrew/bin
                 /usr/local/bin
                 /usr/bin)
