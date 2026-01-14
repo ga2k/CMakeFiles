@@ -127,14 +127,14 @@ if(APP_GLOBAL_RESOURCES)
         set(GLOBAL_RES_DEST "share/${APP_VENDOR}")
     endif()
 
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/global-resources/
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
             DESTINATION ${GLOBAL_RES_DEST}
             COMPONENT GlobalResources
     )
 endif()
 
 # PCM/PCM-like files
-install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/${APP_NAME}.dir/"
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir/"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
         FILES_MATCHING
         PATTERN "*.pcm"
