@@ -18,13 +18,7 @@ function(wxWidgets_set_build_options)
         set(wxBUILD_TOOLKIT "osx_cocoa" CACHE STRING "" FORCE)
     elseif (WIN32)
         set(wxBUILD_TOOLKIT "msw" CACHE STRING "" FORCE)
-        find_program(MSVC_RC rc.exe)
-        if (MSVC_RC)
-            set(CMAKE_RC_COMPILER "${MSVC_RC}" CACHE FILEPATH "" FORCE)
-        endif()
-        # Disable the problematic LLVM-RC preprocessing wrapper
-        set(CMAKE_RC_USE_RESPONSE_FILE_FOR_INCLUDES ON CACHE BOOL "" FORCE)
-        set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON CACHE BOOL "" FORCE)
+        set(CMAKE_RC_COMPILER "rc")
     endif ()
 
     # Ensure it doesn't try to use system-installed wxWidgets when we are building from source
