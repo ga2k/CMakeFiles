@@ -5,7 +5,11 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_SQLITE3_AUTO ON)
     message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in SQLite3 library' FORCE)")
     set(SOCI_SQLITE3_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in SQLite3 library" FORCE)
-    set(SOCI_SQLITE3_BUILTIN ON)
+#    set(SOCI_SQLITE3_BUILTIN ON)
+
+    message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in fmt library' FORCE)")
+    set(SOCI_FMT_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in fmt library" FORCE)
+#    set(SOCI_FMT_BUILTIN ON)
 
     forceSet(WITH_BOOST "" OFF BOOL)
     forceSet(SOCI_TESTS "" OFF BOOL)
@@ -15,8 +19,7 @@ function(soci_preDownload pkgname url tag srcDir)
     forceSet(SOCI_MYSQL "" OFF BOOL)
     forceSet(SOCI_SHARED "" ON BOOL)
     forceSet(SOCI_STATIC "" OFF BOOL)
-    forceSet(SOCI_FMT_EXTERNAL "" OFF BOOL)
-    
+
     # Disable all SOCI backends by default
     set(SOCI_EMPTY OFF CACHE BOOL "Disable SOCI Empty backend" FORCE)
     set(SOCI_DB2 OFF CACHE BOOL "Disable SOCI DB2 backend" FORCE)
