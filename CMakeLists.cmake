@@ -5,28 +5,23 @@ message (NOTICE "\n\t\tProcessing ${APP_NAME}\n")
 unset (PLUGINS)
 
 if ("${APP_FEATURES}" MATCHES "APPEARANCE")
-#    list(REMOVE_ITEM APP_FEATURES APPEARANCE)
     list(APPEND PLUGINS Appearance)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "LOGGER")
-#    list(REMOVE_ITEM APP_FEATURES LOGGER)
     list(APPEND PLUGINS Logger)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "PRINT")
-#    list(REMOVE_ITEM APP_FEATURES PRINT)
     list(APPEND PLUGINS Print)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "CORE")
-    list(APPEND PLUGINS Print)
     list(APPEND REQD_LIBS "HoffSoft")
     list(APPEND FIND_PACKAGE_PATHS "CORE REQUIRED CONFIG PATHS {HoffSoft}" )
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "GFX")
-    list(APPEND PLUGINS Print)
     list(APPEND REQD_LIBS "Gfx")
     list(APPEND FIND_PACKAGE_PATHS "GFX  REQUIRED CONFIG PATHS {Gfx}" )
 endif ()

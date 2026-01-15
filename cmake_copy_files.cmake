@@ -32,18 +32,3 @@ function(copy_files_to_target_dir)
     endforeach()
 endfunction()
 
-copy_files_to_target_dir(
-TARGET_DIR
-    "${OUTPUT_DIR}/bin"
-SOURCE_DIRS
-    "${OUTPUT_DIR}/bin"
-    "${OUTPUT_DIR}/bin/Plugins"
-    "${OUTPUT_DIR}/lib"
-    "${OUTPUT_DIR}/lib/Plugins"
-    "${OUTPUT_DIR}/bin"
-    "${BUILD_DIR}/bin"
-    "${BUILD_DIR}/lib"
-    "${EXTERNALS_DIR}/Boost/stage/lib"
-FILE_PATTERNS
-    "*.exe" "*.dll" "*.plugin" "*.lib" "${PLUGINS_SENTINAL}*"
-)
