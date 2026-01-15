@@ -326,6 +326,8 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
+
+    set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI installation" FORCE)
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
