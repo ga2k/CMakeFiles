@@ -333,10 +333,5 @@ function(wxWidgets_process incs libs defs)
     set(_wxLibraries                ${local_libraries}              PARENT_SCOPE)
     set(_wxFrameworks               ${local_frameworks}             PARENT_SCOPE)
     # @formatter:on
-endfunction()
-
-if (WIDGETS IN_LIST APP_FEATURES)
-    wxWidgets_process(_IncludePathsList _LibrariesList _DefinesList)
     set(HANDLED ON)
-endif ()
-
+endfunction()

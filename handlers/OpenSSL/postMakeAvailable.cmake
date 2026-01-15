@@ -14,8 +14,6 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
 
     set(libr ${_LibrariesList} OpenSSL::SSL OpenSSL::Crypto)
     set(_LibrariesList ${libr} PARENT_SCOPE)
+    set(HANDLED ON)
 
 endfunction()
-
-OpenSSL_postMakeAvailable("${this_src}" "${this_build}" "${this_out}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
-set(HANDLED ON)

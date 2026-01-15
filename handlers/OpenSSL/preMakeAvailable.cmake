@@ -39,29 +39,6 @@ function(OpenSSL_preMakeAvailable _pkgname)
             LOG_FILE ${OUTPUT_DIR}/OpenSSLProj-update.log
     )
 
-#    add_library(OpenSSLShared SHARED IMPORTED)
-#    set_target_properties(OpenSSLShared PROPERTIES
-#            IMPORTED_LOCATION ${outDir}/openssl_install/lib/libssl.so
-#            IMPORTED_SONAME ${outDir}/openssl_install/lib/libssl.so
-#            IMPORTED_LOCATION_CRYPTO ${outDir}/openssl_install/lib/libcrypto.so
-#            IMPORTED_SONAME_CRYPTO ${outDir}/openssl_install/lib/libcrypto.so
-#    )
-#
-#    add_dependencies(OpenSSLShared OpenSSLProj)
-#
-##    addTarget(OpenSSLShared ON "")
-#
-#    list(APPEND librariesList OpenSSLShared)
-#    list(APPEND dependenciesList OpenSSLShared)
-#
-#    set(_DependenciesList   ${dependenciesList} PARENT_SCOPE)
-#    set(_IncludeFoldersList ${includeFoldersList} PARENT_SCOPE)
-#    set(_LibrariesList      ${librariesList} PARENT_SCOPE)
+    set(HANDLED ON)
+
 endfunction()
-
-OpenSSL_preMakeAvailable("${this_pkgname}")
-set(HANDLED ON)
-
-set(_DependenciesList   ${_DependenciesList} PARENT_SCOPE)
-set(_IncludeFoldersList ${_IncludeFoldersList} PARENT_SCOPE)
-set(_LibrariesList      ${_LibrariesList} PARENT_SCOPE)

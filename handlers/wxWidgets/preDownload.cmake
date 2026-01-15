@@ -1,3 +1,5 @@
-include(${CMAKE_CURRENT_LIST_DIR}/helpers.cmake)
-wxWidgets_set_build_options()
-set(HANDLED OFF PARENT_SCOPE)
+function (wxWidgets_preDownload pkgname url tag srcDir)
+    include(${CMAKE_CURRENT_LIST_DIR}/helpers.cmake)
+    wxWidgets_set_build_options()
+    set(HANDLED OFF)
+endfunction()

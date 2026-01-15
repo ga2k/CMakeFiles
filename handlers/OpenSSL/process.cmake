@@ -18,10 +18,5 @@ function(OpenSSL_process incs libs defs)
     else ()
         message(FATAL_ERROR "OpenSSL for Linux should not use \"process\"")
     endif ()
+    set(HANDLED ON)
 endfunction()
-
-if (SSL IN_LIST APP_FEATURES)
-    OpenSSL_process("${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
-endif ()
-set(HANDLED ON)
-

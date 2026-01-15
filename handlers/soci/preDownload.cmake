@@ -27,8 +27,6 @@ function(soci_preDownload pkgname url tag srcDir)
 
     # Enable only the backends you want
     set(SOCI_SQLITE3 ON CACHE BOOL "Enable SOCI SQLite3 backend" FORCE)
+    set(HANDLED OFF)
 
 endfunction()
-
-soci_preDownload(${this_pkgname} ${this_url} ${this_tag} "${EXTERNALS_DIR}/${this_pkgname}")
-set(HANDLED OFF)

@@ -41,11 +41,6 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
     set(_DefinesList      ${definesList} PARENT_SCOPE)
     set(_IncludePathsList ${includePathsList} PARENT_SCOPE)
     set(_LibrariesList    ${librariesList} PARENT_SCOPE)
+    set(HANDLED ON)
+
 endfunction()
-
-soci_postMakeAvailable("${this_src}" "${this_build}" "${this_out}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
-set(_DefinesList      ${_DefinesList} PARENT_SCOPE)
-set(_IncludePathsList ${_IncludePathsList} PARENT_SCOPE)
-set(_LibrariesList    ${_LibrariesList} PARENT_SCOPE)
-
-set(HANDLED ON)

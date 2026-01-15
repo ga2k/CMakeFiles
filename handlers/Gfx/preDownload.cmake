@@ -1,5 +1,4 @@
-function(gfx_postMakeAvailable sourceDir buildDir outDir buildType components)
-
+function(gfx_preDownload pkgname url tag srcDir)
     foreach (thing IN LISTS APP_FEATURES)
         if (${thing} IN_LIST SystemFeatures)
             set (feature)
@@ -23,8 +22,5 @@ function(gfx_postMakeAvailable sourceDir buildDir outDir buildType components)
             endif ()
         endif ()
     endforeach ()
+    set(HANDLED ON)
 endfunction()
-
-gfx_postMakeAvailable("${this_src}" "${this_build}" "${this_out}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
-
-set(HANDLED ON)

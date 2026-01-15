@@ -43,8 +43,6 @@ function(soci_fix target tag sourceDir)
             "soci::blob::blob(blob &&other) noexcept {};\n"
             "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n"
     )
+    set(HANDLED ON)
 
 endfunction()
-
-soci_fix("${this_pkgname}" "${this_tag}" "${this_src}")
-set(HANDLED ON)
