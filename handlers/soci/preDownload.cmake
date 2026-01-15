@@ -8,7 +8,7 @@ function(soci_preDownload pkgname url tag srcDir)
 #    set(SOCI_SQLITE3_BUILTIN ON)
 
     message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in fmt library' FORCE)")
-    set(SOCI_FMT_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in fmt library" FORCE)
+    set(SOCI_FMT_BUILTIN OFF CACHE STRING "Prefer, or forbid, using the built-in fmt library" FORCE)
 #    set(SOCI_FMT_BUILTIN ON)
 
     forceSet(WITH_BOOST "" OFF BOOL)
