@@ -15,7 +15,8 @@ function(soci_preDownload pkgname url tag srcDir)
     forceSet(SOCI_MYSQL "" OFF BOOL)
     forceSet(SOCI_SHARED "" ON BOOL)
     forceSet(SOCI_STATIC "" OFF BOOL)
-
+    forceSet(SOCI_FMT_EXTERNAL "" OFF BOOL)
+    
     # Disable all SOCI backends by default
     set(SOCI_EMPTY OFF CACHE BOOL "Disable SOCI Empty backend" FORCE)
     set(SOCI_DB2 OFF CACHE BOOL "Disable SOCI DB2 backend" FORCE)
