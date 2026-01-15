@@ -1,0 +1,30 @@
+function(gfx_postMakeAvailable sourceDir buildDir outDir buildType components)
+
+    foreach (thing IN LISTS APP_FEATURES)
+        if (${thing} IN_LIST SystemFeatures)
+            set (feature)
+            set (pkgname)
+            getFeaturePkgList (${SystemFeatureList} ${thing} feature)
+            popFront(feature pkgName)
+
+            if (TARGET ${APP_VENDOR}::pkgName)
+                message(STATUS "${APP_VENDOR}: Using bundled ${APP_VENDOR}::pkgName")
+                # Alias the internal target to the standard name so downstream find_package(pkgName)
+                # calls find the one ${APP_VENDOR} provides instead of downloading a new one.
+                if (NOT TARGET ${pkgName})
+                    add_library(${pkgName} ALIAS ${APP_VENDOR}::${pkgName})
+                endif()
+                if (NOT TARGET ${pkgName}::${pkgName})
+                    add_library(${pkgName}::${pkgName} ALIAS ${APP_VENDOR}::${pkgName})
+                endif()
+                string(TOUPPER ${pkgName} pkgNameUC)
+                # Mark the feature as already satisfied for fetchContents
+                set(${pkgNameUC}_FOUND ON CACHE INTERNAL "")
+            endif ()
+        endif ()
+    endforeach ()
+endfunction()
+
+gfx_postMakeAvailable("${this_src}" "${this_build}" "${this_out}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
+
+set(HANDLED ON)

@@ -138,6 +138,18 @@ endfunction()
 ##
 ######################################################################################
 ##
+function(popFront lineVarName frontVarName)
+    unset(${frontVarName} PARENT_SCOPE)
+    set(front "")
+    SplitAt("${${lineVarName}}" "|" front balance)
+    string(STRIP "${front}" front)
+    string(STRIP "${balance}" balance)
+    set(${frontVarName} "${front}" PARENT_SCOPE)
+    set(${lineVarName} "${lineVarName}" PARENT_SCOPE)
+endfunction()
+##
+######################################################################################
+##
 function(parsePackage pkgArray)
     set(options)
     set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST METHOD)
