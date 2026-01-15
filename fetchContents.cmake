@@ -121,7 +121,7 @@ endfunction()
 ########################################################################################################################
 ########################################################################################################################
 function(addPackageData)
-    set(switches SYSTEM;USER)
+    set(switches SYSTEM;USER;LIBRARY)
     set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
     set(arrays COMPONENTS;ARGS)
 
@@ -131,15 +131,21 @@ function(addPackageData)
         message(FATAL_ERROR "addPackageData: One of METHOD FIND/FETCH/PROCESS required")
     endif ()
 
-    if (apd_SYSTEM AND apd_USER)
-        message(FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER allowed")
+    if (NOT apd_SYSTEM AND NOT apd_USER AND NOT apd_LIBRARY)
+        set (apd_USER ON)
+    endif ()
+
+    if ((apd_SYSTEM AND apd_USER) OR (apd_SYSTEM AND apd_LIBRARY) OR (apd_USER AND apd_LIBRARY))
+        message(FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER/LIBRARY allowed")
     endif ()
     if (NOT apd_PKGNAME)
         message(FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
-    if ((apd_URL AND apd_GIT_REPOSITORY) OR
-    (apd_URL AND apd_SRCDIR) OR
-    (apd_GIT_REPOSITORY AND apd_SRCDIR))
+    if (
+        (apd_URL AND apd_GIT_REPOSITORY) OR
+        (apd_URL AND apd_SRCDIR) OR
+        (apd_GIT_REPOSITORY AND apd_SRCDIR)
+    )
         message(FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
     endif ()
     if (NOT apd_URL AND NOT apd_GIT_REPOSITORY AND NOT apd_SRCDIR AND apd_METHOD STREQUAL "FETCH_CONTENTS")
@@ -237,12 +243,16 @@ function(addPackageData)
 
     set(pkgIndex)
 
-    if (apd_USER OR NOT apd_SYSTEM)
+    if (apd_USER)
         set(activeArray UserFeatureData)
-    else ()
+    elseif (apd_SYSTEM)
         set(activeArray SystemFeatureData)
+    elseif (apd_LIBRARY)
+        set(activeArray LibraryFeatureData)
     endif ()
+
     getFeatureIndex(${activeArray} ${apd_FEATURE} pkgIndex)
+
     if (${pkgIndex} EQUAL -1)
         set(newEntry "${apd_FEATURE}|${entry}")
         list(APPEND ${activeArray} "${newEntry}")
@@ -344,13 +354,9 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    #    if (NOT WIN32)
     addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED)
-    #    else ()
-    #    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "PROCESS")
-    #    endif ()
 
     if (WIN32 OR APPLE OR LINUX)
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
@@ -368,8 +374,9 @@ function(createStandardPackageData)
         addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
     endif ()
 
-    set(SystemFeatureData "${SystemFeatureData}" PARENT_SCOPE)
-    set(UserFeatureData "${UserFeatureData}" PARENT_SCOPE)
+    set(SystemFeatureData  "${SystemFeatureData}"  PARENT_SCOPE)
+    set(LibraryFeatureData "${LibraryFeatureData}" PARENT_SCOPE)
+    set(UserFeatureData    "${UserFeatureData}"    PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################
@@ -446,7 +453,7 @@ function(fetchContents)
         list(APPEND SystemFeatures ${afeature})
     endforeach ()
 
-    foreach (line IN LISTS UserFeatureData)
+    foreach (line IN LISTS UserFeatureData LibraryFeatureData)
         SplitAt(${line} "|" afeature dc)
         list(APPEND OptionalFeatures ${afeature})
     endforeach ()
