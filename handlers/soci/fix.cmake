@@ -43,6 +43,6 @@ function(soci_fix target tag sourceDir)
             "soci::blob::blob(blob &&other) noexcept {};\n"
             "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n"
     )
-    set(HANDLED ON)
+    set(HANDLED ON PARENT_SCOPE)
 
 endfunction()

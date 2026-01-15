@@ -27,6 +27,6 @@ function(soci_preDownload pkgname url tag srcDir)
 
     # Enable only the backends you want
     set(SOCI_SQLITE3 ON CACHE BOOL "Enable SOCI SQLite3 backend" FORCE)
-    set(HANDLED OFF)
+    set(HANDLED      OFF PARENT_SCOPE)
 
 endfunction()

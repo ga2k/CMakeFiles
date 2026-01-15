@@ -333,5 +333,5 @@ function(wxWidgets_process incs libs defs)
     set(_wxLibraries                ${local_libraries}              PARENT_SCOPE)
     set(_wxFrameworks               ${local_frameworks}             PARENT_SCOPE)
     # @formatter:on
-    set(HANDLED ON)
+    set(HANDLED                     ON                              PARENT_SCOPE)
 endfunction()

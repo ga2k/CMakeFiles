@@ -50,14 +50,8 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
     list(APPEND librariesList OpenSSLShared)
     list(APPEND dependenciesList OpenSSLShared)
 
-    set(_DependenciesList   ${dependenciesList} PARENT_SCOPE)
-    set(_IncludeFoldersList ${includeFoldersList} PARENT_SCOPE)
-    set(_LibrariesList      ${librariesList} PARENT_SCOPE)
+    set(_DependenciesList   ${dependenciesList}     PARENT_SCOPE)
+    set(_IncludeFoldersList ${includeFoldersList}   PARENT_SCOPE)
+    set(_LibrariesList      ${librariesList}        PARENT_SCOPE)
+    set(HANDLED             ON                      PARENT_SCOPE)
 endfunction()
-
-OpenSSL_postMakeAvailable("${this_src}" "${this_build}" "${this_out}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
-set(HANDLED ON)
-
-set(_DependenciesList   ${_DependenciesList} PARENT_SCOPE)
-set(_IncludeFoldersList ${_IncludeFoldersList} PARENT_SCOPE)
-set(_LibrariesList      ${_LibrariesList} PARENT_SCOPE)

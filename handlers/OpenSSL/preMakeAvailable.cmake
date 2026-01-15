@@ -39,6 +39,6 @@ function(OpenSSL_preMakeAvailable _pkgname)
             LOG_FILE ${OUTPUT_DIR}/OpenSSLProj-update.log
     )
 
-    set(HANDLED ON)
+    set(HANDLED ON PARENT_SCOPE)
 
 endfunction()

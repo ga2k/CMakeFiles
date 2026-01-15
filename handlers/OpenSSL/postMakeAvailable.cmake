@@ -13,7 +13,7 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
     )
 
     set(libr ${_LibrariesList} OpenSSL::SSL OpenSSL::Crypto)
-    set(_LibrariesList ${libr} PARENT_SCOPE)
-    set(HANDLED ON)
+    set(_LibrariesList   ${libr}    PARENT_SCOPE)
+    set(HANDLED         ON          PARENT_SCOPE)
 
 endfunction()
