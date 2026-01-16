@@ -735,6 +735,8 @@ function(fetchContents)
     endif ()
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
+    string(ASCII 27 ESC)
+
     # Two-Pass Strategy:
     # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
     # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
@@ -744,7 +746,7 @@ function(fetchContents)
 
             SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
 
-            message(CHECK_START "${this_feature}")
+            message(CHECK_START "${ESC}[32m${this_feature}${ESC}[0m")
             list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
             # Skip features already found/aliased, but only check this in the final pass
@@ -913,7 +915,7 @@ function(fetchContents)
             endif ()
             message("")
             list(POP_BACK CMAKE_MESSAGE_INDENT)
-            message(CHECK_PASS "OK\n")
+            message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
 
         endforeach () # this_feature_entry
     endforeach () # pass_num

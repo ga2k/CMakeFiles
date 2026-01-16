@@ -36,14 +36,16 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
 
     add_library(OpenSSL::SSL SHARED IMPORTED)
     set_target_properties(OpenSSL::SSL PROPERTIES
-            IMPORTED_LOCATION ${outDir}/openssl_install/lib/libssl.so
-            IMPORTED_SONAME ${outDir}/openssl_install/lib/libssl.so
+            IMPORTED_SONAME ${outDir}/openssl_install/bin/libssl${CMAKE_SHARED_LIBRARY_SUFFIX}
+            IMPORTED_LOCATION ${outDir}/openssl_install/bin/libssl${CMAKE_SHARED_LIBRARY_SUFFIX}
+            IMPORTED_IMPLIB ${outDir}/openssl_install/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
     )
 
     add_library(OpenSSL::Crypto SHARED IMPORTED)
     set_target_properties(OpenSSL::Crypto PROPERTIES
-            IMPORTED_LOCATION ${outDir}/openssl_install/lib/libcrypto.so
-            IMPORTED_SONAME ${outDir}/openssl_install/lib/libcrypto.so
+            IMPORTED_SONAME ${outDir}/openssl_install/bin/libcrypto${CMAKE_SHARED_LIBRARY_SUFFIX}
+            IMPORTED_LOCATION ${outDir}/openssl_install/bin/libcrypto${CMAKE_SHARED_LIBRARY_SUFFIX}
+            IMPORTED_IMPLIB ${outDir}/openssl_install/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
     )
 
     set(librariesList  ${_LibrariesList} OpenSSL::SSL OpenSSL::Crypto)
