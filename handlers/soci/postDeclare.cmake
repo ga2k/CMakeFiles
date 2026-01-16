@@ -1,4 +1,4 @@
-function(soci_poseDeclare pkgname)
+function(soci_postDeclare pkgname)
 
     if(SKIP_INSTALL_RULES)
         set(CMAKE_SKIP_INSTALL_RULES OFF CACHE BOOL "" FORCE)
