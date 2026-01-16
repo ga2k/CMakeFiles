@@ -11,11 +11,6 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-    # --- Strip installation/export logic that causes conflicts in bundled builds ---
-    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "TARGETS soci_core\n" "TARGETS soci_core fmt\n")
-
-
-    // ... existing code ...
 # --- Strip installation/export logic that causes conflicts in bundled builds ---
 ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
 "[=[
