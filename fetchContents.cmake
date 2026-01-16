@@ -11,9 +11,6 @@ function(addTarget target pkgname addToLists components)
 
     unset(at_LibrariesList)
     unset(at_DependenciesList)
-    if ("${pkgname}" STREQUAL "wxxml" OR "${target}" STREQUAL "wxxml")
-        return()
-    endif ()
     message("addTarget called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
