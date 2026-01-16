@@ -744,16 +744,14 @@ function(fetchContents)
 
             SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
 
-            message(" ")
             message(CHECK_START "${this_feature}")
             list(APPEND CMAKE_MESSAGE_INDENT "\t")
-            message(" ")
 
             # Skip features already found/aliased, but only check this in the final pass
             # to allow declarations to overlap if necessary.
             if (${pass_num} EQUAL 1)
                 if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
-                    message("Feature already available without re-processing: skipped")
+                    message(STATUS "\nFeature already available without re-processing: skipped")
                     continue()
                 endif ()
             endif ()
@@ -803,6 +801,7 @@ function(fetchContents)
             if (${pass_num} EQUAL 0)
 
                 if ("${this_method}" STREQUAL "PROCESS")
+                    message(STATUS "\nThis target handles the entire process")
                     set(fn "${this_pkgname}_process")
                     if (COMMAND "${fn}")
                         cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
@@ -838,7 +837,7 @@ function(fetchContents)
                             set(COMPONENTS_KEYWORD "COMPONENTS")
                         endif ()
 
-                        message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                        message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
 
                         FetchContent_Declare(${this_pkgname}
                                 ${SOURCE_KEYWORD} ${this_url}
@@ -850,7 +849,7 @@ function(fetchContents)
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
 
-                        message("find_package(${this_pkgname} ${this_find_package_args})")
+                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
 
                         find_package(${this_pkgname} ${this_find_package_args})
 
@@ -888,7 +887,7 @@ function(fetchContents)
                     endif ()
 
                     if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
-                        message("FetchContent_MakeAvailable(${this_pkgname})")
+                        message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
 
                         FetchContent_MakeAvailable(${this_pkgname})
                         handleTarget()
@@ -914,7 +913,7 @@ function(fetchContents)
             endif ()
             message("")
             list(POP_BACK CMAKE_MESSAGE_INDENT)
-            message(CHECK_PASS "OK")
+            message(CHECK_PASS "OK\n")
 
         endforeach () # this_feature_entry
     endforeach () # pass_num
