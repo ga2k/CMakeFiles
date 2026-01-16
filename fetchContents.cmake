@@ -57,8 +57,8 @@ function(addTarget target pkgname addToLists components)
 
     ####################################################################################################################
     ####################################################################################################################
-    set (fn "${pkgname}_postAddTarget") ################################################################################
-    if(COMMAND "${fn}") ################################################################################################
+    set(fn "${pkgname}_postAddTarget") ################################################################################
+    if (COMMAND "${fn}") ################################################################################################
         cmake_language(CALL "${fn}" "${target}") #######################################################################
     endif () ###########################################################################################################
     ####################################################################################################################
@@ -87,24 +87,24 @@ function(initialiseFeatureHandlers)
 
     foreach (handler IN LISTS handlers)
         get_filename_component(handlerName "${handler}" NAME_WE)
-        get_filename_component(_path       "${handler}" DIRECTORY)
-        get_filename_component(packageName "${_path}"   NAME_WE)
+        get_filename_component(_path "${handler}" DIRECTORY)
+        get_filename_component(packageName "${_path}" NAME_WE)
 
         string(LENGTH ${handlerName} length)
         math(EXPR num_spaces "${longest} - ${length}")
-        string (SUBSTRING "${spaces}" 0 ${num_spaces} padding)
+        string(SUBSTRING "${spaces}" 0 ${num_spaces} padding)
 
         set(msg "Adding handler ${padding}${handlerName} for ${packageName}")
         if (${handlerName} STREQUAL "init")
-            string (APPEND msg " and calling it ..." )
+            string(APPEND msg " and calling it ...")
         endif ()
         message("${msg}")
         include("${handler}")
         if ("${handlerName}" STREQUAL "init")
             ############################################################################################################
             ############################################################################################################
-            set (fn "${packageName}_init") #############################################################################
-            if(COMMAND "${fn}") ########################################################################################
+            set(fn "${packageName}_init") #############################################################################
+            if (COMMAND "${fn}") ########################################################################################
                 cmake_language(CALL "${fn}") ###########################################################################
             endif () ###################################################################################################
             ############################################################################################################
@@ -132,7 +132,7 @@ function(addPackageData)
     endif ()
 
     if (NOT apd_SYSTEM AND NOT apd_USER AND NOT apd_LIBRARY)
-        set (apd_USER ON)
+        set(apd_USER ON)
     endif ()
 
     if ((apd_SYSTEM AND apd_USER) OR (apd_SYSTEM AND apd_LIBRARY) OR (apd_USER AND apd_LIBRARY))
@@ -142,9 +142,9 @@ function(addPackageData)
         message(FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
     if (
-        (apd_URL AND apd_GIT_REPOSITORY) OR
-        (apd_URL AND apd_SRCDIR) OR
-        (apd_GIT_REPOSITORY AND apd_SRCDIR)
+    (apd_URL AND apd_GIT_REPOSITORY) OR
+    (apd_URL AND apd_SRCDIR) OR
+    (apd_GIT_REPOSITORY AND apd_SRCDIR)
     )
         message(FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
     endif ()
@@ -281,9 +281,9 @@ function(addPackageData)
         set(${activeArray} "${${activeArray}}" PARENT_SCOPE)
     endif ()
 
-    set(SystemFeatureData   "${SystemFeatureData}"  PARENT_SCOPE)
-    set(LibraryFeatureData  "${LibraryFeatureData}" PARENT_SCOPE)
-    set(UserFeatureData     "${UserFeatureData}"    PARENT_SCOPE)
+    set(SystemFeatureData "${SystemFeatureData}" PARENT_SCOPE)
+    set(LibraryFeatureData "${LibraryFeatureData}" PARENT_SCOPE)
+    set(UserFeatureData "${UserFeatureData}" PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################
@@ -344,10 +344,10 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-#    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
-#            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
-#            ARG REQUIRED)
-#
+    #    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
+    #            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
+    #            ARG REQUIRED)
+    #
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED PREREQ FORMAT)
@@ -400,9 +400,9 @@ function(createStandardPackageData)
         addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
     endif ()
 
-    set(SystemFeatureData  "${SystemFeatureData}"  PARENT_SCOPE)
+    set(SystemFeatureData "${SystemFeatureData}" PARENT_SCOPE)
     set(LibraryFeatureData "${LibraryFeatureData}" PARENT_SCOPE)
-    set(UserFeatureData    "${UserFeatureData}"    PARENT_SCOPE)
+    set(UserFeatureData "${UserFeatureData}" PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################
@@ -430,11 +430,11 @@ function(fetchContents)
     if (AUE_DEBUG)
         log()
         log(TITLE "Before tampering " LISTS AUE_USE
-                                            AUE_NOT
-                                            AUE_OVERRIDE_FIND_PACKAGE
-                                            AUE_FIND_PACKAGE_ARGS
-                                            AUE_FIND_PACKAGE_COMPONENTS
-                                            AUE_PREREQS)
+                AUE_NOT
+                AUE_OVERRIDE_FIND_PACKAGE
+                AUE_FIND_PACKAGE_ARGS
+                AUE_FIND_PACKAGE_COMPONENTS
+                AUE_PREREQS)
     endif ()
 
     set(FETCHCONTENT_QUIET OFF)
@@ -664,7 +664,7 @@ function(fetchContents)
         unset(optComponents)
         unset(temp)
         ##
-        set (bothLibAndUser "${LibraryFeatureData};${UserFeatureData}")
+        set(bothLibAndUser "${LibraryFeatureData};${UserFeatureData}")
         parsePackage(bothLibAndUser
                 FEATURE ${feature}
                 PKG_INDEX ${this_pkgindex}
@@ -737,21 +737,6 @@ function(fetchContents)
     ####################################################################################################################
     ####################################################################################################################
 
-    # --- Discovery Phase: Split into Providers (Libraries) and Consumers (Others) ---
-    set(libraryWorkList)
-    set(consumerWorkList)
-
-    foreach (this_feature_entry IN LISTS unifiedFeatureList)
-        SplitAt(${this_feature_entry} "." target_feature pkg_ix)
-        getFeatureIndex(LibraryFeatureData ${target_feature} isLib)
-        if (NOT ${isLib} EQUAL -1)
-            list(APPEND libraryWorkList ${this_feature_entry})
-        else ()
-            list(APPEND consumerWorkList ${this_feature_entry})
-        endif ()
-    endforeach ()
-
-    # Prepare counters for the summary
     list(LENGTH unifiedFeatureList numWanted)
     set(numFailed 0)
     if (${numWanted} EQUAL 1)
@@ -761,44 +746,22 @@ function(fetchContents)
     endif ()
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-    # Two-Pass Execution: Pass 0 = Libraries, Pass 1 = Systems/Users
-    set(activeWorkList ${libraryWorkList})
+    # Two-Pass Strategy:
+    # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
+    # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
     foreach (pass_num RANGE 1)
-        if (${pass_num} EQUAL 1)
-            # --- Bundle Discovery: Check if built libraries provide requested features ---
-            foreach (this_feature_entry IN LISTS consumerWorkList)
-                SplitAt(${this_feature_entry} "." target_feature pkg_ix)
-                parsePackage(AllPackageData FEATURE ${target_feature} PKG_INDEX ${pkg_ix} LIST pkg_details)
-                list(GET pkg_details 0 this_pkgname)
+        foreach (this_feature_entry IN LISTS unifiedFeatureList)
 
-                set(bundled_target "${APP_VENDOR}::${this_pkgname}")
-                if (TARGET ${bundled_target})
-                    message(STATUS "Feature ${target_feature} found in bundled library ${bundled_target}")
-                    if (NOT TARGET ${this_pkgname})
-                        add_library(${this_pkgname} ALIAS ${bundled_target})
-                    endif()
-                    # Setting this ensures the loop below skips it
-                    set(${this_pkgname}_FOUND ON CACHE INTERNAL "Bundled by provider")
-                endif()
-            endforeach()
+            SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
 
-            set(activeWorkList ${consumerWorkList})
-        endif()
-
-        # --- BIG LOOP: Processes the current WorkList ---
-        foreach (this_feature IN LISTS activeWorkList)
-
-            SplitAt(${this_feature} "." this_feature this_pkgindex)
-
-            if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
-                message(STATUS "Feature ${this_feature} is already satisfied, skipping.")
-                continue()
+            # Skip features already found/aliased, but only check this in the final pass
+            # to allow declarations to overlap if necessary.
+            if (${pass_num} EQUAL 1)
+                if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
+                    continue()
+                endif ()
             endif ()
-
-            message(" ")
-            message(CHECK_START "${this_feature}")
-            list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
             unset(pkg_details)
             unset(this_pkgname)
@@ -836,222 +799,119 @@ function(fetchContents)
             findInList("${unifiedArgumentList}" ${this_feature} " " this_find_package_args)
 
             list(POP_FRONT pkg_details this_pkgname this_namespace)
-            list(LENGTH this_find_package_components num_components)
-            list(LENGTH this_find_package_args num_args)
+            string(TOLOWER "${this_pkgname}" this_pkglc)
+            string(TOUPPER "${this_pkgname}" this_pkguc)
 
-            if ("${this_method}" STREQUAL "PROCESS")
-                ########################################################################################################
-                ########################################################################################################
-                set (HANDLED OFF) ######################################################################################
-                set (fn "${pkgname}_process") ##########################################################################
-                if(COMMAND "${fn}") ####################################################################################
-                    cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}") ##########
-                endif () ###############################################################################################
-                ########################################################################################################
-                ########################################################################################################
+            # ==========================================================================================================
+            # PASS 0: DECLARATION & FIND_PACKAGE phase
+            # ==========================================================================================================
+            if (${pass_num} EQUAL 0)
+
+                if ("${this_method}" STREQUAL "PROCESS")
+                    set(fn "${this_pkgname}_process")
+                    if (COMMAND "${fn}")
+                        cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
+                    endif ()
+                endif ()
+
+                # Pre-download hooks (mostly for setting variables/policies)
+                set(fn "${this_pkgname}_preDownload")
+                if (COMMAND "${fn}")
+                    cmake_language(CALL "${fn}" "${this_pkgname}" "${this_url}" "${this_tag}" "${this_src}")
+                endif ()
+
+                if ("${this_method}" STREQUAL "FETCH_CONTENTS")
+                    if (this_fetch)
+                        # Normalise source/URL keywords
+                        string(FIND "${this_url}" ".zip" azip)
+                        string(FIND "${this_url}" ".tar" atar)
+                        string(FIND "${this_url}" ".gz" agz)
+                        if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
+                            set(SOURCE_KEYWORD "URL")
+                            unset(GIT_TAG_KEYWORD)
+                            unset(this_tag)
+                        else ()
+                            set(SOURCE_KEYWORD "GIT_REPOSITORY")
+                            set(GIT_TAG_KEYWORD "GIT_TAG")
+                        endif ()
+
+                        # Setup Override keywords
+                        list(LENGTH this_find_package_components num_components)
+                        list(LENGTH this_find_package_args num_args)
+                        if (num_args OR num_components)
+                            set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                            set(COMPONENTS_KEYWORD "COMPONENTS")
+                        endif ()
+
+                        FetchContent_Declare(${this_pkgname}
+                                ${SOURCE_KEYWORD} ${this_url}
+                                SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                ${GIT_TAG_KEYWORD} ${this_tag})
+                    endif ()
+                elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
+                    if (NOT TARGET ${this_namespace}::${this_pkgname})
+                        find_package(${this_pkgname} ${this_find_package_args})
+                        if (${this_pkgname}_LIBRARIES)
+                            list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+                        endif ()
+                    endif ()
+                endif ()
+
+                # ==========================================================================================================
+                # PASS 1: POPULATION & FIX phase
+                # ==========================================================================================================
             else ()
-                set(HANDLED OFF)
+                message(" ")
+                message(CHECK_START "${this_feature}")
+                list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+                if ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
+
+                    set(fn "${this_pkgname}_preMakeAvailable")
+                    if (COMMAND "${fn}")
+                        cmake_language(CALL "${fn}" "${this_pkgname}")
+                    endif ()
+
+                    # Perform the actual population
+                    set(_saved_scan ${CMAKE_CXX_SCAN_FOR_MODULES})
+                    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+                    FetchContent_MakeAvailable(${this_pkgname})
+                    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan})
+
+                    # Setup source/build paths for handlers
+                    if (NOT this_src)
+                        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                    endif ()
+                    if (NOT this_build)
+                        set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
+                    endif ()
+
+                    set(fn "${this_pkgname}_postMakeAvailable")
+                    if (COMMAND "${fn}")
+                        cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
+                    endif ()
+
+                    # Auto-include the standard 'include' folder if it exists and wasn't handled
+                    if (EXISTS "${this_src}/include")
+                        list(APPEND _IncludePathsList "${this_src}/include")
+                    endif ()
+                endif ()
+
+                # Final patching/fixing phase
+                set(fn "${this_pkgname}_fix")
+                if (COMMAND "${fn}")
+                    cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                endif ()
+
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_PASS "OK")
             endif ()
 
-            if (NOT HANDLED)
-                if (num_components GREATER 0 AND NOT ${this_namespace} STREQUAL "")
-                    unset(this_namespace_package_components)
-                    foreach (component IN LISTS this_find_package_components)
-                        if (NOT "::" IN_LIST component AND NOT ${this_namespace} STREQUAL "")
-                            set(component ${this_namespace}::${component})
-                            list(APPEND this_namespace_package_components ${component})
-                        endif ()
-                    endforeach ()
-                endif ()
+        endforeach () # this_feature_entry
+    endforeach () # pass_num
 
-                if (num_args OR num_components)
-                    set(this_override_find_package ON)
-                    set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
-                    if (num_args)
-                        list(APPEND this_hint ${this_find_package_args})
-                    endif ()
-                    if (num_components)
-                        set(COMPONENTS_KEYWORD "COMPONENTS")
-                    endif ()
-                else ()
-                    set(this_override_find_package OFF)
-                endif ()
-
-                unset(cmd_line)
-                string(FIND "${this_url}" ".zip" azip)
-                string(FIND "${this_url}" ".tar" atar)
-                string(FIND "${this_url}" ".gz" agz)
-
-                if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
-                    set(SOURCE_KEYWORD "URL")
-                    unset(GIT_TAG_KEYWORD)
-                    unset(this_tag)
-                else ()
-                    set(SOURCE_KEYWORD "GIT_REPOSITORY")
-                    set(GIT_TAG_KEYWORD "GIT_TAG")
-                endif ()
-
-                string(TOLOWER "${this_pkgname}" this_pkglc)
-                string(TOUPPER "${this_pkgname}" this_pkguc)
-
-                if (NOT ${this_method} STREQUAL "PROCESS")
-                    ####################################################################################################
-                    ####################################################################################################
-                    set (HANDLED OFF) ##################################################################################
-                    set (fn "${this_pkgname}_preDownload") #############################################################
-                    if(COMMAND "${fn}") ################################################################################
-                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_url}" "${this_tag}" "${this_src}") #######
-                    endif () ###########################################################################################
-                    ####################################################################################################
-                    ####################################################################################################
-                endif ()
-
-                if (NOT HANDLED)
-                    if (${this_method} STREQUAL "FETCH_CONTENTS")
-                        if (NOT this_fetch)
-                            message("FetchContent_Declare not required for ${this_pkgname}")
-                        else ()
-                            if ("${SOURCE_KEYWORD}" STREQUAL URL)
-                                FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname})
-                            else ()
-                                FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})
-                            endif ()
-                        endif ()
-                    else ()
-                        if (NOT TARGET ${this_namespace}::${this_pkgname})
-                            list(FIND this_find_package_args "PATHS" pinx)
-                            if (${pinx} GREATER_EQUAL 0)
-                                list(REMOVE_AT this_find_package_args ${pinx})
-                                list(LENGTH this_find_package_args arg_count)
-                                if (${pinx} LESS ${arg_count})
-                                    list(GET this_find_package_args ${pinx} ${this_pkgname}_DIR)
-                                    list(REMOVE_AT this_find_package_args ${pinx})
-                                endif ()
-                            endif ()
-                            find_package(${this_pkgname} ${this_find_package_args})
-                            if (${this_pkgname}_LIBRARIES)
-                                set(add_Libraries ${${this_pkgname}_LIBRARIES})
-                            elseif (${this_pkguc}_LIBRARIES)
-                                set(add_Libraries ${${this_pkguc}_LIBRARIES})
-                            elseif (${this_pkglc}_LIBRARIES)
-                                set(add_Libraries ${${this_pkglc}_LIBRARIES})
-                            endif ()
-                            list(APPEND _LibrariesList ${add_Libraries})
-                        endif ()
-                        set(HANDLED ON)
-                    endif ()
-                endif ()
-
-                if (NOT ${this_method} STREQUAL "PROCESS")
-                    ####################################################################################################
-                    ####################################################################################################
-                    set (HANDLED OFF) ##################################################################################
-                    set (fn "${this_pkgname}_postDownload") ############################################################
-                    if(COMMAND "${fn}") ################################################################################
-                        cmake_language(CALL "${fn}" "${_LibrariesList}" "${this_fetch}") ###############################
-                    endif () ###########################################################################################
-                    ####################################################################################################
-                    ####################################################################################################
-                endif ()
-
-                if (this_fetch)
-                    if (${this_method} STREQUAL "FETCH_CONTENTS")
-                        ################################################################################################
-                        ################################################################################################
-                        set (HANDLED OFF) ##############################################################################
-                        set (fn "${this_pkgname}_preMakeAvailable") ####################################################
-                        if(COMMAND "${fn}") ############################################################################
-                            cmake_language(CALL "${fn}" "${this_pkgname}") #############################################
-                        endif () #######################################################################################
-                        ################################################################################################
-                        ################################################################################################
-                    endif ()
-
-                    if (NOT HANDLED)
-                        set (_saved_scan ${CMAKE_CXX_SCAN_FOR_MODULES})
-                        set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
-                        set(CMAKE_CXX_SCAN_FOR_MODULES OFF PARENT_SCOPE)
-                        FetchContent_MakeAvailable(${this_pkgname})
-                        set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan} PARENT_SCOPE)
-                        set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan})
-                    endif ()
-
-                    if (NOT ${this_method} STREQUAL "FIND_PACKAGE")
-                        if (NOT this_src)
-                            set(this_src ${${this_pkglc}_SOURCE_DIR})
-                            if (NOT this_src)
-                                set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
-                            endif ()
-                        endif ()
-                        if (NOT this_build)
-                            if (DEFINED ${this_pkglc}_BINARY_DIR)
-                                set(this_build ${${this_pkglc}_BINARY_DIR})
-                            else ()
-                                set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
-                            endif ()
-                        endif ()
-                    endif ()
-
-                    if ("${this_method}" STREQUAL "FETCH_CONTENTS")
-                        ################################################################################################
-                        ################################################################################################
-                        set (HANDLED OFF) ##############################################################################
-                        set (fn "${this_pkgname}_postMakeAvailable") ###################################################
-                        if(COMMAND "${fn}") ############################################################################
-                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
-                        endif () #######################################################################################
-                        ################################################################################################
-                        ################################################################################################
-                    endif ()
-
-                    if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
-                        if (this_incdir)
-                            if (EXISTS "${this_incdir}")
-                                target_include_directories(${this_pkgname} PUBLIC ${this_incdir})
-                                list(APPEND _IncludePathsList ${this_incdir})
-                            endif ()
-                        else ()
-                            if (EXISTS ${${this_pkglc}_SOURCE_DIR}/include)
-                                list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR}/include)
-                            endif ()
-                        endif ()
-
-                        set(anyTargetFound OFF)
-                        if (NOT ${this_pkgname} IN_LIST NoLibPackages)
-                            list(APPEND _DefinesList USING_${this_feature})
-                            foreach (component IN LISTS this_find_package_components)
-                                if (TARGET ${component})
-                                    addTarget(${component} ${this_pkgname} ON "${this_find_package_components}")
-                                    set(anyTargetFound ON)
-                                endif ()
-                            endforeach ()
-                            if (TARGET ${this_pkgname} AND NOT anyTargetFound)
-                                addTarget(${this_pkgname} ${this_pkgname} ON "")
-                                set(anyTargetFound ON)
-                            endif ()
-                        endif ()
-                        if (NOT anyTargetFound)
-                            list(APPEND _LibrariesList ${this_pkgname})
-                        endif ()
-                    endif ()
-                endif ()
-
-                ########################################################################################################
-                ########################################################################################################
-                set (HANDLED OFF) ######################################################################################
-                set(fn "${this_pkgname}_fix" ) #########################################################################
-                if(COMMAND "${fn}") ####################################################################################
-                    cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${this_src}") #########################
-                endif () ###############################################################################################
-                ########################################################################################################
-                ########################################################################################################
-
-            endif ()
-
-            list(POP_BACK CMAKE_MESSAGE_INDENT)
-            message(CHECK_PASS "OK")
-        endforeach () # activeWorkList
-    endforeach () # Pass (RANGE 1)
 
     set(ies "ies")
     if (numWanted EQUAL 1)
