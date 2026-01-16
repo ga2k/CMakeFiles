@@ -13,9 +13,43 @@ function(soci_fix target tag sourceDir)
 
     # --- Strip installation/export logic that causes conflicts in bundled builds ---
     ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "TARGETS soci_core\n" "TARGETS soci_core fmt\n")
+
+
+    // ... existing code ...
+# --- Strip installation/export logic that causes conflicts in bundled builds ---
+ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
+[=[
+install(
+  TARGETS soci_core
+  EXPORT SOCICoreTargets
+  RUNTIME DESTINATION "${SOCI_INSTALL_BINDIR}"
+    COMPONENT soci_runtime
+  LIBRARY DESTINATION "${SOCI_INSTALL_LIBDIR}"
+    COMPONENT          soci_runtime
+    NAMELINK_COMPONENT soci_development
+  ARCHIVE DESTINATION "${SOCI_INSTALL_LIBDIR}"
+    COMPONENT soci_development
+  FILE_SET headers DESTINATION "${SOCI_INSTALL_INCLUDEDIR}"
+    COMPONENT soci_development
+)
+# Generate and install a targets file
+install(
+  EXPORT SOCICoreTargets
+  DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
+  FILE SOCICoreTargets.cmake
+  NAMESPACE SOCI::
+  COMPONENT soci_development
+)
+]=]
+ "")
+
+    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
+    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
+    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
+
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
 
