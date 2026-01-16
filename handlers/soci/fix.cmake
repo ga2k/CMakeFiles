@@ -13,7 +13,7 @@ function(soci_fix target tag sourceDir)
 
 # --- Strip installation/export logic that causes conflicts in bundled builds ---
 ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
-"[=[
+[=[
 install(
   TARGETS soci_core
   EXPORT SOCICoreTargets
@@ -34,8 +34,7 @@ install(
   FILE SOCICoreTargets.cmake
   NAMESPACE SOCI::
   COMPONENT soci_development
-)
-]=]" "")
+)]=] "")
 
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
