@@ -4,12 +4,13 @@ function(OpenSSL_process incs libs defs)
         return()
     endif ()
 
-    set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
     # code that has to run after FetchContent_MakeAvailable
     # Create a variable to hold the OpenSSL source directory
-    set(sourceDir "${EXTERNAL_DIR}")
+    set(sourceDir "${EXTERNALS_DIR}")
     set(buildDir  "${BUILD_DIR}/_deps")
     set(outDir    "${OUTPUT_DIR}/${this_pkglc}")
+
+    set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
 
     # Use ExternalProject to build OpenSSL manually since it doesn't use CMake
     include(ExternalProject)
