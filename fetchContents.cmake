@@ -122,8 +122,8 @@ endfunction()
 ########################################################################################################################
 function(addPackageData)
     set(switches SYSTEM;USER;LIBRARY)
-    set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG)
-    set(arrays COMPONENTS;ARGS)
+    set(args METHOD;FEATURE;PKGNAME;NAMESPACE;URL;GIT_REPOSITORY;SRCDIR;GIT_TAG;BINDIR;INCDIR;COMPONENT;ARG;PREREQ)
+    set(arrays COMPONENTS;ARGS;PREREQS)
 
     cmake_parse_arguments("apd" "${switches}" "${args}" "${arrays}" ${ARGN})
 
@@ -171,6 +171,10 @@ function(addPackageData)
         list(APPEND apd_ARGS ${apd_ARG})
     endif ()
 
+    if (apd_PREREQ)
+        list(APPEND apd_PREREQS ${apd_PREREQ})
+    endif ()
+
     set(entry "${apd_PKGNAME}")
 
     if (${apd_METHOD} STREQUAL "PROCESS")
@@ -185,6 +189,7 @@ function(addPackageData)
         unset(apd_ARG)
         unset(apd_COMPONENTS)
         unset(apd_ARGS)
+
     endif ()
 
     if (apd_NAMESPACE)
@@ -241,6 +246,17 @@ function(addPackageData)
         string(APPEND entry "|")
     endif ()
 
+    if (apd_PREREQ)
+        set(prereqs)
+        foreach (prereq IN LISTS apd_ARGS)
+            string(JOIN " " prereqs "${prereqs}" "${prereq}")
+        endforeach ()
+        string(STRIP "${prereqs}" prereqs)
+        string(JOIN "|" entry "${entry}" "${prereqs}")
+    else ()
+        string(APPEND entry "|")
+    endif ()
+
     set(pkgIndex)
 
     if (apd_USER)
@@ -276,7 +292,7 @@ endfunction()
 function(createStandardPackageData)
 
     # 1          2          3            4        5                6                     7          8                                            9
-    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]]
+    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
@@ -288,7 +304,7 @@ function(createStandardPackageData)
     #   [5] One or the other of
     #       ----------------------------------------------------------------------------------------------------
     #       GIT_REPOSITORY is the git url where the package can be found
-    #       URL is the lofeatureion of a .zip, .tar, or .gz file, either remote or local
+    #       URL is the location of a .zip, .tar, or .gz file, either remote or local
     #       ----------------------------------------------------------------------------------------------------
     #   or
     #       ----------------------------------------------------------------------------------------------------
@@ -307,12 +323,14 @@ function(createStandardPackageData)
     #
     #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
     #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
-
+    #
+    #  [10] PREREQ [PREREQ [PREREQ [...]]] Space separated list of FEATURES that must be loaded first
+    #
     #   [, ...] More packages in the same feature, if any
     #
-    #    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
-    #            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-    #            COMPONENT "cpptrace" ARG REQUIRED)
+    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
+            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
+            COMPONENT "cpptrace" ARG REQUIRED)
 
     addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
@@ -326,11 +344,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
+    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
+            ARG REQUIRED)
 
-    set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI installation" FORCE)
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED PREREQ FORMAT)
 
     #
     ##
@@ -339,10 +359,10 @@ function(createStandardPackageData)
     #
 
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG)
+            ARGS REQUIRED CONFIG PREREQ DATABASE=soci)
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG)
+            ARGS REQUIRED CONFIG PREREQ CORE)
 
     #
     ##
@@ -394,7 +414,7 @@ function(fetchContents)
 
     set(options HELP DEBUG)
     set(oneValueArgs PREFIX)
-    set(multiValueArgs USE;NOT;OVERRIDE_FIND_PACKAGE;FIND_PACKAGE_ARGS;FIND_PACKAGE_COMPONENTS) # NOT has precedence over USE
+    set(multiValueArgs USE;NOT;OVERRIDE_FIND_PACKAGE;FIND_PACKAGE_ARGS;FIND_PACKAGE_COMPONENTS;PREREQS) # NOT has precedence over USE
 
     cmake_parse_arguments(AUE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGV})
 
@@ -409,7 +429,12 @@ function(fetchContents)
 
     if (AUE_DEBUG)
         log()
-        log(TITLE "Before tampering " LISTS AUE_USE AUE_NOT AUE_OVERRIDE_FIND_PACKAGE AUE_FIND_PACKAGE_ARGS AUE_FIND_PACKAGE_COMPONENTS)
+        log(TITLE "Before tampering " LISTS AUE_USE
+                                            AUE_NOT
+                                            AUE_OVERRIDE_FIND_PACKAGE
+                                            AUE_FIND_PACKAGE_ARGS
+                                            AUE_FIND_PACKAGE_COMPONENTS
+                                            AUE_PREREQS)
     endif ()
 
     set(FETCHCONTENT_QUIET OFF)
@@ -442,6 +467,7 @@ function(fetchContents)
     set(FeatureIncDirIX 6)
     set(FeatureComponentsIX 7)
     set(FeatureArgsIX 8)
+    set(FeaturePrereqsIX 9)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
@@ -453,6 +479,7 @@ function(fetchContents)
     set(PkgIncDirIX 5)
     set(PkgComponentsIX 6)
     set(PkgArgsIX 7)
+    set(PkgPrereqsIX 8)
 
     foreach (line IN LISTS SystemFeatureData)
         SplitAt(${line} "|" afeature dc)
@@ -531,8 +558,6 @@ function(fetchContents)
                 LIST pkgs
                 COMPONENTS sysComponents
                 ARGS sysArguments)
-
-
         ##
         ## All system packages are REQUIRED
         list(APPEND combinedArguments "REQUIRED")
@@ -635,8 +660,8 @@ function(fetchContents)
         unset(combinedComponents)
         unset(index)
         unset(pkg)
-        unset(sysArguments)
-        unset(sysComponents)
+        unset(optArguments)
+        unset(optComponents)
         unset(temp)
         ##
         set (bothLibAndUser "${LibraryFeatureData};${UserFeatureData}")
@@ -646,6 +671,7 @@ function(fetchContents)
                 LIST pkg
                 COMPONENTS optComponents
                 ARGS optArguments)
+
         ##
         if (NOT "${pkg}" STREQUAL "")
             findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${feature} " " callerComponents index)
@@ -678,7 +704,7 @@ function(fetchContents)
             if (NOT "${temp}" STREQUAL ${feature})
                 list(APPEND unifiedArgumentList "${temp}")
             endif ()
-
+            ##
             list(APPEND unifiedFeatureList ${feature}.${this_pkgindex})
             list(APPEND deadFeatures ${feature})
         endif ()
@@ -704,6 +730,12 @@ function(fetchContents)
     if (AUE_DEBUG)
         log(TITLE "After tampering" LISTS unifiedFeatureList unifiedArgumentList unifiedComponentList)
     endif ()
+
+    ####################################################################################################################
+    ####################################################################################################################
+    ################################ T H E   R E A L   W O R K   B E G I N S   H E R E #################################
+    ####################################################################################################################
+    ####################################################################################################################
 
     # --- Discovery Phase: Split into Providers (Libraries) and Consumers (Others) ---
     set(libraryWorkList)

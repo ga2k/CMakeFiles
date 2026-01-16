@@ -6,7 +6,7 @@ function(soci_preDownload pkgname url tag srcDir)
     message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in SQLite3 library' FORCE)")
     set(SOCI_SQLITE3_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in SQLite3 library" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON)
-    message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in fmt library' FORCE)")
+    message(FATAL_ERROR "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in fmt library' FORCE)")
     set(SOCI_FMT_BUILTIN OFF CACHE STRING "Prefer, or forbid, using the built-in fmt library" FORCE)
     set(SOCI_FMT_BUILTIN OFF)
     FetchContent_Declare(
