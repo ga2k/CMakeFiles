@@ -26,15 +26,15 @@ function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType component
     )
 
 #    # Renamed from 'update' to 'checkout-tag' to avoid conflict with built-in update step
-#    ExternalProject_Add_Step(
-#            OpenSSLProj
-#            checkout-tag
-#            COMMAND git checkout openssl-3.3.2
-#            WORKING_DIRECTORY ${sourceDir}/OpenSSL
-#            DEPENDEES download  # Run after download step
-#            DEPENDERS configure # Run before configure step
-#            LOG 1
-#    )
+    ExternalProject_Add_Step(
+            OpenSSLProj
+            checkout-tag
+            COMMAND git checkout openssl-3.3.2
+            WORKING_DIRECTORY ${sourceDir}/OpenSSL
+            DEPENDEES download  # Run after download step
+            DEPENDERS configure # Run before configure step
+            LOG 1
+    )
 
     add_library(OpenSSL::SSL SHARED IMPORTED)
     set_target_properties(OpenSSL::SSL PROPERTIES
