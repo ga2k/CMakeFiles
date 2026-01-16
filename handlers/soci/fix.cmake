@@ -13,6 +13,7 @@ function(soci_fix target tag sourceDir)
 
     # --- Strip installation/export logic that causes conflicts in bundled builds ---
     ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "TARGETS soci_core\n" "TARGETS soci_core fmt\n")
+    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval" "define FMT_CONSTEVAL")
 
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
