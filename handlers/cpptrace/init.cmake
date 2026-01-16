@@ -9,6 +9,8 @@ function(cpptrace_init)
         set (CPPTRACE_UNWIND_WITH_DLADDR ON CACHE BOOL "Ok?")
         # Avoid forcing libunwind to prevent mismatched availability/config
         set (CPPTRACE_UNWIND_WITH_LIBUNWIND OFF CACHE BOOL "Ok?")
+        # Ensure demangling via cxxabi when available
+        set (CPPTRACE_DEMANGLE_WITH_CXXABI ON CACHE BOOL "Ok?")
     elseif(WIN32)
         # On Windows, even with Clang, WinAPI and DbgHelp are the preferred backends.
         # This works for both MSVC-style (PDB) and many MinGW/Clang setups.
@@ -17,10 +19,9 @@ function(cpptrace_init)
     else()
         set (CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE ON CACHE BOOL "Ok?")
         set (CPPTRACE_UNWIND_WITH_LIBUNWIND ON CACHE BOOL "Ok?")
-endif()
-
-    # Ensure demangling via cxxabi when available
-    set (CPPTRACE_DEMANGLE_WITH_CXXABI ON CACHE BOOL "Ok?")
+        # Ensure demangling via cxxabi when available
+        set (CPPTRACE_DEMANGLE_WITH_CXXABI ON CACHE BOOL "Ok?")
+    endif()
 
     # Keep ABI stable across headers and library by disabling any inline ABI namespaces
     # (This define is consumed by cpptrace to avoid namespace-versioned symbols on some builds)
