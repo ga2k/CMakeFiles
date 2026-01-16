@@ -45,7 +45,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
     set(_DefinesList        ${definesList}      PARENT_SCOPE)
     set(_IncludePathsList   ${includePathsList} PARENT_SCOPE)
     set(_LibrariesList      ${librariesList}    PARENT_SCOPE)
-    set(_dependenciesList   ${dependenciesList} PARENT_SCOPE)
+    set(_DependenciesList   ${dependenciesList} PARENT_SCOPE)
 
     set(HANDLED ON PARENT_SCOPE)
 

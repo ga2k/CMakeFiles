@@ -12,29 +12,30 @@ function(soci_fix target tag sourceDir)
     message("Applying local patches to ${p0}...")
 
 # --- Strip installation/export logic that causes conflicts in bundled builds ---
-ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
-[=[
-install(
-  TARGETS soci_core
-  EXPORT SOCICoreTargets
-  RUNTIME DESTINATION "${SOCI_INSTALL_BINDIR}"
-    COMPONENT soci_runtime
-  LIBRARY DESTINATION "${SOCI_INSTALL_LIBDIR}"
-    COMPONENT          soci_runtime
-    NAMELINK_COMPONENT soci_development
-  ARCHIVE DESTINATION "${SOCI_INSTALL_LIBDIR}"
-    COMPONENT soci_development
-  FILE_SET headers DESTINATION "${SOCI_INSTALL_INCLUDEDIR}"
-    COMPONENT soci_development
-)
-# Generate and install a targets file
-install(
-  EXPORT SOCICoreTargets
-  DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
-  FILE SOCICoreTargets.cmake
-  NAMESPACE SOCI::
-  COMPONENT soci_development
-)]=] "")
+#ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
+#[=[
+#install(
+#  TARGETS soci_core
+#  EXPORT SOCICoreTargets
+#  RUNTIME DESTINATION "${SOCI_INSTALL_BINDIR}"
+#    COMPONENT soci_runtime
+#  LIBRARY DESTINATION "${SOCI_INSTALL_LIBDIR}"
+#    COMPONENT          soci_runtime
+#    NAMELINK_COMPONENT soci_development
+#  ARCHIVE DESTINATION "${SOCI_INSTALL_LIBDIR}"
+#    COMPONENT soci_development
+#  FILE_SET headers DESTINATION "${SOCI_INSTALL_INCLUDEDIR}"
+#    COMPONENT soci_development
+#)
+## Generate and install a targets file
+#install(
+#  EXPORT SOCICoreTargets
+#  DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
+#  FILE SOCICoreTargets.cmake
+#  NAMESPACE SOCI::
+#  COMPONENT soci_development
+#)]=]
+#)
 
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
