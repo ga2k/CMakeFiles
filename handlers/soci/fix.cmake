@@ -12,7 +12,7 @@ function(soci_fix target tag sourceDir)
     message("Applying local patches to ${p0}...")
 
     # --- Strip installation/export logic that causes conflicts in bundled builds ---
-    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "install(TARGETS soci_core\n" "install(TARGETS soci_core fmt\n")
+    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "TARGETS soci_core\n" "TARGETS soci_core fmt\n")
 
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
