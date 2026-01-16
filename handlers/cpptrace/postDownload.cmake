@@ -25,7 +25,5 @@ function(cpptrace_postDownload librariesList didFetch)
             "        set(${var} TRUE PARENT_SCOPE)"
             "    endif ()"
     )
+    set(HANDLED ON)
 endfunction()
-
-cpptrace_postDownload("${_LibrariesList}" "${this_fetch}")
-set(HANDLED ON)
