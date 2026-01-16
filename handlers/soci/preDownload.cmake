@@ -4,12 +4,12 @@ function(soci_preDownload pkgname url tag srcDir)
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
     # This is the critical fix for the export set error
     set(SOCI_INSTALL         OFF PARENT_SCOPE)
-    set(SOCI_INSTALL         OFF CACHE BOOL "Disable SOCI internal install"   FORCE)
+    set(SOCI_INSTALL        "OFF" CACHE STRING "Disable SOCI internal install"   FORCE)
 
     set(SOCI_SQLITE3_BUILTIN  ON PARENT_SCOPE)
-    set(SOCI_SQLITE3_BUILTIN  ON CACHE BOOL "Prefer using built-in SQLite3"   FORCE)
+    set(SOCI_SQLITE3_BUILTIN "ON" CACHE STRING "Prefer using built-in SQLite3"   FORCE)
     set(SOCI_FMT_BUILTIN      ON PARENT_SCOPE)
-    set(SOCI_FMT_BUILTIN      ON CACHE BOOL "Prefer using built-in fmt"       FORCE)
+    set(SOCI_FMT_BUILTIN     "ON" CACHE STRING "Prefer using built-in fmt"       FORCE)
 
     set(WITH_BOOST           OFF PARENT_SCOPE)
     set(WITH_BOOST           OFF CACHE BOOL "Allow this feature"              FORCE)
