@@ -77,7 +77,7 @@ endfunction()
 #######################################################################################################################
 function(initialiseFeatureHandlers)
     if (MONOREPO)
-        file(GLOB handlers LIST_DIRECTORIES true "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*")
+        file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*.cmake")
     else ()
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/cmake/handlers/*.cmake")
     endif ()
