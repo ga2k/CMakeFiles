@@ -343,32 +343,24 @@ function(createStandardPackageData)
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
-
-    #    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
-    #            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
-    #            ARG REQUIRED)
-    #
-    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARG REQUIRED PREREQ FORMAT)
-
     #
     ##
     ####
     ##
     #
-
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG PREREQ DATABASE=soci)
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG PREREQ CORE)
-
     #
     ##
     ####
     ##
     #
+    addPackageData(USER FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
+            ARG REQUIRED)
 
     addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
