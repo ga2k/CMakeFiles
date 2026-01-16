@@ -128,7 +128,7 @@ function(addPackageData)
     cmake_parse_arguments("apd" "${switches}" "${args}" "${arrays}" ${ARGN})
 
     if (NOT apd_METHOD OR (NOT ${apd_METHOD} STREQUAL "PROCESS" AND NOT ${apd_METHOD} STREQUAL "FETCH_CONTENTS" AND NOT ${apd_METHOD} STREQUAL "FIND_PACKAGE"))
-        message(FATAL_ERROR "addPackageData: One of METHOD FIND/FETCH/PROCESS required")
+        message(FATAL_ERROR "addPackageData: One of METHOD FIND_PACKAGE/FETCH_CONTENTS/PROCESS required for ${apd_FEATURE}")
     endif ()
 
     if (NOT apd_SYSTEM AND NOT apd_USER AND NOT apd_LIBRARY)
