@@ -373,13 +373,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    if (WIN32 OR APPLE OR LINUX)
-        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
-    else ()
+#    if (WIN32 OR APPLE OR LINUX)
+#        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
+#    else ()
         addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
                 GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
                 ARG REQUIRED)
-    endif ()
+#    endif ()
 
     if (BUILD_WX_FROM_SOURCE)
         addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
@@ -744,10 +744,16 @@ function(fetchContents)
 
             SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
 
+            message(" ")
+            message(CHECK_START "${this_feature}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+            message(" ")
+
             # Skip features already found/aliased, but only check this in the final pass
             # to allow declarations to overlap if necessary.
             if (${pass_num} EQUAL 1)
                 if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
+                    message("Feature already available without re-processing: skipped")
                     continue()
                 endif ()
             endif ()
@@ -832,6 +838,8 @@ function(fetchContents)
                             set(COMPONENTS_KEYWORD "COMPONENTS")
                         endif ()
 
+                        message("FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+
                         FetchContent_Declare(${this_pkgname}
                                 ${SOURCE_KEYWORD} ${this_url}
                                 SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
@@ -841,9 +849,27 @@ function(fetchContents)
                     endif ()
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
+
+                        message("find_package(${this_pkgname} ${this_find_package_args})")
+
                         find_package(${this_pkgname} ${this_find_package_args})
-                        if (${this_pkgname}_LIBRARIES)
-                            list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+
+                        set(HANDLED OFF)
+                        set(fn "${this_pkgname}_postMakeAvailable")
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
+                        endif ()
+
+                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
+                            if (${this_pkgname}_LIBRARIES)
+                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+                            endif ()
+                            if (${this_pkgname}_INCLUDES)
+                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDES})
+                            endif ()
+
+                            handleTarget()
+
                         endif ()
                     endif ()
                 endif ()
@@ -852,29 +878,20 @@ function(fetchContents)
                 # PASS 1: POPULATION & FIX phase
                 # ==========================================================================================================
             else ()
-                message(" ")
-                message(CHECK_START "${this_feature}")
-                list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                 if ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
                     set(fn "${this_pkgname}_preMakeAvailable")
+                    set(HANDLED OFF)
                     if (COMMAND "${fn}")
                         cmake_language(CALL "${fn}" "${this_pkgname}")
                     endif ()
 
-                    # Perform the actual population
-                    set(_saved_scan ${CMAKE_CXX_SCAN_FOR_MODULES})
-                    set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
-                    FetchContent_MakeAvailable(${this_pkgname})
-                    set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan})
+                    if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
+                        message("FetchContent_MakeAvailable(${this_pkgname})")
 
-                    # Setup source/build paths for handlers
-                    if (NOT this_src)
-                        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
-                    endif ()
-                    if (NOT this_build)
-                        set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
+                        FetchContent_MakeAvailable(${this_pkgname})
+                        handleTarget()
                     endif ()
 
                     set(fn "${this_pkgname}_postMakeAvailable")
@@ -894,9 +911,10 @@ function(fetchContents)
                     cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
                 endif ()
 
-                list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_PASS "OK")
             endif ()
+            message("")
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+            message(CHECK_PASS "OK")
 
         endforeach () # this_feature_entry
     endforeach () # pass_num

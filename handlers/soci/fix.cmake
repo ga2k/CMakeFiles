@@ -38,10 +38,7 @@ function(soci_fix target tag sourceDir)
 #)
 
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
     ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
 
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
