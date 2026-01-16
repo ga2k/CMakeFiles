@@ -847,6 +847,12 @@ function(fetchContents)
                                 ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                 ${COMPONENTS_KEYWORD} ${this_find_package_components}
                                 ${GIT_TAG_KEYWORD} ${this_tag})
+
+                        set(fn "${this_pkgname}_postDeclare")
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${this_pkgname}")
+                        endif ()
+
                     endif ()
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
