@@ -1,5 +1,9 @@
 function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType components)
 
+    if (TARGET OpenSSLProj)
+        return()
+    endif ()
+
     set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
 
     # Use ExternalProject to build OpenSSL manually since it doesn't use CMake
