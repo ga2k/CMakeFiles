@@ -374,11 +374,11 @@ function(createStandardPackageData)
             ARG REQUIRED)
 
 #    if (WIN32 OR APPLE OR LINUX)
-#        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
+        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
 #    else ()
-        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
-                GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
-                ARGS REQUIRED EXCLUDE_FROM_ALL)
+#        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
+#                GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
+#                ARGS REQUIRED EXCLUDE_FROM_ALL)
 #    endif ()
 
     if (BUILD_WX_FROM_SOURCE)

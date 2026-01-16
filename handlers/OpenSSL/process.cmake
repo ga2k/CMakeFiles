@@ -1,4 +1,4 @@
-function(OpenSSL_postMakeAvailable sourceDir buildDir outDir buildType components)
+function(OpenSSL_process incs libs defs)
 
     if (TARGET OpenSSLProj)
         return()
