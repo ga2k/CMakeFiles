@@ -344,10 +344,10 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
-            ARG REQUIRED)
-
+#    addPackageData(SYSTEM FEATURE "FORMAT" PKGNAME "fmt" METHOD "FETCH_CONTENTS"
+#            GIT_REPOSITORY "https://github.com/fmtlib/fmt.git" GIT_TAG "10.1.1"
+#            ARG REQUIRED)
+#
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARG REQUIRED PREREQ FORMAT)
