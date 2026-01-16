@@ -11,7 +11,19 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-    ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 3.5 FATAL_ERROR")
+    # --- Strip installation/export logic that causes conflicts in bundled builds ---
+    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "install(EXPORT \"SOCICoreTargets\"" "# install(EXPORT \"SOCICoreTargets\"")
+    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "install(TARGETS soci_core" "# install(TARGETS soci_core")
+    ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt" "EXPORT \"SOCICoreTargets\"" "")
+
+    # Do the same for the sqlite3 backend
+    if(EXISTS "${sourceDir}/src/backends/sqlite3/CMakeLists.txt")
+        ReplaceInFile("${sourceDir}/src/backends/sqlite3/CMakeLists.txt" "install(EXPORT \"SOCISQLite3Targets\"" "# install(EXPORT \"SOCISQLite3Targets\"")
+        ReplaceInFile("${sourceDir}/src/backends/sqlite3/CMakeLists.txt" "install(TARGETS soci_sqlite3" "# install(TARGETS soci_sqlite3")
+        ReplaceInFile("${sourceDir}/src/backends/sqlite3/CMakeLists.txt" "EXPORT \"SOCISQLite3Targets\"" "")
+    endif()
+
+    ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
 
     ReplaceInFile("${sourceDir}/src/backends/sqlite3/statement.cpp" "if (ssize(columns_) < colNum)" "if (soci::ssize(columns_) < colNum)")
