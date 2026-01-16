@@ -328,7 +328,7 @@ function(createStandardPackageData)
     #
     #   [, ...] More packages in the same feature, if any
     #
-    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace"
+    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
             COMPONENT "cpptrace" ARG REQUIRED)
 
