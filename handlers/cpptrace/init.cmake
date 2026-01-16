@@ -1,28 +1,29 @@
 function(cpptrace_init)
     # Prefer atos on macOS for symbolization, addr2line elsewhere
     if(APPLE)
-        forceSet(CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE "" ON BOOL)
-        forceSet(CPPTRACE_ADDR2LINE_PATH "" "/usr/bin/atos" STRING)
+        set (CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE ON CACHE BOOL "Ok?")
+        set (CPPTRACE_ADDR2LINE_PATH "/usr/bin/atos" CACHE STRING "Ok?")
         # On Apple clang, execinfo is the most compatible unwinder
-        forceSet(CPPTRACE_UNWIND_WITH_EXECINFO "" ON BOOL)
+        set (CPPTRACE_UNWIND_WITH_EXECINFO ON CACHE BOOL "Ok?")
         # dladdr helps resolve dso/object names
-        forceSet(CPPTRACE_UNWIND_WITH_DLADDR "" ON BOOL)
+        set (CPPTRACE_UNWIND_WITH_DLADDR ON CACHE BOOL "Ok?")
         # Avoid forcing libunwind to prevent mismatched availability/config
-        forceSet(CPPTRACE_UNWIND_WITH_LIBUNWIND "" OFF BOOL)
+        set (CPPTRACE_UNWIND_WITH_LIBUNWIND OFF CACHE BOOL "Ok?")
+    elseif(WIN32)
+        # On Windows, even with Clang, WinAPI and DbgHelp are the preferred backends.
+        # This works for both MSVC-style (PDB) and many MinGW/Clang setups.
+        set (CPPTRACE_GET_SYMBOLS_WITH_DBGHELP ON CACHE BOOL "Ok?")
+        set (CPPTRACE_UNWIND_WITH_WINAPI ON CACHE BOOL "Ok?")
     else()
-        forceSet(CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE "" ON BOOL)
-        forceSet(CPPTRACE_UNWIND_WITH_LIBUNWIND "" ON BOOL)
-        forceSet(CPPTRACE_UNWIND_WITH_DLADDR "" ON BOOL)
-    endif()
+        set (CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE ON CACHE BOOL "Ok?")
+        set (CPPTRACE_UNWIND_WITH_LIBUNWIND ON CACHE BOOL "Ok?")
+endif()
 
     # Ensure demangling via cxxabi when available
-    forceSet(CPPTRACE_DEMANGLE_WITH_CXXABI "" ON BOOL)
+    set (CPPTRACE_DEMANGLE_WITH_CXXABI ON CACHE BOOL "Ok?")
 
     # Keep ABI stable across headers and library by disabling any inline ABI namespaces
     # (This define is consumed by cpptrace to avoid namespace-versioned symbols on some builds)
     set_property(GLOBAL APPEND PROPERTY GLOBAL_DEFINITIONS CPPTRACE_NO_ABI_NAMESPACE)
     set(HANDLED ON)
 endfunction()
-
-# Disabled: replacing cpptrace with standard C++ facilities
-# cpptrace_init()
