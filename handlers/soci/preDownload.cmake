@@ -25,7 +25,6 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_POSTGRESQL     "OFF" CACHE STRING "Disable SOCI PostgreSQL backend" FORCE)
 
     # Add this line to prevent the install() commands from running
-    unset(SKIP_INSTALL_RULES        CACHE)
     set(CMAKE_SKIP_INSTALL_RULES ON CACHE BOOL "" FORCE)
     set(SKIP_INSTALL_RULES       ON CACHE BOOL "" FORCE)
 
