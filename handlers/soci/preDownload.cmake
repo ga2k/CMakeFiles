@@ -6,7 +6,18 @@ function(soci_preDownload pkgname url tag srcDir)
     message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in SQLite3 library' FORCE)")
     set(SOCI_SQLITE3_BUILTIN ON CACHE STRING "Prefer, or forbid, using the built-in SQLite3 library" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON)
+    message(NOTICE "set(SOCI_SQLITE3_BUILTIN ON CACHE STRING 'Prefer, or forbid, using the built-in fmt library' FORCE)")
+    set(SOCI_FMT_BUILTIN OFF CACHE STRING "Prefer, or forbid, using the built-in fmt library" FORCE)
+    set(SOCI_FMT_BUILTIN OFF)
+    FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 10.1.1  # or whatever version SOCI expects
+    )
+    FetchContent_MakeAvailable(fmt)
 
+    # Now fetch SOCI and tell it to use your fmt
+    set(SOCI_FMT_EXTERNAL ON CACHE BOOL "" FORCE)
     set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI installation" FORCE)
 
     forceSet(WITH_BOOST "" OFF BOOL)
