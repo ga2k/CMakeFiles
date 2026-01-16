@@ -21,8 +21,8 @@ function(cpptrace_init)
     # Keep ABI stable across headers and library by disabling any inline ABI namespaces
     # (This define is consumed by cpptrace to avoid namespace-versioned symbols on some builds)
     set_property(GLOBAL APPEND PROPERTY GLOBAL_DEFINITIONS CPPTRACE_NO_ABI_NAMESPACE)
+    set(HANDLED ON)
 endfunction()
 
 # Disabled: replacing cpptrace with standard C++ facilities
 # cpptrace_init()
-# set(HANDLED ON)

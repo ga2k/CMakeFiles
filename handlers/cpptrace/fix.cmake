@@ -28,7 +28,6 @@ function(cpptrace_fix target tag sourceDir)
         set(${var} TRUE PARENT_SCOPE)"
     endif ()
 ]=])
-endfunction()
+    set(HANDLED ON)
 
-cpptrace_fix("${this_pkgname}" "${this_tag}" "${this_src}")
-set(HANDLED ON)
+endfunction()
