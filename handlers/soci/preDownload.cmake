@@ -24,9 +24,20 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_ORACLE         "OFF" CACHE STRING "Disable SOCI Oracle backend"     FORCE)
     set(SOCI_POSTGRESQL     "OFF" CACHE STRING "Disable SOCI PostgreSQL backend" FORCE)
 
-    # Add this line to prevent the install() commands from running
-#    set(CMAKE_SKIP_INSTALL_RULES ON CACHE BOOL "" FORCE)
-#    set(SKIP_INSTALL_RULES       ON CACHE BOOL "" FORCE)
+
+    # 1. Fetch fmt first with install enabled
+    FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 12.1.0
+    )
+    set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(fmt)
+
+    # 2. Now fetch SOCI and tell it to use the external fmt
+    set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI internal install" FORCE)
+    set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
+    set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)  # KEY LINE
 
     # @formatter:on
 

@@ -357,7 +357,7 @@ function(createStandardPackageData)
     #
     addPackageData(USER FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARGS EXCLUDE_FROM_ALL REQUIRED)
 
     addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
