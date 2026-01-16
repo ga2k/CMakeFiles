@@ -15,6 +15,24 @@ function(OpenSSL_process incs libs defs)
     # Use ExternalProject to build OpenSSL manually since it doesn't use CMake
     include(ExternalProject)
 
+    message (STATUS
+            [=[
+        ExternalProject_Add(
+            OpenSSLProj
+            GIT_REPOSITORY https://github.com/openssl/openssl.git
+            GIT_TAG openssl-3.3.2
+            SOURCE_DIR ${sourceDir}/OpenSSL
+            BINARY_DIR ${buildDir}/OpenSSL
+            INSTALL_DIR ${outDir}/openssl_install
+            CONFIGURE_COMMAND ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared
+            BUILD_COMMAND ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared && make -j
+            INSTALL_COMMAND make install
+            LOG_DOWNLOAD ON
+            LOG_CONFIGURE ON
+            LOG_BUILD ON
+            LOG_INSTALL ON
+    )
+]=])
     ExternalProject_Add(
             OpenSSLProj
             GIT_REPOSITORY https://github.com/openssl/openssl.git

@@ -803,7 +803,6 @@ function(fetchContents)
             if (${pass_num} EQUAL 0)
 
                 if ("${this_method}" STREQUAL "PROCESS")
-                    message(STATUS "\nThis target handles the entire process")
                     set(fn "${this_pkgname}_process")
                     if (COMMAND "${fn}")
                         cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
