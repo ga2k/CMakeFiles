@@ -43,8 +43,20 @@ ExternalProject_Add(OpenSSLProj
 ]=])
 
     if(WIN32)
-        set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
-        set(OPENSSL_BUILD ninja)
+
+        # Force CMake to find Strawberry Perl specifically if it exists
+        find_program(PERL_EXECUTABLE
+                NAMES perl
+                PATHS "C:/Strawberry/perl/bin"
+                NO_DEFAULT_PATH
+        )
+        # If not in the specific path, find any perl
+        find_package(Perl REQUIRED)
+
+
+        # Use the absolute path found by CMake instead of just 'perl'
+        set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
+        set(OPENSSL_BUILD nmake)
         set(OPENSSL_INSTALL ninja install)
     else()
         set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
@@ -52,6 +64,7 @@ ExternalProject_Add(OpenSSLProj
         set(OPENSSL_INSTALL make install)
     endif()
 
+    include(ExternalProject)
     ExternalProject_Add(OpenSSLProj
             GIT_REPOSITORY      https://github.com/openssl/openssl.git
             GIT_TAG             openssl-3.3.2
