@@ -56,7 +56,7 @@ ExternalProject_Add(OpenSSLProj
 
         # Use the absolute path found by CMake instead of just 'perl'
         set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
-        set(OPENSSL_BUILD nmake)
+        set(OPENSSL_BUILD make)
         set(OPENSSL_INSTALL ninja install)
     else()
         set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
