@@ -25,18 +25,17 @@ function(OpenSSL_process incs libs defs)
             find_package(Perl REQUIRED)
         endif ()
 
-        # Use Strawberry Perl's gmake if available, as it's best for OpenSSL
-        find_program(MAKE_EXECUTABLE
-                NAMES nmake #gmake gmake.exe make make.exe
-                REQUIRED
+#        # Use Strawberry Perl's gmake if available, as it's best for OpenSSL
+#        find_program(MAKE_EXECUTABLE
+#                NAMES gmake gmake.exe make make.exe
 #                PATHS
 #                    "C:/Strawberry/c/bin"
 #                    "C:/Program Files (x86)/GnuWin32/bin"
 #                    "C:/Users/geoff/AppData/Local/Microsoft/WinGet/Links"
 #                NO_DEFAULT_PATH
-        )
+#        )
         if ("${MAKE_EXECUTABLE}" STREQUAL "MAKE_EXECUTABLE-NOTFOUND")
-            find_program(MAKE_EXECUTABLE NAMES make REQUIRED)
+            find_program(MAKE_EXECUTABLE NAMES nmake REQUIRED)
         endif ()
 
         # Use the absolute path found by CMake instead of just 'perl'
