@@ -12,6 +12,8 @@ function(soci_fix target tag sourceDir)
     message("Applying local patches to ${p0}...")
 
     message(CHECK_START "SOCI FMT: Patching system headers with local overrides...")
+    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
     set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
     if (EXISTS ${OVERRIDE_PATH})
 
@@ -21,26 +23,31 @@ function(soci_fix target tag sourceDir)
         file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
 
         foreach(file_rel_path IN LISTS override_files)
+            message(CHECK_START "Patching ${file_rel_path}")
+
             set(system_file_path "${${pkglc}_SOURCE_DIR}/3rdparty/fmt/include/${file_rel_path}")
             set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
 
             if (EXISTS "${system_file_path}")
                 # Overwrite the system file instead of deleting it
                 # This keeps the CMake file list valid while giving us the fixed code
-                message(STATUS "  Patching: ${file_rel_path}")
                 file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                message(CHECK_PASS "Patching: ${file_rel_path}")
+            else ()
+                message(CHECK_FAIL "Patching: ${file_rel_path}")
             endif()
         endforeach()
 
         # 2. We no longer need to mess with PREPEND or target_include_directories
         # because we have physically patched the files in the wxWidgets source tree.
-        message(STATUS "SOCI fmt: Source tree patched successfully.")
+        message(STATUS "SOCI FMT: Source tree patched successfully.")
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
-        message(CHECK_PASS "SOCI FMT: Patching system headers with local overrides...")
+        message(CHECK_PASS "SOCI FMT: Patching system headers passed")
     else ()
-        message(CHECK_FAIL "SOCI FMT: Patching system headers with local overrides...")
+        message(CHECK_FAIL "SOCI FMT: Patching system headers failed")
     endif ()
+    list(POP_BACK CMAKE_MESSAGE_INDENT)
 
     set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
     message(CHECK_START "SOCI: Patching system headers with local overrides...")
@@ -61,9 +68,9 @@ function(soci_fix target tag sourceDir)
 
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
-        message(CHECK_PASS "SOCI: Patching system headers with local overrides...")
+        message(CHECK_PASS "SOCI: Patching system headers passes...")
     else ()
-        message(CHECK_FAIL "SOCI: Patching system headers with local overrides...")
+        message(CHECK_FAIL "SOCI: Patching system headers failed...")
     endif ()
 
 #    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
