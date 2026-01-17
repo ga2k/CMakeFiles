@@ -12,7 +12,7 @@ function(OpenSSL_process incs libs defs)
 
     set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
     file(MAKE_DIRECTORY ${outDir}/openssl_install/include)
-    
+
     # Use ExternalProject to build OpenSSL manually since it doesn't use CMake
     include(ExternalProject)
 
