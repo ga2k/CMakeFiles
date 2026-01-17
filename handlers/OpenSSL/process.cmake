@@ -13,11 +13,11 @@ function(OpenSSL_process incs libs defs)
     include(ExternalProject)
 
     message (STATUS
-[=[
-if(WIN32)
-    set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure windows-clang --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
-    set(OPENSSL_BUILD ninja)
-    set(OPENSSL_INSTALL ninja install)
+            [=[
+    if(WIN32)
+        set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
+        set(OPENSSL_BUILD ninja)
+        set(OPENSSL_INSTALL ninja install)
 else()
     set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
     set(OPENSSL_BUILD make -j)
@@ -43,7 +43,7 @@ ExternalProject_Add(OpenSSLProj
 ]=])
 
     if(WIN32)
-        set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure windows-clang --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
+        set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
         set(OPENSSL_BUILD ninja)
         set(OPENSSL_INSTALL ninja install)
     else()
