@@ -43,6 +43,8 @@ function(OpenSSL_process incs libs defs)
             CONFIGURE_COMMAND ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared
             BUILD_COMMAND ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared && make -j
             INSTALL_COMMAND make install
+            BUILD_BYPRODUCTS ${outDir}/openssl_install/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
+                             ${outDir}/openssl_install/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}  # Add this
             LOG_DOWNLOAD ON
             LOG_CONFIGURE ON
             LOG_BUILD ON
@@ -65,17 +67,25 @@ function(OpenSSL_process incs libs defs)
             IMPORTED_SONAME ${outDir}/openssl_install/bin/libssl${CMAKE_SHARED_LIBRARY_SUFFIX}
             IMPORTED_LOCATION ${outDir}/openssl_install/bin/libssl${CMAKE_SHARED_LIBRARY_SUFFIX}
             IMPORTED_IMPLIB ${outDir}/openssl_install/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
+            INTERFACE_INCLUDE_DIRECTORIES ${outDir}/openssl_install/include
     )
+    add_dependencies(OpenSSL::SSL OpenSSLProj)
 
     add_library(OpenSSL::Crypto SHARED IMPORTED)
     set_target_properties(OpenSSL::Crypto PROPERTIES
             IMPORTED_SONAME ${outDir}/openssl_install/bin/libcrypto${CMAKE_SHARED_LIBRARY_SUFFIX}
             IMPORTED_LOCATION ${outDir}/openssl_install/bin/libcrypto${CMAKE_SHARED_LIBRARY_SUFFIX}
             IMPORTED_IMPLIB ${outDir}/openssl_install/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
+            INTERFACE_INCLUDE_DIRECTORIES ${outDir}/openssl_install/include
     )
+    add_dependencies(OpenSSL::Crypto     OpenSSLProj)
 
-    set(librariesList  ${_LibrariesList} OpenSSL::SSL OpenSSL::Crypto)
-    set(_LibrariesList ${librariesList}  PARENT_SCOPE)
-    set(HANDLED        ON                PARENT_SCOPE)
+    set(librariesList       ${_LibrariesList}       OpenSSL::SSL OpenSSL::Crypto)
+#    set(dependenciesList    ${_dependenciesList}    OpenSSL::SSL OpenSSLProj)
+
+    set(_LibrariesList      ${librariesList}        PARENT_SCOPE)
+#    set(_dependenciesList   ${dependenciesList}     PARENT_SCOPE)
+
+    set(HANDLED ON PARENT_SCOPE)
 
 endfunction()
