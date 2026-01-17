@@ -11,16 +11,16 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-    message(CHECK_STATR "SOCI FMT: Patching system headers with local overrides...")
-    set(FMT_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
-    if (EXISTS ${FMT_OVERRIDE_PATH})
+    message(CHECK_START "SOCI FMT: Patching system headers with local overrides...")
+    set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
+    if (EXISTS ${OVERRIDE_PATH})
 
         # 1. Find all files in your override folder
-        file(GLOB_RECURSE override_files RELATIVE "${FMT_OVERRIDE_PATH}" "${FMT_OVERRIDE_PATH}/*")
+        file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
 
         foreach(file_rel_path IN LISTS override_files)
             set(system_file_path "${${pkglc}_SOURCE_DIR}/3rdparty/fmt/include/${file_rel_path}")
-            set(override_file_path "${FMT_OVERRIDE_PATH}/${file_rel_path}")
+            set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
 
             if (EXISTS "${system_file_path}")
                 # Overwrite the system file instead of deleting it
@@ -40,16 +40,16 @@ function(soci_fix target tag sourceDir)
         message(CHECK_FAIL "SOCI FMT: Patching system headers with local overrides...")
     endif ()
 
-    set(FMT_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
+    set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
     message(CHECK_START "SOCI: Patching system headers with local overrides...")
-    if (EXISTS ${FMT_OVERRIDE_PATH})
+    if (EXISTS ${OVERRIDE_PATH})
 
         # 1. Find all files in your override folder
-        file(GLOB_RECURSE override_files RELATIVE "${FMT_OVERRIDE_PATH}" "${FMT_OVERRIDE_PATH}/*")
+        file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
 
         foreach(file_rel_path IN LISTS override_files)
             set(system_file_path "${${pkglc}_SOURCE_DIR}/include/${file_rel_path}")
-            set(override_file_path "${FMT_OVERRIDE_PATH}/${file_rel_path}")
+            set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
 
             if (EXISTS "${system_file_path}")
                 # Overwrite the system file instead of deleting it
