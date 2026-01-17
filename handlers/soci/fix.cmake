@@ -34,23 +34,22 @@ function(soci_fix target tag sourceDir)
                 # This keeps the CMake file list valid while giving us the fixed code
                 file(COPY_FILE "${override_file_path}" "${system_file_path}")
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_PASS "Patching: ${file_rel_path}")
+                message(CHECK_PASS "OK")
             else ()
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_FAIL "Patching: ${file_rel_path}")
+                message(CHECK_FAIL "FAILED")
             endif()
         endforeach()
 
         # 2. We no longer need to mess with PREPEND or target_include_directories
         # because we have physically patched the files in the wxWidgets source tree.
-        message(STATUS "SOCI FMT: Source tree patched successfully.")
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        message(CHECK_PASS "SOCI FMT: Patching system headers passed")
+        message(CHECK_PASS "OK")
     else ()
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        message(CHECK_FAIL "SOCI FMT: Patching system headers failed")
+        message(CHECK_FAIL "FAILED")
     endif ()
 
     set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
