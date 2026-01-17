@@ -33,11 +33,12 @@ function(soci_fix target tag sourceDir)
                 # Overwrite the system file instead of deleting it
                 # This keeps the CMake file list valid while giving us the fixed code
                 file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
                 message(CHECK_PASS "Patching: ${file_rel_path}")
             else ()
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
                 message(CHECK_FAIL "Patching: ${file_rel_path}")
             endif()
-            list(POP_BACK CMAKE_MESSAGE_INDENT)
         endforeach()
 
         # 2. We no longer need to mess with PREPEND or target_include_directories
@@ -45,11 +46,12 @@ function(soci_fix target tag sourceDir)
         message(STATUS "SOCI FMT: Source tree patched successfully.")
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "SOCI FMT: Patching system headers passed")
     else ()
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_FAIL "SOCI FMT: Patching system headers failed")
     endif ()
-    list(POP_BACK CMAKE_MESSAGE_INDENT)
 
     set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
     message(CHECK_START "SOCI: Patching system headers with local overrides...")
