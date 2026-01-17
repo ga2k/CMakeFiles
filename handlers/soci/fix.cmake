@@ -11,35 +11,66 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-# --- Strip installation/export logic that causes conflicts in bundled builds ---
-#ReplaceInFile("${sourceDir}/src/core/CMakeLists.txt"
-#[=[
-#install(
-#  TARGETS soci_core
-#  EXPORT SOCICoreTargets
-#  RUNTIME DESTINATION "${SOCI_INSTALL_BINDIR}"
-#    COMPONENT soci_runtime
-#  LIBRARY DESTINATION "${SOCI_INSTALL_LIBDIR}"
-#    COMPONENT          soci_runtime
-#    NAMELINK_COMPONENT soci_development
-#  ARCHIVE DESTINATION "${SOCI_INSTALL_LIBDIR}"
-#    COMPONENT soci_development
-#  FILE_SET headers DESTINATION "${SOCI_INSTALL_INCLUDEDIR}"
-#    COMPONENT soci_development
-#)
-## Generate and install a targets file
-#install(
-#  EXPORT SOCICoreTargets
-#  DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
-#  FILE SOCICoreTargets.cmake
-#  NAMESPACE SOCI::
-#  COMPONENT soci_development
-#)]=]
-#)
+    message(CHECK_STATR "SOCI FMT: Patching system headers with local overrides...")
+    set(FMT_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
+    if (EXISTS ${FMT_OVERRIDE_PATH})
 
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
-    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
+        # 1. Find all files in your override folder
+        file(GLOB_RECURSE override_files RELATIVE "${FMT_OVERRIDE_PATH}" "${FMT_OVERRIDE_PATH}/*")
+
+        foreach(file_rel_path IN LISTS override_files)
+            set(system_file_path "${${pkglc}_SOURCE_DIR}/3rdparty/fmt/include/${file_rel_path}")
+            set(override_file_path "${FMT_OVERRIDE_PATH}/${file_rel_path}")
+
+            if (EXISTS "${system_file_path}")
+                # Overwrite the system file instead of deleting it
+                # This keeps the CMake file list valid while giving us the fixed code
+                message(STATUS "  Patching: ${file_rel_path}")
+                file(COPY_FILE "${override_file_path}" "${system_file_path}")
+            endif()
+        endforeach()
+
+        # 2. We no longer need to mess with PREPEND or target_include_directories
+        # because we have physically patched the files in the wxWidgets source tree.
+        message(STATUS "SOCI fmt: Source tree patched successfully.")
+        include_directories(BEFORE SYSTEM "${local_includes}")
+        set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
+        message(CHECK_PASS "SOCI FMT: Patching system headers with local overrides...")
+    else ()
+        message(CHECK_FAIL "SOCI FMT: Patching system headers with local overrides...")
+    endif ()
+
+    set(FMT_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/include")
+    message(CHECK_START "SOCI: Patching system headers with local overrides...")
+    if (EXISTS ${FMT_OVERRIDE_PATH})
+
+        # 1. Find all files in your override folder
+        file(GLOB_RECURSE override_files RELATIVE "${FMT_OVERRIDE_PATH}" "${FMT_OVERRIDE_PATH}/*")
+
+        foreach(file_rel_path IN LISTS override_files)
+            set(system_file_path "${${pkglc}_SOURCE_DIR}/include/${file_rel_path}")
+            set(override_file_path "${FMT_OVERRIDE_PATH}/${file_rel_path}")
+
+            if (EXISTS "${system_file_path}")
+                # Overwrite the system file instead of deleting it
+                # This keeps the CMake file list valid while giving us the fixed code
+                message(STATUS "  Patching: ${file_rel_path}")
+                file(COPY_FILE "${override_file_path}" "${system_file_path}")
+            endif()
+        endforeach()
+
+        # 2. We no longer need to mess with PREPEND or target_include_directories
+        # because we have physically patched the files in the wxWidgets source tree.
+        include_directories(BEFORE SYSTEM "${local_includes}")
+        set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
+        message(CHECK_PASS "SOCI: Patching system headers with local overrides...")
+    else ()
+        message(CHECK_FAIL "SOCI: Patching system headers with local overrides...")
+    endif ()
+
+#    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEVAL consteval"   "define FMT_CONSTEVAL")
+#    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR constexpr"   "define FMT_CONSTEXPR")
+#    ReplaceInFile("${sourceDir}/3rdparty/fmt/include/fmt/base.h" "define FMT_CONSTEXPR20 constexpr" "define FMT_CONSTEXPR20")
 
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
@@ -55,10 +86,10 @@ function(soci_fix target tag sourceDir)
     set(BLOB_CPP "${EXTERNALS_DIR}/soci/src/core/blob.cpp")
 
     # 1. Remove the inline default destructor and constructor from the header
-    ReplaceInFile(${BLOB_H} "blob() = default;" "blob();")
-    ReplaceInFile(${BLOB_H} "~blob() = default;" "~blob();")
-    ReplaceInFile(${BLOB_H} "blob(blob &&other) = default;" "blob(blob &&other) noexcept;")
-    ReplaceInFile(${BLOB_H} "blob &operator=(blob &&other) = default;" "blob &operator=(blob &&other) noexcept;")
+#    ReplaceInFile(${BLOB_H} "blob() = default;" "blob();")
+#    ReplaceInFile(${BLOB_H} "~blob() = default;" "~blob();")
+#    ReplaceInFile(${BLOB_H} "blob(blob &&other) = default;" "blob(blob &&other) noexcept;")
+#    ReplaceInFile(${BLOB_H} "blob &operator=(blob &&other) = default;" "blob &operator=(blob &&other) noexcept;")
 
     # 2. Add the implementations to the .cpp file where blob_backend is (usually) included or defined
     ReplaceInFile(${BLOB_CPP} "blob::~blob() = default;\n" "")
