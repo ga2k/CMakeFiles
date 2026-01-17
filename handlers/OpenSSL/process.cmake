@@ -34,9 +34,9 @@ function(OpenSSL_process incs libs defs)
 #                    "C:/Users/geoff/AppData/Local/Microsoft/WinGet/Links"
 #                NO_DEFAULT_PATH
 #        )
-        if ("${MAKE_EXECUTABLE}" STREQUAL "MAKE_EXECUTABLE-NOTFOUND")
+#        if ("${MAKE_EXECUTABLE}" STREQUAL "MAKE_EXECUTABLE-NOTFOUND")
             find_program(MAKE_EXECUTABLE NAMES nmake REQUIRED)
-        endif ()
+#        endif ()
 
         # Use the absolute path found by CMake instead of just 'perl'
         set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
