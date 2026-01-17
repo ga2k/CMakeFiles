@@ -50,6 +50,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI internal install" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
     set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
+    set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)
 
     # @formatter:on
 
