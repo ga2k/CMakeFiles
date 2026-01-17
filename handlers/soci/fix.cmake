@@ -24,6 +24,7 @@ function(soci_fix target tag sourceDir)
 
         foreach(file_rel_path IN LISTS override_files)
             message(CHECK_START "Patching ${file_rel_path}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
             set(system_file_path "${${pkglc}_SOURCE_DIR}/3rdparty/fmt/include/${file_rel_path}")
             set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
@@ -36,6 +37,7 @@ function(soci_fix target tag sourceDir)
             else ()
                 message(CHECK_FAIL "Patching: ${file_rel_path}")
             endif()
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
         endforeach()
 
         # 2. We no longer need to mess with PREPEND or target_include_directories
