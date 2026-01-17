@@ -98,6 +98,7 @@ function(wxWidgets_export_variables pkgname)
         # because we have physically patched the files in the wxWidgets source tree.
         message(STATUS "wxWidgets: Source tree patched successfully.")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
+        include_directories(BEFORE SYSTEM "${local_includes}")
     endif ()
 
     # Explicitly silence common external warnings for this target

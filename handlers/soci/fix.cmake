@@ -15,6 +15,8 @@ function(soci_fix target tag sourceDir)
     set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
     if (EXISTS ${OVERRIDE_PATH})
 
+        set(local_includes "${${pkglc}_SOURCE_DIR}/3rdparty/fmt/include")
+
         # 1. Find all files in your override folder
         file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
 
@@ -44,7 +46,7 @@ function(soci_fix target tag sourceDir)
     message(CHECK_START "SOCI: Patching system headers with local overrides...")
     if (EXISTS ${OVERRIDE_PATH})
 
-        # 1. Find all files in your override folder
+        set(local_includes "${${pkglc}_SOURCE_DIR}/include")
         file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
 
         foreach(file_rel_path IN LISTS override_files)
@@ -52,15 +54,11 @@ function(soci_fix target tag sourceDir)
             set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
 
             if (EXISTS "${system_file_path}")
-                # Overwrite the system file instead of deleting it
-                # This keeps the CMake file list valid while giving us the fixed code
                 message(STATUS "  Patching: ${file_rel_path}")
                 file(COPY_FILE "${override_file_path}" "${system_file_path}")
             endif()
         endforeach()
 
-        # 2. We no longer need to mess with PREPEND or target_include_directories
-        # because we have physically patched the files in the wxWidgets source tree.
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
         message(CHECK_PASS "SOCI: Patching system headers with local overrides...")
