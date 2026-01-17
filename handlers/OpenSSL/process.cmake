@@ -60,10 +60,10 @@ function(OpenSSL_process incs libs defs)
             INSTALL_COMMAND     ${OPENSSL_INSTALL}
             BUILD_BYPRODUCTS    ${outDir}/openssl_install/lib/libssl.lib
                                 ${outDir}/openssl_install/lib/libcrypto.lib
-            LOG_DOWNLOAD        ON
-            LOG_CONFIGURE       ON
-            LOG_BUILD           ON
-            LOG_INSTALL         ON
+            USES_TERMINAL_DOWNLOAD  ON
+            USES_TERMINAL_CONFIGURE ON
+            USES_TERMINAL_BUILD     ON
+            USES_TERMINAL_INSTALL   ON
     )
 
     add_library(OpenSSL::SSL SHARED IMPORTED)
