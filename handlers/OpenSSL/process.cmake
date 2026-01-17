@@ -9,7 +9,7 @@ function(OpenSSL_process incs libs defs)
     set(outDir    "${OUTPUT_DIR}/${this_pkglc}")
 
     set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
-
+    file(MAKE_DIRECTORY ${outDir}/openssl/openssl_install/include)
     include(ExternalProject)
 
     message (STATUS
