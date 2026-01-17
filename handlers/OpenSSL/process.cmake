@@ -12,36 +12,6 @@ function(OpenSSL_process incs libs defs)
     file(MAKE_DIRECTORY ${outDir}/openssl_install/include)
     include(ExternalProject)
 
-    message (STATUS
-            [=[
-    if(WIN32)
-        set(OPENSSL_CONFIGURE perl ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
-        set(OPENSSL_BUILD ninja)
-        set(OPENSSL_INSTALL ninja install)
-else()
-    set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
-    set(OPENSSL_BUILD make -j)
-    set(OPENSSL_INSTALL make install)
-endif()
-
-ExternalProject_Add(OpenSSLProj
-        GIT_REPOSITORY      https://github.com/openssl/openssl.git
-        GIT_TAG             openssl-3.3.2
-        SOURCE_DIR          ${sourceDir}/OpenSSL
-        BINARY_DIR          ${buildDir}/OpenSSL
-        INSTALL_DIR         ${outDir}/openssl_install
-        CONFIGURE_COMMAND   ${OPENSSL_CONFIGURE}
-        BUILD_COMMAND       ${OPENSSL_BUILD}
-        INSTALL_COMMAND     ${OPENSSL_INSTALL}
-        BUILD_BYPRODUCTS    ${outDir}/openssl_install/lib/libssl.lib
-                            ${outDir}/openssl_install/lib/libcrypto.lib
-        LOG_DOWNLOAD        ON
-        LOG_CONFIGURE       ON
-        LOG_BUILD           ON
-        LOG_INSTALL         ON
-)
-]=])
-
     if(WIN32)
 
         # Force CMake to find Strawberry Perl specifically if it exists
@@ -50,13 +20,26 @@ ExternalProject_Add(OpenSSLProj
                 PATHS "C:/Strawberry/perl/bin"
                 NO_DEFAULT_PATH
         )
-        # If not in the specific path, find any perl
-        find_package(Perl REQUIRED)
+        if ("${PERL_EXECUTABLE}" STREQUAL "PERL_EXECUTABLE-NOTFOUND")
+            # If not in the specific path, find any perl
+            find_package(Perl REQUIRED)
+        endif ()
 
+        # Force CMake to find Strawberry Perl specifically if it exists
+        find_program(MAKE_EXECUTABLE
+                NAMES make make.exe
+                PATHS  "C:/Users/geoff/AppData/Local/Microsoft/WinGet/Links"
+                       "C:/Program Files (x86)/GnuWin32/bin"
+                NO_DEFAULT_PATH
+        )
+        if ("${MAKE_EXECUTABLE}" STREQUAL "MAKE_EXECUTABLE-NOTFOUND")
+            # If not in the specific path, find any perl
+            find_package(Make REQUIRED)
+        endif ()
 
         # Use the absolute path found by CMake instead of just 'perl'
         set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared no-asm)
-        set(OPENSSL_BUILD make)
+        set(OPENSSL_BUILD ${MAKE_EXECUTABLE})
         set(OPENSSL_INSTALL ninja install)
     else()
         set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${outDir}/openssl_install --openssldir=${outDir}/openssl_install shared)
