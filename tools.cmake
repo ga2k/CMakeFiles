@@ -1180,7 +1180,7 @@ function(patchExternals target patchList)
         message(CHECK_START "${YELLOW}${banner}${OFF}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-        set(from_path "${CMAKE_SOURCE_DIR}/include/overrides/${patchBranch}")
+        set(from_path "${CMAKE_SOURCE_DIR}/cmake/patches/${patchBranch}")
         set(failed OFF)
 
         if (EXISTS ${from_path})
