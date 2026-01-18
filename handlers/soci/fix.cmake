@@ -1,3 +1,41 @@
+function(patchExternals banner patchBranch externalTrunk)
+    string(ASCII 27 ESC)
+    set(BOLD "${ESC}[1m")
+    set(RED "${ESC}[31m${BOLD}")
+    set(GREEN "${ESC}[32m${BOLD}")
+    set(OFF "${ESC}[0m")
+
+    message(CHECK_START "${banner}")
+    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+    set(from_path "${CMAKE_SOURCE_DIR}/include/overrides/${patchBranch}")
+    if (EXISTS ${from_path})
+
+        set(to_path "${externalTrunk}/${patchBranch}")
+
+        file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/*")
+
+        foreach(file_rel_path IN LISTS override_files)
+            message(CHECK_START "${BOLD}Patching${OFF} ${file_rel_path}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+            set(system_file_path "${to_path}/${file_rel_path}")
+            set(override_file_path "${from_path}/${file_rel_path}")
+
+            if (EXISTS "${system_file_path}")
+                # Overwrite the system file instead of deleting it
+                # This keeps the CMake file list valid while giving us the fixed code
+                file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_PASS "${GREEN}OK${OFF}")
+            else ()
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_FAIL "${RED}[FAILED]${OFF} ${system_file_path} doesn't exist")
+            endif()
+        endforeach()
+    endif ()
+endfunction()
+
 function(soci_fix target tag sourceDir)
 
     if (NOT "${tag}" STREQUAL "master") # v4.0.3")
@@ -11,34 +49,36 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-    message(CHECK_START "Patching  fmt system headers")
-    list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-    set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
-    if (EXISTS ${OVERRIDE_PATH})
-
-        set(local_includes "${sourceDir}/3rdparty/fmt/include")
-
-        file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
-
-        foreach(file_rel_path IN LISTS override_files)
-            message(CHECK_START "Patching ${file_rel_path}")
-            list(APPEND CMAKE_MESSAGE_INDENT "\t")
-
-            set(system_file_path "${sourceDir}/3rdparty/fmt/include/${file_rel_path}")
-            set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
-
-            if (EXISTS "${system_file_path}")
-                # Overwrite the system file instead of deleting it
-                # This keeps the CMake file list valid while giving us the fixed code
-                file(COPY_FILE "${override_file_path}" "${system_file_path}")
-                list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_PASS "OK")
-            else ()
-                list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_FAIL "FAILED because ${system_file_path} doesn't exist")
-            endif()
-        endforeach()
+    patchExternals("Patching  fmt system headers" "soci/3rdparty/fmt/include" "${sourceDir}")
+#    message(CHECK_START "Patching  fmt system headers")
+#    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+#
+#    set(OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/soci/3rdparty/fmt/include")
+#    if (EXISTS ${OVERRIDE_PATH})
+#
+#        set(local_includes "${sourceDir}/3rdparty/fmt/include")
+#
+#        file(GLOB_RECURSE override_files RELATIVE "${OVERRIDE_PATH}" "${OVERRIDE_PATH}/*")
+#
+#        foreach(file_rel_path IN LISTS override_files)
+#            message(CHECK_START "Patching ${file_rel_path}")
+#            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+#
+#            set(system_file_path "${sourceDir}/3rdparty/fmt/include/${file_rel_path}")
+#            set(override_file_path "${OVERRIDE_PATH}/${file_rel_path}")
+#
+#            if (EXISTS "${system_file_path}")
+#                # Overwrite the system file instead of deleting it
+#                # This keeps the CMake file list valid while giving us the fixed code
+#                file(COPY_FILE "${override_file_path}" "${system_file_path}")
+#                list(POP_BACK CMAKE_MESSAGE_INDENT)
+#                message(CHECK_PASS "OK")
+#            else ()
+#                list(POP_BACK CMAKE_MESSAGE_INDENT)
+#                message(CHECK_FAIL "FAILED because ${system_file_path} doesn't exist")
+#            endif()
+#        endforeach()
 
         include_directories(BEFORE SYSTEM "${local_includes}")
         set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
