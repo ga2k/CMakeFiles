@@ -14,8 +14,9 @@ function(soci_fix target tag sourceDir)
     message("Applying local patches to ${p0}...")
 
 
-    patchExternals("Patching  fmt system headers" "soci/3rdparty/fmt/include" "${sourceDir}")
-    patchExternals("Patching soci system headers" "soci/include"              "${sourceDir}")
+    patchExternals("SOCI"   "Patching  fmt system headers|soci/3rdparty/fmt/include|${sourceDir}"
+                            "Patching soci system headers|soci/include|${sourceDir}"
+    )
 
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
     ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
