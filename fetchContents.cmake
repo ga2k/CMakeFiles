@@ -913,6 +913,8 @@ function(fetchContents)
                     if (EXISTS "${this_src}/include")
                         list(APPEND _IncludePathsList "${this_src}/include")
                     endif ()
+                else ()
+                    message("\nNo Phase 2 step")
                 endif ()
 
                 # Final patching/fixing phase

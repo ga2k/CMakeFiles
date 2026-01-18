@@ -11,7 +11,13 @@ function(cpptrace_fix target tag sourceDir)
 
     message("Applying local patches to ${pkg}...")
 
-    ReplaceInFile("${sourceDir}/Autoconfig.cmake"
+    set(targetFile "${sourceDir}/cmake/Autoconfig.cmake")
+    if (NOT EXISTS "${targetFile}")
+        message(WARNING "Missing file, not patching ................... ${targetFile}")
+        return()
+    endif ()
+
+    ReplaceInFile("${targetFile}"
 [=[
     check_cxx_source_compiles(${full_source} ${var})
 ]=]
