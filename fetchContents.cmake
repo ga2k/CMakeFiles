@@ -6,11 +6,10 @@ set(UserFeatureData)
 
 function(addTarget target pkgname addToLists components)
 
-    set(old_LibrariesList ${_LibrariesList})
-    set(old_DependenciesList ${_DependenciesList})
-
     unset(at_LibrariesList)
     unset(at_DependenciesList)
+    unset(at_LibraryPathsList)
+
     message("addTarget called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
@@ -44,6 +43,7 @@ function(addTarget target pkgname addToLists components)
     if (addToLists)
         list(APPEND at_LibrariesList ${target})
         list(APPEND at_DependenciesList ${target})
+        list(APPEND at_LibraryPathsList ${OUTPUT_DIR}/lib)
     endif ()
 
     set_target_properties("${target}" PROPERTIES
@@ -61,10 +61,12 @@ function(addTarget target pkgname addToLists components)
     ####################################################################################################################
     ####################################################################################################################
 
-    list(APPEND at_LibrariesList ${_LibrariesList})
+    list(APPEND at_LibrariesList    ${_LibrariesList})
+    list(APPEND at_LibraryPathsList ${_LibraryPathsList})
     list(APPEND at_DependenciesList ${_DependenciesList})
 
-    set(_LibrariesList ${at_LibrariesList} PARENT_SCOPE)
+    set(_LibrariesList    ${at_LibrariesList}    PARENT_SCOPE)
+    set(_LibraryPathsList ${at_LibraryPathsList} PARENT_SCOPE)
     set(_DependenciesList ${at_DependenciesList} PARENT_SCOPE)
 
 endfunction()
