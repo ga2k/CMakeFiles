@@ -1177,24 +1177,34 @@ function(patchExternals target patchList)
         SplitAt("${patch}" "|" patchBranch externalTrunk)
 
         set(from_path "${CMAKE_SOURCE_DIR}/cmake/patches/${patchBranch}")
+        if (EXISTS "${from_path}" AND NOT IS_DIRECTORY "${from_path}")
+            get_filename_component(actual_from_path "${from_path}" DIRECTORY)
+            get_filename_component(file_pattern     "${from_path}" NAME)
+            set(from_path "${actual_from_path}")
+
+            string(LENGTH "${file_pattern}" fn_len)
+            string(LENGTH "${patchBranch}" path_len)
+            math(EXPR path_len "${path_len} - ${fn_len} - 1")
+
+            string(SUBSTRING "${patchBranch}" 0 ${path_len} patchBranch)
+        elseif (EXISTS "${from_path}")
+            set(file_pattern "*")
+        endif ()
+
         set(failed OFF)
 
-        get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
         if (EXISTS ${from_path})
-            if(IS_DIRECTORY "${input_path}")
-                file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/*")
-            else()
-                file(GLOB override_files RELATIVE "${from_path}" "${from_path}")
-            endif()
+            file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
+            get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
 
             foreach(file_rel_path IN LISTS override_files)
                 message(CHECK_START "${BOLD}Patching${OFF} ${file_rel_path}")
                 list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-                set(system_file_path "${to_path}/${file_rel_path}")
-                message("  system_file_path=${system_file_path}")
                 set(override_file_path "${from_path}/${file_rel_path}")
+                set(system_file_path "${to_path}/${file_rel_path}")
                 message("override_file_path=${override_file_path}")
+                message("  system_file_path=${system_file_path}")
 
                 if (EXISTS "${system_file_path}")
                     file(COPY_FILE "${override_file_path}" "${system_file_path}")
