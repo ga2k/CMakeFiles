@@ -13,36 +13,34 @@ function(soci_fix target tag sourceDir)
 
     message("Applying local patches to ${p0}...")
 
-
-    patchExternals("SOCI"   "Patching  fmt system headers|soci/3rdparty/fmt/include|${sourceDir}"
-                            "Patching soci system headers|soci/include|${sourceDir}"
+    list(APPEND patches
+            " fmt system headers|soci/3rdparty/fmt/include|${sourceDir}"
+            "soci system headers|soci/include|${sourceDir}"
+            "     CMakeLists.txt|soci/root|${sourceDir}"
+            "   sqlite3 back end|soci/src|${sourceDir}"
     )
+    patchExternals("SOCI" "${patches}")
 
-    ReplaceInFile("${sourceDir}/CMakeLists.txt" "VERSION 2.8 FATAL_ERROR" "VERSION 4.0 FATAL_ERROR")
-    ReplaceInFile("${sourceDir}/CMakeLists.txt" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" ON)" "option(SOCI_TESTS \"Enable build of collection of SOCI tests\" OFF)")
-
-    ReplaceInFile("${sourceDir}/src/backends/sqlite3/statement.cpp" "if (ssize(columns_) < colNum)" "if (soci::ssize(columns_) < colNum)")
-    ReplaceInFile("${sourceDir}/src/backends/sqlite3/statement.cpp" " ssize" " soci::ssize")
-    ReplaceInFile("${sourceDir}/src/backends/sqlite3/vector-into-type.cpp" " ssize" " soci::ssize")
-    ReplaceInFile("${sourceDir}/src/core/soci-simple.cpp" " ssize" " soci::ssize")
-    ReplaceInFile("${sourceDir}/src/core/statement.cpp" " ssize" " soci::ssize")
-
-    # Patch blob.h to move destructor to the .cpp file, fixing the incomplete type error with dllexport
-    set(BLOB_H "${EXTERNALS_DIR}/soci/include/soci/blob.h")
-    set(BLOB_CPP "${EXTERNALS_DIR}/soci/src/core/blob.cpp")
-
-    ReplaceInFile(${BLOB_CPP} "blob::~blob() = default;\n" "")
-    ReplaceInFile(${BLOB_CPP} "soci::blob::blob() {}\n" "")
-    ReplaceInFile(${BLOB_CPP} "soci::blob::~blob() {}\n" "")
-    ReplaceInFile(${BLOB_CPP} "soci::blob::blob(blob &&other) noexcept {};\n" "")
-    ReplaceInFile(${BLOB_CPP} "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n" "")
-
-    file(APPEND ${BLOB_CPP}
-            "soci::blob::blob() {}\n"
-            "soci::blob::~blob() {}\n"
-            "soci::blob::blob(blob &&other) noexcept {};\n"
-            "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n"
-    )
+#    ReplaceInFile("${sourceDir}/src/backends/sqlite3/statement.cpp" "if (ssize(columns_) < colNum)" "if (soci::ssize(columns_) < colNum)")
+#    ReplaceInFile("${sourceDir}/src/backends/sqlite3/statement.cpp" " ssize" " soci::ssize")
+#    ReplaceInFile("${sourceDir}/src/backends/sqlite3/vector-into-type.cpp" " ssize" " soci::ssize")
+#    ReplaceInFile("${sourceDir}/src/core/soci-simple.cpp" " ssize" " soci::ssize")
+#    ReplaceInFile("${sourceDir}/src/core/statement.cpp" " ssize" " soci::ssize")
+#
+#    set(BLOB_CPP "${EXTERNALS_DIR}/soci/src/core/blob.cpp")
+#
+#    ReplaceInFile(${BLOB_CPP} "blob::~blob() = default;\n" "")
+#    ReplaceInFile(${BLOB_CPP} "soci::blob::blob() {}\n" "")
+#    ReplaceInFile(${BLOB_CPP} "soci::blob::~blob() {}\n" "")
+#    ReplaceInFile(${BLOB_CPP} "soci::blob::blob(blob &&other) noexcept {};\n" "")
+#    ReplaceInFile(${BLOB_CPP} "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n" "")
+#
+#    file(APPEND ${BLOB_CPP}
+#            "soci::blob::blob() {}\n"
+#            "soci::blob::~blob() {}\n"
+#            "soci::blob::blob(blob &&other) noexcept {};\n"
+#            "soci::blob &soci::blob::operator=(blob &&other) noexcept = default;\n"
+#    )
     set(HANDLED ON PARENT_SCOPE)
 
 endfunction()

@@ -1174,8 +1174,8 @@ function(patchExternals target patchList)
     set(any_failed OFF)
 
     foreach (patch IN LISTS patchList)
-        SplitAt(patch "|" banner paths)
-        SplitAt(paths "|" patchBranch externalTrunk)
+        SplitAt("${patch}" "|" banner paths)
+        SplitAt("${paths}" "|" patchBranch externalTrunk)
 
         message(CHECK_START "${YELLOW}${banner}${OFF}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
