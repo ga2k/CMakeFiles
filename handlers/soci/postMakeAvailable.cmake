@@ -1,4 +1,4 @@
-function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
+function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 
     unset(ADD_TO_DEFINES)
 
@@ -26,7 +26,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
     list(APPEND SOCI_PLUGINS_HANDLED soci_core soci_sqlite3)
     foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
         if (TARGET ${target})               # Prefer dynamic library ...
-            addTarget(${target} soci OFF "${components}")
+            addTarget(${target} soci OFF)
             list(APPEND librariesList ${target})
 #            list(APPEND dependenciesList ${target})
 
@@ -36,7 +36,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType components)
             endif ()
             set(ADD_TO_DEFINES ON)
         elseif (TARGET ${target}_static)    # ... over the static one
-            addTarget(${target}_static soci OFF "${components}")
+            addTarget(${target}_static soci OFF)
             list(APPEND librariesList ${target}_static)
 #            list(APPEND dependenciesList ${target}_static)
 

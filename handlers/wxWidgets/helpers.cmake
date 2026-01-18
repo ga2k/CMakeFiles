@@ -30,8 +30,9 @@ function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
     # Components the project uses
-    set(components core base aui expat gl html jpeg media net png propgrid regex ribbon richtext webview xml zlib)
-    
+#    set(components core base aui expat gl html jpeg media net png propgrid regex ribbon richtext tiff webview xml zlib)
+    set(components core base aui gl html media net propgrid ribbon richtext webview xml)
+
     # Check both the CACHE variable and the local variable
     set(stc_enabled OFF)
     if (wxUSE_STC)
@@ -42,15 +43,15 @@ function(wxWidgets_export_variables pkgname)
         list(APPEND components stc)
     endif()
 
-    set(local_libs)
+    set(local_libraries)
     foreach(comp IN LISTS components)
         if (TARGET wx::${comp})
-            list(APPEND local_libs wx::${comp})
+            list(APPEND local_libraries wx::${comp})
+        endif()
+        if (TARGET wx${comp})
+            list(APPEND local_libraries wx${comp})
         endif()
     endforeach()
-
-    # Export to the scope fetchContents expects
-    set(_wxLibraries ${local_libs} PARENT_SCOPE)
 
     # Include directories
     string(TOLOWER "${pkgname}" pkglc)
@@ -97,13 +98,11 @@ function(wxWidgets_export_variables pkgname)
         # 2. We no longer need to mess with PREPEND or target_include_directories
         # because we have physically patched the files in the wxWidgets source tree.
         message(STATUS "wxWidgets: Source tree patched successfully.")
-        set(_wxIncludePaths ${local_includes} PARENT_SCOPE)
-        include_directories(BEFORE SYSTEM "${local_includes}")
     endif ()
 
     # Explicitly silence common external warnings for this target
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        foreach(lib ${components})
+        foreach(lib ${components} wxwidgets wxWidgets)
             foreach(_variant wx::${lib} wx${lib} ${lib})
                 if (TARGET ${_variant})
                     get_target_property(_aliasTarget "${_variant}" ALIASED_TARGET)
@@ -119,10 +118,16 @@ function(wxWidgets_export_variables pkgname)
                             "-Wno-unused-lambda-capture"
                             "-Wno-enum-compare-switch"
                     )
-                endif()
                 break()
+                endif()
             endforeach ()
         endforeach ()
     endif ()
+
+    list(APPEND local_libraries _wxLibraries)
+    list(APPEND local_includes  _wxIncludePaths)
+
+    set (_wxLibraries    "${_wxLibraries}"    PARENT_SCOPE)
+    set (_wxIncludePaths "${_wxIncludePaths}" PARENT_SCOPE)
 
 endfunction()

@@ -4,7 +4,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 set(SystemFeatureData)
 set(UserFeatureData)
 
-function(addTarget target pkgname addToLists components)
+function(addTarget target pkgname addToLists)
 
     unset(at_LibrariesList)
     unset(at_DependenciesList)
@@ -15,7 +15,7 @@ function(addTarget target pkgname addToLists components)
 
     if (NOT ${_aliasTarget} STREQUAL "_aliasTarget-NOTFOUND")
         message("Target ${target} is an alias. Retargeting target to target ${_aliasTarget}")
-        addTarget(${_aliasTarget} "${pkgname}" ${addToLists} "${components}")
+        addTarget(${_aliasTarget} "${pkgname}" ${addToLists})
         set(_LibrariesList ${_LibrariesList} PARENT_SCOPE)
         set(_DependenciesList ${_DependenciesList} PARENT_SCOPE)
         return()
@@ -868,7 +868,7 @@ function(fetchContents)
                         set(HANDLED OFF)
                         set(fn "${this_pkgname}_postMakeAvailable")
                         if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
+                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
                         endif ()
 
                         if (NOT HANDLED AND ${this_pkgname}_FOUND)
@@ -908,7 +908,7 @@ function(fetchContents)
 
                     set(fn "${this_pkgname}_postMakeAvailable")
                     if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}" "${this_find_package_components}")
+                        cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
                     endif ()
 
                     # Auto-include the standard 'include' folder if it exists and wasn't handled
