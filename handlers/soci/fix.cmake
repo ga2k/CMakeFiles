@@ -11,13 +11,11 @@ function(soci_fix target tag sourceDir)
     math(EXPR subLength "${pkgLength} - 4")
     string(SUBSTRING ${p0} 0 ${subLength} p0)
 
-    message("Applying local patches to ${p0}...")
-
     list(APPEND patches
-            " fmt system headers|soci/3rdparty/fmt/include|${sourceDir}"
-            "soci system headers|soci/include|${sourceDir}"
-            "     CMakeLists.txt|soci/root|${sourceDir}"
-            "   sqlite3 back end|soci/src|${sourceDir}"
+            "soci/3rdparty/fmt/include|${sourceDir}"
+            "soci/include|${sourceDir}"
+            "soci/CMakeLists.txt|${sourceDir}"
+            "soci/src|${sourceDir}"
     )
     patchExternals("SOCI" "${patches}")
 
