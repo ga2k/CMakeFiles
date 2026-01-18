@@ -8,10 +8,16 @@ function(patchExternals banner patchBranch externalTrunk)
     message(CHECK_START "${banner}")
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
+    message("       patchBranch=${patchBranch}")
+    message("     externalTrunk=${externalTrunk}")
+
     set(from_path "${CMAKE_SOURCE_DIR}/include/overrides/${patchBranch}")
+    message("         from_path=${from_path}")
+
     if (EXISTS ${from_path})
 
-        set(to_path "${externalTrunk}/${patchBranch}")
+        get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
+        message("           to_path=${to_path}")
 
         file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/*")
 
@@ -20,7 +26,9 @@ function(patchExternals banner patchBranch externalTrunk)
             list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
             set(system_file_path "${to_path}/${file_rel_path}")
+            message("  system_file_path=${system_file_path}")
             set(override_file_path "${from_path}/${file_rel_path}")
+            message("override_file_path=${override_file_path}")
 
             if (EXISTS "${system_file_path}")
                 # Overwrite the system file instead of deleting it
