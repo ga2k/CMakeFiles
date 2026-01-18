@@ -30,7 +30,7 @@ function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
     # Components the project uses
-    set(components core base gl net xml html aui ribbon richtext propgrid webview media)
+    set(components core base aui expat gl html jpeg media net png propgrid regex ribbon richtext webview xml zlib)
     
     # Check both the CACHE variable and the local variable
     set(stc_enabled OFF)
