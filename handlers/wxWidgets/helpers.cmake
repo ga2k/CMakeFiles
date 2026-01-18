@@ -117,6 +117,12 @@ function(wxWidgets_export_variables pkgname)
                             "-Wno-deprecated-declarations"
                             "-Wno-unused-lambda-capture"
                             "-Wno-enum-compare-switch"
+                            "-Wno-unknown-pragmas"
+                            "-Wno-ignored-attributes"
+                            "-Wno-microsoft-exception-spec"
+                            "-Wno-unused-local-typedef"
+                            "-Wno-extern-initializer"
+                            "-Wno-deprecated-this-capture"
                     )
                 break()
                 endif()
