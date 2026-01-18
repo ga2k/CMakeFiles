@@ -1109,53 +1109,54 @@ function(newestFile IN_LIST OUT_LIST)
     set(${OUT_LIST} "${sorted_list}" PARENT_SCOPE)
 endfunction()
 
-set(CPYRGHT "# ##############################################################################
-# Copyright (c) @TPL_COPYRIGHT_YEAR@@TPL_CURRENT_YEAR@ Hoffmann Systems. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the 'License');
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an 'AS IS' BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# ##############################################################################
-#
-# Author: Geoffrey Hoffmann
-# Date: @TPL_CURRENT_DATE@
-#
-# ##############################################################################
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright
-# notice, this list of conditions and the following disclaimer in the
-# documentation and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS'
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-# ##############################################################################")
-string(REPLACE "\n" "%%" CPYRGHT ${CPYRGHT})
-set(COPYRIGHT "${CPYRGHT}" CACHE STRING "Copyright notice" FORCE)
+function(patchExternals banner patchBranch externalTrunk)
+    string(ASCII 27 ESC)
+    set(BOLD   "${ESC}[1m")
+    set(RED    "${ESC}[31m${BOLD}")
+    set(GREEN  "${ESC}[32m${BOLD}")
+    set(YELLOW "${ESC}[33m${BOLD}")
+    set(OFF "${ESC}[0m")
+
+    message(CHECK_START "${YELLOW}${banner}${OFF}")
+    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+    set(from_path "${CMAKE_SOURCE_DIR}/include/overrides/${patchBranch}")
+    set(failed OFF)
+
+    if (EXISTS ${from_path})
+        get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
+
+        file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/*")
+
+        foreach(file_rel_path IN LISTS override_files)
+            message(CHECK_START "${BOLD}Patching${OFF} ${file_rel_path}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+            set(system_file_path "${to_path}/${file_rel_path}")
+            message("  system_file_path=${system_file_path}")
+            set(override_file_path "${from_path}/${file_rel_path}")
+            message("override_file_path=${override_file_path}")
+
+            if (EXISTS "${system_file_path}")
+                # Overwrite the system file instead of deleting it
+                # This keeps the CMake file list valid while giving us the fixed code
+                file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_PASS "${GREEN}OK${OFF}")
+            else ()
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_FAIL "${RED}[FAILED]${OFF} ${system_file_path} doesn't exist")
+                set(failed ON)
+            endif()
+        endforeach()
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        if (failed)
+            message(CHECK_FAIL "${RED}[FAILED]${OFF}")
+        else ()
+            message(CHECK_PASS "${GREEN}OK${OFF}")
+        endif ()
+    else ()
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_FAIL "${RED}[FAILED]${OFF} ${from_path} doesn't exist")
+    endif ()
+endfunction()
