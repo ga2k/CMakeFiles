@@ -859,8 +859,40 @@ function(fetchContents)
 
                     endif ()
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
-                    if (NOT TARGET ${this_namespace}::${this_pkgname})
+                    message ("\nNothing to do right now")
+#                    if (NOT TARGET ${this_namespace}::${this_pkgname})
+#
+#                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+#
+#                        find_package(${this_pkgname} ${this_find_package_args})
+#
+#                        set(HANDLED OFF)
+#                        set(fn "${this_pkgname}_postMakeAvailable")
+#                        if (COMMAND "${fn}")
+#                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+#                        endif ()
+#
+#                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
+#                            if (${this_pkgname}_LIBRARIES)
+#                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+#                            endif ()
+#                            if (${this_pkgname}_INCLUDE_DIR)
+#                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
+#                            endif ()
+#
+#                            handleTarget()
+#
+#                        endif ()
+#                    endif ()
+                endif ()
 
+                # ==========================================================================================================
+                # PASS 1: POPULATION & FIX phase
+                # ==========================================================================================================
+
+            else ()
+                if ("${this_method}" STREQUAL "FIND_PACKAGE")
+                    if (NOT TARGET ${this_namespace}::${this_pkgname})
                         message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
 
                         find_package(${this_pkgname} ${this_find_package_args})
@@ -878,20 +910,11 @@ function(fetchContents)
                             if (${this_pkgname}_INCLUDE_DIR)
                                 list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
                             endif ()
-
-                            handleTarget()
-
                         endif ()
+
+                       handleTarget()
                     endif ()
-                endif ()
-
-                # ==========================================================================================================
-                # PASS 1: POPULATION & FIX phase
-                # ==========================================================================================================
-
-            else ()
-
-                if ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
+                elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
                     set(fn "${this_pkgname}_preMakeAvailable")
                     set(HANDLED OFF)
