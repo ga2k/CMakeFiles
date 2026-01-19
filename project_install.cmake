@@ -239,7 +239,7 @@ endif ()
 
 if (WIN32)
     install(CODE "
-        include(\"\${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/cmake_copy_files.cmake\")
+        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
         copy_files_to_target_dir(
             TARGET_DIR
                 \"\${OUTPUT_DIR}/bin\"
