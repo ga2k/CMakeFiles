@@ -99,7 +99,7 @@ endif ()
 set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
 
 if (APP_LOCAL_RESOURCES)
-    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS ${APP_LOCAL_RESOURCES}/* RELATIVE ${APP_LOCAL_RESOURCES})
+    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS RELATIVE ${APP_LOCAL_RESOURCES} ${APP_LOCAL_RESOURCES}/*)
 
     if(APPLE)
         # Shared resources go to Application Support
