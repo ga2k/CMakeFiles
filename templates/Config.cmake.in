@@ -214,9 +214,12 @@ endif()
 #endif()
 
 # Convenience variables
-set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" PARENT_SCOPE)
-set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ PARENT_SCOPE)
-set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
+set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
+set(@APP_NAME@_INCLUDE_DIR  "${@APP_NAME@_INCLUDE_DIR}" PARENT_SCOPE)
+set(@APP_NAME@_LIBRARIES    @APP_VENDOR@::@APP_NAME@ )
+set(@APP_NAME@_LIBRARIES    "${@APP_NAME@_LIBRARIES}"   PARENT_SCOPE)
+set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
+set(@APP_NAME@_LIBRARY_DIR  "${@APP_NAME@_LIBRARY_DIR}" PARENT_SCOPE)
 
 # Plugin and resource directories
 
@@ -227,6 +230,7 @@ if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
   else ()
     set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
   endif ()
+  set(PLUGIN_DIR              "${PLUGIN_DIR}" PARENT_SCOPE)
   set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}" PARENT_SCOPE)
 endif()
 
