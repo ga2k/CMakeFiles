@@ -99,7 +99,20 @@ endif ()
 set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
 
 if (APP_LOCAL_RESOURCES)
-    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS ${APP_LOCAL_RESOURCES})
+    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS ${APP_LOCAL_RESOURCES} RELATIVE ${APP_LOCAL_RESOURCES})
+
+    if(APPLE)
+        # Shared resources go to Application Support
+        set(LOCAL_RES_DEST "Library/Application Support/${APP_VENDOR}/${APP_NAME}")
+    else()
+        # Linux/Windows fallback
+        set(LOCAL_RES_DEST "share/${APP_VENDOR}/${APP_NAME}")
+    endif()
+
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/resources/
+            DESTINATION ${LOCAL_RES_DEST}
+            COMPONENT LocalResources)
+
 else ()
     set (resource_list "")
 endif ()
@@ -121,10 +134,10 @@ install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
 if(APP_GLOBAL_RESOURCES)
     if(APPLE)
         # Shared resources go to Application Support
-        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}")
+        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}/${APP_NAME}")
     else()
         # Linux/Windows fallback
-        set(GLOBAL_RES_DEST "share/${APP_VENDOR}")
+        set(GLOBAL_RES_DEST "share/${APP_VENDOR}/${APP_NAME}")
     endif()
 
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
