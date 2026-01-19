@@ -133,11 +133,7 @@ if ("@APP_TARGET@" STREQUAL "@APP_NAME@" OR "@APP_NAME@" STREQUAL "Core")
       INTERFACE_COMPILE_FEATURES "cxx_std_23"
     )
   endif()
-  
-  if(WIN32)
-    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
-  endif()
-@endif()
+endif()
 
 if(_inDevelopment)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
