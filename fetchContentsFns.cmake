@@ -416,7 +416,7 @@ macro(handleTarget)
         endif ()
     endif ()
     if (NOT _anyTargetFound)
-        list(APPEND _LibrariesList ${this_pkgname})
+#        list(APPEND _LibrariesList ${this_pkgname})
     endif ()
 
     # Setup source/build paths for handlers
