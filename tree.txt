@@ -1,0 +1,81 @@
+
+$DESTDIR
+    |
+    |- $CMAKE_INSTALL_PREFIX
+        |
+        |- $CMAKE_INSTALL_LIBDIR
+        |   |- cmake
+        |   |    |- cxx
+        |   |    |   |- HoffSoft
+        |   |    |          |- HoffSoft
+        |   |    |          |   |- (all the source files)
+        |   |    |          |   |- cxx-modules-HoffSoftTarget.cmake
+        |   |    |          |   |- cxx-modules-HoffSoftTarget-Debug.cmake
+        |   |    |          |   |- cxx-modules-HoffSoftTarget-Release.cmake
+        |   |    |          |- Gfx
+        |   |    |              |- (all the source files)
+        |   |    |              |- cxx-modules-GfxTarget.cmake
+        |   |    |              |- cxx-modules-GfxTarget-Debug.cmake
+        |   |    |              |- cxx-modules-GfxTarget-Release.cmake
+        |   |    |- bmi
+        |   |    |   |- HoffSoft
+        |   |    |          |- HoffSoft
+        |   |    |          |   |- (all the bmi files)
+        |   |    |          |- Gfx
+        |   |    |              |- (all the bmi files)
+        |   |    |- HoffSoft
+        |   |           |- HoffSoftConfig.cmake
+        |   |           |- HoffSoftConfigVersion.cmake
+        |   |           |- HoffSoftTarget.cmake
+        |   |           |- HoffSoftTarget-debug.cmake
+        |   |           |- HoffSoftTarget-release.cmake
+        |   |           |- GfxConfig.cmake
+        |   |           |- GfxConfigVersion.cmake
+        |   |           |- GfxTarget.cmake
+        |   |           |- GfxTarget-debug.cmake
+        |   |           |- GfxTarget-release.cmake
+        |   |- hoffsoft_hoffsoft.lib
+        |   |- hoffsoft_gfx.lib
+        |   |- HoffSoft
+        |           |- HoffSoft
+        |           |   |- plugins
+        |           |       |- (all the plugins)
+        |           |- Gfx
+        |           |   |- plugins
+        |           |       |- (all the plugins)
+        |           |- MyCare
+        |               |- plugins
+        |                   |- (all the plugins)
+        |
+        |- $CMAKE_INSTALL_INCDIR
+        |   |- HoffSoft
+        |   |- Gfx
+        |   |- MyCare
+        |
+        |- $CMAKE_INSTALL_BINDIR
+        |   |- HoffSoft
+        |   |   |- (all the dlls and exes)
+        |   |- Gfx
+        |   |   |- (all the dlls and exes)
+        |   |- MyCare
+        |       |- (all the dlls and exes)
+        |
+        |- $CMAKE_INSTALL_DATADIR
+            |- HoffSoft
+                |- HoffSoft
+                |   |- Resources
+                |   |   |- (all the global resources)
+                |   |- doc
+                |       |- (all the documentation)
+                |- Gfx
+                |   |- Resources
+                |   |   |- (all the resources from Gfx)
+                |   |- doc
+                |       |- (all the documentation)
+                |- MyCare
+                    |- Resources
+                    |   |- (all the app-local resources)
+                    |- doc
+                        |- (all the documentation)
+
+

@@ -98,11 +98,14 @@ endif ()
 #
 set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
 
-if (APP_LOCAL_RESOURCES)
-    file(GLOB_RECURSE resource_list CONFIGURE_DEPENDS ${APP_LOCAL_RESOURCES})
-else ()
-    set (resource_list "")
-endif ()
+if(APP_GLOBAL_RESOURCES)
+    # Based on your tree: $CMAKE_INSTALL_DATADIR/HoffSoft/HoffSoft/Resources
+    # Note: Global resources seem to belong to the vendor's primary 'HoffSoft' folder in your tree
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/global-resources/"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_VENDOR}/Resources"
+            COMPONENT GlobalResources
+    )
+endif()
 
 # @formatting:off
 install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
@@ -199,43 +202,33 @@ install(FILES
 # User guide, if present
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
-            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${APP_NAME}")
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/doc")
 endif ()
 
 if (APP_LOCAL_RESOURCES)
     set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
 
-    if (APPLE)
-        # Install directory directly into the bundle's Resources folder
-        # This avoids the "install RESOURCE given directory" error
-    else()
-        # Windows/Linux: Install to share/Vendor/AppName/resources
+    if (APPLE AND "${APP_TYPE}" STREQUAL "Executable")
+        # If it's a macOS Bundle, we can still put them in the bundle
+        # but per your tree requirements for a unified stagedir:
         install(DIRECTORY "${LOCAL_RES_SRC}/"
-                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
-    endif()
-
-    # Handle Linux desktop files specifically
-    if (NOT APPLE AND NOT WIN32)
-        file(GLOB _hs_desktop_files "${LOCAL_RES_SRC}/*.desktop")
-        if (_hs_desktop_files)
-            install(FILES ${_hs_desktop_files}
-                    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-        endif ()
-        unset(_hs_desktop_files)
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
+    else()
+        # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/HoffSoft/${APP_NAME}/Resources
+        install(DIRECTORY "${LOCAL_RES_SRC}/"
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
     endif()
 endif ()
 
-# Resources directory (fonts, images, etc.)
-if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources")
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
-            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/${APP_VENDOR}/${APP_NAME}/resources")
-    file(GLOB _hs_desktop_files "${CMAKE_CURRENT_SOURCE_DIR}/resources/*.desktop")
+# Handle Linux desktop files specifically
+if (LINUX)
+    file(GLOB _hs_desktop_files "${LOCAL_RES_SRC}/*.desktop")
     if (_hs_desktop_files)
         install(FILES ${_hs_desktop_files}
                 DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
     endif ()
     unset(_hs_desktop_files)
-endif ()
+endif()
 
 if (WIN32)
     install(CODE "
