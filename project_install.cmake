@@ -107,12 +107,11 @@ if (APP_LOCAL_RESOURCES)
     else()
         # Linux/Windows fallback
         set(LOCAL_RES_DEST "share/${APP_VENDOR}/${APP_NAME}")
+
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/resources/
+                DESTINATION ${LOCAL_RES_DEST}
+                COMPONENT LocalResources)
     endif()
-
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/resources/
-            DESTINATION ${LOCAL_RES_DEST}
-            COMPONENT LocalResources)
-
 else ()
     set (resource_list "")
 endif ()
