@@ -876,15 +876,6 @@ function(fetchContents)
                         endif ()
                     endif ()
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
-                    message ("\nNothing to do right now")
-                endif ()
-
-                # ==========================================================================================================
-                # PASS 1: POPULATION & FIX phase
-                # ==========================================================================================================
-
-            else ()
-                if ("${this_method}" STREQUAL "FIND_PACKAGE")
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
                         message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
 
@@ -904,7 +895,36 @@ function(fetchContents)
                                 list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
                             endif ()
                         endif ()
+                    endif ()
 
+                endif ()
+
+                # ==========================================================================================================
+                # PASS 1: POPULATION & FIX phase
+                # ==========================================================================================================
+
+            else ()
+                if ("${this_method}" STREQUAL "FIND_PACKAGE")
+                    if (NOT TARGET ${this_namespace}::${this_pkgname})
+#                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+#
+#                        find_package(${this_pkgname} ${this_find_package_args})
+#
+#                        set(HANDLED OFF)
+#                        set(fn "${this_pkgname}_postMakeAvailable")
+#                        if (COMMAND "${fn}")
+#                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+#                        endif ()
+#
+#                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
+#                            if (${this_pkgname}_LIBRARIES)
+#                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+#                            endif ()
+#                            if (${this_pkgname}_INCLUDE_DIR)
+#                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
+#                            endif ()
+#                        endif ()
+#
                        handleTarget()
                     endif ()
                 elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
