@@ -828,7 +828,7 @@ function(fetchContents)
                         # This allows Gfx to see what HoffSoft already fetched/built
                         message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
                         set(temporary_args ${this_find_package_args})
-                        list(REMOVE_ITEM temporary_args "REQUIRED")
+                        list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
                         find_package(${this_pkgname} QUIET ${temporary_args})
 
                         if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
@@ -836,7 +836,7 @@ function(fetchContents)
                             # Mark as found so Pass 1 skips population
                             set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                         else()
-                            message(STATUS "nope! Doing it the hard way...")
+                            message(STATUS "Nope! Doing it the hard way...")
                             # Normalise source/URL keywords
                             string(FIND "${this_url}" ".zip" azip)
                             string(FIND "${this_url}" ".tar" atar)
