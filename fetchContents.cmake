@@ -400,7 +400,7 @@ function(createStandardPackageData)
     ####
     ##
     #
-    addPackageData(USER FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARGS EXCLUDE_FROM_ALL REQUIRED) # GIT_SUBMODULES "")
 
@@ -761,13 +761,14 @@ set(AUE_DEBUG ON)
     message(STATUS "Pre-scanning libraries for supplied targets...")
     foreach (this_feature_entry IN LISTS unifiedFeatureList)
         SplitAt(${this_feature_entry} "." _feat _idx)
-        parsePackage(AllPackageData FEATURE ${_feat} PKG_INDEX ${_idx} KIND _kind METHOD _method ARGS _args PKG_NAME _name LIST _dnc)
+        parsePackage(AllPackageData FEATURE ${_feat} PKG_INDEX ${_idx} KIND _kind METHOD _method ARGS _args LIST _pkg)
 
         if ("${_kind}" STREQUAL "LIBRARY" AND "${_method}" STREQUAL "FIND_PACKAGE")
             # Try to locate the library now to see its exported targets
+            SplitAt("${_pkg}" ";" _name _dc)
             set(_temp_args ${_args})
             list(REMOVE_ITEM _temp_args REQUIRED EXCLUDE_FROM_ALL)
-            find_package(${_name} QUIET ${_temp_args})
+            find_package(${_name} ${_temp_args})
 
             if (${_name}_FOUND)
                 scanLibraryTargets("${_name}")
