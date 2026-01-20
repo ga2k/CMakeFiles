@@ -823,70 +823,57 @@ function(fetchContents)
 
                 if ("${this_method}" STREQUAL "FETCH_CONTENTS")
                     if (this_fetch)
-                        # Normalise source/URL keywords
-                        string(FIND "${this_url}" ".zip" azip)
-                        string(FIND "${this_url}" ".tar" atar)
-                        string(FIND "${this_url}" ".gz" agz)
-                        if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
-                            set(SOURCE_KEYWORD "URL")
-                            unset(GIT_TAG_KEYWORD)
-                            unset(this_tag)
-                        else ()
-                            set(SOURCE_KEYWORD "GIT_REPOSITORY")
-                            set(GIT_TAG_KEYWORD "GIT_TAG")
+
+                        # Try to find the package first before declaring FetchContent
+                        # This allows Gfx to see what HoffSoft already fetched/built
+                        message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
+                        find_package(${this_pkgname} QUIET ${this_find_package_args})
+
+                        if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                            message(STATUS "  ${this_pkgname} found! Skipping FetchContent.")
+                            # Mark as found so Pass 1 skips population
+                            set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
+                        else()
+                            # Normalise source/URL keywords
+                            string(FIND "${this_url}" ".zip" azip)
+                            string(FIND "${this_url}" ".tar" atar)
+                            string(FIND "${this_url}" ".gz" agz)
+                            if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
+                                set(SOURCE_KEYWORD "URL")
+                                unset(GIT_TAG_KEYWORD)
+                                unset(this_tag)
+                            else ()
+                                set(SOURCE_KEYWORD "GIT_REPOSITORY")
+                                set(GIT_TAG_KEYWORD "GIT_TAG")
+                            endif ()
+
+                            # Setup Override keywords
+                            list(LENGTH this_find_package_components num_components)
+                            list(LENGTH this_find_package_args num_args)
+                            if (num_args OR num_components)
+                                set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                            endif ()
+                            if (num_components)
+                                set(COMPONENTS_KEYWORD "COMPONENTS")
+                            endif ()
+
+                            message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+
+                            FetchContent_Declare(${this_pkgname}
+                                    ${SOURCE_KEYWORD} ${this_url}
+                                    SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                    ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                    ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                    ${GIT_TAG_KEYWORD} ${this_tag})
+
+                            set(fn "${this_pkgname}_postDeclare")
+                            if (COMMAND "${fn}")
+                                cmake_language(CALL "${fn}" "${this_pkgname}")
+                            endif ()
                         endif ()
-
-                        # Setup Override keywords
-                        list(LENGTH this_find_package_components num_components)
-                        list(LENGTH this_find_package_args num_args)
-                        if (num_args OR num_components)
-                            set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
-                        endif ()
-                        if (num_components)
-                            set(COMPONENTS_KEYWORD "COMPONENTS")
-                        endif ()
-
-                        message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
-
-                        FetchContent_Declare(${this_pkgname}
-                                ${SOURCE_KEYWORD} ${this_url}
-                                SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
-                                ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-                                ${COMPONENTS_KEYWORD} ${this_find_package_components}
-                                ${GIT_TAG_KEYWORD} ${this_tag})
-
-                        set(fn "${this_pkgname}_postDeclare")
-                        if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_pkgname}")
-                        endif ()
-
                     endif ()
                 elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
                     message ("\nNothing to do right now")
-#                    if (NOT TARGET ${this_namespace}::${this_pkgname})
-#
-#                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
-#
-#                        find_package(${this_pkgname} ${this_find_package_args})
-#
-#                        set(HANDLED OFF)
-#                        set(fn "${this_pkgname}_postMakeAvailable")
-#                        if (COMMAND "${fn}")
-#                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-#                        endif ()
-#
-#                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
-#                            if (${this_pkgname}_LIBRARIES)
-#                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
-#                            endif ()
-#                            if (${this_pkgname}_INCLUDE_DIR)
-#                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
-#                            endif ()
-#
-#                            handleTarget()
-#
-#                        endif ()
-#                    endif ()
                 endif ()
 
                 # ==========================================================================================================
@@ -919,23 +906,28 @@ function(fetchContents)
                     endif ()
                 elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
-                    set(fn "${this_pkgname}_preMakeAvailable")
-                    set(HANDLED OFF)
-                    if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${this_pkgname}")
-                    endif ()
+                    if (NOT ${this_pkgname}_ALREADY_FOUND)
+                        set(fn "${this_pkgname}_preMakeAvailable")
+                        set(HANDLED OFF)
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${this_pkgname}")
+                        endif ()
 
-                    if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
-                        message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
+                        if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
+                            message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
 
-                        FetchContent_MakeAvailable(${this_pkgname})
+                            FetchContent_MakeAvailable(${this_pkgname})
+                            handleTarget()
+                        endif ()
+
+                        set(fn "${this_pkgname}_postMakeAvailable")
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                        endif ()
+                    else()
+                        message(STATUS "${this_pkgname} already found, skipping population.")
                         handleTarget()
-                    endif ()
-
-                    set(fn "${this_pkgname}_postMakeAvailable")
-                    if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-                    endif ()
+                    endif()
 
                     # Auto-include the standard 'include' folder if it exists and wasn't handled
                     if (EXISTS "${this_src}/include")
