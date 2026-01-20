@@ -8,6 +8,7 @@ function(wxWidgets_fix target tag sourceDir)
 
     list(APPEND patches
             "${target}/include|${sourceDir}"
+            "${target}/src|${sourceDir}"
     )
     patchExternals(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
