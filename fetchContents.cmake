@@ -4,18 +4,18 @@ include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 set(SystemFeatureData)
 set(UserFeatureData)
 
-function(addTarget target pkgname addToLists)
+function(addTargetProperties target pkgname addToLists)
 
     unset(at_LibrariesList)
     unset(at_DependenciesList)
     unset(at_LibraryPathsList)
 
-    message("addTarget called for '${target}'")
+    message("addTargetProperties called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
     if (NOT ${_aliasTarget} STREQUAL "_aliasTarget-NOTFOUND")
         message("Target ${target} is an alias. Retargeting target to target ${_aliasTarget}")
-        addTarget(${_aliasTarget} "${pkgname}" ${addToLists})
+        addTargetProperties(${_aliasTarget} "${pkgname}" ${addToLists})
         set(_LibrariesList ${_LibrariesList} PARENT_SCOPE)
         set(_DependenciesList ${_DependenciesList} PARENT_SCOPE)
         return()
