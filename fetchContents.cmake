@@ -742,7 +742,7 @@ set(AUE_DEBUG ON)
     endif ()
 
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
-    resolveDependencies("${unifiedFeatureList}" "${AllPackageData}" reorderedList)
+    resolveDependencies("${unifiedFeatureList}" AllPackageData reorderedList)
     set(unifiedFeatureList "${reorderedList}")
 
     if (AUE_DEBUG)

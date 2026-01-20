@@ -407,7 +407,7 @@ function(resolveDependencies inputList allData outputList)
             list(APPEND visited "${entry}")
 
             SplitAt("${entry}" "." _feat _idx)
-            parsePackage(allData
+            parsePackage(${allData}
                     FEATURE "${_feat}"
                     PKG_INDEX "${_idx}"
                     PREREQS _pre
@@ -443,7 +443,7 @@ function(resolveDependencies inputList allData outputList)
     # Pass 1: Visit LIBRARY features first to ensure they pull their dependencies forward
     foreach(item IN LISTS inputList)
         SplitAt("${item}" "." _feat _idx)
-        parsePackage(allData FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind)
+        parsePackage(${allData} FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind)
         if ("${_kind}" STREQUAL "LIBRARY")
             visit("${item}")
         endif()
