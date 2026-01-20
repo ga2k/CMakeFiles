@@ -848,53 +848,58 @@ set(AUE_DEBUG ON)
                 if ("${this_method}" STREQUAL "FETCH_CONTENTS")
                     if (this_fetch)
 
-                        # Try to find the package first before declaring FetchContent
-                        # This allows Gfx to see what HoffSoft already fetched/built
-                        message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
-                        set(temporary_args ${this_find_package_args})
-                        list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
-                        find_package(${this_pkgname} QUIET ${temporary_args})
-
-                        if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                            message(STATUS "${this_pkgname} found (likely via prerequisite). Skipping FetchContent.")
-                            set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
+                        # Check if a previously loaded LIBRARY already claimed this package
+                        if (${this_pkgname}_ALREADY_FOUND)
+                            message(STATUS "${this_pkgname} was discovered as a transitive dependency. Skipping FetchContent.")
                         else()
-                            message(STATUS "Nope! Doing it the hard way...")
-                            # Normalise source/URL keywords
-                            string(FIND "${this_url}" ".zip" azip)
-                            string(FIND "${this_url}" ".tar" atar)
-                            string(FIND "${this_url}" ".gz" agz)
-                            if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
-                                set(SOURCE_KEYWORD "URL")
-                                unset(GIT_TAG_KEYWORD)
-                                unset(this_tag)
-                            else ()
-                                set(SOURCE_KEYWORD "GIT_REPOSITORY")
-                                set(GIT_TAG_KEYWORD "GIT_TAG")
-                            endif ()
+                            # Try to find the package first before declaring FetchContent
+                            # This allows Gfx to see what HoffSoft already fetched/built
+                            message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
+                            set(temporary_args ${this_find_package_args})
+                            list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
+                            find_package(${this_pkgname} QUIET ${temporary_args})
 
-                            # Setup Override keywords
-                            list(LENGTH this_find_package_components num_components)
-                            list(LENGTH this_find_package_args num_args)
-                            if (num_args OR num_components)
-                                set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
-                            endif ()
-                            if (num_components)
-                                set(COMPONENTS_KEYWORD "COMPONENTS")
-                            endif ()
+                            if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                message(STATUS "${this_pkgname} found (likely via prerequisite). Skipping FetchContent.")
+                                set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
+                            else()
+                                message(STATUS "Nope! Doing it the hard way...")
+                                # Normalise source/URL keywords
+                                string(FIND "${this_url}" ".zip" azip)
+                                string(FIND "${this_url}" ".tar" atar)
+                                string(FIND "${this_url}" ".gz" agz)
+                                if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
+                                    set(SOURCE_KEYWORD "URL")
+                                    unset(GIT_TAG_KEYWORD)
+                                    unset(this_tag)
+                                else ()
+                                    set(SOURCE_KEYWORD "GIT_REPOSITORY")
+                                    set(GIT_TAG_KEYWORD "GIT_TAG")
+                                endif ()
 
-                            message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                # Setup Override keywords
+                                list(LENGTH this_find_package_components num_components)
+                                list(LENGTH this_find_package_args num_args)
+                                if (num_args OR num_components)
+                                    set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                                endif ()
+                                if (num_components)
+                                    set(COMPONENTS_KEYWORD "COMPONENTS")
+                                endif ()
 
-                            FetchContent_Declare(${this_pkgname}
-                                    ${SOURCE_KEYWORD} ${this_url}
-                                    SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
-                                    ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-                                    ${COMPONENTS_KEYWORD} ${this_find_package_components}
-                                    ${GIT_TAG_KEYWORD} ${this_tag})
+                                message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
 
-                            set(fn "${this_pkgname}_postDeclare")
-                            if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_pkgname}")
+                                FetchContent_Declare(${this_pkgname}
+                                        ${SOURCE_KEYWORD} ${this_url}
+                                        SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                        ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                        ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                        ${GIT_TAG_KEYWORD} ${this_tag})
+
+                                set(fn "${this_pkgname}_postDeclare")
+                                if (COMMAND "${fn}")
+                                    cmake_language(CALL "${fn}" "${this_pkgname}")
+                                endif ()
                             endif ()
                         endif ()
                     endif ()
@@ -917,6 +922,12 @@ set(AUE_DEBUG ON)
                             if (${this_pkgname}_INCLUDE_DIR)
                                 list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
                             endif ()
+
+                            # If this was a LIBRARY (like CORE), scan it for 3rd-party targets it might supply
+                            parsePackage(AllPackageData FEATURE ${this_feature} PKG_INDEX ${this_pkgindex} KIND this_kind)
+                            if ("${this_kind}" STREQUAL "LIBRARY")
+                                scanLibraryTargets("${this_pkgname}")
+                            endif()
                         endif ()
                     endif ()
 
@@ -929,25 +940,6 @@ set(AUE_DEBUG ON)
             else ()
                 if ("${this_method}" STREQUAL "FIND_PACKAGE")
                     if (NOT TARGET ${this_namespace}::${this_pkgname})
-#                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
-#
-#                        find_package(${this_pkgname} ${this_find_package_args})
-#
-#                        set(HANDLED OFF)
-#                        set(fn "${this_pkgname}_postMakeAvailable")
-#                        if (COMMAND "${fn}")
-#                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-#                        endif ()
-#
-#                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
-#                            if (${this_pkgname}_LIBRARIES)
-#                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
-#                            endif ()
-#                            if (${this_pkgname}_INCLUDE_DIR)
-#                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
-#                            endif ()
-#                        endif ()
-#
                        handleTarget()
                     endif ()
                 elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)

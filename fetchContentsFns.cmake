@@ -473,6 +473,35 @@ function(resolveDependencies inputList allData outputList)
     set(${outputList} "${current_input}" PARENT_SCOPE)
 endfunction()
 
+function(scanLibraryTargets libName)
+    set(targetName "HoffSoft::${libName}")
+    if (NOT TARGET ${targetName})
+        return()
+    endif()
+
+    message(STATUS "Scanning ${targetName} for transitive 3rd-party targets...")
+
+    get_target_property(libs ${targetName} INTERFACE_LINK_LIBRARIES)
+    if (libs)
+        foreach(lib IN LISTS libs)
+            # Check if this link library is one of our known package targets
+            # e.g., soci::soci or magic_enum::magic_enum
+            foreach(feature_data IN LISTS AllPackageData)
+                SplitAt("${feature_data}" "|" feat_name packages)
+                string(REPLACE "," ";" package_list "${packages}")
+                foreach(pkg IN LISTS package_list)
+                    SplitAt("${pkg}" "|" pkg_name ns)
+                    # Check against the target name, the namespace::target, or the raw name
+                    if ("${lib}" STREQUAL "${pkg_name}" OR "${lib}" STREQUAL "${ns}::${pkg_name}")
+                        message(STATUS "  Feature '${feat_name}' is supplied by ${libName}")
+                        set(${pkg_name}_ALREADY_FOUND ON CACHE INTERNAL "")
+                    endif()
+                endforeach()
+            endforeach()
+        endforeach()
+    endif()
+endfunction()
+
 macro(handleTarget)
     if (this_incdir)
         if (EXISTS "${this_incdir}")
