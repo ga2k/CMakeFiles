@@ -827,7 +827,9 @@ function(fetchContents)
                         # Try to find the package first before declaring FetchContent
                         # This allows Gfx to see what HoffSoft already fetched/built
                         message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
-                        find_package(${this_pkgname} QUIET ${this_find_package_args})
+                        set(temporary_args ${thid_find_package_args})
+                        list(REMOVE_ITEM "REQUIRED")
+                        find_package(${this_pkgname} QUIET ${temporary_args})
 
                         if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
                             message(STATUS "  ${this_pkgname} found! Skipping FetchContent.")

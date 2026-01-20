@@ -2,32 +2,32 @@ cmake_minimum_required(VERSION 3.28)
 
 macro(fetchContentsHelp)
 
-    set(help_msg " ")
-    list(APPEND help_msg "Valid options for ${CMAKE_CURRENT_FUNCTION}")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "USE <ALL | PKG_FEATURE[:ALT] [PKG_FEATURE[:ALT] [...]]>")
-    list(APPEND help_msg "\t\tFetch_Content() the named package features")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "NOT <PKG_FEATURE [PKG_FEATURE [...]]>")
-    list(APPEND help_msg "\t\tDon't Fetch_Content() these package features")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "OVERRIDE_FIND_PACKAGE ALL | PKG_FEATURE [PKG_FEATURE [...]]")
-    list(APPEND help_msg "\t\tRedirect calls to find_package() to this local cache")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "FIND_PACKAGE_ARGS [\"ALL [args]\"] [\"PKG_FEATURE [args]\"] [\"PKG_FEATURE [args]\"] [...]")
-    list(APPEND help_msg "\t\tThese args to find_package will take precedence over or supplement the user's args.")
-    list(APPEND help_msg "\t\tIf \"ALL [args]\" supplied, it must be the first entry supplied.")
-    list(APPEND help_msg "\t\tIf \"ALL [args]\" supplied, [args] will be prepended to each PKG_FEATURE's args.")
-    list(APPEND help_msg "\t\tDon't add COMPONENTS here, there is a separate keyword for that, shown below.")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "FIND_PACKAGE_COMPONENTS \"PKG_FEATURE args\" [\"PKG_FEATURE args\" [...]]")
-    list(APPEND help_msg "\t\tCOMPONENTS to pass to find_package.")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "HELP")
-    list(APPEND help_msg "\t\tPrint this help and exit")
-    list(APPEND help_msg " ")
-    list(APPEND help_msg "\tCurrently available package features are ")
-    list(APPEND help_msg " ")
+    set(help_msg "[=[
+Valid options for fetchContents()
+
+USE <ALL | PKG_FEATURE[:ALT] [PKG_FEATURE[:ALT] [...]]>
+        FetchContent() the named package features
+
+NOT <PKG_FEATURE [PKG_FEATURE [...]]>
+        Don't Fetch_Content() these package features
+
+OVERRIDE_FIND_PACKAGE ALL | PKG_FEATURE [PKG_FEATURE [...]]
+        Redirect calls to find_package() to this local cache
+
+FIND_PACKAGE_ARGS ["ALL [args]"] ["PKG_FEATURE [args]"] ["PKG_FEATURE [args]"] [...]
+        These args to find_package will take precedence over or supplement the user's args.
+        If "ALL [args]" supplied, it must be the first entry supplied.
+        If "ALL [args]" supplied, [args] will be prepended to each PKG_FEATURE's args.
+        Don't add COMPONENTS here, there is a separate keyword for that, shown below.
+
+FIND_PACKAGE_COMPONENTS "PKG_FEATURE args" ["PKG_FEATURE args" [...]]
+        COMPONENTS to pass to find_package.
+
+HELP
+        Print this help and exit
+
+    Currently available package features are
+]=]")
 
     list(LENGTH PKG_FEATURES items)
     math(EXPR last_item "${items} - 1")
