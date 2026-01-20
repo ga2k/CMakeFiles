@@ -410,6 +410,7 @@ function(resolveDependencies inputList allData outputList)
             SplitAt("${entry}" "." _feat _idx)
             parsePackage("${allData}"
                     FEATURE "${_feat}"
+                    LIST _list
                     PKG_INDEX "${_idx}"
                     PREREQS _pre
             )
