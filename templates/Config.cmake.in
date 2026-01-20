@@ -112,8 +112,8 @@ if(WIN32)
 endif()
   
 
-# This is weird, but it works.
-if ("@APP_TARGET@" STREQUAL "@APP_NAME@" OR "@APP_NAME@" STREQUAL "Core")
+## This is weird, but it works.
+#if ("@APP_TARGET@" STREQUAL "@APP_NAME@" OR "@APP_NAME@" STREQUAL "Core")
   # Create imported target if not done already
   if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
     add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
@@ -133,7 +133,7 @@ if ("@APP_TARGET@" STREQUAL "@APP_NAME@" OR "@APP_NAME@" STREQUAL "Core")
       INTERFACE_COMPILE_FEATURES "cxx_std_23"
     )
   endif()
-endif()
+#endif()
 
 if(_inDevelopment)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
@@ -149,24 +149,24 @@ elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAM
   include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 #  
-# Create imported target if not done already
-if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-      IMPORTED_LOCATION "${_lib}"
-      INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
-      CXX_EXTENSIONS "OFF"
-      CXX_MODULE_STD "23"
-      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
-      INTERFACE_COMPILE_FEATURES "cxx_std_23")
-else()
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-      CXX_EXTENSIONS "OFF"
-      CXX_MODULE_STD "23"
-      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
-      INTERFACE_COMPILE_FEATURES "cxx_std_23")
-endif()
-
+## Create imported target if not done already
+#if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+#  add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#      IMPORTED_LOCATION "${_lib}"
+#      INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
+#      CXX_EXTENSIONS "OFF"
+#      CXX_MODULE_STD "23"
+#      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
+#      INTERFACE_COMPILE_FEATURES "cxx_std_23")
+#else()
+#  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#      CXX_EXTENSIONS "OFF"
+#      CXX_MODULE_STD "23"
+#      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
+#      INTERFACE_COMPILE_FEATURES "cxx_std_23")
+#endif()
+#
 if(WIN32)
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
   set(_libdir "${_impdir}")
