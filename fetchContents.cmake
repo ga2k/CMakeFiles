@@ -287,9 +287,9 @@ function(addPackageData)
         string(APPEND entry "|")
     endif ()
 
-    if (apd_PREREQ)
+    if (apd_PREREQS)
         set(prereqs)
-        foreach (prereq IN LISTS apd_ARGS)
+        foreach (prereq IN LISTS apd_PREREQS)
             string(JOIN " " prereqs "${prereqs}" "${prereq}")
         endforeach ()
         string(STRIP "${prereqs}" prereqs)
@@ -391,7 +391,7 @@ function(createStandardPackageData)
     ##
     #
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG PREREQ STACKTRACE REFLECTION SIGNAL DATABASE)
+            ARGS REQUIRED CONFIG PREREQS STACKTRACE REFLECTION SIGNAL DATABASE)
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG PREREQ CORE)

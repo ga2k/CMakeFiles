@@ -152,14 +152,18 @@ endfunction()
 ##
 function(parsePackage pkgArray)
     set(options)
-    set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX
+    set(one_value_args LIST
+            FEATURE PKG_NAME PKG_INDEX
             URL GIT_TAG
-            SRC_DIR BUILD_DIR
-            FETCH_FLAG INC_DIR
-            COMPONENTS LIST
+            SRC_DIR BUILD_DIR INC_DIR
+            FETCH_FLAG
             KIND METHOD
-            PREREQS)
-    set(multi_value_args)
+            COMPONENTS
+            PREREQS
+            ARGS
+    )
+    set(multi_value_args
+    )
 
     # Parse the arguments
     cmake_parse_arguments(PARSE_ARGV 1 A_PP "${options}" "${one_value_args}" "${multi_value_args}")
