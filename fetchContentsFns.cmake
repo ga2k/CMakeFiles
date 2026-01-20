@@ -114,6 +114,7 @@ endfunction()
 ##
 function(getFeaturePackage array feature index var)
     foreach (item IN LISTS ${array})
+#    foreach (item IN LISTS array)
         SplitAt("${item}" "|" this_feature packages)
         if ("${this_feature}" STREQUAL "${feature}")
             string(REPLACE "," ";" list "${packages}")
@@ -181,7 +182,7 @@ function(parsePackage pkgArray)
         set(A_PP_PKG_NAME)
     endif ()
 
-    getFeaturePackage(${pkgArray} ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
+    getFeaturePackage("${pkgArray}" ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
     # Initialize output variables
     set(${A_PP_LIST}        "" PARENT_SCOPE)
     set(${A_PP_KIND}        "" PARENT_SCOPE)
@@ -197,14 +198,13 @@ function(parsePackage pkgArray)
     set(${A_PP_PREREQS}     "" PARENT_SCOPE)
 
     string(REPLACE "|" ";" pkg_deets "${local}")
-    list(LENGTH pkg_deets length)
     set(${A_PP_LIST} "${pkg_deets}" PARENT_SCOPE)
-    list(LENGTH pkg_deets pkg_deets_size)
+    list(LENGTH pkg_deets length)
 
-    if (${pkg_deets_size} GREATER 4)
-        list(GET pkg_deets 1 localNS)
-        list(GET pkg_deets 2 localKind)
-        list(GET pkg_deets 3 localMethod)
+    if (${length} GREATER 4)
+        list(GET pkg_deets ${PkgNamespaceIX} localNS)
+        list(GET pkg_deets ${PkgKindIX}      localKind)
+        list(GET pkg_deets ${PkgMethodIX}    localMethod)
 
         set(${A_PP_KIND}   ${localKind}   PARENT_SCOPE)
         set(${A_PP_METHOD} ${localMethod} PARENT_SCOPE)
@@ -213,7 +213,7 @@ function(parsePackage pkgArray)
             return()
         endif ()
     else ()
-        message(WARNING "${pkg_deets_size} length pkg_deets")
+        message(WARNING "${length} length pkg_deets")
     endif ()
 
     set(is_git_repo OFF)
@@ -408,7 +408,7 @@ function(resolveDependencies inputList allData outputList)
             list(APPEND visited "${entry}")
 
             SplitAt("${entry}" "." _feat _idx)
-            parsePackage("${allData}"
+            parsePackage(allData
                     FEATURE "${_feat}"
                     LIST _list
                     PKG_INDEX "${_idx}"
