@@ -433,7 +433,7 @@ function(fetchContents)
 
 set(AUE_DEBUG ON)
     if (AUE_DEBUG)
-        log()
+        log("")
         log(TITLE "Before tampering " LISTS AUE_USE
                 AUE_NOT
                 AUE_OVERRIDE_FIND_PACKAGE
