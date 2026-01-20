@@ -398,7 +398,6 @@ function(combine primaryList secondaryList outputList)  # Optionally, add TRUE o
 
 endfunction()
 
-
 function(resolveDependencies inputList allData outputList)
     set(resolved "")
     set(visited "")
@@ -410,17 +409,23 @@ function(resolveDependencies inputList allData outputList)
             SplitAt("${entry}" "." _feat _idx)
             parsePackage(allData
                     FEATURE "${_feat}"
-                    LIST _list
                     PKG_INDEX "${_idx}"
                     PREREQS _pre
             )
 
             foreach (p IN LISTS _pre)
+                # Handle "FEATURE=PACKAGE" syntax in prereqs
+                string(FIND "${p}" "=" eq_pos)
+                if (eq_pos GREATER -1)
+                    string(SUBSTRING "${p}" 0 ${eq_pos} p_feat)
+                else()
+                    set(p_feat "${p}")
+                endif()
+
                 # Find the corresponding entry in the input list for this prerequisite feature
-                # If a specific package index wasn't specified in prereqs, default to 0
                 set(found_entry "")
                 foreach(e IN LISTS inputList)
-                    if(e MATCHES "^${p}\\.")
+                    if(e MATCHES "^${p_feat}\\.")
                         set(found_entry "${e}")
                         break()
                     endif()
@@ -435,6 +440,16 @@ function(resolveDependencies inputList allData outputList)
         endif()
     endmacro()
 
+    # Pass 1: Visit LIBRARY features first to ensure they pull their dependencies forward
+    foreach(item IN LISTS inputList)
+        SplitAt("${item}" "." _feat _idx)
+        parsePackage(allData FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind)
+        if ("${_kind}" STREQUAL "LIBRARY")
+            visit("${item}")
+        endif()
+    endforeach()
+
+    # Pass 2: Visit everything else
     foreach(item IN LISTS inputList)
         visit("${item}")
     endforeach()
