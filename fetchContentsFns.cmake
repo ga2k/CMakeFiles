@@ -414,9 +414,10 @@ macro(handleTarget)
             addTarget(${this_pkgname} ${this_pkgname} ON)
             set(_anyTargetFound ON)
         endif ()
-    endif ()
-    if (NOT _anyTargetFound)
-#        list(APPEND _LibrariesList ${this_pkgname})
+        if (TARGET ${this_pkgname}::${this_pkgname} AND NOT _anyTargetFound)
+            addTarget(${this_pkgname} ${this_pkgname}::${this_pkgname} ON)
+            set(_anyTargetFound ON)
+        endif ()
     endif ()
 
     # Setup source/build paths for handlers
