@@ -5,23 +5,22 @@ macro(fetchContentsHelp)
     set(help_msg "[=[
 Valid options for fetchContents()
 
-USE <ALL | PKG_FEATURE[:ALT] [PKG_FEATURE[:ALT] [...]]>
+USE <ALL | FEATURE[:ALT] [FEATURE[:ALT] [...]]>
         FetchContent() the named package features
 
-NOT <PKG_FEATURE [PKG_FEATURE [...]]>
+NOT <FEATURE [FEATURE [...]]>
         Don't Fetch_Content() these package features
 
-OVERRIDE_FIND_PACKAGE ALL | PKG_FEATURE [PKG_FEATURE [...]]
+OVERRIDE_FIND_PACKAGE ALL | FEATURE [FEATURE [...]]
         Redirect calls to find_package() to this local cache
 
-FIND_PACKAGE_ARGS ["ALL [args]"] ["PKG_FEATURE [args]"] ["PKG_FEATURE [args]"] [...]
+FIND_PACKAGE_ARGS ALL [args]
+FIND_PACKAGE_ARGS FEATURE [args] [FEATURE [args] [...]]
         These args to find_package will take precedence over or supplement the user's args.
-        If "ALL [args]" supplied, it must be the first entry supplied.
-        If "ALL [args]" supplied, [args] will be prepended to each PKG_FEATURE's args.
-        Don't add COMPONENTS here, there is a separate keyword for that, shown below.
+        If ALL [args] supplied, [args] will be prepended to each FEATURE's args.
 
-FIND_PACKAGE_COMPONENTS "PKG_FEATURE args" ["PKG_FEATURE args" [...]]
-        COMPONENTS to pass to find_package.
+FIND_PACKAGE_COMPONENTS FEATURE=component[,component[,... ]] [FEATURE=component[,component[,... ]] [ ... ]]
+        COMPONENTS parameter to pass to find_package.
 
 HELP
         Print this help and exit
