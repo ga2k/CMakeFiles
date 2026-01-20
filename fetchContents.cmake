@@ -836,7 +836,7 @@ function(fetchContents)
                             # Mark as found so Pass 1 skips population
                             set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                         else()
-                            message(STATUS "  ${this_pkgname} nope! Doing it the hard way...\n")
+                            message(STATUS "nope! Doing it the hard way...")
                             # Normalise source/URL keywords
                             string(FIND "${this_url}" ".zip" azip)
                             string(FIND "${this_url}" ".tar" atar)
