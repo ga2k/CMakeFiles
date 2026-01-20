@@ -399,65 +399,74 @@ function(combine primaryList secondaryList outputList)  # Optionally, add TRUE o
 endfunction()
 
 function(resolveDependencies inputList allData outputList)
-    set(resolved "")
-    set(visited "")
+    set(current_input "${inputList}")
+    set(ooo ON)
 
-    macro(visit entry)
-        if (NOT "${entry}" IN_LIST visited)
-            list(APPEND visited "${entry}")
+    while(ooo)
+        set(ooo OFF)
+        set(local_output "")
 
-            SplitAt("${entry}" "." _feat _idx)
-            parsePackage(${allData}
+        foreach(CI IN LISTS current_input)
+            # Get prerequisites for the Current Item
+            SplitAt("${CI}" "." _feat _idx)
+            parsePackage("${allData}"
                     FEATURE "${_feat}"
                     PKG_INDEX "${_idx}"
                     PREREQS _pre
-                    LIST _dnc
             )
 
-            foreach (p IN LISTS _pre)
-                # Handle "FEATURE=PACKAGE" syntax in prereqs
-                string(FIND "${p}" "=" eq_pos)
+            foreach(PR_ENTRY IN LISTS _pre)
+                # Handle FEATURE=PACKAGE syntax
+                string(FIND "${PR_ENTRY}" "=" eq_pos)
                 if (eq_pos GREATER -1)
-                    string(SUBSTRING "${p}" 0 ${eq_pos} p_feat)
+                    string(SUBSTRING "${PR_ENTRY}" 0 ${eq_pos} PR_FEAT)
                 else()
-                    set(p_feat "${p}")
+                    set(PR_FEAT "${PR_ENTRY}")
                 endif()
 
-                # Find the corresponding entry in the input list for this prerequisite feature
-                set(found_entry "")
-                foreach(e IN LISTS inputList)
-                    if(e MATCHES "^${p_feat}\\.")
-                        set(found_entry "${e}")
+                # Is the prerequisite already in our new output list?
+                set(found_in_output OFF)
+                foreach(check IN LISTS local_output)
+                    if(check MATCHES "^${PR_FEAT}\\.")
+                        set(found_in_output ON)
                         break()
                     endif()
                 endforeach()
 
-                if(found_entry)
-                    visit("${found_entry}")
+                if(NOT found_in_output)
+                    # Not in output yet. Is it anywhere in the input list?
+                    set(found_entry_in_input "")
+                    foreach(e IN LISTS current_input)
+                        if(e MATCHES "^${PR_FEAT}\\.")
+                            set(found_entry_in_input "${e}")
+                            break()
+                        endif()
+                    endforeach()
+
+                    if(found_entry_in_input)
+                        # Add PR to output now, before CI
+                        list(APPEND local_output "${found_entry_in_input}")
+                        set(ooo ON)
+                    else()
+                        # Step 6: Prerequisite not found in input list
+                        message(AUTHOR_WARNING "Feature '${_feat}' requires '${PR_FEAT}', but '${PR_FEAT}' is not in the feature list.")
+                    endif()
                 endif()
             endforeach()
 
-            list(APPEND resolved "${entry}")
+            # Add CI itself to output if not already added by a dependency check
+            if(NOT "${CI}" IN_LIST local_output)
+                list(APPEND local_output "${CI}")
+            endif()
+        endforeach()
+
+        if(ooo)
+            set(current_input "${local_output}")
         endif()
-    endmacro()
+    endwhile()
 
-    # Pass 1: Visit LIBRARY features first to ensure they pull their dependencies forward
-    foreach(item IN LISTS inputList)
-        SplitAt("${item}" "." _feat _idx)
-        parsePackage(${allData} FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind LIST _dnc)
-        if ("${_kind}" STREQUAL "LIBRARY")
-            visit("${item}")
-        endif()
-    endforeach()
-
-    # Pass 2: Visit everything else
-    foreach(item IN LISTS inputList)
-        visit("${item}")
-    endforeach()
-
-    set(${outputList} "${resolved}" PARENT_SCOPE)
+    set(${outputList} "${current_input}" PARENT_SCOPE)
 endfunction()
-
 
 macro(handleTarget)
     if (this_incdir)
