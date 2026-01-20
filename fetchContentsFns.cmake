@@ -151,7 +151,13 @@ endfunction()
 ##
 function(parsePackage pkgArray)
     set(options)
-    set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX URL GIT_TAG SRC_DIR BUILD_DIR FETCH_FLAG INC_DIR COMPONENTS LIST METHOD PREREQS)
+    set(one_value_args ARGS FEATURE PKG_NAME PKG_INDEX
+            URL GIT_TAG
+            SRC_DIR BUILD_DIR
+            FETCH_FLAG INC_DIR
+            COMPONENTS LIST
+            KIND METHOD
+            PREREQS)
     set(multi_value_args)
 
     # Parse the arguments
@@ -178,6 +184,7 @@ function(parsePackage pkgArray)
     getFeaturePackage(${pkgArray} ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
     # Initialize output variables
     set(${A_PP_LIST}        "" PARENT_SCOPE)
+    set(${A_PP_KIND}        "" PARENT_SCOPE)
     set(${A_PP_METHOD}      "" PARENT_SCOPE)
     set(${A_PP_URL}         "" PARENT_SCOPE)
     set(${A_PP_GIT_TAG}     "" PARENT_SCOPE)
@@ -194,9 +201,12 @@ function(parsePackage pkgArray)
     set(${A_PP_LIST} "${pkg_deets}" PARENT_SCOPE)
     list(LENGTH pkg_deets pkg_deets_size)
 
-    if (${pkg_deets_size} GREATER 3)
+    if (${pkg_deets_size} GREATER 4)
         list(GET pkg_deets 1 localNS)
-        list(GET pkg_deets 2 localMethod)
+        list(GET pkg_deets 2 localKind)
+        list(GET pkg_deets 3 localMethod)
+
+        set(${A_PP_KIND}   ${localKind}   PARENT_SCOPE)
         set(${A_PP_METHOD} ${localMethod} PARENT_SCOPE)
 
         if ("${localMethod}" STREQUAL "PROCESS")
@@ -387,6 +397,50 @@ function(combine primaryList secondaryList outputList)  # Optionally, add TRUE o
     set(${outputList} "${allItems}" PARENT_SCOPE)
 
 endfunction()
+
+
+function(resolveDependencies inputList allData outputList)
+    set(resolved "")
+    set(visited "")
+
+    macro(visit entry)
+        if (NOT "${entry}" IN_LIST visited)
+            list(APPEND visited "${entry}")
+
+            SplitAt("${entry}" "." _feat _idx)
+            parsePackage("${allData}"
+                    FEATURE "${_feat}"
+                    PKG_INDEX "${_idx}"
+                    PREREQS _pre
+            )
+
+            foreach (p IN LISTS _pre)
+                # Find the corresponding entry in the input list for this prerequisite feature
+                # If a specific package index wasn't specified in prereqs, default to 0
+                set(found_entry "")
+                foreach(e IN LISTS inputList)
+                    if(e MATCHES "^${p}\\.")
+                        set(found_entry "${e}")
+                        break()
+                    endif()
+                endforeach()
+
+                if(found_entry)
+                    visit("${found_entry}")
+                endif()
+            endforeach()
+
+            list(APPEND resolved "${entry}")
+        endif()
+    endmacro()
+
+    foreach(item IN LISTS inputList)
+        visit("${item}")
+    endforeach()
+
+    set(${outputList} "${resolved}" PARENT_SCOPE)
+endfunction()
+
 
 macro(handleTarget)
     if (this_incdir)
