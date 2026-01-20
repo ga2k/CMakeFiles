@@ -413,6 +413,7 @@ function(resolveDependencies inputList allData outputList)
                     FEATURE "${_feat}"
                     PKG_INDEX "${_idx}"
                     PREREQS _pre
+                    LIST _dnc
             )
 
             foreach(PR_ENTRY IN LISTS _pre)
