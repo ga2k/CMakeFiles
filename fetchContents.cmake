@@ -139,7 +139,16 @@ function(addPackageData)
 
     if ((apd_SYSTEM AND apd_USER) OR (apd_SYSTEM AND apd_LIBRARY) OR (apd_USER AND apd_LIBRARY))
         message(FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER/LIBRARY allowed")
+    else ()
+        if(apd_SYSTEM)
+            set(apd_KIND "SYSTEM")
+        elseif(apd_LIBRARY)
+            set(apd_KIND "LIBRARY")
+        else ()
+            set(apd_KIND "USER")
+        endif ()
     endif ()
+
     if (NOT apd_PKGNAME)
         message(FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
@@ -200,6 +209,7 @@ function(addPackageData)
         string(APPEND entry "|")
     endif ()
 
+    string(JOIN "|" entry "${entry}" ${apd_KIND})
     string(JOIN "|" entry "${entry}" ${apd_METHOD})
 
     if (apd_GIT_REPOSITORY)
@@ -293,17 +303,18 @@ endfunction()
 ########################################################################################################################
 function(createStandardPackageData)
 
-    # 1          2          3            4        5                6                     7          8                                            9
-    # FEATURE | PKGNAME | [NAMESPACE] | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
+    # 0          1          2            3      4        5                6                     7          8                                            9                        10
+    # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
-    #   [4] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
+    #   [4] KIND is one of LIBRARY / SYSTEM / USER
+    #   [5] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
     #       If METHOD=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/cmake/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
     #
-    #   [5] One or the other of
+    #   [6] One or the other of
     #       ----------------------------------------------------------------------------------------------------
     #       GIT_REPOSITORY is the git url where the package can be found
     #       URL is the location of a .zip, .tar, or .gz file, either remote or local
@@ -318,15 +329,15 @@ function(createStandardPackageData)
     #       [BUILD]/path/to/folder      [BUILD] will be replaced by the directory
     #                                   ${BUILD_DIR}/_deps
     #       ----------------------------------------------------------------------------------------------------
-    #   [6] GIT_TAG     for identifying which git branch/tag to retrieve, OR
+    #   [7] GIT_TAG     for identifying which git branch/tag to retrieve, OR
     #       BINDIR      is the build directory if you have manually downloaded the source. Format as SRCDIR
     #
-    #   [7] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
+    #   [8] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
     #
-    #   [8] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
-    #   [9] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
+    #   [9] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
+    #  [10] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
     #
-    #  [10] PREREQ [PREREQ [PREREQ [...]]] Space separated list of FEATURES that must be loaded first
+    #  [11] PREREQ [PREREQ [PREREQ [...]]] Space separated list of FEATURES that must be loaded first
     #
     #   [, ...] More packages in the same feature, if any
     #
@@ -416,11 +427,11 @@ function(fetchContents)
         fetchContentsHelp()
         return()
     endif ()
-
     if (AUE_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
+set(AUE_DEBUG ON)
     if (AUE_DEBUG)
         log()
         log(TITLE "Before tampering " LISTS AUE_USE
@@ -454,26 +465,28 @@ function(fetchContents)
     set(FeaturePkgNameIX 1)
     set(FeatureNamespaceIX 2)
     set(FeatureMethodIX 3)
-    set(FeatureUrlIX 4)
-    set(FeatureGitTagIX 5)
-    set(FeatureSrcDirIX 4)
-    set(FeatureBuildDirIX 5)
-    set(FeatureIncDirIX 6)
-    set(FeatureComponentsIX 7)
-    set(FeatureArgsIX 8)
-    set(FeaturePrereqsIX 9)
+    set(FeatureMethodIX 4)
+    set(FeatureUrlIX 5)
+    set(FeatureGitTagIX 6)
+    set(FeatureSrcDirIX 5)
+    set(FeatureBuildDirIX 6)
+    set(FeatureIncDirIX 7)
+    set(FeatureComponentsIX 8)
+    set(FeatureArgsIX 9)
+    set(FeaturePrereqsIX 10)
 
     set(PkgNameIX 0)
     set(PkgNamespaceIX 1)
-    set(PkgMethodIX 2)
-    set(PkgUrlIX 3)
-    set(PkgGitTagIX 4)
-    set(PkgSrcDirIX 3)
-    set(PkgBuildDirIX 4)
-    set(PkgIncDirIX 5)
-    set(PkgComponentsIX 6)
-    set(PkgArgsIX 7)
-    set(PkgPrereqsIX 8)
+    set(PkgKindIX 2)
+    set(PkgMethodIX 3)
+    set(PkgUrlIX 4)
+    set(PkgGitTagIX 5)
+    set(PkgSrcDirIX 4)
+    set(PkgBuildDirIX 5)
+    set(PkgIncDirIX 6)
+    set(PkgComponentsIX 7)
+    set(PkgArgsIX 8)
+    set(PkgPrereqsIX 9)
 
     foreach (line IN LISTS SystemFeatureData)
         SplitAt(${line} "|" afeature dc)
@@ -725,6 +738,14 @@ function(fetchContents)
         log(TITLE "After tampering" LISTS unifiedFeatureList unifiedArgumentList unifiedComponentList)
     endif ()
 
+    # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
+    resolveDependencies("${unifiedFeatureList}" "${AllPackageData}" reorderedList)
+    set(unifiedFeatureList "${reorderedList}")
+
+    if (AUE_DEBUG)
+        log(TITLE "After re-ordering by prerequisites" LISTS unifiedFeatureList)
+    endif ()
+
     ####################################################################################################################
     ####################################################################################################################
     ################################ T H E   R E A L   W O R K   B E G I N S   H E R E #################################
@@ -832,8 +853,7 @@ function(fetchContents)
                         find_package(${this_pkgname} QUIET ${temporary_args})
 
                         if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                            message(STATUS "  ${this_pkgname} found! Skipping FetchContent.")
-                            # Mark as found so Pass 1 skips population
+                            message(STATUS "${this_pkgname} found (likely via prerequisite). Skipping FetchContent.")
                             set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                         else()
                             message(STATUS "Nope! Doing it the hard way...")
