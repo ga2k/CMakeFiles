@@ -4,24 +4,33 @@ function(OpenSSL_process incs libs defs)
         return()
     endif ()
 
-    set(sourceDir "${EXTERNALS_DIR}")
-    set(buildDir  "${BUILD_DIR}/_deps")
-    set(outDir    "${OUTPUT_DIR}/${this_pkglc}")
-    set(installDir "${outDir}/openssl_install")
+    set(sourceDir   "${EXTERNALS_DIR}")
+    set(buildDir    "${BUILD_DIR}/_deps")
+    set(outDir      "${OUTPUT_DIR}/${this_pkglc}")
+    set(installDir  "${outDir}/openssl_install")
+    set(paths       "${_LibraryPathsList}")
 
     if(WIN32)
         find_library(ssl
                 NAMES ssl
-                PATHS "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
+                PATHS   "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
         find_library(crypto
                 NAMES crypto
-                PATHS "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
+                PATHS   "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
+
         if (ssl AND crypto)
+            get_filename_component(ssl_lib      "${ssl}"    NAME)
+            get_filename_component(crypto_lib   "${crypto}" NAME)
+            get_filename_component(lib_dir      "${crypto}" PATH)
+
             message("\nUsing installed system OpenSSL libraries")
-            list(APPEND libs  ${ssl} ${crypto})
-            list(APPEND incs "C:/Program Files/OpenSSL-Win64/include")
-            set (_LibrariesList    "${libs}" PARENT_SCOPE)
-            set (_IncludePathsList "${incs}" PARENT_SCOPE)
+            list(APPEND libs    ${ssl_lib} ${crypto_lib})
+            list(APPEND incs    "C:/Program Files/OpenSSL-Win64/include")
+            list(APPEND paths   "${lib_dir}")
+
+            set (_LibrariesList    "${libs}"    PARENT_SCOPE)
+            set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
+            set (_IncludePathsList "${incs}"    PARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
             return()
         endif ()
