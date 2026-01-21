@@ -458,35 +458,6 @@ set(AUE_DEBUG ON)
     ####################################################################################################################
     ####################################################################################################################
 
-    # ==========================================================================================================
-    # PRE-SCAN phase: Identify targets already supplied by LIBRARY features
-    # ==========================================================================================================
-    message(STATUS "Pre-scanning libraries for supplied targets...")
-    foreach (this_feature_entry IN LISTS unifiedFeatureList)
-        SplitAt(${this_feature_entry} "." _feat _idx)
-        parsePackage(AllPackageData FEATURE ${_feat} PKG_INDEX ${_idx} KIND _kind METHOD _method ARGS _args LIST _pkg)
-
-        if ("${_kind}" STREQUAL "LIBRARY" AND "${_method}" STREQUAL "FIND_PACKAGE")
-            # Try to locate the library now to see its exported targets
-            SplitAt("${_pkg}" ";" _name _dc)
-            set(_temp_args ${_args})
-            list(REMOVE_ITEM _temp_args REQUIRED EXCLUDE_FROM_ALL)
-            find_package(${_name} ${_temp_args})
-
-            if (${_name}_FOUND)
-                scanLibraryTargets("${_name}")
-            endif()
-        endif()
-    endforeach()
-
-#    list(LENGTH unifiedFeatureList numWanted)
-#    set(numFailed 0)
-#    if (${numWanted} EQUAL 1)
-#        message(CHECK_START "Fetching library")
-#    else ()
-#        message(CHECK_START "Fetching ${numWanted} Libraries")
-#    endif ()
-#    list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
     string(ASCII 27 ESC)
 
@@ -741,7 +712,6 @@ set(AUE_DEBUG ON)
                         cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
                     endif ()
 
-
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
                     message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
 
@@ -752,33 +722,9 @@ set(AUE_DEBUG ON)
 
             endforeach () # this_feature_entry
         endforeach () # pass_num
-
-
-        set(ies "ies")
-        if (numWanted EQUAL 1)
-            set(ies "y")
-        endif ()
-        list(POP_BACK CMAKE_MESSAGE_INDENT)
-
-        if (numFailed)
-            if (${numFailed} EQUAL 1)
-                if (${numWanted} EQUAL 1)
-                    message(CHECK_FAIL "finished. Library could not be loaded.")
-                else ()
-                    message(CHECK_FAIL "finished. One out of ${numWanted} libraries could not be loaded.")
-                endif ()
-            elseif ()
-                message(CHECK_FAIL "finished. ${numFailed} out of ${numWanted} libraries could not be loaded.")
-            endif ()
-        else ()
-            if (${numWanted} EQUAL 1)
-                message(CHECK_PASS "finished. Library loaded.")
-            else ()
-                message(CHECK_PASS "finished. All ${numWanted} librar${ies} loaded.")
-            endif ()
-        endif ()
-    #
     endfunction()
+
+    processFeatures("${unifiedFeatureList}")
 
     # ##########################################################################################################
     #
