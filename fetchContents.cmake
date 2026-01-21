@@ -104,7 +104,7 @@ function(createStandardPackageData)
     #
     addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS" NAMESPACE "SOCI"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARGS EXCLUDE_FROM_ALL REQUIRED) # GIT_SUBMODULES "")
+            ARGS EXCLUDE_FROM_ALL REQUIRED COMPONENTS Core SQLite3) # GIT_SUBMODULES "")
 
     addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
