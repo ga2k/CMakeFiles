@@ -15,13 +15,14 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     endif ()
 
     list(APPEND SOCI_PLUGINS_HANDLED )
-    foreach (target soci_core soci_sqlite3)
+    foreach (target SOCI::Core SOCI::SQLite3)
         if (TARGET ${target})               # Prefer dynamic library ...
             # Strip SOCI's internal export metadata to prevent "multiple export sets" error
-            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
-            set_property(TARGET ${target} PROPERTY EXPORT_PROPERTIES "")
+#            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
+#            set_property(TARGET ${target} PROPERTY EXPORT_PROPERTIES "")
             addTargetProperties(${target} soci OFF)
             list(APPEND librariesList ${target})
+#            list(APPEND dependenciesList ${target})
             set(ADD_TO_DEFINES ON)
 
             if(WIDGETS IN_LIST APP_FEATURES)
@@ -30,10 +31,11 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 
         elseif (TARGET ${target}_static)    # ... over the static one
             # Strip metadata for static targets too
-            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
-            set_property(TARGET ${target}_static PROPERTY EXPORT_PROPERTIES "")
+#            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
+#            set_property(TARGET ${target}_static PROPERTY EXPORT_PROPERTIES "")
             addTargetProperties(${target}_static soci OFF)
-            list(APPEND librariesList ${target}_static)
+            list(APPEND librariesList    ${target}_static)
+#            list(APPEND dependenciesList ${target})
             set(ADD_TO_DEFINES ON)
         endif ()
     endforeach ()
