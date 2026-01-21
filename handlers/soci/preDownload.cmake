@@ -5,7 +5,7 @@ function(soci_preDownload pkgname url tag srcDir)
     # @formatter:off
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
     # This is the critical fix for the export set error
-    set(SOCI_INSTALL        OFF CACHE BOOL "Disable SOCI internal install"   FORCE)
+    set(SOCI_INSTALL         ON CACHE BOOL "Disable SOCI internal install"   FORCE)
 
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3"   FORCE)
     set(SOCI_FMT_BUILTIN     ON CACHE BOOL "Prefer using built-in fmt"       FORCE)
@@ -52,7 +52,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
 
     # 3. Now fetch SOCI and tell it to use the external fmt
-    set(SOCI_INSTALL OFF CACHE BOOL "Disable SOCI internal install" FORCE)
+    set(SOCI_INSTALL  ON CACHE BOOL "Disable SOCI internal install" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
     set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
     set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)

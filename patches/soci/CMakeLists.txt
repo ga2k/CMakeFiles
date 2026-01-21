@@ -1,20 +1,20 @@
 # Note: we need >= v3.23 in order to make use of file sets for header installation
-cmake_minimum_required(VERSION 4.00 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.23...3.31 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/find_modules")
 
 include(soci_parse_version)
 soci_parse_version(
-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
-  OUTPUT_VARIABLE SOCI_VERSION
+        ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE SOCI_VERSION
 )
 
 project(SOCI
-  VERSION ${SOCI_VERSION}
-  DESCRIPTION "C++ database access library"
-  HOMEPAGE_URL "https://soci.sourceforge.net/"
-  LANGUAGES C CXX
+        VERSION ${SOCI_VERSION}
+        DESCRIPTION "C++ database access library"
+        HOMEPAGE_URL "https://soci.sourceforge.net/"
+        LANGUAGES C CXX
 )
 
 include(soci_utils)
@@ -41,7 +41,7 @@ else()
 endif()
 
 option(SOCI_SHARED "Enable building SOCI as a shared library" ${SHARED_DEFAULT})
-option(SOCI_TESTS "Enable building SOCI test cases" OFF)
+option(SOCI_TESTS "Enable building SOCI test cases" ${PROJECT_IS_TOP_LEVEL})
 option(WITH_BOOST "Enable Boost support" ON)
 cmake_dependent_option(SOCI_LTO "Enable link time optimizations in release builds" ON "LTO_AVAILABLE" OFF)
 
@@ -126,8 +126,8 @@ if(NOT SOCI_FMT_BUILTIN)
   else()
     if ("${SOCI_FMT_BUILTIN}" STREQUAL "OFF")
       message(
-        FATAL_ERROR
-          "System fmt library not found and using built-in version was disabled."
+              FATAL_ERROR
+              "System fmt library not found and using built-in version was disabled."
       )
     endif()
   endif()
@@ -139,9 +139,9 @@ set(soci_fmt fmt::fmt)
 if(soci_use_bundled_fmt)
   if (NOT EXISTS ${PROJECT_SOURCE_DIR}/3rdparty/fmt/CMakeLists.txt)
     message(
-      FATAL_ERROR
-        "fmt library submodule not found.\n"
-        "Please ensure that you have cloned the SOCI repository with --recurse-submodules."
+            FATAL_ERROR
+            "fmt library submodule not found.\n"
+            "Please ensure that you have cloned the SOCI repository with --recurse-submodules."
     )
   endif()
 
@@ -179,48 +179,48 @@ endif()
 # Packaging
 include(CMakePackageConfigHelpers)
 configure_package_config_file("soci-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
-  INSTALL_DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
+        INSTALL_DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
 )
 write_basic_package_version_file(soci-config-version.cmake
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
 )
 install(
-  FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/soci-config-version.cmake"
-    DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
+        FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/soci-config-version.cmake"
+        DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
 )
 
 # Give build summary at the end but only if it's the first time we're running,
 # as indicated by SOCI_SUMMARY not being cached yet, or if it has changed.
 set(SOCI_SUMMARY_NOW
-  "${SOCI_VERSION}-${SOCI_LIB_TYPE}-${SOCI_ENABLED_BACKENDS}-${CMAKE_BUILD_TYPE}"
+        "${SOCI_VERSION}-${SOCI_LIB_TYPE}-${SOCI_ENABLED_BACKENDS}-${CMAKE_BUILD_TYPE}"
 )
 if(NOT "${SOCI_SUMMARY_NOW}" STREQUAL "${SOCI_SUMMARY}")
-set(SOCI_SUMMARY ${SOCI_SUMMARY_NOW} CACHE INTERNAL "SOCI internal build summary")
+  set(SOCI_SUMMARY ${SOCI_SUMMARY_NOW} CACHE INTERNAL "SOCI internal build summary")
 
-if (CMAKE_BUILD_TYPE)
-  set(SOCI_CONFIG_DESCRIPTION " in ${CMAKE_BUILD_TYPE} configuration")
-endif()
-message(STATUS "SOCI ${SOCI_VERSION} will be built as ${SOCI_LIB_TYPE} library${SOCI_CONFIG_DESCRIPTION}.")
-message(STATUS "Enabled SOCI backends are: ${SOCI_ENABLED_BACKENDS}")
+  if (CMAKE_BUILD_TYPE)
+    set(SOCI_CONFIG_DESCRIPTION " in ${CMAKE_BUILD_TYPE} configuration")
+  endif()
+  message(STATUS "SOCI ${SOCI_VERSION} will be built as ${SOCI_LIB_TYPE} library${SOCI_CONFIG_DESCRIPTION}.")
+  message(STATUS "Enabled SOCI backends are: ${SOCI_ENABLED_BACKENDS}")
 
 endif()
 
 # Also make it possible to see SOCI configuration later.
 add_custom_target(show_config
-  COMMAND ${CMAKE_COMMAND} -E echo
-    "SOCI ${SOCI_VERSION} configured with:"
-  COMMAND ${CMAKE_COMMAND} -E echo
-    # If using multi-config generator CMAKE_BUILD_TYPE is not meaningful. One
-    # would instead select a build type from CMAKE_CONFIGURATION_TYPES.
-    "  Build type:       $<IF:${SOCI_IS_MULTI_CONFIG},${CMAKE_CONFIGURATION_TYPES},${CMAKE_BUILD_TYPE}>"
-  COMMAND ${CMAKE_COMMAND} -E echo
-    "  Library type:     ${SOCI_LIB_TYPE}"
-  COMMAND ${CMAKE_COMMAND} -E echo
-    "  Enabled backends: ${SOCI_ENABLED_BACKENDS}"
-  COMMENT
-    "Show SOCI build configuration summary"
-  VERBATIM
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "SOCI ${SOCI_VERSION} configured with:"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        # If using multi-config generator CMAKE_BUILD_TYPE is not meaningful. One
+        # would instead select a build type from CMAKE_CONFIGURATION_TYPES.
+        "  Build type:       $<IF:${SOCI_IS_MULTI_CONFIG},${CMAKE_CONFIGURATION_TYPES},${CMAKE_BUILD_TYPE}>"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "  Library type:     ${SOCI_LIB_TYPE}"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "  Enabled backends: ${SOCI_ENABLED_BACKENDS}"
+        COMMENT
+        "Show SOCI build configuration summary"
+        VERBATIM
 )
