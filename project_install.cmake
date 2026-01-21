@@ -166,14 +166,6 @@ if (APP_CREATES_PLUGINS)
 endif ()
 # @formatting:on
 
-install(CODE "
-  message(WARNING \"Removing $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}/**/*.ixx\")
-  file(GLOB_RECURSE junk \"$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}/*.ixx\")
-  if(junk)
-    file(REMOVE ${junk})
-  endif()
-")
-
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 

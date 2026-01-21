@@ -400,7 +400,7 @@ function(createStandardPackageData)
     ####
     ##
     #
-    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
+    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARGS EXCLUDE_FROM_ALL REQUIRED) # GIT_SUBMODULES "")
 
@@ -411,7 +411,7 @@ function(createStandardPackageData)
 
     addPackageData(FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
-            COMPONENT system date_time regex url algorithm
+            COMPONENTS system date_time regex url algorithm
             ARGS NAMES Boost)
 
     addPackageData(FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
