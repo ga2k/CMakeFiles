@@ -730,10 +730,11 @@ set(AUE_DEBUG ON)
 
                 endif ()
 
-                list(POP_BACK CMAKE_MESSAGE_INDENT)
-                message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
-
             endforeach () # this_feature_entry
+
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+            message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
+
         endforeach () # pass_num
 
         propegateUpwards("Interim")

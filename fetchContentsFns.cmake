@@ -761,27 +761,50 @@ endfunction()
 ########################################################################################################################
 ##
 function(scanLibraryTargets libName)
-    set(targetName "HoffSoft::${libName}")
-    if (NOT TARGET ${targetName})
+    # Check for the library target itself first
+    set(targetName "")
+    if (TARGET HoffSoft::${libName})
+        set(targetName "HoffSoft::${libName}")
+    elseif (TARGET ${libName})
+        set(targetName "${libName}")
+    endif()
+
+    if ("${targetName}" STREQUAL "")
+        message(STATUS "  scanLibraryTargets: Could not find target for ${libName}")
         return()
     endif()
 
-    message(STATUS "Scanning ${targetName} for transitive 3rd-party targets...")
+    message(STATUS "  Scanning ${targetName} for provided imports...")
 
     get_target_property(libs ${targetName} INTERFACE_LINK_LIBRARIES)
     if (libs)
         foreach(lib IN LISTS libs)
-            # Check if this link library is one of our known package targets
-            # e.g., soci::soci or magic_enum::magic_enum
-            foreach(feature_data IN LISTS AllPackageData)
-                SplitAt("${feature_data}" "|" feat_name packages)
+            # 1. Clean up target name (remove generator expressions)
+            string(REGEX REPLACE "\\$<.*>" "" clean_lib "${lib}")
+            if ("${clean_lib}" STREQUAL "")
+                continue()
+            endif()
+
+            # 2. Extract the raw name if it's in the HoffSoft:: namespace
+            # e.g., HoffSoft::eventpp -> eventpp
+            set(raw_import_name "${clean_lib}")
+            if ("${clean_lib}" MATCHES "^HoffSoft::")
+                string(REPLACE "HoffSoft::" "" raw_import_name "${clean_lib}")
+            endif()
+
+            # 3. Cross-reference against AllPackageData using the raw name
+            foreach(feature_line IN LISTS AllPackageData)
+                SplitAt("${feature_line}" "|" feat_name packages)
                 string(REPLACE "," ";" package_list "${packages}")
-                foreach(pkg IN LISTS package_list)
-                    SplitAt("${pkg}" "|" pkg_name ns)
-                    # Check against the target name, the namespace::target, or the raw name
-                    if ("${lib}" STREQUAL "${pkg_name}" OR "${lib}" STREQUAL "${ns}::${pkg_name}")
-                        message(STATUS "  Feature '${feat_name}' is supplied by ${libName}")
+
+                foreach(pkg_entry IN LISTS package_list)
+                    SplitAt("${pkg_entry}" "|" pkg_name ns)
+
+                    # Match against the package name (e.g., yaml-cpp) or the namespace (e.g., SOCI)
+                    if ("${raw_import_name}" STREQUAL "${pkg_name}" OR "${raw_import_name}" STREQUAL "${ns}")
+                        message(STATUS "    -> Feature '${feat_name}' (${pkg_name}) is already provided by ${targetName}")
                         set(${pkg_name}_ALREADY_FOUND ON CACHE INTERNAL "")
+                        break()
                     endif()
                 endforeach()
             endforeach()
