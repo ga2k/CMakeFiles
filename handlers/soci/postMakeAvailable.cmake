@@ -23,25 +23,37 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
         list(APPEND includePathsList "${buildDir}/include")
     endif ()
 
-    list(APPEND SOCI_PLUGINS_HANDLED SOCI::Core SOCI::SQLite3)
-    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
-        if (TARGET ${target})               # Prefer dynamic library ...
-            addTargetProperties(${target} soci OFF)
-            list(APPEND librariesList ${target})
-            list(APPEND dependenciesList ${target})
+#    list(APPEND SOCI_PLUGINS_HANDLED SOCI::Core SOCI::SQLite3)
+#    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
+        if (TARGET SOCI::Core)               # Prefer dynamic library ...
+            addTargetProperties(SOCI::Core soci OFF)
+            list(APPEND librariesList SOCI::Core)
+            list(APPEND dependenciesList SOCI::Core)
 
-            target_include_directories(${target} PRIVATE ${_IncludePathsList})
+            target_include_directories(soci_core PRIVATE ${_IncludePathsList})
             if(WIDGETS IN_LIST APP_FEATURES)
-                target_include_directories(${target} PRIVATE ${_wxIncludePaths})
+                target_include_directories(soci_core PRIVATE ${_wxIncludePaths})
             endif ()
             set(ADD_TO_DEFINES ON)
-        elseif (TARGET ${target}_static)    # ... over the static one
-            addTargetProperties(${target}_static soci OFF)
-            list(APPEND librariesList ${target}_static)
-            list(APPEND dependenciesList ${target}_static)
+        endif ()
+    if (TARGET SOCI::SQLite3)               # Prefer dynamic library ...
+        addTargetProperties(SOCI::SQLite3 soci OFF)
+        list(APPEND librariesList SOCI::SQLite3)
+        list(APPEND dependenciesList SOCI::SQLite3)
 
-            target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
-            set(ADD_TO_DEFINES ON)
+        target_include_directories(soci_sqlite3 PRIVATE ${_IncludePathsList})
+        if(WIDGETS IN_LIST APP_FEATURES)
+            target_include_directories(soci_sqlite3 PRIVATE ${_wxIncludePaths})
+        endif ()
+        set(ADD_TO_DEFINES ON)
+    endif ()
+#        elseif (TARGET soci_core_static)    # ... over the static one
+#            addTargetProperties(${target}_static soci OFF)
+#            list(APPEND librariesList ${target}_static)
+#            list(APPEND dependenciesList ${target}_static)
+#
+#            target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
+#            set(ADD_TO_DEFINES ON)
         endif ()
     endforeach ()
 
