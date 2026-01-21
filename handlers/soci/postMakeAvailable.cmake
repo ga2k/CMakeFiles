@@ -25,17 +25,17 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 
 #    list(APPEND SOCI_PLUGINS_HANDLED SOCI::Core SOCI::SQLite3)
 #    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
-        if (TARGET SOCI::Core)               # Prefer dynamic library ...
-            addTargetProperties(SOCI::Core soci OFF)
-            list(APPEND librariesList SOCI::Core)
-            list(APPEND dependenciesList SOCI::Core)
+    if (TARGET SOCI::Core)               # Prefer dynamic library ...
+        addTargetProperties(SOCI::Core soci OFF)
+        list(APPEND librariesList SOCI::Core)
+        list(APPEND dependenciesList SOCI::Core)
 
-            target_include_directories(soci_core PRIVATE ${_IncludePathsList})
-            if(WIDGETS IN_LIST APP_FEATURES)
-                target_include_directories(soci_core PRIVATE ${_wxIncludePaths})
-            endif ()
-            set(ADD_TO_DEFINES ON)
+        target_include_directories(soci_core PRIVATE ${_IncludePathsList})
+        if(WIDGETS IN_LIST APP_FEATURES)
+            target_include_directories(soci_core PRIVATE ${_wxIncludePaths})
         endif ()
+        set(ADD_TO_DEFINES ON)
+    endif ()
     if (TARGET SOCI::SQLite3)               # Prefer dynamic library ...
         addTargetProperties(SOCI::SQLite3 soci OFF)
         list(APPEND librariesList SOCI::SQLite3)
@@ -54,8 +54,8 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 #
 #            target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
 #            set(ADD_TO_DEFINES ON)
-        endif ()
-    endforeach ()
+#        endif ()
+#    endforeach ()
 
     if (ADD_TO_DEFINES)
         list(APPEND definesList USING_DATABASE USING_soci)
