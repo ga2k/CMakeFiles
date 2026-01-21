@@ -10,7 +10,7 @@ function(soci_fix target tag sourceDir)
             "soci/3rdparty/fmt/include|${sourceDir}"
             "soci/include|${sourceDir}"
 #            "soci/CMakeLists.txt|${sourceDir}"
-            "soci/src|${sourceDir}"
+#            "soci/src|${sourceDir}"
     )
     patchExternals(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
