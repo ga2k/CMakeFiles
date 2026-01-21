@@ -15,7 +15,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     endif ()
 
     list(APPEND SOCI_PLUGINS_HANDLED )
-    foreach (target SOCI::Core SOCI::SQLite3)
+    foreach (target soci_core soci_sqlite3 ) #SOCI::Core SOCI::SQLite3)
         if (TARGET ${target})               # Prefer dynamic library ...
             # Strip SOCI's internal export metadata to prevent "multiple export sets" error
 #            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})

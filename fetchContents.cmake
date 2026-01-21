@@ -102,7 +102,7 @@ function(createStandardPackageData)
     ####
     ##
     #
-    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS" NAMESPACE "SOCI"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARGS EXCLUDE_FROM_ALL REQUIRED) # GIT_SUBMODULES "")
 
