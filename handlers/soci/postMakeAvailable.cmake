@@ -23,50 +23,50 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
         list(APPEND includePathsList "${buildDir}/include")
     endif ()
 
-#    list(APPEND SOCI_PLUGINS_HANDLED SOCI::Core SOCI::SQLite3)
-#    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
-    if (TARGET SOCI::Core)               # Prefer dynamic library ...
-        addTargetProperties(SOCI::Core soci OFF)
-        list(APPEND librariesList SOCI::Core)
-        list(APPEND dependenciesList SOCI::Core)
+    list(APPEND SOCI_PLUGINS_HANDLED soci_core soci_sqlite3)
+    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
+        if (TARGET ${target})               # Prefer dynamic library ...
+            # Strip SOCI's internal export metadata to prevent "multiple export sets" error
+            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
+            set_property(TARGET ${target} PROPERTY EXPORT_PROPERTIES "")
 
-        target_include_directories(soci_core PRIVATE ${_IncludePathsList})
-        if(WIDGETS IN_LIST APP_FEATURES)
-            target_include_directories(soci_core PRIVATE ${_wxIncludePaths})
-        endif ()
-        set(ADD_TO_DEFINES ON)
-    endif ()
-    if (TARGET SOCI::SQLite3)               # Prefer dynamic library ...
-        addTargetProperties(SOCI::SQLite3 soci OFF)
-        list(APPEND librariesList SOCI::SQLite3)
-        list(APPEND dependenciesList SOCI::SQLite3)
+            addTargetProperties(${target} soci ON)
 
-        target_include_directories(soci_sqlite3 PRIVATE ${_IncludePathsList})
-        if(WIDGETS IN_LIST APP_FEATURES)
-            target_include_directories(soci_sqlite3 PRIVATE ${_wxIncludePaths})
+            target_include_directories(${target} PRIVATE ${_IncludePathsList})
+            if(WIDGETS IN_LIST APP_FEATURES)
+                target_include_directories(${target} PRIVATE ${_wxIncludePaths})
+            endif ()
+            target_include_directories(${target} PRIVATE ${_IncludePathsList})
+            set(ADD_TO_DEFINES ON)
+        elseif (TARGET ${target}_static)    # ... over the static one
+            # Strip metadata for static targets too
+            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
+            set_property(TARGET ${target}_static PROPERTY EXPORT_PROPERTIES "")
+
+            addTargetProperties(${target}_static soci ON)
+
+            target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
+            set(ADD_TO_DEFINES ON)
         endif ()
-        set(ADD_TO_DEFINES ON)
-    endif ()
-#        elseif (TARGET soci_core_static)    # ... over the static one
-#            addTargetProperties(${target}_static soci OFF)
-#            list(APPEND librariesList ${target}_static)
-#            list(APPEND dependenciesList ${target}_static)
-#
-#            target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
-#            set(ADD_TO_DEFINES ON)
-#        endif ()
-#    endforeach ()
+    endforeach ()
 
     if (ADD_TO_DEFINES)
         list(APPEND definesList USING_DATABASE USING_soci)
     endif ()
 
-#    include_directories(${_IncludePathsList})
 
-    set(_DefinesList        ${definesList}      PARENT_SCOPE)
-    set(_IncludePathsList   ${includePathsList} PARENT_SCOPE)
-    set(_LibrariesList      ${librariesList}    PARENT_SCOPE)
-    set(_DependenciesList   ${dependenciesList} PARENT_SCOPE)
+    list(APPEND definesList         ${_DefinesList}                 )
+    list(REMOVE_DUPLICATES            definesList                   )
+    set(        _DefinesList        ${definesList}      PARENT_SCOPE)
+    list(APPEND includePathsList    ${_IncludePathsList}            )
+    list(REMOVE_DUPLICATES            includePathsList              )
+    set(        _IncludePathsList   ${includePathsList} PARENT_SCOPE)
+    list(APPEND librariesList       ${_LibrariesList}               )
+    list(REMOVE_DUPLICATES            librariesList                 )
+    set(        _LibrariesList      ${librariesList}    PARENT_SCOPE)
+    list(APPEND dependenciesList    ${_DependenciesList}            )
+    list(REMOVE_DUPLICATES            dependenciesList              )
+    set(        _DependenciesList   ${dependenciesList} PARENT_SCOPE)
 
     set(HANDLED ON PARENT_SCOPE)
 

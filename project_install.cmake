@@ -108,18 +108,21 @@ if(APP_GLOBAL_RESOURCES)
 endif()
 
 # @formatting:off
-install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
-        EXPORT                   ${APP_NAME}Target
-        LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
-        ARCHIVE                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        CXX_MODULES_BMI          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILE_SET CXX_MODULES     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
-        FILE_SET HEADERS         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        INCLUDES                 DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        BUNDLE                   DESTINATION .
-        RESOURCE                 ${resource_list}
+install(TARGETS                 ${APP_NAME}
+                                ${HS_DependenciesList}
+        EXPORT                  ${APP_NAME}Target
+        LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME                 DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+        FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
+        FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        BUNDLE                  DESTINATION .
+        RESOURCE                ${resource_list}
 )
+
 # Install Global Shared Resources
 if(APP_GLOBAL_RESOURCES)
     if(APPLE)
