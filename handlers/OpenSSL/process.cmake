@@ -30,7 +30,7 @@ function(OpenSSL_process incs libs defs)
 
             set (_LibrariesList    "${libs}"    PARENT_SCOPE)
             set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
-            set (_IncludePathsList "${incs}"    PARENT_SCOPE)
+            set (_IncludePathsList "${incs}"    config-GfxPARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
             return()
         endif ()
