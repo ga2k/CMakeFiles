@@ -471,6 +471,7 @@ set(AUE_DEBUG ON)
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
+        message("\n-----------------------------------------------------------------------------------------------\n")
         message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -489,6 +490,7 @@ set(AUE_DEBUG ON)
                     endif ()
                 endif ()
 
+                message(" ")
                 message(CHECK_START "${ESC}[32m${this_feature}${ESC}[0m")
                 list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -536,6 +538,7 @@ set(AUE_DEBUG ON)
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
+                    message(" ")
                     message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -658,6 +661,7 @@ set(AUE_DEBUG ON)
                     endif ()
 
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
+                    message( " " )
                     message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
 
                     # ==========================================================================================================
@@ -666,6 +670,7 @@ set(AUE_DEBUG ON)
 
                 else ()
 
+                    message(" ")
                     message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -713,10 +718,11 @@ set(AUE_DEBUG ON)
                     endif ()
 
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
+                    message(" ")
                     message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
 
                 endif ()
-                message("")
+
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
                 message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
 
