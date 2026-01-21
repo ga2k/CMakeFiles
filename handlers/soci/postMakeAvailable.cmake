@@ -25,9 +25,9 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 #            list(APPEND dependenciesList ${target})
             set(ADD_TO_DEFINES ON)
 
-            if(WIDGETS IN_LIST APP_FEATURES)
-                target_include_directories(${target} PRIVATE ${_wxIncludePaths})
-            endif ()
+#            if(WIDGETS IN_LIST APP_FEATURES)
+#                target_include_directories(${target} PRIVATE ${_wxIncludePaths})
+#            endif ()
 
         elseif (TARGET ${target}_static)    # ... over the static one
             # Strip metadata for static targets too

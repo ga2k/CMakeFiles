@@ -81,7 +81,7 @@ function(addTargetProperties target pkgname addToLists)
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
     if (NOT ${_aliasTarget} STREQUAL "_aliasTarget-NOTFOUND")
-        message("Target ${target} is an alias. Retargeting target to target ${_aliasTarget}")
+        message("Target ${target} is an alias. Retargeting target to target target ${_aliasTarget}")
         addTargetProperties(${_aliasTarget} "${pkgname}" ${addToLists})
         if(addToLists)
             set(_LibrariesList ${_LibrariesList} PARENT_SCOPE)
