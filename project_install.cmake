@@ -108,7 +108,7 @@ if(APP_GLOBAL_RESOURCES)
 endif()
 
 # @formatting:off
-install(TARGETS                  ${APP_NAME} ${HS_DependenciesList}
+install(TARGETS                  ${APP_NAME} # ${HS_DependenciesList}
         EXPORT                   ${APP_NAME}Target
         LIBRARY                  DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                  DESTINATION ${CMAKE_INSTALL_BINDIR}
