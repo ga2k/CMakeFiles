@@ -458,7 +458,6 @@ set(AUE_DEBUG ON)
     ####################################################################################################################
     ####################################################################################################################
 
-
     string(ASCII 27 ESC)
 
     ##
@@ -490,9 +489,6 @@ set(AUE_DEBUG ON)
                     endif ()
                 endif ()
 
-                message(" ")
-                message(CHECK_START "${ESC}[32m${this_feature}${ESC}[0m")
-                list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                 unset(pkg_details)
                 unset(this_pkgname)
@@ -539,7 +535,7 @@ set(AUE_DEBUG ON)
                 if (${pass_num} EQUAL 0)
 
                     message(" ")
-                    message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
+                    message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if ("${this_method}" STREQUAL "PROCESS")
@@ -616,26 +612,37 @@ set(AUE_DEBUG ON)
                         endif ()
                     elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
                         if (NOT TARGET ${this_namespace}::${this_pkgname})
-                            # Check prerequisites before attempting to find this library
-                            if (this_prereqs)
-                                set(needed_prereqs)
-                                foreach(p IN LISTS this_prereqs)
-                                    foreach(e IN LISTS unifiedFeatureList)
-                                        if(e MATCHES "^${p}\\.")
-                                            list(APPEND needed_prereqs "${e}")
-                                            break()
-                                        endif()
-                                    endforeach()
-                                endforeach()
+                            # 1. Is the library already available? (Probe it)
+                            set(temporary_args ${this_find_package_args})
+                            list(REMOVE_ITEM temporary_args REQUIRED CONFIG)
+                            find_package(${this_pkgname} QUIET ${temporary_args})
 
-                                if (needed_prereqs)
-                                    message(STATUS "Processing prerequisites for ${this_pkgname}: ${needed_prereqs}")
-                                    processFeatures("${needed_prereqs}")
+                            if (${this_pkgname}_FOUND)
+                                # Library exists! Scan it to see what 3rd-party targets it supplies
+                                scanLibraryTargets("${this_pkgname}")
+                            else()
+                                # Library not found yet. We must fulfill its metadata prerequisites
+                                # so that we can eventually load it.
+                                if (this_prereqs)
+                                    set(needed_prereqs)
+                                    foreach(p IN LISTS this_prereqs)
+                                        foreach(e IN LISTS unifiedFeatureList)
+                                            if(e MATCHES "^${p}\\.")
+                                                list(APPEND needed_prereqs "${e}")
+                                                break()
+                                            endif()
+                                        endforeach()
+                                    endforeach()
+
+                                    if (needed_prereqs)
+                                        message(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
+                                        processFeatures("${needed_prereqs}")
+                                    endif()
                                 endif()
                             endif()
 
+                            # 2. Now attempt the real find_package
                             message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
-
                             find_package(${this_pkgname} ${this_find_package_args})
 
                             set(HANDLED OFF)
@@ -671,7 +678,7 @@ set(AUE_DEBUG ON)
                 else ()
 
                     message(" ")
-                    message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                    message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if ("${this_method}" STREQUAL "FIND_PACKAGE")

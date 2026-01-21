@@ -699,16 +699,15 @@ function(combine primaryList secondaryList outputList)  # Optionally, add TRUE o
 endfunction()
 
 function(resolveDependencies inputList allData outputList)
-    set(current_input "${inputList}")
-    set(ooo ON)
+    set(resolved "")
+    set(visited "")
 
-    while(ooo)
-        set(ooo OFF)
-        set(local_output "")
+    # Internal helper to walk dependencies
+    macro(visit entry)
+        if (NOT "${entry}" IN_LIST visited)
+            list(APPEND visited "${entry}")
 
-        foreach(CI IN LISTS current_input)
-            # Get prerequisites for the Current Item
-            SplitAt("${CI}" "." _feat _idx)
+            SplitAt("${entry}" "." _feat _idx)
             parsePackage("${allData}"
                     FEATURE "${_feat}"
                     PKG_INDEX "${_idx}"
@@ -717,7 +716,6 @@ function(resolveDependencies inputList allData outputList)
             )
 
             foreach(PR_ENTRY IN LISTS _pre)
-                # Handle FEATURE=PACKAGE syntax
                 string(FIND "${PR_ENTRY}" "=" eq_pos)
                 if (eq_pos GREATER -1)
                     string(SUBSTRING "${PR_ENTRY}" 0 ${eq_pos} PR_FEAT)
@@ -725,49 +723,40 @@ function(resolveDependencies inputList allData outputList)
                     set(PR_FEAT "${PR_ENTRY}")
                 endif()
 
-                # Is the prerequisite already in our new output list?
-                set(found_in_output OFF)
-                foreach(check IN LISTS local_output)
-                    if(check MATCHES "^${PR_FEAT}\\.")
-                        set(found_in_output ON)
+                set(found_entry_in_input "")
+                foreach(e IN LISTS inputList)
+                    if(e MATCHES "^${PR_FEAT}\\.")
+                        set(found_entry_in_input "${e}")
                         break()
                     endif()
                 endforeach()
 
-                if(NOT found_in_output)
-                    # Not in output yet. Is it anywhere in the input list?
-                    set(found_entry_in_input "")
-                    foreach(e IN LISTS current_input)
-                        if(e MATCHES "^${PR_FEAT}\\.")
-                            set(found_entry_in_input "${e}")
-                            break()
-                        endif()
-                    endforeach()
-
-                    if(found_entry_in_input)
-                        # Add PR to output now, before CI
-                        list(APPEND local_output "${found_entry_in_input}")
-                        set(ooo ON)
-                    else()
-                        # Step 6: Prerequisite not found in input list
-                        message(AUTHOR_WARNING "Feature '${_feat}' requires '${PR_FEAT}', but '${PR_FEAT}' is not in the feature list.")
-                    endif()
+                if(found_entry_in_input)
+                    visit("${found_entry_in_input}")
                 endif()
             endforeach()
 
-            # Add CI itself to output if not already added by a dependency check
-            if(NOT "${CI}" IN_LIST local_output)
-                list(APPEND local_output "${CI}")
-            endif()
-        endforeach()
-
-        if(ooo)
-            set(current_input "${local_output}")
+            list(APPEND resolved "${entry}")
         endif()
-    endwhile()
+    endmacro()
 
-    set(${outputList} "${current_input}" PARENT_SCOPE)
+    # Pass 1: Handle LIBRARIES and their deep prerequisites first
+    foreach(item IN LISTS inputList)
+        SplitAt("${item}" "." _feat _idx)
+        parsePackage("${allData}" FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind LIST _dnc)
+        if ("${_kind}" STREQUAL "LIBRARY")
+            visit("${item}")
+        endif()
+    endforeach()
+
+    # Pass 2: Handle everything else
+    foreach(item IN LISTS inputList)
+        visit("${item}")
+    endforeach()
+
+    set(${outputList} "${resolved}" PARENT_SCOPE)
 endfunction()
+
 ##
 ########################################################################################################################
 ##
