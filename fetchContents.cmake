@@ -490,254 +490,296 @@ set(AUE_DEBUG ON)
 
     string(ASCII 27 ESC)
 
-    # Two-Pass Strategy:
-    # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
-    # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
+    ##
+    ## Nested function. How fancy
+    ##
 
-    foreach (pass_num RANGE 1)
-        foreach (this_feature_entry IN LISTS unifiedFeatureList)
+    function(processFeatures featureList)
 
-            SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
+        # Two-Pass Strategy:
+        # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
+        # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
-            message(CHECK_START "${ESC}[32m${this_feature}${ESC}[0m")
-            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
+        list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-            # Skip features already found/aliased, but only check this in the final pass
-            # to allow declarations to overlap if necessary.
-            if (${pass_num} EQUAL 1)
-                if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
-                    list(POP_BACK CMAKE_MESSAGE_INDENT)
-                    message(CHECK_PASS "Feature already available without re-processing: skipped")
-                    continue()
-                endif ()
-            endif ()
+        foreach (pass_num RANGE 1)
+            foreach (this_feature_entry IN LISTS unifiedFeatureList)
 
-            unset(pkg_details)
-            unset(this_pkgname)
-            unset(this_pkglc)
-            unset(this_pkguc)
-            unset(this_namespace)
-            unset(this_method)
-            unset(this_url)
-            unset(this_tag)
-            unset(this_src)
-            unset(this_build)
-            unset(this_inc)
-            unset(this_out)
-            unset(this_find_package_components)
-            unset(this_namespace_package_components)
-            unset(this_find_package_args)
-            unset(this_hint)
-            unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
-            unset(COMPONENTS_KEYWORD)
+                SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
 
-            parsePackage(AllPackageData
-                    FEATURE ${this_feature}
-                    PKG_INDEX ${this_pkgindex}
-                    METHOD this_method
-                    LIST pkg_details
-                    URL this_url
-                    GIT_TAG this_tag
-                    SRC_DIR this_src
-                    BUILD_DIR this_build
-                    FETCH_FLAG this_fetch
-                    INC_DIR this_inc
-            )
-
-            findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
-            findInList("${unifiedArgumentList}" ${this_feature} " " this_find_package_args)
-
-            list(POP_FRONT pkg_details this_pkgname this_namespace)
-            string(TOLOWER "${this_pkgname}" this_pkglc)
-            string(TOUPPER "${this_pkgname}" this_pkguc)
-
-            # ==========================================================================================================
-            # PASS 0: DECLARATION & FIND_PACKAGE phase
-            # ==========================================================================================================
-            if (${pass_num} EQUAL 0)
-
-                if ("${this_method}" STREQUAL "PROCESS")
-                    set(fn "${this_pkgname}_process")
-                    if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
+                # Skip features already found/aliased, but only check this in the final pass
+                # to allow declarations to overlap if necessary.
+                if (${pass_num} EQUAL 1)
+                    if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND)
+    #                    list(POP_BACK CMAKE_MESSAGE_INDENT)
+    #                    message(CHECK_PASS "Feature already available without re-processing: skipped")
+                        continue()
                     endif ()
                 endif ()
 
-                # Pre-download hooks (mostly for setting variables/policies)
-                set(fn "${this_pkgname}_preDownload")
-                if (COMMAND "${fn}")
-                    cmake_language(CALL "${fn}" "${this_pkgname}" "${this_url}" "${this_tag}" "${this_src}")
-                endif ()
+                message(CHECK_START "${ESC}[32m${this_feature}${ESC}[0m")
+                list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-                if ("${this_method}" STREQUAL "FETCH_CONTENTS")
-                    if (this_fetch)
+                unset(pkg_details)
+                unset(this_pkgname)
+                unset(this_pkglc)
+                unset(this_pkguc)
+                unset(this_namespace)
+                unset(this_method)
+                unset(this_url)
+                unset(this_tag)
+                unset(this_src)
+                unset(this_build)
+                unset(this_inc)
+                unset(this_out)
+                unset(this_find_package_components)
+                unset(this_namespace_package_components)
+                unset(this_find_package_args)
+                unset(this_hint)
+                unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
+                unset(COMPONENTS_KEYWORD)
 
-                        # Check if a previously loaded LIBRARY already claimed this package
-                        if (${this_pkgname}_ALREADY_FOUND)
-                            message(STATUS "${this_pkgname} was discovered as a transitive dependency. Skipping FetchContent.")
-                        else()
-                            # Try to find the package first before declaring FetchContent
-                            # This allows Gfx to see what HoffSoft already fetched/built
-                            message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
-                            set(temporary_args ${this_find_package_args})
-                            list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
-                            find_package(${this_pkgname} QUIET ${temporary_args})
+                parsePackage(AllPackageData
+                        FEATURE ${this_feature}
+                        PKG_INDEX ${this_pkgindex}
+                        METHOD this_method
+                        LIST pkg_details
+                        URL this_url
+                        GIT_TAG this_tag
+                        SRC_DIR this_src
+                        BUILD_DIR this_build
+                        FETCH_FLAG this_fetch
+                        INC_DIR this_inc
+                )
 
-                            if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                message(STATUS "${this_pkgname} found (likely via prerequisite). Skipping FetchContent.")
+                findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
+                findInList("${unifiedArgumentList}" ${this_feature} " " this_find_package_args)
+
+                list(POP_FRONT pkg_details this_pkgname this_namespace)
+                string(TOLOWER "${this_pkgname}" this_pkglc)
+                string(TOUPPER "${this_pkgname}" this_pkguc)
+
+                # ==========================================================================================================
+                # PASS 0: DECLARATION & FIND_PACKAGE phase
+                # ==========================================================================================================
+                if (${pass_num} EQUAL 0)
+
+                    message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
+                    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+                    if ("${this_method}" STREQUAL "PROCESS")
+                        set(fn "${this_pkgname}_process")
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${_IncludePathsList}" "${_LibrariesList}" "${_DefinesList}")
+                        endif ()
+                    endif ()
+
+                    # Pre-download hooks (mostly for setting variables/policies)
+                    set(fn "${this_pkgname}_preDownload")
+                    if (COMMAND "${fn}")
+                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_url}" "${this_tag}" "${this_src}")
+                    endif ()
+
+                    if ("${this_method}" STREQUAL "FETCH_CONTENTS")
+                        if (this_fetch)
+
+                            # Check if a previously loaded LIBRARY already claimed this package
+                            if (${this_pkgname}_ALREADY_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                message(STATUS "${this_pkgname} already supplied by a library target. Skipping FetchContent.")
                                 set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                             else()
-                                message(STATUS "Nope! Doing it the hard way...")
-                                # Normalise source/URL keywords
-                                string(FIND "${this_url}" ".zip" azip)
-                                string(FIND "${this_url}" ".tar" atar)
-                                string(FIND "${this_url}" ".gz" agz)
-                                if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
-                                    set(SOURCE_KEYWORD "URL")
-                                    unset(GIT_TAG_KEYWORD)
-                                    unset(this_tag)
-                                else ()
-                                    set(SOURCE_KEYWORD "GIT_REPOSITORY")
-                                    set(GIT_TAG_KEYWORD "GIT_TAG")
-                                endif ()
+                                # Try to find the package first before declaring FetchContent
+                                # This allows Gfx to see what HoffSoft already fetched/built
+                                message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
+                                set(temporary_args ${this_find_package_args})
+                                list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
+                                find_package(${this_pkgname} QUIET ${temporary_args})
 
-                                # Setup Override keywords
-                                list(LENGTH this_find_package_components num_components)
-                                list(LENGTH this_find_package_args num_args)
-                                if (num_args OR num_components)
-                                    set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
-                                endif ()
-                                if (num_components)
-                                    set(COMPONENTS_KEYWORD "COMPONENTS")
-                                endif ()
+                                if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                    message(STATUS "${this_pkgname} found (likely via prerequisite). Skipping FetchContent.")
+                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
+                                else()
+                                    message(STATUS "Nope! Doing it the hard way...")
+                                    # Normalise source/URL keywords
+                                    string(FIND "${this_url}" ".zip" azip)
+                                    string(FIND "${this_url}" ".tar" atar)
+                                    string(FIND "${this_url}" ".gz" agz)
+                                    if (${azip} GREATER 0 OR ${atar} GREATER 0 OR ${agz} GREATER 0)
+                                        set(SOURCE_KEYWORD "URL")
+                                        unset(GIT_TAG_KEYWORD)
+                                        unset(this_tag)
+                                    else ()
+                                        set(SOURCE_KEYWORD "GIT_REPOSITORY")
+                                        set(GIT_TAG_KEYWORD "GIT_TAG")
+                                    endif ()
 
-                                message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    # Setup Override keywords
+                                    list(LENGTH this_find_package_components num_components)
+                                    list(LENGTH this_find_package_args num_args)
+                                    if (num_args OR num_components)
+                                        set(OVERRIDE_FIND_PACKAGE_KEYWORD "OVERRIDE_FIND_PACKAGE")
+                                    endif ()
+                                    if (num_components)
+                                        set(COMPONENTS_KEYWORD "COMPONENTS")
+                                    endif ()
 
-                                FetchContent_Declare(${this_pkgname}
-                                        ${SOURCE_KEYWORD} ${this_url}
-                                        SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
-                                        ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-                                        ${COMPONENTS_KEYWORD} ${this_find_package_components}
-                                        ${GIT_TAG_KEYWORD} ${this_tag})
+                                    message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
 
-                                set(fn "${this_pkgname}_postDeclare")
-                                if (COMMAND "${fn}")
-                                    cmake_language(CALL "${fn}" "${this_pkgname}")
+                                    FetchContent_Declare(${this_pkgname}
+                                            ${SOURCE_KEYWORD} ${this_url}
+                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                            ${GIT_TAG_KEYWORD} ${this_tag})
+
+                                    set(fn "${this_pkgname}_postDeclare")
+                                    if (COMMAND "${fn}")
+                                        cmake_language(CALL "${fn}" "${this_pkgname}")
+                                    endif ()
                                 endif ()
                             endif ()
                         endif ()
-                    endif ()
-                elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
-                    if (NOT TARGET ${this_namespace}::${this_pkgname})
-                        message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+                    elseif ("${this_method}" STREQUAL "FIND_PACKAGE")
+                        if (NOT TARGET ${this_namespace}::${this_pkgname})
+                            # Check prerequisites before attempting to find this library
+                            if (this_prereqs)
+                                set(needed_prereqs)
+                                foreach(p IN LISTS this_prereqs)
+                                    foreach(e IN LISTS unifiedFeatureList)
+                                        if(e MATCHES "^${p}\\.")
+                                            list(APPEND needed_prereqs "${e}")
+                                            break()
+                                        endif()
+                                    endforeach()
+                                endforeach()
 
-                        find_package(${this_pkgname} ${this_find_package_args})
-
-                        set(HANDLED OFF)
-                        set(fn "${this_pkgname}_postMakeAvailable")
-                        if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-                        endif ()
-
-                        if (NOT HANDLED AND ${this_pkgname}_FOUND)
-                            if (${this_pkgname}_LIBRARIES)
-                                list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
-                            endif ()
-                            if (${this_pkgname}_INCLUDE_DIR)
-                                list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
-                            endif ()
-
-                            # If this was a LIBRARY (like CORE), scan it for 3rd-party targets it might supply
-                            parsePackage(AllPackageData FEATURE ${this_feature} PKG_INDEX ${this_pkgindex} KIND this_kind)
-                            if ("${this_kind}" STREQUAL "LIBRARY")
-                                scanLibraryTargets("${this_pkgname}")
+                                if (needed_prereqs)
+                                    message(STATUS "Processing prerequisites for ${this_pkgname}: ${needed_prereqs}")
+                                    processFeatures("${needed_prereqs}")
+                                endif()
                             endif()
+
+                            message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+
+                            find_package(${this_pkgname} ${this_find_package_args})
+
+                            set(HANDLED OFF)
+                            set(fn "${this_pkgname}_postMakeAvailable")
+                            if (COMMAND "${fn}")
+                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                            endif ()
+
+                            if (NOT HANDLED AND ${this_pkgname}_FOUND)
+                                if (${this_pkgname}_LIBRARIES)
+                                    list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
+                                endif ()
+                                if (${this_pkgname}_INCLUDE_DIR)
+                                    list(APPEND _IncludePathsList ${${this_pkgname}_INCLUDE_DIR})
+                                endif ()
+
+                                # Now that the library is found, scan it for transitives
+                                if ("${this_kind}" STREQUAL "LIBRARY")
+                                    scanLibraryTargets("${this_pkgname}")
+                                endif()
+                            endif ()
                         endif ()
                     endif ()
 
-                endif ()
+                    list(POP_BACK CMAKE_MESSAGE_INDENT)
+                    message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
 
-                # ==========================================================================================================
-                # PASS 1: POPULATION & FIX phase
-                # ==========================================================================================================
+                    # ==========================================================================================================
+                    # PASS 1: POPULATION & FIX phase
+                    # ==========================================================================================================
 
-            else ()
-                if ("${this_method}" STREQUAL "FIND_PACKAGE")
-                    if (NOT TARGET ${this_namespace}::${this_pkgname})
-                       handleTarget()
-                    endif ()
-                elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
-
-                    if (NOT ${this_pkgname}_ALREADY_FOUND)
-                        set(fn "${this_pkgname}_preMakeAvailable")
-                        set(HANDLED OFF)
-                        if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_pkgname}")
-                        endif ()
-
-                        if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
-                            message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
-
-                            FetchContent_MakeAvailable(${this_pkgname})
-                            handleTarget()
-                        endif ()
-
-                        set(fn "${this_pkgname}_postMakeAvailable")
-                        if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-                        endif ()
-                    else()
-                        message(STATUS "${this_pkgname} already found, skipping population.")
-                        handleTarget()
-                    endif()
-
-                    # Auto-include the standard 'include' folder if it exists and wasn't handled
-                    if (EXISTS "${this_src}/include")
-                        list(APPEND _IncludePathsList "${this_src}/include")
-                    endif ()
                 else ()
-                    message("\nNo Phase 2 step")
+
+                    message(CHECK_START "${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+                    if ("${this_method}" STREQUAL "FIND_PACKAGE")
+                        if (NOT TARGET ${this_namespace}::${this_pkgname})
+                           handleTarget()
+                        endif ()
+                    elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
+
+                        if (NOT ${this_pkgname}_ALREADY_FOUND)
+                            set(fn "${this_pkgname}_preMakeAvailable")
+                            set(HANDLED OFF)
+                            if (COMMAND "${fn}")
+                                cmake_language(CALL "${fn}" "${this_pkgname}")
+                            endif ()
+
+                            if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
+                                message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
+
+                                FetchContent_MakeAvailable(${this_pkgname})
+                                handleTarget()
+                            endif ()
+
+                            set(fn "${this_pkgname}_postMakeAvailable")
+                            if (COMMAND "${fn}")
+                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                            endif ()
+                        else()
+                            message(STATUS "${this_pkgname} already found, skipping population.")
+                            handleTarget()
+                        endif()
+
+                        # Auto-include the standard 'include' folder if it exists and wasn't handled
+                        if (EXISTS "${this_src}/include")
+                            list(APPEND _IncludePathsList "${this_src}/include")
+                        endif ()
+                    else ()
+                        message("\nNo Phase 2 step")
+                    endif ()
+
+                    # Final patching/fixing phase
+                    set(fn "${this_pkgname}_fix")
+                    if (COMMAND "${fn}")
+                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                    endif ()
+
+
+                    list(POP_BACK CMAKE_MESSAGE_INDENT)
+                    message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
+
                 endif ()
+                message("")
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+                message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
 
-                # Final patching/fixing phase
-                set(fn "${this_pkgname}_fix")
-                if (COMMAND "${fn}")
-                    cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
-                endif ()
-
-            endif ()
-            message("")
-            list(POP_BACK CMAKE_MESSAGE_INDENT)
-            message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
-
-        endforeach () # this_feature_entry
-    endforeach () # pass_num
+            endforeach () # this_feature_entry
+        endforeach () # pass_num
 
 
-    set(ies "ies")
-    if (numWanted EQUAL 1)
-        set(ies "y")
-    endif ()
-    list(POP_BACK CMAKE_MESSAGE_INDENT)
-
-    if (numFailed)
-        if (${numFailed} EQUAL 1)
-            if (${numWanted} EQUAL 1)
-                message(CHECK_FAIL "finished. Library could not be loaded.")
-            else ()
-                message(CHECK_FAIL "finished. One out of ${numWanted} libraries could not be loaded.")
-            endif ()
-        elseif ()
-            message(CHECK_FAIL "finished. ${numFailed} out of ${numWanted} libraries could not be loaded.")
+        set(ies "ies")
+        if (numWanted EQUAL 1)
+            set(ies "y")
         endif ()
-    else ()
-        if (${numWanted} EQUAL 1)
-            message(CHECK_PASS "finished. Library loaded.")
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+
+        if (numFailed)
+            if (${numFailed} EQUAL 1)
+                if (${numWanted} EQUAL 1)
+                    message(CHECK_FAIL "finished. Library could not be loaded.")
+                else ()
+                    message(CHECK_FAIL "finished. One out of ${numWanted} libraries could not be loaded.")
+                endif ()
+            elseif ()
+                message(CHECK_FAIL "finished. ${numFailed} out of ${numWanted} libraries could not be loaded.")
+            endif ()
         else ()
-            message(CHECK_PASS "finished. All ${numWanted} librar${ies} loaded.")
+            if (${numWanted} EQUAL 1)
+                message(CHECK_PASS "finished. Library loaded.")
+            else ()
+                message(CHECK_PASS "finished. All ${numWanted} librar${ies} loaded.")
+            endif ()
         endif ()
-    endif ()
     #
+    endfunction()
+
     # ##########################################################################################################
     #
     #
