@@ -5,16 +5,7 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     set(definesList         ${_DefinesList})
     set(includePathsList    ${_IncludePathsList})
     set(librariesList       ${_LibrariesList})
-    set(dependenciesList    ${_DependenciesList})
-
-    if(soci IN_LIST librariesList)
-        message(WARNING "raw soci library has been removed to library list")
-        list(REMOVE_ITEM librariesList soci)
-    endif ()
-    if(soci IN_LIST dependenciesList)
-        message(WARNING "raw soci library has been removed to ldependency list")
-        list(REMOVE_ITEM dependenciesList soci)
-    endif ()
+#    set(dependenciesList    ${_DependenciesList})
 
     if(EXISTS "${sourceDir}/include")
         list(APPEND includePathsList "${sourceDir}/include")
@@ -23,28 +14,23 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
         list(APPEND includePathsList "${buildDir}/include")
     endif ()
 
-    list(APPEND SOCI_PLUGINS_HANDLED soci_core soci_sqlite3)
-    foreach (target IN LISTS SOCI_PLUGINS_HANDLED)
+    list(APPEND SOCI_PLUGINS_HANDLED )
+    foreach (target soci_core soci_sqlite3)
         if (TARGET ${target})               # Prefer dynamic library ...
             # Strip SOCI's internal export metadata to prevent "multiple export sets" error
             set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
             set_property(TARGET ${target} PROPERTY EXPORT_PROPERTIES "")
-
-            addTargetProperties(${target} soci ON)
-
+#            addTargetProperties(${target} soci ON)
             target_include_directories(${target} PRIVATE ${_IncludePathsList})
             if(WIDGETS IN_LIST APP_FEATURES)
                 target_include_directories(${target} PRIVATE ${_wxIncludePaths})
             endif ()
-            target_include_directories(${target} PRIVATE ${_IncludePathsList})
             set(ADD_TO_DEFINES ON)
         elseif (TARGET ${target}_static)    # ... over the static one
             # Strip metadata for static targets too
             set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
             set_property(TARGET ${target}_static PROPERTY EXPORT_PROPERTIES "")
-
-            addTargetProperties(${target}_static soci ON)
-
+#            addTargetProperties(${target}_static soci ON)
             target_include_directories(${target}_static PRIVATE ${_IncludePathsList})
             set(ADD_TO_DEFINES ON)
         endif ()
@@ -64,9 +50,9 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     list(APPEND librariesList       ${_LibrariesList}               )
     list(REMOVE_DUPLICATES            librariesList                 )
     set(        _LibrariesList      ${librariesList}    PARENT_SCOPE)
-    list(APPEND dependenciesList    ${_DependenciesList}            )
-    list(REMOVE_DUPLICATES            dependenciesList              )
-    set(        _DependenciesList   ${dependenciesList} PARENT_SCOPE)
+#    list(APPEND dependenciesList    ${_DependenciesList}            )
+#    list(REMOVE_DUPLICATES            dependenciesList              )
+#    set(        _DependenciesList   ${dependenciesList} PARENT_SCOPE)
 
     set(HANDLED ON PARENT_SCOPE)
 
