@@ -853,9 +853,11 @@ macro(handleTarget _pkgname)
         # This is the "Magic" that links you to HoffSoft::magic_enum instead of fetching a new one
         if (${_pkgname}_PROVIDED_TARGET AND TARGET ${${_pkgname}_PROVIDED_TARGET})
             set(_actualTarget ${${_pkgname}_PROVIDED_TARGET})
+            message(STATUS "  Linking ${_pkgname} to existing target: ${_actualTarget}")
+
             addTargetProperties(${_actualTarget} ${_pkgname} ON)
 
-            # Proactively pull include directories from the imported target
+            # Ensure the include directories from the existing target are propagated
             get_target_property(_target_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
             if (_target_incs)
                 list(APPEND _IncludePathsList ${_target_incs})
@@ -863,6 +865,9 @@ macro(handleTarget _pkgname)
             set(_anyTargetFound ON)
         endif()
 
+        # 2. Standard component check (only if not found in library)
+        if (NOT _anyTargetFound)
+// ... existing code ...
         # 2. Standard component check
         if (NOT _anyTargetFound)
             foreach (_component IN LISTS this_find_package_components)
