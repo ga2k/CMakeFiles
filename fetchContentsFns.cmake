@@ -857,7 +857,7 @@ macro(handleTarget _pkgname)
 
             addTargetProperties(${_actualTarget} ${_pkgname} ON)
             list(REMOVE_ITEM _DependenciesList "${actualTarget}")
-            
+
             # Ensure the include directories from the existing target are propagated
             get_target_property(_target_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
             if (_target_incs)
