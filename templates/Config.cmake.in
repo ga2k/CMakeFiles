@@ -2,6 +2,63 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
+  
+# Provide a wxWidgets shim for consumers.
+# GfxTarget.cmake exports HoffSoft::wxWidgets that links to wx::wxmono, but consumers may not
+# have wxWidgets' own CMake package (and thus no wx::wxmono target). We stage the real binaries,
+# so create an imported target that points at them.
+if(WIN32 AND NOT TARGET wx::wxmono)
+  set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
+  set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
+
+  # 1) Find the wx monolithic runtime DLL (ignore wxrc tool and unrelated DLLs).
+  file(GLOB _wx_dll_candidates
+    "${_wx_bin_dir}/wxmsw*u*.dll"
+    "${_wx_bin_dir}/wxmsw*.dll"
+  )
+  list(FILTER _wx_dll_candidates EXCLUDE REGEX ".*/wxrc-.*\\.exe$")
+  list(REMOVE_DUPLICATES _wx_dll_candidates)
+
+  # 2) Find the primary import library for wxWidgets monolithic Unicode build.
+  # Keep this tight so we don't accidentally pick wxwebp/wxsharpyuv etc.
+  file(GLOB _wx_implib_candidates
+    "${_wx_lib_dir}/wx_mswu-*.lib"
+    "${_wx_lib_dir}/wxmswu*.lib"
+  )
+  list(REMOVE_DUPLICATES _wx_implib_candidates)
+
+  list(LENGTH _wx_dll_candidates _wx_dll_count)
+  list(LENGTH _wx_implib_candidates _wx_implib_count)
+
+  if(_wx_dll_count EQUAL 1 AND _wx_implib_count EQUAL 1)
+    list(GET _wx_dll_candidates 0 _wx_mono_dll)
+    list(GET _wx_implib_candidates 0 _wx_mono_implib)
+  
+    add_library(wx::wxmono SHARED IMPORTED)
+    set_target_properties(wx::wxmono PROPERTIES
+    IMPORTED_LOCATION "${_wx_mono_dll}"
+    IMPORTED_IMPLIB   "${_wx_mono_implib}"
+    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+  )
+  else()
+    message(FATAL_ERROR
+    "Gfx package could not uniquely identify staged wxWidgets artifacts.\n"
+    "  bin search dir: ${_wx_bin_dir}\n"
+    "  dll candidates: ${_wx_dll_candidates}\n"
+    "  lib search dir: ${_wx_lib_dir}\n"
+    "  implib candidates: ${_wx_implib_candidates}\n"
+    "Fix the glob patterns or stage layout so exactly one DLL and one import LIB are found.")
+  endif()
+
+  unset(_wx_bin_dir)
+  unset(_wx_lib_dir)
+  unset(_wx_dll_candidates)
+  unset(_wx_implib_candidates)
+  unset(_wx_dll_count)
+  unset(_wx_implib_count)
+  unset(_wx_mono_dll)
+  unset(_wx_mono_implib)
+endif()
 
 if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   message(NOTICE "In development")
@@ -111,29 +168,6 @@ if(WIN32)
   set(_libdir "${_impdir}")
 endif()
   
-### This is weird, but it works.
-##if ("@APP_TARGET@" STREQUAL "@APP_NAME@" OR "@APP_NAME@" STREQUAL "Core")
-#  # Create imported target if not done already
-#  if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-#    add_library(@APP_VENDOR@::@APP_NAME@ SHARED IMPORTED)
-#    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-#      IMPORTED_LOCATION "${_lib}"
-#      INTERFACE_INCLUDE_DIRECTORIES "${_incdir}"
-#      CXX_EXTENSIONS "OFF"
-#      CXX_MODULE_STD "23"
-#      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
-#      INTERFACE_COMPILE_FEATURES "cxx_std_23"
-#    )
-#  else()
-#    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-#      CXX_EXTENSIONS "OFF"
-#      CXX_MODULE_STD "23"
-#      IMPORTED_CXX_MODULES_COMPILE_FEATURES "cxx_std_23"
-#      INTERFACE_COMPILE_FEATURES "cxx_std_23"
-#    )
-#  endif()
-##endif()
-
 if(_inDevelopment)
   # In development (monorepo) include the build-tree export of module FILE_SET mappings
   file(GLOB _DEV_MODULE_EXPORT
@@ -194,24 +228,6 @@ if(USE_PREBUILT_MODULES)
   endif()
 endif()
 
-## Link transitive dependencies when available so consumers don’t create duplicates.
-#if(TARGET magic_enum::magic_enum)
-#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-#    INTERFACE_LINK_LIBRARIES magic_enum::magic_enum)
-#endif()
-#if(TARGET eventpp::eventpp)
-#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-#    INTERFACE_LINK_LIBRARIES eventpp::eventpp)
-#endif()
-#if(TARGET GTest::gtest)
-#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-#    INTERFACE_LINK_LIBRARIES GTest::gtest)
-#endif()
-#if(TARGET yaml-cpp)
-#  set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-#    INTERFACE_LINK_LIBRARIES yaml-cpp)
-#endif()
-
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
 set(@APP_NAME@_INCLUDE_DIR  "${@APP_NAME@_INCLUDE_DIR}" PARENT_SCOPE)
@@ -221,7 +237,6 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
 set(@APP_NAME@_LIBRARY_DIR  "${@APP_NAME@_LIBRARY_DIR}" PARENT_SCOPE)
 
 # Plugin and resource directories
-
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
   # If the app creates plugins, set the plugin directory
   if (_inDevelopment)
