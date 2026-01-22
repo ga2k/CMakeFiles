@@ -188,7 +188,13 @@ foreach(pkg IN LISTS HS_DependenciesList)
         install(DIRECTORY "${${pkglc}_BINARY_DIR}/lib/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT Runtime
-                FILES_MATCHING PATTERN "*.lib" PATTERN "*.a" PATTERN "*.so*"
+                FILES_MATCHING
+                    PATTERN "*.lib"
+                    PATTERN "*.a"
+                    PATTERN "*.so*"
+                    PATTERN "*d.lib"
+                    PATTERN "*d.a"
+                    PATTERN "*d.so*"
         )
 
         # Install DLLs (Windows specific - must be in the bin folder)
@@ -196,7 +202,9 @@ foreach(pkg IN LISTS HS_DependenciesList)
             install(DIRECTORY "${${pkglc}_BINARY_DIR}/bin/"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                     COMPONENT Runtime
-                    FILES_MATCHING PATTERN "*.dll"
+                    FILES_MATCHING
+                        PATTERN "*.dll"
+                        PATTERN "*d.dll"
             )
         endif()
     endif()
