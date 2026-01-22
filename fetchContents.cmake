@@ -704,7 +704,7 @@ function(fetchContents)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
-                    message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                    message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
                     message(" ")
 
