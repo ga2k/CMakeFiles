@@ -14,11 +14,19 @@ if(WIN32)
   set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
   set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
+  message(STATUS "Copying setup.h from ${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx to ${_wx_lib_dir}/vc_x64_dll/mswud/wx")
   execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory  "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
                   COMMAND "${CMAKE_COMMAND}" -E copy            "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
                                                                 "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
-                  COMMAND_ERROR_IS_FATAL ANY
+                  COMMAND_ERROR_IS_FATAL  ANY
+                  RESULT_VARIABLE         resultVariable
+                  OUTPUT_VARIABLE         outputVariable
+                  ERROR_VARIABLE          errorVariable
   )
+
+  if (${resultVariable} GREATER 0)
+    message(FATAL_ERROR "Couldn't copy file: Error Code ${errorVariable}")
+  endif()
 
   # Find the CMake-style generated setup.h:
   #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
