@@ -633,8 +633,7 @@ set(AUE_DEBUG ON)
                             # 1. Is the library already available? (Probe it)
                             set(temporary_args ${this_find_package_args})
                             list(REMOVE_ITEM temporary_args REQUIRED CONFIG)
-                            find_package(${this_pkgname} ${temporary_args})
-#                            find_package(${this_pkgname} QUIET ${temporary_args})
+                            find_package(${this_pkgname} QUIET ${temporary_args})
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
