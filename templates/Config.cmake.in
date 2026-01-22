@@ -28,6 +28,8 @@ if(WIN32)
     if (${resultVariable} GREATER 0)
       message(FATAL_ERROR "Couldn't copy file: Error Code ${errorVariable}")
     endif()
+  else()
+    message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
   endif()
 
   # Find the CMake-style generated setup.h:
