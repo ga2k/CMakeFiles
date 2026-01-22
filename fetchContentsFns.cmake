@@ -702,7 +702,9 @@ endfunction()
 
 function(resolveDependencies inputList allData outputList)
     set(resolved "")
+    set(packageList "")
     set(visited "")
+    set(longestPkgName 0)
 
     # Internal helper to walk dependencies
     macro(visit entry is_a_prereq)
@@ -717,6 +719,12 @@ function(resolveDependencies inputList allData outputList)
                     LIST dnc_
                     ARGS args_
             )
+
+            list(GET dnc_ 0 pkgname_)
+            string(LENGTH "${pkgname_}" this_pkglength_)
+            if (${this_pkglength_} GREATER ${longestPkgName})
+                set(longestPkgName ${this_pkglength_})
+            endif ()
 
             foreach(pr_entry_ IN LISTS pre_)
                 string(FIND "${pr_entry_}" "=" eq_pos_)
@@ -744,18 +752,23 @@ function(resolveDependencies inputList allData outputList)
             else ()
                 list(APPEND resolved "${entry}")
             endif ()
+
+            list(APPEND packageList ${pkgname_})
+
         endif()
 
-        unset(feat_)
-        unset(idx_)
-        unset(pre_)
-        unset(dnc_)
         unset(args_)
-        unset(pr_entry_)
-        unset(eq_pos_)
-        unset(pr_feat_)
-        unset(found_entry_in_input_)
+        unset(dnc_)
         unset(e_)
+        unset(eq_pos_)
+        unset(feat_)
+        unset(found_entry_in_input_)
+        unset(idx_)
+        unset(pkgname_)
+        unset(pr_entry_)
+        unset(pr_feat_)
+        unset(pre_)
+        unset(this_pkglength_)
 
     endmacro()
 
@@ -773,7 +786,10 @@ function(resolveDependencies inputList allData outputList)
         visit("${item}" OFF)
     endforeach()
 
-    set(${outputList} "${resolved}" PARENT_SCOPE)
+    set(${outputList}       ${resolved}         PARENT_SCOPE)
+    set(longestPkgName      ${longestPkgName}   PARENT_SCOPE)
+    set(packageList         ${packageList}      PARENT_SCOPE)
+
 endfunction()
 
 ##
