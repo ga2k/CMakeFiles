@@ -108,6 +108,13 @@ function(addTargetProperties target pkgname addToLists)
     target_compile_definitions( "${target}" ${LIB_TYPE} "${_DefinesList}")
     target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
 
+    if(WIN32)
+        set_target_properties("${target}" PROPERTIES
+                    OUTPUT_NAME "${target}"
+                    DEBUG_POSTFIX ""   # <- removes the trailing 'd'
+            )
+    endif ()
+
     if (addToLists)
         list(APPEND at_LibrariesList ${target})
         list(APPEND at_DependenciesList ${target})
