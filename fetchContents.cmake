@@ -698,17 +698,18 @@ set(AUE_DEBUG ON)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
+                    message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+                    message(" ")
 
                     if(${this_feature}_PASS_TWO_COMPLETED)
-                        message(STATUS "\nPhase 2 for ${this_feasture} has already been done.")
+                        list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        message(CHECK_PASS "(already been done)")
                     else ()
                         if (apf_IS_A_PREREQ)
                             set(${this_feature}_PASS_TWO_COMPLETED ON)
                         endif ()
-
-                        message(" ")
-                        list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                         if ("${this_method}" STREQUAL "FIND_PACKAGE")
                             if (NOT TARGET ${this_namespace}::${this_pkgname})
