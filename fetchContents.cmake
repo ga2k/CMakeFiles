@@ -554,6 +554,7 @@ set(AUE_DEBUG ON)
                     message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
+                    message(" ")
 
                     if ("${this_method}" STREQUAL "PROCESS")
                         set(fn "${this_pkgname}_process")

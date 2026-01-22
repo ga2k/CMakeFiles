@@ -162,10 +162,23 @@ foreach(pkg IN LISTS HS_DependenciesList)
 
     # 1. Bundle Headers
     # Look in the source directory where FetchContent downloaded them
-    if (EXISTS "${${pkglc}_SOURCE_DIR}/include")
-        install(DIRECTORY "${${pkglc}_SOURCE_DIR}/include/"
-                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-                COMPONENT Development)
+#    if (EXISTS "${${pkglc}_SOURCE_DIR}/include")
+     if (EXISTS "${${pkglc}_INCLUDE_DIR}")
+         set(include_dir "${${pkglc}_INCLUDE_DIR}")
+     elseif (EXISTS "${${pkg}_INCLUDE_DIR}/include")
+         set(include_dir "${${pkg}_INCLUDE_DIR}")
+     elseif (EXISTS "${EXTERNALS_DIR}/${pkglc}/include")
+         set(include_dir "${EXTERNALS_DIR}/${pkglc}/include")
+     elseif (EXISTS "${${pkglc}_SOURCE_DIR}/include")
+         set(include_dir "${${pkglc}_SOURCE_DIR}/include")
+     else ()
+         unset(include_dir)
+     endif ()
+
+     if(include_dir)
+         install(DIRECTORY "${include_dir}/"
+                    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                    COMPONENT Development)
     endif()
 
     # 2. Bundle Compiled Binaries (Static/Shared Libs)
@@ -174,15 +187,17 @@ foreach(pkg IN LISTS HS_DependenciesList)
         # Install .lib / .a files
         install(DIRECTORY "${${pkglc}_BINARY_DIR}/lib/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                COMPONENT Runtime
                 FILES_MATCHING PATTERN "*.lib" PATTERN "*.a" PATTERN "*.so*"
-                COMPONENT Runtime)
+        )
 
         # Install DLLs (Windows specific - must be in the bin folder)
         if (WIN32)
             install(DIRECTORY "${${pkglc}_BINARY_DIR}/bin/"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                    COMPONENT Runtime
                     FILES_MATCHING PATTERN "*.dll"
-                    COMPONENT Runtime)
+            )
         endif()
     endif()
 endforeach()
