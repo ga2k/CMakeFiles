@@ -191,23 +191,27 @@ foreach(pkg IN LISTS _hs_install_targets)
 
     # 1. Bundle Headers
     # Look in the source directory where FetchContent downloaded them
-#    if (EXISTS "${${pkglc}_SOURCE_DIR}/include")
-     if (EXISTS "${${pkglc}_INCLUDE_DIR}")
-         set(include_dir "${${pkglc}_INCLUDE_DIR}")
-     elseif (EXISTS "${${pkg}_INCLUDE_DIR}/include")
-         set(include_dir "${${pkg}_INCLUDE_DIR}")
-     elseif (EXISTS "${EXTERNALS_DIR}/${pkglc}/include")
-         set(include_dir "${EXTERNALS_DIR}/${pkglc}/include")
-     elseif (EXISTS "${${pkglc}_SOURCE_DIR}/include")
-         set(include_dir "${${pkglc}_SOURCE_DIR}/include")
-     else ()
-         unset(include_dir)
-     endif ()
+    if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
+        install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
+                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                COMPONENT Development)
+    endif ()
+    if (EXISTS "${${pkglc}_INCLUDE_DIR}")
+        set(include_dir "${${pkglc}_INCLUDE_DIR}")
+    elseif (EXISTS "${${pkg}_INCLUDE_DIR}/include")
+        set(include_dir "${${pkg}_INCLUDE_DIR}")
+    elseif (EXISTS "${EXTERNALS_DIR}/${pkglc}/include")
+        set(include_dir "${EXTERNALS_DIR}/${pkglc}/include")
+    elseif (EXISTS "${${pkglc}_SOURCE_DIR}/include")
+        set(include_dir "${${pkglc}_SOURCE_DIR}/include")
+    else ()
+        unset(include_dir)
+    endif ()
 
-     if(include_dir)
-         install(DIRECTORY "${include_dir}/"
-                    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-                    COMPONENT Development)
+    if(include_dir)
+        install(DIRECTORY "${include_dir}/"
+                   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                   COMPONENT Development)
     endif()
 
     # 2. Bundle Compiled Binaries (Static/Shared Libs)
