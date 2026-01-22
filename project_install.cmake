@@ -107,9 +107,38 @@ if(APP_GLOBAL_RESOURCES)
     )
 endif()
 
+# ---- Debug + sanitize dependency targets for install(TARGETS) ----
+message(STATUS "Install(${APP_NAME}): HS_DependenciesList = [${HS_DependenciesList}]")
+
+set(_hs_install_targets "")
+foreach(_t IN LISTS HS_DependenciesList)
+    if(NOT TARGET ${_t})
+        message(STATUS "Install(${APP_NAME}): skipping missing target '${_t}'")
+        continue()
+    endif()
+
+    # Resolve alias targets (install(TARGETS) needs the real one)
+    get_target_property(_aliased ${_t} ALIASED_TARGET)
+    if(_aliased)
+        message(STATUS "Install(${APP_NAME}): resolving alias '${_t}' -> '${_aliased}'")
+        set(_t "${_aliased}")
+    endif()
+
+    # Never try to install imported targets (e.g. HoffSoft::yaml-cpp)
+    get_target_property(_imported ${_t} IMPORTED)
+    if(_imported)
+        message(STATUS "Install(${APP_NAME}): skipping IMPORTED target '${_t}'")
+        continue()
+    endif()
+
+    list(APPEND _hs_install_targets ${_t})
+endforeach()
+
+message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
+
 # @formatting:off
 install(TARGETS                 ${APP_NAME}
-                                ${HS_DependenciesList}
+                                ${_hs_install_targets}
         EXPORT                  ${APP_NAME}Target
         LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME                 DESTINATION ${CMAKE_INSTALL_BINDIR}
