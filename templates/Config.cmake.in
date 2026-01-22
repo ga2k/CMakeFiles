@@ -26,34 +26,54 @@ if(WIN32 AND NOT TARGET wx::wxmono)
   )
   list(REMOVE_DUPLICATES _wx_implib_candidates)
 
+  # Find the CMake-style generated setup.h:
+  #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
+  file(GLOB _wx_setup_h_candidates
+  "${_wx_lib_dir}/wx/include/*/wx/setup.h"
+  )
+  list(REMOVE_DUPLICATES _wx_setup_h_candidates)
+
+  set(_wx_setup_include_dir "")
+  list(LENGTH _wx_setup_h_candidates _wx_setup_h_count)
+  if(_wx_setup_h_count GREATER 0)
+    # Prefer a stable deterministic pick: choose the first sorted entry.
+    list(SORT _wx_setup_h_candidates)
+    list(GET _wx_setup_h_candidates 0 _wx_setup_h)
+    get_filename_component(_wx_setup_include_dir "${_wx_setup_h}" DIRECTORY) # .../wx
+    get_filename_component(_wx_setup_include_dir "${_wx_setup_include_dir}" DIRECTORY) # .../<cfg>
+  endif()
+
   list(LENGTH _wx_dll_candidates _wx_dll_count)
   list(LENGTH _wx_implib_candidates _wx_implib_count)
 
-  if(_wx_dll_count EQUAL 1 AND _wx_implib_count EQUAL 1)
+  if(_wx_dll_count EQUAL 1 AND _wx_implib_count EQUAL 1 AND _wx_setup_include_dir)
     list(GET _wx_dll_candidates 0 _wx_mono_dll)
     list(GET _wx_implib_candidates 0 _wx_mono_implib)
 
     add_library(wx::wxmono SHARED IMPORTED)
     set_target_properties(wx::wxmono PROPERTIES
-        IMPORTED_LOCATION "${_wx_mono_dll}"
-        IMPORTED_IMPLIB   "${_wx_mono_implib}"
-        INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
-    )
+    IMPORTED_LOCATION "${_wx_mono_dll}"
+    IMPORTED_IMPLIB   "${_wx_mono_implib}"
+    # Put the CMake-generated setup.h include dir FIRST to avoid include/msvc/wx/setup.h path logic.
+    INTERFACE_INCLUDE_DIRECTORIES "${_wx_setup_include_dir};${PACKAGE_PREFIX_DIR}/include")
   else()
-    # Not staged yet (or ambiguous). Don't fail configure; just leave it unresolved for now.
-    # If a consumer truly needs wx::wxmono and nothing provides it, they'll fail later with a clear error.
     message(STATUS
-        "Gfx package: wxWidgets shim not created (yet).\n"
-        "  bin: ${_wx_bin_dir}\n"
-        "  dll candidates: ${_wx_dll_candidates}\n"
-        "  lib: ${_wx_lib_dir}\n"
-        "  implib candidates: ${_wx_implib_candidates}")
+    "Gfx package: wxWidgets shim not created (yet).\n"
+    "  bin: ${_wx_bin_dir}\n"
+    "  dll candidates: ${_wx_dll_candidates}\n"
+    "  lib: ${_wx_lib_dir}\n"
+    "  implib candidates: ${_wx_implib_candidates}\n"
+    "  setup.h candidates: ${_wx_setup_h_candidates}")
   endif()
 
   unset(_wx_bin_dir)
   unset(_wx_lib_dir)
   unset(_wx_dll_candidates)
   unset(_wx_implib_candidates)
+  unset(_wx_setup_h_candidates)
+  unset(_wx_setup_h_count)
+  unset(_wx_setup_h)
+  unset(_wx_setup_include_dir)
   unset(_wx_dll_count)
   unset(_wx_implib_count)
   unset(_wx_mono_dll)
@@ -140,12 +160,12 @@ foreach(_dir IN LISTS _searchDirs)
   if(EXISTS "${_dir}/${_actualLibName}")
     set(_lib    "${_dir}/${_actualLibName}")
     set(_libdir "${_dir}")
-    message(AUTHOR_WARNING "LIB is ${_lib}")
+#    message(AUTHOR_WARNING "LIB is ${_lib}")
   endif()
   if(WIN32 AND EXISTS "${_dir}/${_winImpLibName}")
     set(_imp    "${_dir}/${_winImpLibName}")
     set(_impdir "${_dir}")
-    message(AUTHOR_WARNING "IMP is ${_imp}")
+#    message(AUTHOR_WARNING "IMP is ${_imp}")
   endif()
 endforeach()
 
