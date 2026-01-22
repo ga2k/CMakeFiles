@@ -477,9 +477,7 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         message("\n-----------------------------------------------------------------------------------------------\n")
-        foreach(p IN LISTS packageList)
-            string(JOIN ", " l "${l}" ${p})
-        endforeach ()
+        string(JOIN ", " l ${pkgList})
 
         message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${l}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
