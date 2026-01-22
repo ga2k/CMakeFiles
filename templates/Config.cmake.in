@@ -207,7 +207,7 @@ if(WIN32)
   if (TARGET @APP_VENDOR@::wxWidgets)
     set_property(TARGET @APP_VENDOR@::wxWidgets
         APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-            "${_incdir}/msvc/include"
+            "${_incdir}/msvc"
     )
   endif()
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
