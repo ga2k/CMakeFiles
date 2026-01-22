@@ -155,6 +155,22 @@ install(EXPORT      ${APP_NAME}Target
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
+# Install the headers from the 3rd party libraries
+foreach(pkg IN LISTS HS_DependenciesList)
+    # FetchContent sets <lowercaseName>_SOURCE_DIR
+    string(TOLOWER "${pkg}" pkglc)
+
+    if (EXISTS "${${pkglc}_SOURCE_DIR}/include")
+        message(STATUS "Bundling ${pkg} headers for export...")
+
+        # Install the headers into the same include folder as HoffSoft
+        install(DIRECTORY "${${pkglc}_SOURCE_DIR}/include/"
+                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                COMPONENT Development
+        )
+    endif()
+endforeach()
+
 if (APP_CREATES_PLUGINS)
     install(TARGETS                          ${APP_CREATES_PLUGINS}
             EXPORT                           ${APP_NAME}PluginTarget
