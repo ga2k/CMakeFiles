@@ -703,55 +703,72 @@ function(resolveDependencies inputList allData outputList)
     set(visited "")
 
     # Internal helper to walk dependencies
-    macro(visit entry)
+    macro(visit entry is_a_prereq)
         if (NOT "${entry}" IN_LIST visited)
             list(APPEND visited "${entry}")
 
-            SplitAt("${entry}" "." _feat _idx)
+            SplitAt("${entry}" "." feat_ idx_)
             parsePackage("${allData}"
-                    FEATURE "${_feat}"
-                    PKG_INDEX "${_idx}"
-                    PREREQS _pre
-                    LIST _dnc
+                    FEATURE "${feat_}"
+                    PKG_INDEX "${idx_}"
+                    PREREQS pre_
+                    LIST dnc_
+                    ARGS args_
             )
 
-            foreach(PR_ENTRY IN LISTS _pre)
-                string(FIND "${PR_ENTRY}" "=" eq_pos)
-                if (eq_pos GREATER -1)
-                    string(SUBSTRING "${PR_ENTRY}" 0 ${eq_pos} PR_FEAT)
+            foreach(pr_entry_ IN LISTS pre_)
+                string(FIND "${pr_entry_}" "=" eq_pos_)
+                if (eq_pos_ GREATER -1)
+                    string(SUBSTRING "${pr_entry_}" 0 ${eq_pos_} pr_feat_)
                 else()
-                    set(PR_FEAT "${PR_ENTRY}")
+                    set(pr_feat_ "${pr_entry_}")
                 endif()
 
-                set(found_entry_in_input "")
-                foreach(e IN LISTS inputList)
-                    if(e MATCHES "^${PR_FEAT}\\.")
-                        set(found_entry_in_input "${e}")
+                set(found_entry_in_input_ "")
+                foreach(e_ IN LISTS inputList)
+                    if(e_ MATCHES "^${pr_feat_}\\.")
+                        set(found_entry_in_input_ "${e_}")
                         break()
                     endif()
                 endforeach()
 
-                if(found_entry_in_input)
-                    visit("${found_entry_in_input}")
+                if(found_entry_in_input_)
+                    visit("${found_entry_in_input_}" ON)
                 endif()
             endforeach()
 
-            list(APPEND resolved "${entry}")
+            if (${is_a_prereq})
+                list(APPEND resolved "${entry}.P")
+            else ()
+                list(APPEND resolved "${entry}")
+            endif ()
         endif()
+
+        unset(feat_)
+        unset(idx_)
+        unset(pre_)
+        unset(dnc_)
+        unset(args_)
+        unset(pr_entry_)
+        unset(eq_pos_)
+        unset(pr_feat_)
+        unset(found_entry_in_input_)
+        unset(e_)
+
     endmacro()
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS inputList)
         SplitAt("${item}" "." _feat _idx)
-        parsePackage("${allData}" FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind LIST _dnc)
+        parsePackage("${allData}" FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind LIST _dnc ARGS _args)
         if ("${_kind}" STREQUAL "LIBRARY")
-            visit("${item}")
+            visit("${item}" OFF)
         endif()
     endforeach()
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS inputList)
-        visit("${item}")
+        visit("${item}" OFF)
     endforeach()
 
     set(${outputList} "${resolved}" PARENT_SCOPE)
@@ -814,49 +831,51 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-macro(handleTarget)
+macro(handleTarget pkg)
+    string(TOLOWER "${pkg}" _pkglc)
     if (this_incdir)
         if (EXISTS "${this_incdir}")
-            target_include_directories(${this_pkgname} PUBLIC ${this_incdir})
+            target_include_directories(${pkg} PUBLIC ${this_incdir})
             list(APPEND _IncludePathsList ${this_incdir})
         endif ()
     else ()
-        if (EXISTS ${${this_pkglc}_SOURCE_DIR}/include)
-            list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR}/include)
+        if (EXISTS ${${_pkglc}_SOURCE_DIR}/include)
+            list(APPEND _IncludePathsList ${${_pkglc}_SOURCE_DIR}/include)
         endif ()
     endif ()
 
     set(_anyTargetFound OFF)
-    if (NOT ${this_pkgname} IN_LIST NoLibPackages)
+    if (NOT ${pkg} IN_LIST NoLibPackages)
         list(APPEND _DefinesList USING_${this_feature})
         foreach (_component IN LISTS this_find_package_components)
             if (TARGET ${_component})
-                addTargetProperties(${_component} ${this_pkgname} ON)
+                addTargetProperties(${_component} ${pkg} ON)
                 set(_anyTargetFound ON)
             endif ()
         endforeach ()
-        if (TARGET ${this_pkgname}::${this_pkgname} AND NOT _anyTargetFound)
-            addTargetProperties(${this_pkgname}::${this_pkgname} ${this_pkgname} ON)
+        if (TARGET ${pkg}::${pkg} AND NOT _anyTargetFound)
+            addTargetProperties(${pkg}::${pkg} ${pkg} ON)
             set(_anyTargetFound ON)
         endif ()
-        if (TARGET ${this_pkgname} AND NOT _anyTargetFound)
-            addTargetProperties(${this_pkgname} ${this_pkgname} ON)
+        if (TARGET ${pkg} AND NOT _anyTargetFound)
+            addTargetProperties(${pkg} ${pkg} ON)
             set(_anyTargetFound ON)
         endif ()
     endif ()
     if (NOT _anyTargetFound)
-#        list(APPEND _LibrariesList ${this_pkgname})
+#        list(APPEND _LibrariesList ${pkg})
     endif ()
 
     # Setup source/build paths for handlers
     if (NOT this_src)
-        set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+        set(this_src "${EXTERNALS_DIR}/${pkg}")
     endif ()
     if (NOT this_build)
-        set(this_build "${BUILD_DIR}/_deps/${this_pkglc}-build")
+        set(this_build "${BUILD_DIR}/_deps/${_pkglc}-build")
     endif ()
 
     unset(_component)
     unset(_anyTargetFound)
+    unset(_pkglc)
 
 endmacro()

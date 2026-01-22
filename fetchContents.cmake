@@ -466,18 +466,35 @@ set(AUE_DEBUG ON)
 
     function(processFeatures featureList)
 
+        set(switches IS_A_PREREQ)
+        set(args "")
+        set(arrays "")
+
+        cmake_parse_arguments("apf" "${switches}" "${args}" "${arrays}" ${ARGN})
+
         # Two-Pass Strategy:
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         message("\n-----------------------------------------------------------------------------------------------\n")
-        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
+        message(CHECK_START "${ES}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         foreach (pass_num RANGE 1)
             foreach (this_feature_entry IN LISTS unifiedFeatureList)
 
-                SplitAt(${this_feature_entry} "." this_feature this_pkgindex)
+                SplitAt(${this_feature_entry} "." this_feature this_tail)
+                SplitAt(${this_tail} "." this_pkgindex apf_IS_A_PREREQ)
+
+                if(${this_pkgindex} STREQUAL "P")
+                    set(apf_IS_A_PREREQ ON)
+                    set(this_pkgindex ".0")
+                    set(this_feature_entry "${this_feature}${this_pkgindex}")
+                elseif ("${apf_IS_A_PREREQ}" STREQUAL "P")
+                    set(apf_IS_A_PREREQ ON)
+                    set(this_feature_entry "${this_feature}.${this_pkgindex}")
+                endif ()
+                unset(this_tail)
 
                 # Skip features already found/aliased, but only check this in the final pass
                 # to allow declarations to overlap if necessary.
@@ -615,7 +632,8 @@ set(AUE_DEBUG ON)
                             # 1. Is the library already available? (Probe it)
                             set(temporary_args ${this_find_package_args})
                             list(REMOVE_ITEM temporary_args REQUIRED CONFIG)
-                            find_package(${this_pkgname} QUIET ${temporary_args})
+                            find_package(${this_pkgname} ${temporary_args})
+#                            find_package(${this_pkgname} QUIET ${temporary_args})
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
@@ -671,11 +689,13 @@ set(AUE_DEBUG ON)
                     message( " " )
                     message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
 
+                endif ()
+
                     # ==========================================================================================================
                     # PASS 1: POPULATION & FIX phase
                     # ==========================================================================================================
 
-                else ()
+                if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
                     message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
@@ -683,7 +703,7 @@ set(AUE_DEBUG ON)
 
                     if ("${this_method}" STREQUAL "FIND_PACKAGE")
                         if (NOT TARGET ${this_namespace}::${this_pkgname})
-                           handleTarget()
+                           handleTarget(${this_pkgname})
                         endif ()
                     elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
@@ -698,7 +718,7 @@ set(AUE_DEBUG ON)
                                 message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
 
                                 FetchContent_MakeAvailable(${this_pkgname})
-                                handleTarget()
+                                handleTarget(${this_pkgname})
                             endif ()
 
                             set(fn "${this_pkgname}_postMakeAvailable")
@@ -707,7 +727,7 @@ set(AUE_DEBUG ON)
                             endif ()
                         else()
                             message(STATUS "${this_pkgname} already found, skipping population.")
-                            handleTarget()
+                            handleTarget(${this_pkgname})
                         endif()
 
                         # Auto-include the standard 'include' folder if it exists and wasn't handled
