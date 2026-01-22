@@ -160,14 +160,30 @@ foreach(pkg IN LISTS HS_DependenciesList)
     # FetchContent sets <lowercaseName>_SOURCE_DIR
     string(TOLOWER "${pkg}" pkglc)
 
+    # 1. Bundle Headers
+    # Look in the source directory where FetchContent downloaded them
     if (EXISTS "${${pkglc}_SOURCE_DIR}/include")
-        message(STATUS "Bundling ${pkg} headers for export...")
-
-        # Install the headers into the same include folder as HoffSoft
         install(DIRECTORY "${${pkglc}_SOURCE_DIR}/include/"
                 DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-                COMPONENT Development
-        )
+                COMPONENT Development)
+    endif()
+
+    # 2. Bundle Compiled Binaries (Static/Shared Libs)
+    # Compiled libs usually land in the BINARY_DIR (build tree)
+    if (EXISTS "${${pkglc}_BINARY_DIR}")
+        # Install .lib / .a files
+        install(DIRECTORY "${${pkglc}_BINARY_DIR}/lib/"
+                DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                FILES_MATCHING PATTERN "*.lib" PATTERN "*.a" PATTERN "*.so*"
+                COMPONENT Runtime)
+
+        # Install DLLs (Windows specific - must be in the bin folder)
+        if (WIN32)
+            install(DIRECTORY "${${pkglc}_BINARY_DIR}/bin/"
+                    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                    FILES_MATCHING PATTERN "*.dll"
+                    COMPONENT Runtime)
+        endif()
     endif()
 endforeach()
 
