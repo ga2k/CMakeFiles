@@ -477,7 +477,11 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         message("\n-----------------------------------------------------------------------------------------------\n")
-        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${packageList}${ESC}[0m")
+        foreach(p IN LISTS packageList)
+            string(JOIN ", " l "${l}" ${p})
+        endforeach ()
+
+        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${l}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
         message(" ")
 
@@ -553,9 +557,9 @@ function(fetchContents)
                 if (${pass_num} EQUAL 0)
 
                     string(LENGTH "${this_pkgname}" this_pkgnameLength)
-                    math(EXPR paddingChars ${longestPkgName} - ${this_pkgnameLength})
-                    string(REPEAT " " ${paddingChars} padding )
-                    message(CHECK_START "${ESC}[32m${this_pkgname}${padding} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
+                    math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
+                    string(REPEAT "." ${paddingChars} padding )
+                    message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
                     message(" ")
 
@@ -763,10 +767,10 @@ function(fetchContents)
 
             endforeach () # this_feature_entry
 
-            list(POP_BACK CMAKE_MESSAGE_INDENT)
-            message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
 
         endforeach () # pass_num
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
 
         propegateUpwards("Interim")
 
