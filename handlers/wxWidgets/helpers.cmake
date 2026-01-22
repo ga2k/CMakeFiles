@@ -112,19 +112,20 @@ function(wxWidgets_export_variables pkgname)
                     endif()
 
                     target_compile_options(${_actualTarget} INTERFACE
-                            "-Wno-deprecated-enum-enum-conversion"
                             "-Wno-deprecated-anon-enum-enum-conversion"
                             "-Wno-deprecated-declarations"
-                            "-Wno-unused-lambda-capture"
+                            "-Wno-deprecated-enum-enum-conversion"
+                            "-Wno-deprecated-this-capture"
                             "-Wno-enum-compare-switch"
-                            "-Wno-unknown-pragmas"
+                            "-Wno-extern-initializer"
                             "-Wno-ignored-attributes"
                             "-Wno-microsoft-exception-spec"
+                            "-Wno-unknown-pragmas"
+                            "-Wno-unused-command-line-argument"
+                            "-Wno-unused-lambda-capture"
                             "-Wno-unused-local-typedef"
-                            "-Wno-extern-initializer"
-                            "-Wno-deprecated-this-capture"
                     )
-                break()
+                    break()
                 endif()
             endforeach ()
         endforeach ()

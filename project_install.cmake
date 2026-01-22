@@ -185,7 +185,7 @@ install(EXPORT      ${APP_NAME}Target
 )
 
 # Install the headers from the 3rd party libraries
-foreach(pkg IN LISTS HS_DependenciesList)
+foreach(pkg IN LISTS _hs_install_targets)
     # FetchContent sets <lowercaseName>_SOURCE_DIR
     string(TOLOWER "${pkg}" pkglc)
 

@@ -753,7 +753,7 @@ function(fetchContents)
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(" ")
-                        message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
+                        message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m")
 
                     endif ()
                 endif ()

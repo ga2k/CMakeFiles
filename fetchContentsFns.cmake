@@ -109,10 +109,7 @@ function(addTargetProperties target pkgname addToLists)
     target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
 
     if(WIN32)
-        set_target_properties("${target}" PROPERTIES
-                    OUTPUT_NAME "${target}"
-                    DEBUG_POSTFIX ""   # <- removes the trailing 'd'
-            )
+        set_target_properties("${target}" PROPERTIES DEBUG_POSTFIX "")
     endif ()
 
     if (addToLists)
@@ -861,7 +858,6 @@ macro(handleTarget _pkgname)
             message(STATUS "  Linking ${_pkgname} to existing target: ${_actualTarget}")
 
             addTargetProperties(${_actualTarget} ${_pkgname} ON)
-            list(REMOVE_ITEM _DependenciesList "${_actualTarget}")
 
             # Ensure the include directories from the existing target are propagated
             get_target_property(_target_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
