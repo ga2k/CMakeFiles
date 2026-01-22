@@ -163,7 +163,7 @@ function(fetchContents)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
-set(AUE_DEBUG ON)
+    set(AUE_DEBUG ON)
     if (AUE_DEBUG)
         log(TITLE "Before tampering "
             LISTS
@@ -479,6 +479,7 @@ set(AUE_DEBUG ON)
         message("\n-----------------------------------------------------------------------------------------------\n")
         message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
+        message(" ")
 
         foreach (pass_num RANGE 1)
             foreach (this_feature_entry IN LISTS unifiedFeatureList)
@@ -551,7 +552,6 @@ set(AUE_DEBUG ON)
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
-                    message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
                     message(" ")
@@ -697,7 +697,6 @@ set(AUE_DEBUG ON)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
-                    message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
                     message(" ")
