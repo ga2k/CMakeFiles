@@ -14,6 +14,17 @@ if(WIN32)
   set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
   set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
+<<<<<<< HEAD
+=======
+  execute_process("${CMAKE_COMMAND}" -E make_directory "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
+                  "${CMAKE_COMMAND}" -E copy           "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
+                                                       "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
+                  OUTPUT_QUIET
+                  ERROR_QUIET
+                  COMMAND_ERROR_IS_FATAL ANY
+  )
+
+>>>>>>> 14a0ba64fd2ad6c3ff6f9ee715cc1669e6a82e39
   # Find the CMake-style generated setup.h:
   #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
   file(GLOB _wx_setup_h_candidates
