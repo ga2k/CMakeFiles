@@ -865,9 +865,6 @@ macro(handleTarget _pkgname)
             set(_anyTargetFound ON)
         endif()
 
-        # 2. Standard component check (only if not found in library)
-        if (NOT _anyTargetFound)
-// ... existing code ...
         # 2. Standard component check
         if (NOT _anyTargetFound)
             foreach (_component IN LISTS this_find_package_components)
