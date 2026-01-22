@@ -695,61 +695,66 @@ set(AUE_DEBUG ON)
                     # PASS 1: POPULATION & FIX phase
                     # ==========================================================================================================
 
-                if (${pass_num} EQUAL 1 OR (apf_IS_A_PREREQ AND NOT ${this_feature}_PASS_TWO_COMPLETED))
-                    if (apf_IS_A_PREREQ)
-                        set(${this_feature}_PASS_TWO_COMPLETED ON)
-                    endif ()
+                if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
-                    message(" ")
-                    message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
-                    list(APPEND CMAKE_MESSAGE_INDENT "\t")
-
-                    if ("${this_method}" STREQUAL "FIND_PACKAGE")
-                        if (NOT TARGET ${this_namespace}::${this_pkgname})
-                           handleTarget(${this_pkgname})
-                        endif ()
-                    elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
-
-                        if (NOT ${this_pkgname}_ALREADY_FOUND)
-                            set(fn "${this_pkgname}_preMakeAvailable")
-                            set(HANDLED OFF)
-                            if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_pkgname}")
-                            endif ()
-
-                            if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
-                                message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
-                                FetchContent_MakeAvailable(${this_pkgname})
-                                handleTarget(${this_pkgname})
-                            endif ()
-
-                            set(fn "${this_pkgname}_postMakeAvailable")
-                            if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-                            endif ()
-                        else()
-                            message(STATUS "${this_pkgname} already found, skipping population.")
-                            handleTarget(${this_pkgname})
-                        endif()
-
-                        # Auto-include the standard 'include' folder if it exists and wasn't handled
-                        if (EXISTS "${this_src}/include")
-                            list(APPEND _IncludePathsList "${this_src}/include")
-                        endif ()
+                    if(${this_feature}_PASS_TWO_COMPLETED)
+                        message(STATUS "Phase 2 for ${this_feasture} has already been done.")
                     else ()
-                        message("\nNo Phase 2 step")
+                        if (apf_IS_A_PREREQ)
+                            set(${this_feature}_PASS_TWO_COMPLETED ON)
+                        endif ()
+
+                        message(" ")
+                        message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                        list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+                        if ("${this_method}" STREQUAL "FIND_PACKAGE")
+                            if (NOT TARGET ${this_namespace}::${this_pkgname})
+                               handleTarget(${this_pkgname})
+                            endif ()
+                        elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
+
+                            if (NOT ${this_pkgname}_ALREADY_FOUND)
+                                set(fn "${this_pkgname}_preMakeAvailable")
+                                set(HANDLED OFF)
+                                if (COMMAND "${fn}")
+                                    cmake_language(CALL "${fn}" "${this_pkgname}")
+                                endif ()
+
+                                if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
+                                    message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
+                                    FetchContent_MakeAvailable(${this_pkgname})
+                                    handleTarget(${this_pkgname})
+                                endif ()
+
+                                set(fn "${this_pkgname}_postMakeAvailable")
+                                if (COMMAND "${fn}")
+                                    cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                endif ()
+                            else()
+                                message(STATUS "${this_pkgname} already found, skipping population.")
+                                handleTarget(${this_pkgname})
+                            endif()
+
+                            # Auto-include the standard 'include' folder if it exists and wasn't handled
+                            if (EXISTS "${this_src}/include")
+                                list(APPEND _IncludePathsList "${this_src}/include")
+                            endif ()
+                        else ()
+                            message("\nNo Phase 2 step")
+                        endif ()
+
+                        # Final patching/fixing phase
+                        set(fn "${this_pkgname}_fix")
+                        if (COMMAND "${fn}")
+                            cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                        endif ()
+
+                        list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        message(" ")
+                        message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
+
                     endif ()
-
-                    # Final patching/fixing phase
-                    set(fn "${this_pkgname}_fix")
-                    if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
-                    endif ()
-
-                    list(POP_BACK CMAKE_MESSAGE_INDENT)
-                    message(" ")
-                    message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m\n")
-
                 endif ()
 
             endforeach () # this_feature_entry
