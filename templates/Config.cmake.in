@@ -183,6 +183,13 @@ elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAM
 endif()
 
 if(WIN32)
+  # Add the wx/setup.h header to the include path
+  if (TARGET @APP_VENDOR@::wxWidgets)
+    set_property(TARGET @APP_VENDOR@::wxWidgets
+        APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+            "${_incdir}/msvc/include"
+    )
+  endif()
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
   set(_libdir "${_impdir}")
 endif()
