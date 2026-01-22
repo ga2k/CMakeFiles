@@ -56,11 +56,11 @@ endif ()
 
 # Define set: magic_enum override and general include paths
 list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
-string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
-list(REMOVE_ITEM extra_Definitions "PLUGINS")
-if (NOT "${PI}" STREQUAL "")
-    list(APPEND extra_Definitions "PLUGINS=${PI}")
-endif ()
+#string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
+#list(REMOVE_ITEM extra_Definitions "PLUGINS")
+#if (NOT "${PI}" STREQUAL "")
+#    list(APPEND extra_Definitions "PLUGINS=${PI}")
+#endif ()
 
 list(APPEND extra_IncludePaths
         ${HEADER_BASE_DIRS}
