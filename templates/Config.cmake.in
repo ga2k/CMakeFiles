@@ -2,28 +2,27 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-  
+
 # Provide a wxWidgets shim for consumers.
-# GfxTarget.cmake exports HoffSoft::wxWidgets that links to wx::wxmono, but consumers may not
-# have wxWidgets' own CMake package (and thus no wx::wxmono target). We stage the real binaries,
-# so create an imported target that points at them.
+# GfxTarget.cmake exports HoffSoft::wxWidgets that links to wx::wxmono, but consumers may not have
+# wxWidgets' own CMake package (and thus no wx::wxmono target). We stage the real binaries, so we
+# create an imported target that points at them *when they exist*.
+#
+# IMPORTANT: In superbuild flows, find_package(Gfx) may happen before staging has copied wx binaries
+# into the prefix. In that case, we must NOT fail at configure time.
 if(WIN32 AND NOT TARGET wx::wxmono)
   set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
   set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
-  # 1) Find the wx monolithic runtime DLL (ignore wxrc tool and unrelated DLLs).
   file(GLOB _wx_dll_candidates
-    "${_wx_bin_dir}/wxmsw*u*.dll"
-    "${_wx_bin_dir}/wxmsw*.dll"
+      "${_wx_bin_dir}/wxmsw*u*.dll"
+      "${_wx_bin_dir}/wxmsw*.dll"
   )
-  list(FILTER _wx_dll_candidates EXCLUDE REGEX ".*/wxrc-.*\\.exe$")
   list(REMOVE_DUPLICATES _wx_dll_candidates)
 
-  # 2) Find the primary import library for wxWidgets monolithic Unicode build.
-  # Keep this tight so we don't accidentally pick wxwebp/wxsharpyuv etc.
   file(GLOB _wx_implib_candidates
-    "${_wx_lib_dir}/wx_mswu-*.lib"
-    "${_wx_lib_dir}/wxmswu*.lib"
+      "${_wx_lib_dir}/wx_mswu-*.lib"
+      "${_wx_lib_dir}/wxmswu*.lib"
   )
   list(REMOVE_DUPLICATES _wx_implib_candidates)
 
@@ -33,21 +32,22 @@ if(WIN32 AND NOT TARGET wx::wxmono)
   if(_wx_dll_count EQUAL 1 AND _wx_implib_count EQUAL 1)
     list(GET _wx_dll_candidates 0 _wx_mono_dll)
     list(GET _wx_implib_candidates 0 _wx_mono_implib)
-  
+
     add_library(wx::wxmono SHARED IMPORTED)
     set_target_properties(wx::wxmono PROPERTIES
-    IMPORTED_LOCATION "${_wx_mono_dll}"
-    IMPORTED_IMPLIB   "${_wx_mono_implib}"
-    INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
-  )
+        IMPORTED_LOCATION "${_wx_mono_dll}"
+        IMPORTED_IMPLIB   "${_wx_mono_implib}"
+        INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+    )
   else()
-    message(FATAL_ERROR
-    "Gfx package could not uniquely identify staged wxWidgets artifacts.\n"
-    "  bin search dir: ${_wx_bin_dir}\n"
-    "  dll candidates: ${_wx_dll_candidates}\n"
-    "  lib search dir: ${_wx_lib_dir}\n"
-    "  implib candidates: ${_wx_implib_candidates}\n"
-    "Fix the glob patterns or stage layout so exactly one DLL and one import LIB are found.")
+    # Not staged yet (or ambiguous). Don't fail configure; just leave it unresolved for now.
+    # If a consumer truly needs wx::wxmono and nothing provides it, they'll fail later with a clear error.
+    message(STATUS
+        "Gfx package: wxWidgets shim not created (yet).\n"
+        "  bin: ${_wx_bin_dir}\n"
+        "  dll candidates: ${_wx_dll_candidates}\n"
+        "  lib: ${_wx_lib_dir}\n"
+        "  implib candidates: ${_wx_implib_candidates}")
   endif()
 
   unset(_wx_bin_dir)
