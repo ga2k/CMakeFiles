@@ -477,7 +477,7 @@ set(AUE_DEBUG ON)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         message("\n-----------------------------------------------------------------------------------------------\n")
-        message(CHECK_START "${ES}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
+        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${featureList}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         foreach (pass_num RANGE 1)
