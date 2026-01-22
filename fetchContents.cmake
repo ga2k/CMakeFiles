@@ -637,7 +637,7 @@ set(AUE_DEBUG ON)
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
-                                scanLibraryTargets("${this_pkgname}")
+                                scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
                             else()
                                 # Library not found yet. We must fulfill its metadata prerequisites
                                 # so that we can eventually load it.
@@ -679,7 +679,7 @@ set(AUE_DEBUG ON)
 
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
-                                    scanLibraryTargets("${this_pkgname}")
+                                    scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
                                 endif()
                             endif ()
                         endif ()
@@ -716,7 +716,6 @@ set(AUE_DEBUG ON)
 
                             if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
                                 message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
-
                                 FetchContent_MakeAvailable(${this_pkgname})
                                 handleTarget(${this_pkgname})
                             endif ()

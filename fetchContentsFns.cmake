@@ -777,11 +777,13 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-function(scanLibraryTargets libName)
-    # Check for the library target itself first
+function(scanLibraryTargets libName packageData)
+    # Check common target name patterns
     set(targetName "")
     if (TARGET HoffSoft::${libName})
         set(targetName "HoffSoft::${libName}")
+    elseif (TARGET ${libName}::${libName})
+        set(targetName "${libName}::${libName}")
     elseif (TARGET ${libName})
         set(targetName "${libName}")
     endif()
@@ -802,25 +804,26 @@ function(scanLibraryTargets libName)
                 continue()
             endif()
 
-            # 2. Extract the raw name if it's in the HoffSoft:: namespace
-            # e.g., HoffSoft::eventpp -> eventpp
+            # 2. Extract raw name for matching
             set(raw_import_name "${clean_lib}")
-            if ("${clean_lib}" MATCHES "^HoffSoft::")
-                string(REPLACE "HoffSoft::" "" raw_import_name "${clean_lib}")
+            if ("${clean_lib}" MATCHES "::")
+                # Handle HoffSoft::name or Namespace::name
+                string(REGEX REPLACE ".*::" "" raw_import_name "${clean_lib}")
             endif()
 
-            # 3. Cross-reference against AllPackageData using the raw name
-            foreach(feature_line IN LISTS AllPackageData)
+            # 3. Cross-reference against packageData
+            foreach(feature_line IN LISTS packageData)
                 SplitAt("${feature_line}" "|" feat_name packages)
                 string(REPLACE "," ";" package_list "${packages}")
 
                 foreach(pkg_entry IN LISTS package_list)
                     SplitAt("${pkg_entry}" "|" pkg_name ns)
 
-                    # Match against the package name (e.g., yaml-cpp) or the namespace (e.g., SOCI)
+                    # Does the library link to this package?
                     if ("${raw_import_name}" STREQUAL "${pkg_name}" OR "${raw_import_name}" STREQUAL "${ns}")
-                        message(STATUS "    -> Feature '${feat_name}' (${pkg_name}) is already provided by ${targetName}")
+                        message(STATUS "    -> Feature '${feat_name}' (${pkg_name}) is already provided by ${targetName} as ${clean_lib}")
                         set(${pkg_name}_ALREADY_FOUND ON CACHE INTERNAL "")
+                        set(${pkg_name}_PROVIDED_TARGET "${clean_lib}" CACHE INTERNAL "")
                         break()
                     endif()
                 endforeach()
@@ -828,42 +831,60 @@ function(scanLibraryTargets libName)
         endforeach()
     endif()
 endfunction()
-##
-########################################################################################################################
-##
-macro(handleTarget pkg)
-    string(TOLOWER "${pkg}" _pkglc)
+
+macro(handleTarget _ppkgname)
     if (this_incdir)
         if (EXISTS "${this_incdir}")
-            target_include_directories(${pkg} PUBLIC ${this_incdir})
+            target_include_directories(${this_pkgname} PUBLIC ${this_incdir})
             list(APPEND _IncludePathsList ${this_incdir})
         endif ()
     else ()
-        if (EXISTS ${${_pkglc}_SOURCE_DIR}/include)
-            list(APPEND _IncludePathsList ${${_pkglc}_SOURCE_DIR}/include)
+        if (EXISTS ${${this_pkglc}_SOURCE_DIR}/include)
+            list(APPEND _IncludePathsList ${${this_pkglc}_SOURCE_DIR}/include)
         endif ()
     endif ()
 
     set(_anyTargetFound OFF)
-    if (NOT ${pkg} IN_LIST NoLibPackages)
+    if (NOT ${this_pkgname} IN_LIST NoLibPackages)
         list(APPEND _DefinesList USING_${this_feature})
-        foreach (_component IN LISTS this_find_package_components)
-            if (TARGET ${_component})
-                addTargetProperties(${_component} ${pkg} ON)
+
+        # 1. Check for the specific target cached by scanLibraryTargets
+        # This is the "Magic" that links you to HoffSoft::magic_enum instead of fetching a new one
+        if (${this_pkgname}_PROVIDED_TARGET AND TARGET ${${this_pkgname}_PROVIDED_TARGET})
+            set(_actualTarget ${${this_pkgname}_PROVIDED_TARGET})
+            addTargetProperties(${_actualTarget} ${this_pkgname} ON)
+
+            # Proactively pull include directories from the imported target
+            get_target_property(_target_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
+            if (_target_incs)
+                list(APPEND _IncludePathsList ${_target_incs})
+            endif()
+            set(_anyTargetFound ON)
+        endif()
+
+        # 2. Standard component check
+        if (NOT _anyTargetFound)
+            foreach (_component IN LISTS this_find_package_components)
+                if (TARGET ${_component})
+                    addTargetProperties(${_component} ${this_pkgname} ON)
+                    set(_anyTargetFound ON)
+                endif ()
+            endforeach ()
+        endif()
+
+        # 3. Standard naming fallback
+        if (NOT _anyTargetFound)
+            if (TARGET ${this_pkgname}::${this_pkgname})
+                addTargetProperties(${this_pkgname}::${this_pkgname} ${this_pkgname} ON)
+                set(_anyTargetFound ON)
+            elseif (TARGET ${this_pkgname})
+                addTargetProperties(${this_pkgname} ${this_pkgname} ON)
+                set(_anyTargetFound ON)
+            elseif (TARGET HoffSoft::${this_pkgname})
+                addTargetProperties(HoffSoft::${this_pkgname} ${this_pkgname} ON)
                 set(_anyTargetFound ON)
             endif ()
-        endforeach ()
-        if (TARGET ${pkg}::${pkg} AND NOT _anyTargetFound)
-            addTargetProperties(${pkg}::${pkg} ${pkg} ON)
-            set(_anyTargetFound ON)
-        endif ()
-        if (TARGET ${pkg} AND NOT _anyTargetFound)
-            addTargetProperties(${pkg} ${pkg} ON)
-            set(_anyTargetFound ON)
-        endif ()
-    endif ()
-    if (NOT _anyTargetFound)
-#        list(APPEND _LibrariesList ${pkg})
+        endif()
     endif ()
 
     # Setup source/build paths for handlers
