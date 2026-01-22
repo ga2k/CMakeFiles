@@ -695,7 +695,10 @@ set(AUE_DEBUG ON)
                     # PASS 1: POPULATION & FIX phase
                     # ==========================================================================================================
 
-                if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
+                if (${pass_num} EQUAL 1 OR (apf_IS_A_PREREQ AND NOT ${this_feature}_PASS_TWO_COMPLETED))
+                    if (apf_IS_A_PREREQ)
+                        set(${this_feature}_PASS_TWO_COMPLETED ON)
+                    endif ()
 
                     message(" ")
                     message(CHECK_START "${ESC}[32m${this_feature} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
