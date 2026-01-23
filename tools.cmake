@@ -1281,7 +1281,7 @@ function(patchExternals target patchList)
                             file(READ "${original_check}" check_contents)
                             file(READ "${system_file_path}" source_contents)
 
-                            # ensure tey are the same
+                            # ensure they are the same
                             if (NOT "${check_contents}" STREQUAL "${source_contents}")
                                 # Oops.
                                 file(READ "${override_file_path}" patch_contents)
@@ -1299,7 +1299,8 @@ function(patchExternals target patchList)
                     endif ()
 
                     if (NOT error_message)
-                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                        file(COPY_FILE "${system_file_path}" "${override_file_path}.check")
+#                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
                     endif ()
 
                 else ()
