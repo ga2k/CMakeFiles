@@ -14,27 +14,27 @@ set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 # - TYPE must be a valid cache type (e.g., BOOL, STRING, FILEPATH, PATH, INTERNAL).
 # - This mirrors the behavior described in project docs/comments.
 function(forceSet VAR_NAME ENV_NAME VALUE TYPE)
-    if(NOT VAR_NAME)
+    if (NOT VAR_NAME)
         message(FATAL_ERROR "forceSet: VAR_NAME is required")
-    endif()
-    if(NOT DEFINED TYPE OR TYPE STREQUAL "")
+    endif ()
+    if (NOT DEFINED TYPE OR TYPE STREQUAL "")
         set(TYPE STRING)
-    endif()
+    endif ()
 
     # Derive environment variable name if not provided
-    if(DEFINED ENV_NAME AND NOT ENV_NAME STREQUAL "")
+    if (DEFINED ENV_NAME AND NOT ENV_NAME STREQUAL "")
         set(_ENV_NAME "${ENV_NAME}")
-    else()
+    else ()
         set(_ENV_NAME "${VAR_NAME}")
-    endif()
+    endif ()
 
     # Set in local scope
     set(${VAR_NAME} "${VALUE}")
 
     # Set in parent scope
-    if(CMAKE_CURRENT_FUNCTION)
+    if (CMAKE_CURRENT_FUNCTION)
         set(${VAR_NAME} "${VALUE}" PARENT_SCOPE)
-    endif()
+    endif ()
 
     # Set in process environment
     set(ENV{${_ENV_NAME}} "${VALUE}")
@@ -44,9 +44,9 @@ function(forceSet VAR_NAME ENV_NAME VALUE TYPE)
     set(${VAR_NAME} "${VALUE}" CACHE ${TYPE} "" FORCE)
 
     # Optional verbose trace for debugging
-    if(DEFINED CMAKE_MESSAGE_LOG_LEVEL AND (CMAKE_MESSAGE_LOG_LEVEL STREQUAL "VERBOSE" OR CMAKE_MESSAGE_LOG_LEVEL STREQUAL "DEBUG"))
+    if (DEFINED CMAKE_MESSAGE_LOG_LEVEL AND (CMAKE_MESSAGE_LOG_LEVEL STREQUAL "VERBOSE" OR CMAKE_MESSAGE_LOG_LEVEL STREQUAL "DEBUG"))
         message(VERBOSE "forceSet: ${VAR_NAME}='${VALUE}' (TYPE=${TYPE}) ENV{${_ENV_NAME}} updated and cache forced")
-    endif()
+    endif ()
 endfunction()
 
 # Function to copy specified file patterns from source directories to target directory
@@ -155,9 +155,9 @@ endfunction()
 ##
 function(FindReplaceInFile l f old new)
     foreach (d IN LISTS l)
-        set (p "${d}/${f}")
+        set(p "${d}/${f}")
         if (EXISTS "${p}")
-            ReplaceInFile ("${p}" "${old}" "${new}")
+            ReplaceInFile("${p}" "${old}" "${new}")
             break()
         endif ()
     endforeach ()
@@ -997,7 +997,7 @@ endfunction()
 ## @param PARAM_TYPE is the type of CACHE variable to create (STRING, BOOL, FILEPATH, etc)
 macro(forceUnset PARAM_TARGET)
     unset(${PARAM_TARGET})
-    if(CMAKE_CURRENT_FUNCTION)
+    if (CMAKE_CURRENT_FUNCTION)
         unset(${PARAM_TARGET} PARENT_SCOPE)
     endif ()
     unset(${PARAM_TARGET} CACHE)
@@ -1009,13 +1009,13 @@ macro(forceSet PARAM_TARGET PARAM_VAR PARAM_VALUE PARAM_TYPE)
     if (NOT "${PARAM_VAR}" STREQUAL "" AND DEFINED ${PARAM_VAR})
         set(${PARAM_TARGET} "${${PARAM_VAR}}" CACHE ${PARAM_TYPE} "Please don't change" FORCE)
         set(${PARAM_TARGET} "${${PARAM_VAR}}")
-        if(CMAKE_CURRENT_FUNCTION)
+        if (CMAKE_CURRENT_FUNCTION)
             set(${PARAM_TARGET} "${${PARAM_VAR}}" PARENT_SCOPE)
         endif ()
     else ()
         set(${PARAM_TARGET} "${PARAM_VALUE}" CACHE ${PARAM_TYPE} "Please don't change" FORCE)
         set(${PARAM_TARGET} "${PARAM_VALUE}")
-        if(CMAKE_CURRENT_FUNCTION)
+        if (CMAKE_CURRENT_FUNCTION)
             set(${PARAM_TARGET} "${PARAM_VALUE}" PARENT_SCOPE)
         endif ()
     endif ()
@@ -1033,18 +1033,18 @@ macro(generateExportHeader)
 
     cmake_parse_arguments(A_GEH "${FLAGS}" "${SINGLE_ARGS}" "${MULTI_ARGS}" ${ARGN})
 
-    if(NOT A_GEH_TARGET)
+    if (NOT A_GEH_TARGET)
         message(FATAL_ERROR "TARGET missing for generateExportHeader")
     else ()
-        set (_target ${A_GEH_TARGET})
+        set(_target ${A_GEH_TARGET})
         string(TOLOWER "${_target}" _targetlc)
     endif ()
 
-    if(NOT A_GEH_FILE_SET)
+    if (NOT A_GEH_FILE_SET)
         set(A_GEH_FILE_SET HEADERS)
     endif ()
 
-    if(NOT A_GEH_DESTDIR)
+    if (NOT A_GEH_DESTDIR)
         if (MONOREPO)
             set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
             message(AUTHOR_WARNING "MONOREPO: Setting A_GEH_DESTDIR to '${A_GEH_DESTDIR}'")
@@ -1070,7 +1070,7 @@ macro(generateExportHeader)
             PUBLIC
             FILE_SET ${A_GEH_FILE_SET}
             TYPE HEADERS
-#            BASE_DIRS ${A_GEH_DESTDIR}
+            #            BASE_DIRS ${A_GEH_DESTDIR}
             FILES ${_generated_export_header})
 
 endmacro()
@@ -1082,28 +1082,28 @@ function(newestFile IN_LIST OUT_LIST)
     log(TITLE "Provided list" LISTS IN_LIST)
 
     # 1. Filter only existing files
-    foreach(file IN LISTS IN_LIST)
-        if(EXISTS "${file}")
+    foreach (file IN LISTS IN_LIST)
+        if (EXISTS "${file}")
             list(APPEND working_list "${file}")
-        endif()
-    endforeach()
+        endif ()
+    endforeach ()
 
     log(TITLE "Working list" LISTS working_list)
 
     # 2. Selection sort by timestamp
-    while(working_list)
+    while (working_list)
         list(GET working_list 0 newest)
 
-        foreach(current_file IN LISTS working_list)
+        foreach (current_file IN LISTS working_list)
             # If current_file is newer than our current 'newest', update 'newest'
-            if("${current_file}" IS_NEWER_THAN "${newest}")
+            if ("${current_file}" IS_NEWER_THAN "${newest}")
                 set(newest "${current_file}")
-            endif()
-        endforeach()
+            endif ()
+        endforeach ()
 
         list(APPEND sorted_list "${newest}")
         list(REMOVE_ITEM working_list "${newest}")
-    endwhile()
+    endwhile ()
 
     log(TITLE "Sorted by date order" LISTS sorted_list)
     set(${OUT_LIST} "${sorted_list}" PARENT_SCOPE)
@@ -1111,9 +1111,9 @@ endfunction()
 
 function(patchExternals_ banner patchBranch externalTrunk)
     string(ASCII 27 ESC)
-    set(BOLD   "${ESC}[1m")
-    set(RED    "${ESC}[31m${BOLD}")
-    set(GREEN  "${ESC}[32m${BOLD}")
+    set(BOLD "${ESC}[1m")
+    set(RED "${ESC}[31m${BOLD}")
+    set(GREEN "${ESC}[32m${BOLD}")
     set(YELLOW "${ESC}[33m${BOLD}")
     set(OFF "${ESC}[0m")
 
@@ -1128,7 +1128,7 @@ function(patchExternals_ banner patchBranch externalTrunk)
 
         file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/*")
 
-        foreach(file_rel_path IN LISTS override_files)
+        foreach (file_rel_path IN LISTS override_files)
             message(CHECK_START "${BOLD}Patching${OFF} ${file_rel_path}")
             list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -1147,8 +1147,8 @@ function(patchExternals_ banner patchBranch externalTrunk)
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
                 message(CHECK_FAIL "${RED}[FAILED]${OFF} ${system_file_path} doesn't exist")
                 set(failed ON)
-            endif()
-        endforeach()
+            endif ()
+        endforeach ()
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         if (failed)
             message(CHECK_FAIL "${RED}[FAILED]${OFF}")
@@ -1163,9 +1163,9 @@ endfunction()
 
 function(patchExternals target patchList)
     string(ASCII 27 ESC)
-    set(BOLD   "${ESC}[1m")
-    set(RED    "${ESC}[31m${BOLD}")
-    set(GREEN  "${ESC}[32m${BOLD}")
+    set(BOLD "${ESC}[1m")
+    set(RED "${ESC}[31m${BOLD}")
+    set(GREEN "${ESC}[32m${BOLD}")
     set(YELLOW "${ESC}[33m${BOLD}")
     set(OFF "${ESC}[0m")
 
@@ -1180,17 +1180,17 @@ function(patchExternals target patchList)
         math(EXPR etLastCharOffset "${etLength} - 1")
         string(SUBSTRING "${externalTrunk}" ${etLastCharOffset} -1 etLastChar)
         set(etIsAbsolute OFF)
-        if("${etLastChar}" STREQUAL "/")
+        if ("${etLastChar}" STREQUAL "/")
             set(etIsAbsolute ON)
         endif ()
 
         set(from_path "${CMAKE_SOURCE_DIR}/cmake/patches/${patchBranch}")
         if (EXISTS "${from_path}" AND NOT IS_DIRECTORY "${from_path}")
             get_filename_component(actual_from_path "${from_path}" DIRECTORY)
-            get_filename_component(file_pattern     "${from_path}" NAME)
+            get_filename_component(file_pattern "${from_path}" NAME)
 
             set(final_part "${file_pattern}")
-            set(from_path  "${actual_from_path}")
+            set(from_path "${actual_from_path}")
 
             string(LENGTH "${file_pattern}" fn_len)
             string(LENGTH "${patchBranch}" path_len)
@@ -1206,13 +1206,21 @@ function(patchExternals target patchList)
 
         if (EXISTS ${from_path})
             file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
-            if(etIsAbsolute)
+            if (etIsAbsolute)
                 get_filename_component(to_path "${externalTrunk}" ABSOLUTE)
             else ()
                 get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
             endif ()
-            foreach(file_rel_path IN LISTS override_files)
-                if(etIsAbsolute)
+            foreach (file_rel_path IN LISTS override_files)
+
+                # Skip this file if it is a check file
+                get_filename_component(extn "${file_rel_path}" EXT)
+                if ("${extn}" STREQUAL ".check")
+                    # We obviously won't patch this ?? ...
+                    continue()
+                endif ()
+
+                if (etIsAbsolute)
                     get_filename_component(true_file_rel_path "${file_rel_path}" NAME)
                 else ()
                     set(true_file_rel_path "${file_rel_path}")
@@ -1225,16 +1233,56 @@ function(patchExternals target patchList)
                 message("override_file_path=${override_file_path}")
                 message("  system_file_path=${system_file_path}")
 
+                set(errored OFF)
+                unset(error_message)
+
                 if (EXISTS "${system_file_path}")
-                    file(COPY_FILE "${override_file_path}" "${system_file_path}")
-                    list(POP_BACK CMAKE_MESSAGE_INDENT)
-                    message(CHECK_PASS "${GREEN}OK.${OFF}")
+
+                    # is there a check file?
+                    set(original_check "${override_file_path}.check")
+                    if (EXISTS "${original_check}")
+                        file(READ "${original_check}" check_contents)
+
+                        get_filename_component(final_patch_filename_ext "${override_file_path}" NAME)
+                        file(READ "${system_file_path}/final_patch_filename_ext" source_contents)
+
+                        # ensure tey are the same
+                        if (NOT "${check_contents}" STREQUAL "${source_contents}")
+                            # Oops.
+                            file(READ "${override_file_path}" patch_contents)
+
+                            #  see if it has already been patched
+                            if (NOT "${check_contents}" STREQUAL "${source_contents}")
+                                set(error_message "Source file differs from expected. File has NOT been patched.")
+                                set(errored ON)
+                            else ()
+                                set(error_message "Patch has already been applied.")
+                                set(errored OFF)
+                            endif ()
+                        endif ()
+                    endif ()
+
+                    if (NOT error_message)
+                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                    endif ()
+
                 else ()
-                    list(POP_BACK CMAKE_MESSAGE_INDENT)
-                    message(CHECK_FAIL "${RED}[FAILED]${OFF} ${system_file_path} doesn't exist.")
-                    set(failed ON)
-                endif()
-            endforeach()
+                    set(errored ON)
+                    set(error_message "${system_file_path} doesn't exist.")
+                endif ()
+
+                list(POP_BACK CMAKE_MESSAGE_INDENT)
+
+                if (NOT error_message)
+                    set(error_message "OK")
+                endif ()
+
+                if (errored)
+                    message(CHECK_FAIL "${RED}[FAILED]${OFF} ${BOLD}${error_message}${OFF}")
+                else ()
+                    message(CHECK_PASS "${GREEN}${error_message}${OFF}")
+                endif ()
+            endforeach ()
         else ()
             message("${RED}[FAILED]${OFF} ${from_path} doesn't exist.")
             set(any_failed ON)
