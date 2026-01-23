@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-include(${CMAKE_SOURCE_DIR}/cmake/handlers/wxWidgets/helpers.cmake OPTIONAL)
-=======
 function(wxWidgets_set_build_options)
     message(NOTICE "Configuring wxWidgets build options")
 
@@ -221,4 +218,3 @@ function(wxWidgets_export_variables pkgname)
     set (_wxIncludePaths    "${local_includes}"        PARENT_SCOPE)
 
 endfunction()
->>>>>>> bfff3c7106f852a63a8c40319cda90a6126b08ee
