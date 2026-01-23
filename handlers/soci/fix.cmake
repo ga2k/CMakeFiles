@@ -2,6 +2,7 @@ include("${CMAKE_SOURCE_DIR}/cmake/tools.cmake")
 
 function(soci_fix target tag sourceDir)
 
+    unset(patches)
     list(APPEND patches
             "soci/3rdparty/fmt/include|${sourceDir}"
             "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"

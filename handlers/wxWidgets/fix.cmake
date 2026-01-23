@@ -6,6 +6,7 @@ function(wxWidgets_fix target tag sourceDir)
         message(FATAL_ERROR "Attempting to patch wrong version of ${target}")
     endif ()
 
+    unset(patches)
     list(APPEND patches
             "${target}/include|${sourceDir}"
             "${target}/src|${sourceDir}"
