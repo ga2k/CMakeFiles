@@ -734,15 +734,15 @@ function(fetchContents)
                                     FetchContent_MakeAvailable(${this_pkgname})
                                     handleTarget(${this_pkgname})
                                 endif ()
-
-                                set(fn "${this_pkgname}_postMakeAvailable")
-                                if (COMMAND "${fn}")
-                                    cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
-                                endif ()
                             else()
                                 message(STATUS "${this_pkgname} already found, skipping population.")
                                 handleTarget(${this_pkgname})
                             endif()
+
+                            set(fn "${this_pkgname}_postMakeAvailable")
+                            if (COMMAND "${fn}")
+                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                            endif ()
 
                             # Auto-include the standard 'include' folder if it exists and wasn't handled
                             if (EXISTS "${this_src}/include")
