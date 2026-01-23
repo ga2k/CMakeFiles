@@ -1299,7 +1299,7 @@ function(patchExternals target patchList)
                     endif ()
 
                     if (NOT error_message)
-#                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
                     endif ()
 
                 else ()
