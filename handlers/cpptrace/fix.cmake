@@ -7,7 +7,7 @@ function(cpptrace_fix target tag sourceDir)
     endif ()
 
     list(APPEND patches "cpptrace/cmake|${sourceDir}")
-#    patchExternals(${target} "${patches}")
+    patchExternals(${target} "${patches}")
     set(HANDLED ON)
 
 endfunction()

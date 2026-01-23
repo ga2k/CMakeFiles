@@ -756,6 +756,8 @@ function(fetchContents)
                         set(fn "${this_pkgname}_fix")
                         if (COMMAND "${fn}")
                             cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                        else ()
+                            patchExternals("${this_pkgname}" "${this_pkgname}|${this_src}")
                         endif ()
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
