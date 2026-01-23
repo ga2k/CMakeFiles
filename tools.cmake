@@ -1162,12 +1162,14 @@ function(patchExternals_ banner patchBranch externalTrunk)
 endfunction()
 
 function(patchExternals target patchList)
+
     string(ASCII 27 ESC)
     set(BOLD "${ESC}[1m")
     set(RED "${ESC}[31m${BOLD}")
     set(GREEN "${ESC}[32m${BOLD}")
     set(YELLOW "${ESC}[33m${BOLD}")
     set(OFF "${ESC}[0m")
+    set(visited)
 
     message(CHECK_START "${BOLD}Applying local patches for target ${YELLOW}${target}${OFF}")
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
@@ -1214,7 +1216,7 @@ function(patchExternals target patchList)
             foreach (file_rel_path IN LISTS override_files)
 
                 # Skip this file if it is a check file
-                get_filename_component(extn "${file_rel_path}" EXT)
+                get_filename_component(extn "${file_rel_path}" LAST_EXT)
                 if ("${extn}" STREQUAL ".check")
                     # We obviously won't patch this ?? ...
                     continue()
@@ -1230,6 +1232,7 @@ function(patchExternals target patchList)
 
                 set(override_file_path "${from_path}/${file_rel_path}")
                 set(system_file_path "${to_path}/${true_file_rel_path}")
+
                 message("override_file_path=${override_file_path}")
                 message("  system_file_path=${system_file_path}")
 
@@ -1238,30 +1241,63 @@ function(patchExternals target patchList)
 
                 if (EXISTS "${system_file_path}")
 
-                    # is there a check file?
-                    set(original_check "${override_file_path}.check")
-                    if (EXISTS "${original_check}")
-                        file(READ "${original_check}" check_contents)
-                        file(READ "${system_file_path}" source_contents)
+                    # See if we are attempting to patch again.
+                    # visited[Override_1,System_1,Override_2,System_2,...,Override_n,System_n]
 
-                        # ensure tey are the same
-                        if (NOT "${check_contents}" STREQUAL "${source_contents}")
-                            # Oops.
-                            file(READ "${override_file_path}" patch_contents)
+                    list(FIND visited "${override_file_path}" patchIndex)
+                    list(FIND visited "${system_file_path}"   sourceIndex)
 
-                            #  see if it has already been patched
+                    if(${patchIndex} GREATER_EQUAL 0)
+                        math(EXPR six "${patchIndex} + 1")
+                        list(GET visited ${six} source)
+                    endif ()
+
+                    if(${sourceIndex} GREATER_EQUAL 0)
+                        math(EXPR pix "${sourceIndex} - 1")
+                        list(GET visited ${pix} patch)
+                    endif ()
+
+                    if ("${patch}" STREQUAL "${override_file_path}" AND "${source}" STREQUAL "${system_file_path}")
+                        set(error_message "Patched in previous iteration of loop")
+                    elseif ("${patch}" STREQUAL "${override_file_path}" AND NOT "${source}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(error_message "override_file has been used to patch ${source}")
+                    elseif (NOT "${patch}" STREQUAL "${override_file_path}" AND "${source}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(error_message "system_file has already been patched by ${patch}")
+                    endif ()
+
+                    if (NOT error_message)
+
+                        # save the details of this visit.
+
+                        list(APPEND visited "${override_file_path}" "${system_file_path}")
+
+                        # is there a check file?
+                        set(original_check "${override_file_path}.check")
+                        if (EXISTS "${original_check}")
+                            file(READ "${original_check}" check_contents)
+                            file(READ "${system_file_path}" source_contents)
+
+                            # ensure tey are the same
                             if (NOT "${check_contents}" STREQUAL "${source_contents}")
-                                set(error_message "Source file differs from expected. File has NOT been patched.")
-                                set(errored ON)
-                            else ()
-                                set(error_message "Patch has already been applied.")
-                                set(errored OFF)
+                                # Oops.
+                                file(READ "${override_file_path}" patch_contents)
+
+                                #  see if it has already been patched
+                                if (NOT "${check_contents}" STREQUAL "${source_contents}")
+                                    set(error_message "Source file differs from expected. File has NOT been patched.")
+                                    set(errored ON)
+                                else ()
+                                    set(error_message "Patch has already been applied.")
+                                    set(errored OFF)
+                                endif ()
                             endif ()
                         endif ()
                     endif ()
 
                     if (NOT error_message)
-                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
+#                        file(COPY_FILE "${override_file_path}" "${system_file_path}")
                     endif ()
 
                 else ()
