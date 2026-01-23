@@ -1268,7 +1268,7 @@ function(patchExternals target patchList)
                             set(error_message "system_file has already been patched by ${patch}")
                         endif ()
                     endif ()
-                    
+
                     if (NOT error_message)
 
                         # save the details of this visit.
