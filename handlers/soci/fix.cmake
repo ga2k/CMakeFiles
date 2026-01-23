@@ -13,7 +13,7 @@ function(soci_fix target tag sourceDir)
             "soci/cmake/soci_define_backend_target.cmake|${sourceDir}"
 
 #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
-#            "soci/src|${sourceDir}"
+            "soci/src|${sourceDir}"
     )
     patchExternals(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
