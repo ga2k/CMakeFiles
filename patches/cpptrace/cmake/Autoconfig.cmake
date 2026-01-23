@@ -5,16 +5,8 @@ function(check_support var source includes libraries definitions)
   set(CMAKE_REQUIRED_LIBRARIES "${libraries}")
   set(CMAKE_REQUIRED_DEFINITIONS "${definitions}")
   string(CONCAT full_source "#include \"${source}\"" ${nonce})
-  if (${var} STREQUAL HAS_CXXABI
-      OR ${var} STREQUAL HAS_EXECINFO
-  )
-      set(${var} TRUE PARENT_SCOPE)\n"
-  elseif (${var} STREQUAL HAS_MACH_VM)"
-      set(${var} FALSE PARENT_SCOPE)"
-  else ()"
-      check_cxx_source_compiles(${full_source} ${var}) # Fixed GH"
-      set(${var} TRUE PARENT_SCOPE)"
-  endif ()  set(${var} ${${var}} PARENT_SCOPE)
+  check_cxx_source_compiles(${full_source} ${var})
+  set(${var} ${${var}} PARENT_SCOPE)
 endfunction()
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -48,14 +40,14 @@ endif()
 # ================================================ Autoconfig unwinding ================================================
 # Unwind back-ends
 if(
-  NOT (
-    CPPTRACE_UNWIND_WITH_UNWIND OR
-    CPPTRACE_UNWIND_WITH_LIBUNWIND OR
-    CPPTRACE_UNWIND_WITH_EXECINFO OR
-    CPPTRACE_UNWIND_WITH_WINAPI OR
-    CPPTRACE_UNWIND_WITH_DBGHELP OR
-    CPPTRACE_UNWIND_WITH_NOTHING
-  )
+        NOT (
+        CPPTRACE_UNWIND_WITH_UNWIND OR
+        CPPTRACE_UNWIND_WITH_LIBUNWIND OR
+        CPPTRACE_UNWIND_WITH_EXECINFO OR
+        CPPTRACE_UNWIND_WITH_WINAPI OR
+        CPPTRACE_UNWIND_WITH_DBGHELP OR
+        CPPTRACE_UNWIND_WITH_NOTHING
+)
 )
   # Attempt to auto-config
   if(APPLE AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
@@ -92,14 +84,14 @@ endif()
 
 # ================================================= Autoconfig symbols =================================================
 if(
-  NOT (
-    CPPTRACE_GET_SYMBOLS_WITH_LIBBACKTRACE OR
-    CPPTRACE_GET_SYMBOLS_WITH_LIBDL OR
-    CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE OR
-    CPPTRACE_GET_SYMBOLS_WITH_LIBDWARF OR
-    CPPTRACE_GET_SYMBOLS_WITH_DBGHELP OR
-    CPPTRACE_GET_SYMBOLS_WITH_NOTHING
-  )
+        NOT (
+        CPPTRACE_GET_SYMBOLS_WITH_LIBBACKTRACE OR
+        CPPTRACE_GET_SYMBOLS_WITH_LIBDL OR
+        CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE OR
+        CPPTRACE_GET_SYMBOLS_WITH_LIBDWARF OR
+        CPPTRACE_GET_SYMBOLS_WITH_DBGHELP OR
+        CPPTRACE_GET_SYMBOLS_WITH_NOTHING
+)
 )
   if(UNIX)
     message(STATUS "Cpptrace auto config: Using libdwarf for symbols")
@@ -119,11 +111,11 @@ endif()
 # =============================================== Autoconfig demangling ================================================
 # Handle demangle configuration
 if(
-  NOT (
-    CPPTRACE_DEMANGLE_WITH_CXXABI OR
-    CPPTRACE_DEMANGLE_WITH_WINAPI OR
-    CPPTRACE_DEMANGLE_WITH_NOTHING
-  )
+        NOT (
+        CPPTRACE_DEMANGLE_WITH_CXXABI OR
+        CPPTRACE_DEMANGLE_WITH_WINAPI OR
+        CPPTRACE_DEMANGLE_WITH_NOTHING
+)
 )
   if(HAS_CXXABI)
     message(STATUS "Cpptrace auto config: Using cxxabi for demangling")
