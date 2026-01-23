@@ -77,6 +77,7 @@ function(addTargetProperties target pkgname addToLists)
     unset(at_DependenciesList)
     unset(at_LibraryPathsList)
 
+    message(" ")
     message("addTargetProperties called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 

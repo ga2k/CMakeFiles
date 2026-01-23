@@ -75,13 +75,13 @@ if(WIN32)
       IMPORTED_IMPLIB   "${_wx_mono_implib}"
       )
     else()
-      message(STATUS "[=[
+      message(STATUS [=[
       Gfx package: wx::wxmono shim not created (yet).
       bin: ${_wx_bin_dir}
       dll candidates: ${_wx_dll_candidates}
       lib: ${_wx_lib_dir}
       implib candidates: ${_wx_implib_candidates}
-      ]=]")
+      ]=])
     endif()
   endif()
 

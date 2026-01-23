@@ -1171,6 +1171,7 @@ function(patchExternals target patchList)
     set(OFF "${ESC}[0m")
     unset(visited)
 
+    message(" ")
     message(CHECK_START "${BOLD}Applying local patches for target ${YELLOW}${target}${OFF}")
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
     set(any_failed OFF)
