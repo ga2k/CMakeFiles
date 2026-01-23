@@ -1,9 +1,0 @@
-include("${CMAKE_SOURCE_DIR}/cmake/tools.cmake")
-
-function(magic_enum_fix target tag sourceDir)
-
-    list(APPEND patches "magic_enum|${sourceDir}")
-    patchExternals(${target} "${patches}")
-    set(HANDLED ON)
-
-endfunction()
