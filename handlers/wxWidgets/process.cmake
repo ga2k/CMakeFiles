@@ -10,21 +10,18 @@ function(wxWidgets_process incs libs defs)
         if (helper_found)
             wxWidgets_set_build_options()
 
-            # If we are in process.cmake but want source build, we must ensure FetchContent was handled.
-            # However, fetchContents.cmake should have changed METHOD to FETCH_CONTENTS.
-            # If for some reason it didn't, we can try to trigger export here if targets exist.
-
-            if (NOT _wxLibraries)
-                 wxWidgets_export_variables("wxWidgets")
-            endif()
+            wxWidgets_export_variables("wxWidgets")
             
-            if (_wxLibraries)
-                set(wxWidgets_INCLUDE_DIRS      ${_wxIncludePaths}       PARENT_SCOPE)
-                set(wxWidgets_LIBRARIES         ${_wxLibraries}          PARENT_SCOPE)
-                set(_wxIncludePaths             ${_wxIncludePaths}       PARENT_SCOPE)
-                set(_wxLibraries                ${_wxLibraries}          PARENT_SCOPE)
-                return()
-            endif()
+            set(wxWidgets_INCLUDE_DIRS      ${_wxIncludePaths}       PARENT_SCOPE)
+            set(wxWidgets_LIBRARIES         ${_wxLibraries}          PARENT_SCOPE)
+            set(wxWidgets_DEFINES           ${_wxDefines}            PARENT_SCOPE)
+            set(wxWidgets_COMPILER_OPTIONS  ${_wxCompilerOptions}    PARENT_SCOPE)
+            
+            set(_wxIncludePaths             ${_wxIncludePaths}       PARENT_SCOPE)
+            set(_wxLibraries                ${_wxLibraries}          PARENT_SCOPE)
+            set(_wxDefines                  ${_wxDefines}            PARENT_SCOPE)
+            set(_wxCompilerOptions          ${_wxCompilerOptions}    PARENT_SCOPE)
+            return()
         endif()
     else ()
 
@@ -248,7 +245,11 @@ function(wxWidgets_process incs libs defs)
         set(CMAKE_CROSSCOMPILING OFF)
 
         # Specify which wxWidgets libraries you need
-        find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+        if (wxBUILD_MONOLITHIC)
+            find_package(wxWidgets CONFIG REQUIRED COMPONENTS mono)
+        else ()
+            find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base gl net xml html aui ribbon richtext propgrid stc webview media)
+        endif ()
 
         if(wxWidgets_FOUND)
             # The FindwxWidgets module provides these variables:
@@ -260,7 +261,12 @@ function(wxWidgets_process incs libs defs)
 
             # Extract Compiler Options
             if(NOT wxWidgets_CXX_FLAGS)
-                get_target_property(_raw_options wx::core INTERFACE_COMPILE_OPTIONS)
+                if (wxBUILD_MONOLITHIC)
+                    set(_wx_main_target wx::mono)
+                else ()
+                    set(_wx_main_target wx::core)
+                endif ()
+                get_target_property(_raw_options ${_wx_main_target} INTERFACE_COMPILE_OPTIONS)
                 if(_raw_options)
                     foreach(_opt IN LISTS _raw_options)
                         # Clean up generator expressions if they exist
@@ -274,7 +280,7 @@ function(wxWidgets_process incs libs defs)
 
             # Extract Compile Definitions (like UNICODE, __WXMSW__, etc.)
             if(NOT wxWidgets_DEFINITIONS)
-                get_target_property(_raw_defs wx::core INTERFACE_COMPILE_DEFINITIONS)
+                get_target_property(_raw_defs ${_wx_main_target} INTERFACE_COMPILE_DEFINITIONS)
                 if(_raw_defs)
                     foreach(_def IN LISTS _raw_defs)
                         string(REGEX REPLACE "\\$<.*>" "" _clean_def "${_def}")
@@ -285,7 +291,7 @@ function(wxWidgets_process incs libs defs)
                 endif()
             endif()
             if(NOT wxWidgets_INCLUDE_DIRS)
-                get_target_property(_raw_includes wx::core INTERFACE_INCLUDE_DIRECTORIES)
+                get_target_property(_raw_includes ${_wx_main_target} INTERFACE_INCLUDE_DIRECTORIES)
 
                 # Generator expressions like $<CONFIG:Debug> cause issues in raw variables.
                 # We'll filter for the actual include directory and the base library include.
