@@ -1252,7 +1252,7 @@ function(patchExternals target patchList)
                         list(GET visited ${six} source)
                     endif ()
 
-                    if(${sourceIndex} GREATER_EQUAL 0)
+                    if(${sourceIndex} GREATER 0)
                         math(EXPR pix "${sourceIndex} - 1")
                         list(GET visited ${pix} patch)
                     endif ()
