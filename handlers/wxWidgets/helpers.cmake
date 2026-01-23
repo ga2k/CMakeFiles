@@ -195,8 +195,8 @@ function(wxWidgets_export_variables pkgname)
         endforeach ()
     endif ()
 
-    list(APPEND local_libraries _wxLibraries)
-    list(APPEND local_includes  _wxIncludePaths)
+    list(APPEND local_libraries ${_wxLibraries})
+    list(APPEND local_includes  ${_wxIncludePaths})
 
     # Deduplicate
     if (local_compilerOptions)
