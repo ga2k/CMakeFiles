@@ -15,32 +15,50 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     endif ()
 
     list(APPEND SOCI_PLUGINS_HANDLED )
-    foreach (target soci_core soci_sqlite3 ) #SOCI::Core SOCI::SQLite3)
-        if (TARGET ${target})               # Prefer dynamic library ...
-            # Strip SOCI's internal export metadata to prevent "multiple export sets" error
-            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
-            # Try to force it out of SOCI's export set by clearing the property if it exists
-            # Note: EXPORT_PROPERTIES is for properties, but we want to avoid install(EXPORT)
-            # Since we can't easily undo install() commands, we must ensure SOCI_INSTALL=OFF works.
-            
-            addTargetProperties(${target} soci ON)
-            list(APPEND librariesList ${target})
-            list(APPEND dependenciesList ${target})
-            set(ADD_TO_DEFINES ON)
 
-#            if(WIDGETS IN_LIST APP_FEATURES)
-#                target_include_directories(${target} PRIVATE ${_wxIncludePaths})
-#            endif ()
+    unset(_soci_targets)
 
-        elseif (TARGET ${target}_static)    # ... over the static one
-            # Strip metadata for static targets too
-            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
-            addTargetProperties(${target}_static soci ON)
-            list(APPEND librariesList    ${target}_static)
-            list(APPEND dependenciesList ${target}_static)
-            set(ADD_TO_DEFINES ON)
+    # Prefer real build targets when present; fall back to imported targets from find_package().
+    if (TARGET soci_core)
+        list(APPEND _soci_targets soci_core)
+    elseif (TARGET soci_core_static)
+        list(APPEND _soci_targets soci_core_static)
+    elseif (TARGET SOCI::Core)
+        list(APPEND _soci_targets SOCI::Core)
+    endif ()
+
+    if (TARGET soci_sqlite3)
+        list(APPEND _soci_targets soci_sqlite3)
+    elseif (TARGET soci_sqlite3_static)
+        list(APPEND _soci_targets soci_sqlite3_static)
+    elseif (TARGET SOCI::SQLite3)
+        list(APPEND _soci_targets SOCI::SQLite3)
+    endif ()
+
+    foreach (target IN LISTS _soci_targets)
+        set(_real_target "${target}")
+        get_target_property(_aliased ${target} ALIASED_TARGET)
+        if (_aliased)
+            set(_real_target "${_aliased}")
         endif ()
+
+        get_target_property(_imported ${_real_target} IMPORTED)
+
+        # Only retarget/build-customize real build targets (never imported ones).
+        if (NOT _imported)
+            set_target_properties(${_real_target} PROPERTIES EXPORT_NAME ${_real_target})
+            addTargetProperties(${_real_target} soci ON)
+        endif ()
+
+        list(APPEND librariesList ${_real_target})
+        list(APPEND dependenciesList ${_real_target})
+        set(ADD_TO_DEFINES ON)
     endforeach ()
+
+    unset(_soci_targets)
+    unset(_real_target)
+    unset(_aliased)
+    unset(_imported)
 
     if (ADD_TO_DEFINES)
         list(APPEND definesList USING_DATABASE USING_soci)
