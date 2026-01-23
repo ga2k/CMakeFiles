@@ -1242,9 +1242,7 @@ function(patchExternals target patchList)
                     set(original_check "${override_file_path}.check")
                     if (EXISTS "${original_check}")
                         file(READ "${original_check}" check_contents)
-
-                        get_filename_component(final_patch_filename_ext "${override_file_path}" NAME)
-                        file(READ "${system_file_path}/final_patch_filename_ext" source_contents)
+                        file(READ "${system_file_path}" source_contents)
 
                         # ensure tey are the same
                         if (NOT "${check_contents}" STREQUAL "${source_contents}")
