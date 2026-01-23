@@ -11,19 +11,20 @@ function(soci_preMakeAvailable pkgname)
     forceSet(SOCI_INSTALL "" OFF BOOL)
     forceSet(SOCI_SKIP_INSTALL "" ON BOOL)
 
-    # Ensure sources are populated so we can patch them *before* add_subdirectory()
-    # (FetchContent_MakeAvailable would otherwise configure SOCI first, and we'd be too late).
+    # Ensure sources are populated so we can patch them *before* add_subdirectory().
+    # Note: After FetchContent_Populate(), we must add_subdirectory() ourselves.
     FetchContent_GetProperties(${pkgname})
     if (NOT ${pkgname}_POPULATED)
         message(STATUS "Pre-patching ${pkgname}: FetchContent_Populate(${pkgname})")
         FetchContent_Populate(${pkgname})
     endif ()
 
-    if (DEFINED ${pkgname}_SOURCE_DIR AND EXISTS "${${pkgname}_SOURCE_DIR}")
-        set(_soci_src "${${pkgname}_SOURCE_DIR}")
-    else ()
-        set(_soci_src "${EXTERNALS_DIR}/${pkgname}")
+    if (NOT DEFINED ${pkgname}_SOURCE_DIR OR NOT EXISTS "${${pkgname}_SOURCE_DIR}")
+        message(FATAL_ERROR "Pre-patching ${pkgname}: ${pkgname}_SOURCE_DIR not set or missing")
     endif ()
+
+    set(_soci_src "${${pkgname}_SOURCE_DIR}")
+    set(_soci_bin "${${pkgname}_BINARY_DIR}")
 
     if (COMMAND soci_fix)
         soci_fix("${pkgname}" "" "${_soci_src}")
@@ -33,6 +34,14 @@ function(soci_preMakeAvailable pkgname)
         patchExternals("${pkgname}" ${_patches})
     endif ()
 
-    unset(_soci_src)
-endfunction()
+    # Add SOCI to the build using the patched sources.
+    if (NOT TARGET soci_core AND NOT TARGET SOCI::Core)
+        add_subdirectory("${_soci_src}" "${_soci_bin}" EXCLUDE_FROM_ALL)
+    endif ()
 
+    # Tell fetchContents() not to call FetchContent_MakeAvailable() again.
+    set(HANDLED ON PARENT_SCOPE)
+
+    unset(_soci_src)
+    unset(_soci_bin)
+endfunction()
