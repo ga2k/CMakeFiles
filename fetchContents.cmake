@@ -218,7 +218,6 @@ function(fetchContents)
     )
     list(APPEND NoLibPackages
             googletest
-            soci
     )
 
     unset(USE_ALL)

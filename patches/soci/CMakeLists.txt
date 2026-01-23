@@ -177,6 +177,7 @@ endif()
 
 
 # Packaging
+if (NOT SOCI_SKIP_INSTALL)
 include(CMakePackageConfigHelpers)
 configure_package_config_file("soci-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
         INSTALL_DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
@@ -191,6 +192,7 @@ install(
         "${CMAKE_CURRENT_BINARY_DIR}/soci-config-version.cmake"
         DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
 )
+endif()
 
 # Give build summary at the end but only if it's the first time we're running,
 # as indicated by SOCI_SUMMARY not being cached yet, or if it has changed.

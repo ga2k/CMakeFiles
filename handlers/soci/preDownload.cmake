@@ -5,7 +5,16 @@ function(soci_preDownload pkgname url tag srcDir)
     # @formatter:off
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
     # This is the critical fix for the export set error
-    set(SOCI_INSTALL         ON CACHE BOOL "Disable SOCI internal install"   FORCE)
+    # We set these to OFF to avoid SOCI's internal install() calls which cause export conflicts.
+    # However, since SOCI doesn't seem to have a single master SOCI_INSTALL flag, 
+    # we might need to rely on the fact that if we aren't careful, it will install anyway.
+    set(SOCI_INSTALL         OFF CACHE BOOL "Disable SOCI internal install"   FORCE)
+    set(SOCI_CORE_INSTALL    OFF CACHE BOOL "" FORCE)
+    set(SOCI_SQLITE3_INSTALL OFF CACHE BOOL "" FORCE)
+    set(SOCI_STATIC          OFF CACHE BOOL "" FORCE)
+    # Patch SOCI to respect SOCI_INSTALL if it doesn't already
+    set(SOCI_SKIP_INSTALL    ON  CACHE BOOL "" FORCE)
+    set(SOCI_TESTS           OFF CACHE BOOL "" FORCE)
 
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3"   FORCE)
     set(SOCI_FMT_BUILTIN    OFF CACHE BOOL "Prefer using built-in fmt"       FORCE)
@@ -52,7 +61,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
 
     # 3. Now fetch SOCI and tell it to use the external fmt
-    set(SOCI_INSTALL  ON CACHE BOOL "Disable SOCI internal install" FORCE)
+    set(SOCI_INSTALL  OFF CACHE BOOL "Disable SOCI internal install" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
     set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
     set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)

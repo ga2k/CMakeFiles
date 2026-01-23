@@ -18,11 +18,14 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     foreach (target soci_core soci_sqlite3 ) #SOCI::Core SOCI::SQLite3)
         if (TARGET ${target})               # Prefer dynamic library ...
             # Strip SOCI's internal export metadata to prevent "multiple export sets" error
-#            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
-#            set_property(TARGET ${target} PROPERTY EXPORT_PROPERTIES "")
-            addTargetProperties(${target} soci OFF)
+            set_target_properties(${target} PROPERTIES EXPORT_NAME ${target})
+            # Try to force it out of SOCI's export set by clearing the property if it exists
+            # Note: EXPORT_PROPERTIES is for properties, but we want to avoid install(EXPORT)
+            # Since we can't easily undo install() commands, we must ensure SOCI_INSTALL=OFF works.
+            
+            addTargetProperties(${target} soci ON)
             list(APPEND librariesList ${target})
-#            list(APPEND dependenciesList ${target})
+            list(APPEND dependenciesList ${target})
             set(ADD_TO_DEFINES ON)
 
 #            if(WIDGETS IN_LIST APP_FEATURES)
@@ -31,11 +34,10 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 
         elseif (TARGET ${target}_static)    # ... over the static one
             # Strip metadata for static targets too
-#            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
-#            set_property(TARGET ${target}_static PROPERTY EXPORT_PROPERTIES "")
-            addTargetProperties(${target}_static soci OFF)
+            set_target_properties(${target}_static PROPERTIES EXPORT_NAME ${target}_static)
+            addTargetProperties(${target}_static soci ON)
             list(APPEND librariesList    ${target}_static)
-#            list(APPEND dependenciesList ${target})
+            list(APPEND dependenciesList ${target}_static)
             set(ADD_TO_DEFINES ON)
         endif ()
     endforeach ()
