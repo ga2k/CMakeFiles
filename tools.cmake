@@ -1177,6 +1177,11 @@ function(patchExternals target patchList)
     set(any_failed OFF)
 
     foreach (patch IN LISTS patchList)
+
+        message(" ")
+        message(CHECK_START "Override pattern is ${YELLOW}${patch}${OFF}")
+        list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
         SplitAt("${patch}" "|" patchBranch externalTrunk)
 
         string(LENGTH "${externalTrunk}" etLength)
@@ -1324,6 +1329,11 @@ function(patchExternals target patchList)
             message("${RED}[FAILED]${OFF} ${from_path} doesn't exist.")
             set(any_failed ON)
         endif ()
+
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_PASS "${GREEN}OK.${OFF}")
+        endif ()
+
     endforeach ()
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
