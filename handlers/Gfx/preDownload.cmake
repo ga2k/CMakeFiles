@@ -1,4 +1,5 @@
 function(gfx_preDownload pkgname url tag srcDir)
+    return()
     foreach (thing IN LISTS APP_FEATURES)
         if (${thing} IN_LIST SystemFeatures)
             set (feature)
