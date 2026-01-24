@@ -1282,24 +1282,22 @@ function(patchExternals target patchList)
                         list(APPEND visited "${override_file_path}" "${system_file_path}")
 
                         # is there a check file?
-                        set(original_check "${override_file_path}.check")
-                        if (EXISTS "${original_check}")
-                            file(READ "${original_check}" check_contents)
+                        set(check_file_path "${override_file_path}.check")
+                        if (EXISTS "${check_file_path}")
+                            file(READ "${check_file_path}" check_contents)
+                            file(READ "${override_file_path}" override_contents)
                             file(READ "${system_file_path}" source_contents)
 
                             # ensure they are the same
                             if (NOT "${check_contents}" STREQUAL "${source_contents}")
-                                # Oops.
-                                file(READ "${override_file_path}" patch_contents)
 
                                 #  see if it has already been patched
-                                if (NOT "${check_contents}" STREQUAL "${source_contents}")
-                                    set(error_message "Source file differs from expected. File has NOT been patched.")
-                                    set(errored ON)
-                                else ()
+                                if ("${source_contents}" STREQUAL "${override_contents}")
                                     set(error_message "Patch has already been applied.")
                                     set(errored OFF)
-                                endif ()
+                                elseif (NOT "${check_contents}" STREQUAL "${source_contents}")
+                                    set(error_message "Unpatched Source file differs from what is expected. Patching aborted.")
+                                    set(errored ON)
                             endif ()
                         endif ()
                     endif ()
