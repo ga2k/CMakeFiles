@@ -835,16 +835,47 @@ function(scanLibraryTargets libName packageData)
                 string(REPLACE "," ";" package_list "${packages}")
 
                 foreach(pkg_entry IN LISTS package_list)
-                    SplitAt("${pkg_entry}" "|" pkg_name ns)
+                    # 4. Extract package details
+                    # Format is usually: PKGNAME|NAMESPACE|KIND|METHOD|URL|GIT_TAG|INCDIR|COMPONENTS|ARGS|PREREQS
+                    # but let's be careful about how many | there are.
+                    string(REPLACE "|" ";" pkg_details "${pkg_entry}")
+                    list(GET pkg_details 0 pkg_name)
+                    list(GET pkg_details 1 ns)
+                    list(GET pkg_details 7 components) # COMPONENTS are at index 7 (0-based)
 
                     # Does the library link to this package?
+                    set(MATCHED OFF)
                     if ("${raw_import_name}" STREQUAL "${pkg_name}" OR "${raw_import_name}" STREQUAL "${ns}")
+                        set(MATCHED ON)
+                    elseif(components)
+                        # Check components
+                        string(REPLACE " " ";" component_list "${components}")
+                        foreach(comp IN LISTS component_list)
+                            # Match against component name (e.g. Core) or ns_component (e.g. SOCI_Core)
+                            # or common variations like pkg_component (e.g. soci_core)
+                            string(TOLOWER "${pkg_name}" pkg_lc)
+                            string(TOLOWER "${comp}" comp_lc)
+
+                            if ("${raw_import_name}" STREQUAL "${comp}" OR
+                                "${raw_import_name}" STREQUAL "${ns}_${comp}" OR
+                                "${raw_import_name}" STREQUAL "${pkg_name}_${comp}" OR
+                                "${raw_import_name}" STREQUAL "${pkg_lc}_${comp_lc}")
+                                set(MATCHED ON)
+                                break()
+                            endif()
+                        endforeach()
+                    endif()
+
+                    if (MATCHED)
                         message(STATUS "    -> Feature '${feat_name}' (${pkg_name}) is already provided by ${targetName} as ${clean_lib}")
                         set(${pkg_name}_ALREADY_FOUND ON CACHE INTERNAL "")
                         set(${pkg_name}_PROVIDED_TARGET "${clean_lib}" CACHE INTERNAL "")
                         break()
                     endif()
                 endforeach()
+                if (MATCHED)
+                    break()
+                endif()
             endforeach()
         endforeach()
     endif()
