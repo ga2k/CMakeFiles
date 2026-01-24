@@ -32,6 +32,7 @@ function(soci_preMakeAvailable pkgname)
         unset(_patches)
         list(APPEND _patches "${pkgname}|${_soci_src}")
         patchExternals("${pkgname}" ${_patches})
+        set(${pkgname}_PATCHED ON PARENT_SCOPE)
     endif ()
 
     # Add SOCI to the build using the patched sources.
