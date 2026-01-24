@@ -1332,7 +1332,6 @@ function(patchExternals target patchList)
 
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK.${OFF}")
-        endif ()
 
     endforeach ()
 
