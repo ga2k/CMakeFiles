@@ -366,7 +366,7 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         message("\n-----------------------------------------------------------------------------------------------\n")
-        string(JOIN ", " l ${pkgList})
+        string(JOIN ", " l ${packageList})
 
         message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${l}${ESC}[0m")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
