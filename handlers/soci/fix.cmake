@@ -16,6 +16,7 @@ function(soci_fix target tag sourceDir)
             "soci/src|${sourceDir}"
     )
     patchExternals(${target} "${patches}")
+    set(${target}_PATCHED ON PARENT_SCOPE)
     set(HANDLED ON PARENT_SCOPE)
 
 endfunction()
