@@ -28,7 +28,7 @@ set(PkgArgsIX 8)
 set(PkgPrereqsIX 9)
 
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/stdPackageData.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
 
 set(SystemFeatureData)
 set(UserFeatureData)
