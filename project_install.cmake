@@ -288,44 +288,44 @@ if (LINUX)
     unset(_hs_desktop_files)
 endif()
 
-if (WIN32)
-    install(CODE [=[
-        include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake")
-        copy_files_to_target_dir(
-            TARGET_DIR
-                "\${OUTPUT_DIR}/bin"
-            SOURCE_DIRS
-                "${OUTPUT_DIR}/bin"
-                "${OUTPUT_DIR}/bin/Plugins"
-                "${OUTPUT_DIR}/lib"
-                "${OUTPUT_DIR}/lib/Plugins"
-                "${OUTPUT_DIR}/bin"
-                "${BUILD_DIR}/bin"
-                "${BUILD_DIR}/lib"
-                "${EXTERNALS_DIR}/Boost/stage/lib"
-            FILE_PATTERNS
-                "*.exe" "*.dll" "*.plugin" "*.lib"
-        )
-    ]=])
-endif ()
-
 #if (WIN32)
-#    install(CODE "
-#        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
+#    install(CODE [=[
+#        include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake")
 #        copy_files_to_target_dir(
 #            TARGET_DIR
-#                \"\${OUTPUT_DIR}/bin\"
+#                "\${OUTPUT_DIR}/bin"
 #            SOURCE_DIRS
-#                \"\${OUTPUT_DIR}/bin\"
-#                \"\${OUTPUT_DIR}/bin/Plugins\"
-#                \"\${OUTPUT_DIR}/lib\"
-#                \"\${OUTPUT_DIR}/lib/Plugins\"
-#                \"\${OUTPUT_DIR}/bin\"
-#                \"\${BUILD_DIR}/bin\"
-#                \"\${BUILD_DIR}/lib\"
-#                \"\${EXTERNALS_DIR}/Boost/stage/lib\"
+#                "${OUTPUT_DIR}/bin"
+#                "${OUTPUT_DIR}/bin/Plugins"
+#                "${OUTPUT_DIR}/lib"
+#                "${OUTPUT_DIR}/lib/Plugins"
+#                "${OUTPUT_DIR}/bin"
+#                "${BUILD_DIR}/bin"
+#                "${BUILD_DIR}/lib"
+#                "${EXTERNALS_DIR}/Boost/stage/lib"
 #            FILE_PATTERNS
-#                \"*.exe\" \"*.dll\" \"*.plugin\" \"*.lib\"
+#                "*.exe" "*.dll" "*.plugin" "*.lib"
 #        )
-#    ")
+#    ]=])
 #endif ()
+
+if (WIN32)
+    install(CODE "
+        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
+        copy_files_to_target_dir(
+            TARGET_DIR
+                \"\${OUTPUT_DIR}/bin\"
+            SOURCE_DIRS
+                \"\${OUTPUT_DIR}/bin\"
+                \"\${OUTPUT_DIR}/bin/Plugins\"
+                \"\${OUTPUT_DIR}/lib\"
+                \"\${OUTPUT_DIR}/lib/Plugins\"
+                \"\${OUTPUT_DIR}/bin\"
+                \"\${BUILD_DIR}/bin\"
+                \"\${BUILD_DIR}/lib\"
+                \"\${EXTERNALS_DIR}/Boost/stage/lib\"
+            FILE_PATTERNS
+                \"*.exe\" \"*.dll\" \"*.plugin\" \"*.lib\"
+        )
+    ")
+endif ()
