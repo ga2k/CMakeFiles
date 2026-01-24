@@ -6,29 +6,12 @@ message(STATUS "=== Configuring Components ===")
 # App configuration (app.yaml) generation paths
 set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
-## Track if Core already exists before this project adds sources
-#set(ALREADY_HAVE_CORE OFF)
-#if (TARGET HoffSoft::HoffSoft)
-#    set(ALREADY_HAVE_CORE ON)
-#endif ()
-
 # Enter the project's src folder (defines targets)
 if (MONOREPO AND MONOBUILD)
     # This is done in the root CMakeLists.txt
 else ()
     add_subdirectory(src)
 endif ()
-
-## Consumer workaround for yaml-cpp when consuming HoffSoft::HoffSoft install package
-#if (ALREADY_HAVE_CORE)
-#    find_package(yaml-cpp CONFIG QUIET)
-#    if (TARGET yaml-cpp::yaml-cpp)
-#        message(STATUS "Linking yaml-cpp::yaml-cpp explicitly as a workaround for HoffSoft::HoffSoft package")
-#        if (TARGET main)
-#            target_link_libraries(main LINK_PRIVATE yaml-cpp::yaml-cpp)
-#        endif ()
-#    endif ()
-#endif ()
 
 # Optional resources fetching per project
 # @formatting:off
@@ -37,17 +20,17 @@ if (APP_GLOBAL_RESOURCES)
     set(GLOBAL_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
     file(MAKE_DIRECTORY "${GLOBAL_RESOURCES_DIR}")
     ExternalProject_Add(${APP_NAME}ResourceRepo
-            GIT_REPOSITORY "${APP_GLOBAL_RESOURCES}"
-            GIT_TAG master
-            GIT_SHALLOW TRUE
+            GIT_REPOSITORY      "${APP_GLOBAL_RESOURCES}"
+            GIT_TAG             master
+            GIT_SHALLOW         TRUE
             UPDATE_DISCONNECTED TRUE
-            CONFIGURE_COMMAND ""
-            BUILD_COMMAND ""
-            INSTALL_COMMAND ""
-            TEST_COMMAND ""
-            SOURCE_DIR "${GLOBAL_RESOURCES_DIR}"
-            BUILD_BYPRODUCTS "${GLOBAL_RESOURCES_DIR}/.fetched"
-            COMMAND ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
+            CONFIGURE_COMMAND   ""
+            BUILD_COMMAND       ""
+            INSTALL_COMMAND     ""
+            TEST_COMMAND        ""
+            SOURCE_DIR          "${GLOBAL_RESOURCES_DIR}"
+            BUILD_BYPRODUCTS    "${GLOBAL_RESOURCES_DIR}/.fetched"
+            COMMAND             ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
     )
     add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
     if (TARGET ${APP_NAME})
@@ -57,7 +40,6 @@ endif ()
 # @formatting:on
 
 ## App configuration (app.yaml) generation paths
-#set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
 include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
 install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -67,11 +49,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
 
 if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 
-#    if (MONOREPO)
-#        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MyCare/src/generated)
-#    else ()
-#        set(GEN_DEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/generated)
-#    endif ()
     set(GEN_DEST_DIR ${BUILD_DIR}/generated)
 
     if (APP_GENERATE_RECORDSETS)
@@ -99,8 +76,6 @@ endif ()
 set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
 
 if(APP_GLOBAL_RESOURCES)
-    # Based on your tree: $CMAKE_INSTALL_DATADIR/HoffSoft/HoffSoft/Resources
-    # Note: Global resources seem to belong to the vendor's primary 'HoffSoft' folder in your tree
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/global-resources/"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_VENDOR}/Resources"
             COMPONENT GlobalResources
@@ -314,22 +289,43 @@ if (LINUX)
 endif()
 
 if (WIN32)
-    install(CODE "
-        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
+    install(CODE [=[
+        include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake")
         copy_files_to_target_dir(
             TARGET_DIR
-                \"\${OUTPUT_DIR}/bin\"
+                "\${OUTPUT_DIR}/bin"
             SOURCE_DIRS
-                \"\${OUTPUT_DIR}/bin\"
-                \"\${OUTPUT_DIR}/bin/Plugins\"
-                \"\${OUTPUT_DIR}/lib\"
-                \"\${OUTPUT_DIR}/lib/Plugins\"
-                \"\${OUTPUT_DIR}/bin\"
-                \"\${BUILD_DIR}/bin\"
-                \"\${BUILD_DIR}/lib\"
-                \"\${EXTERNALS_DIR}/Boost/stage/lib\"
+                "${OUTPUT_DIR}/bin"
+                "${OUTPUT_DIR}/bin/Plugins"
+                "${OUTPUT_DIR}/lib"
+                "${OUTPUT_DIR}/lib/Plugins"
+                "${OUTPUT_DIR}/bin"
+                "${BUILD_DIR}/bin"
+                "${BUILD_DIR}/lib"
+                "${EXTERNALS_DIR}/Boost/stage/lib"
             FILE_PATTERNS
-                \"*.exe\" \"*.dll\" \"*.plugin\" \"*.lib\"
+                "*.exe" "*.dll" "*.plugin" "*.lib"
         )
-    ")
+    ]=])
 endif ()
+
+#if (WIN32)
+#    install(CODE "
+#        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
+#        copy_files_to_target_dir(
+#            TARGET_DIR
+#                \"\${OUTPUT_DIR}/bin\"
+#            SOURCE_DIRS
+#                \"\${OUTPUT_DIR}/bin\"
+#                \"\${OUTPUT_DIR}/bin/Plugins\"
+#                \"\${OUTPUT_DIR}/lib\"
+#                \"\${OUTPUT_DIR}/lib/Plugins\"
+#                \"\${OUTPUT_DIR}/bin\"
+#                \"\${BUILD_DIR}/bin\"
+#                \"\${BUILD_DIR}/lib\"
+#                \"\${EXTERNALS_DIR}/Boost/stage/lib\"
+#            FILE_PATTERNS
+#                \"*.exe\" \"*.dll\" \"*.plugin\" \"*.lib\"
+#        )
+#    ")
+#endif ()
