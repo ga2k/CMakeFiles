@@ -1178,11 +1178,11 @@ function(patchExternals target patchList)
 
     foreach (patch IN LISTS patchList)
 
-        message(" ")
-        message(CHECK_START "Override pattern is ${YELLOW}${patch}${OFF}")
-        list(APPEND CMAKE_MESSAGE_INDENT "\t")
-
         SplitAt("${patch}" "|" patchBranch externalTrunk)
+
+        message(" ")
+        message(CHECK_START "Override pattern is ${YELLOW}${patchBranch}${OFF}")
+        list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         string(LENGTH "${externalTrunk}" etLength)
         math(EXPR etLastCharOffset "${etLength} - 1")
