@@ -1,4 +1,3 @@
-total 269K
 drwxr-xr-x 1 geoff 197609    0 Jan 24 00:37 .
 drwxr-xr-x 1 geoff 197609    0 Jan 14 00:05 ..
 drwxr-xr-x 1 geoff 197609    0 Jan 20 18:56 .git
@@ -30,3 +29,34 @@ drwxr-xr-x 1 geoff 197609    0 Jan 14 00:05 windows
 -rw-r--r-- 1 geoff 197609  21K Jan 16 17:12 NULL
 -rw-r--r-- 1 geoff 197609    5 Jan 14 00:05 README.md
 -rw-r--r-- 1 geoff 197609  401 Jan 14 00:19 Win32.modules
+.
+..
+.git
+.idea
+.run_linux
+.run_macOS
+.run_win11
+.vs
+cmake
+Gfx
+HoffSoft
+MyCare
+windows
+.backup.modules
+.gitignore
+.gitmodules
+.makefile_silent
+.makefile_update_check
+.modules
+boo
+CMakeLists.txt
+CMakePresets.json
+errors.log
+LICENSE
+Linux.modules
+macOS.modules
+Makefile
+noop
+NULL
+README.md
+Win32.modules
