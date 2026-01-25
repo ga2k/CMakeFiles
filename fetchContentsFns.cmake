@@ -796,6 +796,10 @@ endfunction()
 ########################################################################################################################
 ##
 function(scanLibraryTargets libName packageData)
+
+    set(${libName}_COMPONENTS)
+    set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
+
     # Check common target name patterns
     set(targetName "")
     if (TARGET ${APP_VENDOR}::${libName})
@@ -839,9 +843,9 @@ function(scanLibraryTargets libName packageData)
                     # Format is usually: PKGNAME|NAMESPACE|KIND|METHOD|URL|GIT_TAG|INCDIR|COMPONENTS|ARGS|PREREQS
                     # but let's be careful about how many | there are.
                     string(REPLACE "|" ";" pkg_details "${pkg_entry}")
-                    list(GET pkg_details 0 pkg_name)
-                    list(GET pkg_details 1 ns)
-                    list(GET pkg_details 7 components) # COMPONENTS are at index 7 (0-based)
+                    list(GET pkg_details ${PkgNameIX} pkg_name)
+                    list(GET pkg_details ${PkgNamespaceIX} ns)
+                    list(GET pkg_details ${PkgComponentsIX} components) # COMPONENTS are at index 7 (0-based)
 
                     # Does the library link to this package?
                     set(MATCHED OFF)
@@ -868,6 +872,7 @@ function(scanLibraryTargets libName packageData)
 
                     if (MATCHED)
                         message(STATUS "    -> Feature '${feat_name}' (${pkg_name}) is already provided by ${targetName} as ${clean_lib}")
+                        list(APPEND ${libName}_COMPONENTS ${pkg_name})
                         set(${pkg_name}_ALREADY_FOUND ON CACHE INTERNAL "")
                         set(${pkg_name}_PROVIDED_TARGET "${clean_lib}" CACHE INTERNAL "")
                         break()
@@ -879,6 +884,8 @@ function(scanLibraryTargets libName packageData)
             endforeach()
         endforeach()
     endif()
+    set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
+
 endfunction()
 
 macro(handleTarget _pkgname)

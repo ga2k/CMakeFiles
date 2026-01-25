@@ -370,6 +370,8 @@ function(fetchContents)
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
         message(" ")
 
+        unset(combinedLibraryComponents)
+
         foreach (pass_num RANGE 1)
             foreach (this_feature_entry IN LISTS unifiedFeatureList)
 
@@ -454,6 +456,11 @@ function(fetchContents)
                     message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
+                    if(${this_pkgname} IN_LIST combinedLibraryComponents)
+                        list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        message(CHECK_PASS "Feature already available without re-processing: skipped")
+                        continue()
+                    endif ()
                     if ("${this_method}" STREQUAL "PROCESS")
                         set(fn "${this_pkgname}_process")
                         if (COMMAND "${fn}")
@@ -541,6 +548,7 @@ function(fetchContents)
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
                                 scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
+                                list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                             else()
                                 # Library not found yet. We must fulfill its metadata prerequisites
                                 # so that we can eventually load it.
@@ -583,6 +591,7 @@ function(fetchContents)
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
                                     scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
+                                    list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif()
                             endif ()
                         endif ()
@@ -669,8 +678,6 @@ function(fetchContents)
                 endif ()
 
             endforeach () # this_feature_entry
-
-
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
