@@ -1,7 +1,7 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
+function(generateUIClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
 
     set (generator "yaml2ui.py")
 
@@ -11,7 +11,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                     --quiet ${SHOW_SIZER_INFO_FLAG}
-                    --scan "${SOURCE_DIR}"
+                    --scan "${SRCDIR}"
                     --output "${OUT_DIR}"
                     --app-target "${APP_NAME}"
                     --export-var "${EXPORT_VAR}"
@@ -27,7 +27,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
     #    We use a 'stamp' file as the known OUTPUT so Ninja/Make can track the rule.
     file(GLOB_RECURSE UI_DEPENDENCIES
             CONFIGURE_DEPENDS
-            "${SOURCE_DIR}/*.yaml"
+            "${SRCDIR}/*.yaml"
             "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
@@ -39,7 +39,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
             COMMAND "${Python3_EXECUTABLE}"
                         "${CMAKE_SOURCE_DIR}/cmake/${generator}"
                         --quiet ${SHOW_SIZER_INFO_FLAG}
-                        --scan "${SOURCE_DIR}"
+                        --scan "${SRCDIR}"
                         --output "${OUT_DIR}"
                         --app-target "${APP_NAME}"
                         --export-var "${EXPORT_VAR}"
@@ -73,7 +73,7 @@ function(generateUIClasses OUT_DIR SOURCE_DIR TRRGET EXPORT_VAR)
 
 endfunction()
 
-function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
+function(generateRecordsets OUT_DIR SRCDIR TRRGET)
 
     set (generator "yaml2rs.py")
 
@@ -81,7 +81,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
     file(MAKE_DIRECTORY "${OUT_DIR}")
     execute_process(
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
-                    --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
+                    --quiet --scan "${SRCDIR}" --output "${OUT_DIR}"
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             RESULT_VARIABLE CONFIGURE_RESULT
             ERROR_VARIABLE OOPSIE
@@ -94,7 +94,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
     #    We use a 'stamp' file as the known OUTPUT so Ninja/Make can track the rule.
     file(GLOB_RECURSE RS_DEPENDENCIES
             CONFIGURE_DEPENDS
-            "${SOURCE_DIR}/*.yaml"
+            "${SRCDIR}/*.yaml"
             "${CMAKE_SOURCE_DIR}/cmake/${generator}"
     )
 
@@ -104,7 +104,7 @@ function(generateRecordsets OUT_DIR SOURCE_DIR TRRGET)
             BYPRODUCTS ${RS_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
             COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/cmake/${generator}"
-                    --quiet --scan "${SOURCE_DIR}" --output "${OUT_DIR}"
+                    --quiet --scan "${SRCDIR}" --output "${OUT_DIR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${RS_CLASSES_STAMP}"
             DEPENDS ${RS_DEPENDENCIES} "${CMAKE_SOURCE_DIR}/cmake/${generator}"
             COMMENT "Generating RS.ixx files from YAML specs (batch mode)"

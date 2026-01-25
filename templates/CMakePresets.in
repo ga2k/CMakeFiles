@@ -125,13 +125,14 @@
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
+        "BUILD_WX_FROM_SOURCE": "ON",
         "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
-        "CMAKE_LINKER": "C:/Program Files/LLVM/bin/lld-link.exe",
-        "CMAKE_SYSTEM_NAME": "Windows",
-        "CMAKE_SYSTEM_PROCESSOR": "AMD64",
         "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe",
-        "BUILD_WX_FROM_SOURCE": "ON"
+        "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
+        "CMAKE_LINKER": "C:/Program Files/LLVM/bin/lld-link.exe",
+        "CMAKE_RC_COMPILER": "C:/Program Files/LLVM/bin/llvm-rc.exe",
+        "CMAKE_SYSTEM_NAME": "Windows",
+        "CMAKE_SYSTEM_PROCESSOR": "AMD64"
 
       }
     },

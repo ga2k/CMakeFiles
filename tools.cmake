@@ -69,13 +69,13 @@ function(copy_files_to_target_dir)
         message(FATAL_ERROR "At least one FILE_PATTERN is required!")
     endif ()
 
-    foreach (SOURCE_DIR IN LISTS MV_SOURCE_DIRS)
+    foreach (SRCDIR IN LISTS MV_SOURCE_DIRS)
         foreach (PATTERN IN LISTS MV_FILE_PATTERNS)
-            file(GLOB FILES "${SOURCE_DIR}/${PATTERN}")
+            file(GLOB FILES "${SRCDIR}/${PATTERN}")
 
             foreach (FILE IN LISTS FILES)
                 get_filename_component(FILE_NAME ${FILE} NAME)
-                message(STATUS "Copying ${FILE_NAME} from ${SOURCE_DIR} to ${MV_TARGET_DIR}")
+                message(STATUS "Copying ${FILE_NAME} from ${SRCDIR} to ${MV_TARGET_DIR}")
 
                 file(MAKE_DIRECTORY ${MV_TARGET_DIR})
                 file(COPY ${FILE} DESTINATION ${MV_TARGET_DIR} FOLLOW_SYMLINK_CHAIN)

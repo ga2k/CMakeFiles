@@ -75,7 +75,7 @@ function(OpenSSL_process incs libs defs)
         set(OPENSSL_INSTALL make install)
     endif()
 
-    message([=[)
+    message([=[
 ExternalProject_Add(OpenSSLProj
         GIT_REPOSITORY      https://github.com/openssl/openssl.git
         GIT_TAG             openssl-3.3.2
