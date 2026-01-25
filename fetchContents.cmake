@@ -355,10 +355,9 @@ function(fetchContents)
 
     function(processFeatures featureList)
 
-        set(switches IS_A_PREREQ)
         unset(removeFromDependencies)
 
-        cmake_parse_arguments("apf" "${switches}" "" "" ${ARGN})
+        cmake_parse_arguments("apf" "IS_A_PREREQ" "" "" ${ARGN})
 
         # Two-Pass Strategy:
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
@@ -389,14 +388,14 @@ function(fetchContents)
 
                 # Skip features already found/aliased, but only check this in the final pass
                 # to allow declarations to overlap if necessary.
-                if (${pass_num} EQUAL 1)
+#                if (${pass_num} EQUAL 1)
                     if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND OR ${this_feature}_ALREADY_FOUND)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(CHECK_PASS "Feature already available without re-processing: skipped")
                         list(APPEND removeFromDependencies "${this_feature_entry}" "${this_feature}")
                         continue()
                     endif ()
-                endif ()
+#                endif ()
 
                 unset(COMPONENTS_KEYWORD)
                 unset(OVERRIDE_FIND_PACKAGE_KEYWORD)

@@ -799,7 +799,7 @@ function(scanLibraryTargets libName packageData)
     # Check common target name patterns
     set(targetName "")
     if (TARGET HoffSoft::${libName})
-        set(targetName "HoffSoft::${libName}")
+        set(targetName "${APP_VENDOR}::${libName}")
     elseif (TARGET ${libName}::${libName})
         set(targetName "${libName}::${libName}")
     elseif (TARGET ${libName})
