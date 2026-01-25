@@ -172,7 +172,7 @@ macro(check_environment PROJECT_ROOT)
         string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
 
 #        if (NOT BUILD_DIR)
-            forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
+            forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
 #        endif ()
         #        if(NOT OUTPUT_DIR)
             forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
