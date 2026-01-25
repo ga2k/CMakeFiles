@@ -481,7 +481,7 @@ function(fetchContents)
                                 list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
                                 find_package(${this_pkgname} QUIET ${temporary_args})
 
-                                if(${this_pkgname}_ALREADY_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
                                     message(STATUS "${this_pkgname} found. Skipping FetchContent.\n")
                                     set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                                 else()
