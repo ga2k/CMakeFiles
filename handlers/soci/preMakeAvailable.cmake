@@ -4,7 +4,7 @@ include("${CMAKE_SOURCE_DIR}/cmake/tools.cmake")
 function(soci_preMakeAvailable pkgname)
 
     message(" ")
-    
+
     if(soci_ALREADY_FOUND)
         message("oonga boonga oonga boonga oonga boonga oonga boonga I can't help that feeling...")
         return()
