@@ -53,7 +53,7 @@ function(fetchContents)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
-    set(AUE_DEBUG ON)
+    set(AUE_DEBUG OFF)
     if (AUE_DEBUG)
         log(TITLE "Before tampering "
             LISTS
