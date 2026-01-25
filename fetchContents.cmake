@@ -348,6 +348,18 @@ function(fetchContents)
     ####################################################################################################################
 
     string(ASCII 27 ESC)
+    set(RED     "${ESC}[31m")
+    set(GREEN   "${ESC}[32m")
+    set(YELLOW  "${ESC}[33m")
+    set(BLUE    "${ESC}[34m")
+    set(MAGENTA "${ESC}[35m")
+    set(CYAN    "${ESC}[36m")
+    set(WHITE   "${ESC}[37m")
+    set(DEFAULT "${ESC}[38m")
+    set(BOLD    "${ESC}[1m" )
+    set(NC      "${ESC}[0m" )
+
+
 
     ##
     ## Nested function. How fancy
@@ -366,7 +378,7 @@ function(fetchContents)
         message("\n-----------------------------------------------------------------------------------------------\n")
         string(JOIN ", " l ${packageList})
 
-        message(CHECK_START "${ESC}[33mProcessing features${ESC}[0;1m ${l}${ESC}[0m")
+        message(CHECK_START "${YELLOW}Processing features${NC}${BOLD} ${l}${NC}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
         message(" ")
 
@@ -453,7 +465,7 @@ function(fetchContents)
                     string(LENGTH "${this_pkgname}" this_pkgnameLength)
                     math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
                     string(REPEAT "." ${paddingChars} padding )
-                    message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m1${ESC}[0m")
+                    message(CHECK_START "${GREEN}${this_pkgname} ${padding} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -600,7 +612,7 @@ function(fetchContents)
 
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
                     message( " " )
-                    message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m")
+                    message(CHECK_PASS "${GREEN}Finished${NC}")
 
                 endif ()
 
@@ -613,7 +625,7 @@ function(fetchContents)
                     string(LENGTH "${this_pkgname}" this_pkgnameLength)
                     math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
                     string(REPEAT "." ${paddingChars} padding )
-                    message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
+                    message(CHECK_START "${GREEN}${this_pkgname} ${padding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if(${this_feature}_PASS_TWO_COMPLETED)
@@ -637,7 +649,7 @@ function(fetchContents)
                             endif ()
                             if(NOT this_build)
                                 if(EXISTS "${BUILD_DIR}/${this_pkglc}-build")
-                                    set(this_build "${BUILD_DIR}${BUILD_TYPE_LC}/${LINK_TYPE_LC}/${this_pkglc}-build")
+                                    set(this_build "${BUILD_DIR}/${this_pkglc}-build")
                                 endif ()
                             endif ()
 
@@ -683,7 +695,7 @@ function(fetchContents)
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(" ")
-                        message(CHECK_PASS "${ESC}[32mFinished${ESC}[0m")
+                        message(CHECK_PASS "${GREEN}Finished${NC}")
 
                     endif ()
                 endif ()
@@ -691,7 +703,7 @@ function(fetchContents)
             endforeach () # this_feature_entry
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        message(CHECK_PASS "${ESC}[32mOK${ESC}[0m\n")
+        message(CHECK_PASS "${GREEN}OK${NC}\n")
 
         propegateUpwards("Interim")
 
