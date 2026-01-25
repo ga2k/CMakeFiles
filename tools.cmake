@@ -1172,13 +1172,13 @@ function(patchExternals target patchList)
     unset(visited)
 
     message(" ")
-    message(CHECK_START "${BOLD}Applying local patches for target ${YELLOW}${target}${OFF}")
+    message(CHECK_START "Applying local patches for target ${YELLOW}${target}${OFF}")
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
     set(any_failed OFF)
 
     if(${target}_ALREADY_FOUND)
-        message(CHECK_PASS "Not required for ${BOLD}imported libraries${OFF}")
         list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_PASS "Not required for ${BOLD}imported libraries${OFF}")
         return()
     endif ()
 
