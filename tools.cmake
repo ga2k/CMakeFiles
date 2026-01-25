@@ -1177,7 +1177,8 @@ function(patchExternals target patchList)
     set(any_failed OFF)
 
     if(${target}_ALREADY_FOUND)
-        message("\nPatching of include files not required for ${BOLD}imported libraries${OFF}")
+        message(CHECK_PASS "Not required for ${BOLD}imported libraries${OFF}")
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
         return()
     endif ()
 
