@@ -103,7 +103,6 @@ foreach(_t IN LISTS HS_DependenciesList)
     get_target_property(_imported ${_t} IMPORTED)
     if(_imported)
         message(STATUS "Install(${APP_NAME}): skipping IMPORTED target '${_t}'")
-        set(${_t}_IMPORTED ON PARENT_SCOPE)
         continue()
     endif()
 

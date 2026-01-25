@@ -1176,16 +1176,15 @@ function(patchExternals target patchList)
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
     set(any_failed OFF)
 
-    if(${target}_IMPORTED)
+    if(${target}_ALREADY_FOUND)
         message("\nPatching of include files not required for ${BOLD}imported libraries${OFF}")
         return()
     endif ()
-    
+
     foreach (patch IN LISTS patchList)
 
         SplitAt("${patch}" "|" patchBranch externalTrunk)
 
-        message(" ")
         message(CHECK_START "Override pattern is ${YELLOW}${patchBranch}${OFF}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
