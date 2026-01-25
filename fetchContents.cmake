@@ -615,7 +615,6 @@ function(fetchContents)
                     string(REPEAT "." ${paddingChars} padding )
                     message(CHECK_START "${ESC}[32m${this_pkgname} ${padding} ${ESC}[36mPhase ${ESC}[0;1m2${ESC}[0m")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
-                    message(" ")
 
                     if(${this_feature}_PASS_TWO_COMPLETED)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
