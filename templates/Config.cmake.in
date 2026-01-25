@@ -19,14 +19,13 @@ if(WIN32)
     execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory  "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
                     COMMAND "${CMAKE_COMMAND}" -E copy            "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
                                                                   "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
-                    COMMAND_ERROR_IS_FATAL  ANY
                     RESULT_VARIABLE         resultVariable
                     OUTPUT_VARIABLE         outputVariable
                     ERROR_VARIABLE          errorVariable
     )
 
     if (${resultVariable} GREATER 0)
-      message(FATAL_ERROR "Couldn't copy file: Error Code ${errorVariable}")
+      message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
     endif()
   else()
     message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
@@ -75,13 +74,12 @@ if(WIN32)
       IMPORTED_IMPLIB   "${_wx_mono_implib}"
       )
     else()
-      message(STATUS [=[
-      Gfx package: wx::wxmono shim not created (yet).
-      bin: ${_wx_bin_dir}
-      dll candidates: ${_wx_dll_candidates}
-      lib: ${_wx_lib_dir}
-      implib candidates: ${_wx_implib_candidates}
-      ]=])
+      message(STATUS
+      "Gfx package: wx::wxmono shim not created (yet).\n"
+      "bin: ${_wx_bin_dir}\n"
+      "dll candidates: ${_wx_dll_candidates}\n"
+      "lib: ${_wx_lib_dir}\n"
+      "implib candidates: ${_wx_implib_candidates}")
     endif()
   endif()
 
