@@ -74,7 +74,7 @@ class CppModuleGenerator:
 
     def set_max_join_depth(self, depth: int) -> None:
         """Set the maximum depth for nested joins (default is 3)."""
-        self.max_join_depth = std::max(1, depth)  # Minimum depth is 1
+        self.max_join_depth = max(1, depth)  # Minimum depth is 1
 
     def resolve_relationship_fields(self, relationships: List[Dict[str, Any]],
                                     current_table_name: str = "",
@@ -557,14 +557,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if not resolved_fields:
             return decls, reads
 
-        max_name_len = std::max(len(name) for name, _, _ in resolved_fields)
-        max_type_len = std::max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
+        max_name_len = max(len(name) for name, _, _ in resolved_fields)
+        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
 
         for name, cpp_type, required in resolved_fields:
             type_str = f"optional<{cpp_type}>"
             decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
             reads.append(
-                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * std::max(0, 15 - len(cpp_type))}("{name}");'
+                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
             )
 
         return decls, reads
@@ -705,14 +705,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if not resolved_fields:
             return decls, reads
 
-        max_name_len = std::max(len(name) for name, _, _ in resolved_fields)
-        max_type_len = std::max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
+        max_name_len = max(len(name) for name, _, _ in resolved_fields)
+        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
 
         for name, cpp_type, required in resolved_fields:
             type_str = f"optional<{cpp_type}>"
             decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
             reads.append(
-                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * std::max(0, 15 - len(cpp_type))}("{name}");'
+                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
             )
 
         return decls, reads
@@ -835,8 +835,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         for field_name, field_def in fields.items():
             cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
             type_str = cpp_type if self.is_required_field(field_def) else f"optional<{cpp_type}>"
-            max_type_len = std::max(max_type_len, len(type_str))
-            max_name_len = std::max(max_name_len, len(field_name))
+            max_type_len = max(max_type_len, len(type_str))
+            max_name_len = max(max_name_len, len(field_name))
 
         # Generate declarations with alignment
         for field_name, field_def in fields.items():
@@ -943,24 +943,24 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         for field_name, field_def in fields.items():
             if field_def.get('auto_increment', False):
                 continue
-            pad = " " * std::max(0, 16 - len(field_name))
+            pad = " " * max(0, 16 - len(field_name))
             pairs.append(f'           pair ("{field_name}"s,{pad}this->in_.{field_name})')
         return pairs
 
     def generate_row_assignments(self, fields: Dict[str, Any]) -> List[str]:
         """Generate row assignment statements (Record::in) for base table only."""
         assignments = []
-        max_name_len = std::max(len(name) for name in fields.keys()) if fields else 0
+        max_name_len = max(len(name) for name in fields.keys()) if fields else 0
         for field_name, field_def in fields.items():
             cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
             padded_name = field_name.ljust(max_name_len)
             if self.is_required_field(field_def):
                 assignments.append(
-                    f'      {padded_name} = row.get<{cpp_type}>{" " * std::max(0, 23 - len(cpp_type))}("{field_name}");'
+                    f'      {padded_name} = row.get<{cpp_type}>{" " * max(0, 23 - len(cpp_type))}("{field_name}");'
                 )
             else:
                 assignments.append(
-                    f'      {padded_name} = row.get<optional<{cpp_type}>>{" " * std::max(0, 15 - len(cpp_type))}("{field_name}");'
+                    f'      {padded_name} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{field_name}");'
                 )
         return assignments
 
