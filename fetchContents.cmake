@@ -458,6 +458,7 @@ function(fetchContents)
 
                     if(${this_pkgname} IN_LIST combinedLibraryComponents)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        message(" ")
                         message(CHECK_PASS "Feature already available without re-processing: skipped")
                         continue()
                     endif ()
