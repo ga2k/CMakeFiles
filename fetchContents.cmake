@@ -708,12 +708,12 @@ function(fetchContents)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
 
-        propegateUpwards("Interim" OFF)
+        propegateUpwards("Interim" ON)
 
     endfunction()
 
     processFeatures("${unifiedFeatureList}")
-    propegateUpwards("Finally" OFF)
+    propegateUpwards("Finally" ON)
 
 endfunction()
 
