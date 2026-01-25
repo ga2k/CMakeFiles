@@ -708,16 +708,16 @@ function(fetchContents)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
 
-        propegateUpwards("Interim")
+        propegateUpwards("Interim" OFF)
 
     endfunction()
 
     processFeatures("${unifiedFeatureList}")
-    propegateUpwards("Finally")
+    propegateUpwards("Finally" OFF)
 
 endfunction()
 
-macro (propegateUpwards whereWeAre)
+macro (propegateUpwards whereWeAre QUIET)
 
     # @formatter:off
     list(APPEND ${AUE_PREFIX}_CompileOptionsList ${_CompileOptionsList} ${${AUE_PREFIX}_CompileOptionsList})
@@ -771,23 +771,25 @@ macro (propegateUpwards whereWeAre)
     set(${AUE_PREFIX}_wxLibraries        ${${AUE_PREFIX}_wxLibraries}        PARENT_SCOPE)
     set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
     # @formatter:on
-    log(TITLE "${whereWeAre}" LISTS
 
-            ${AUE_PREFIX}_CompileOptionsList
-            ${AUE_PREFIX}_DefinesList
-            ${AUE_PREFIX}_DependenciesList
-            ${AUE_PREFIX}_IncludePathsList
-            ${AUE_PREFIX}_LibrariesList
-            ${AUE_PREFIX}_LibraryPathsList
-            ${AUE_PREFIX}_LinkOptionsList
-            ${AUE_PREFIX}_PrefixPathsList
+    if(NOT QUIET)
+        log(TITLE "${whereWeAre}" LISTS
 
-            ${AUE_PREFIX}_wxCompilerOptions
-            ${AUE_PREFIX}_wxDefines
-            ${AUE_PREFIX}_wxIncludePaths
-            ${AUE_PREFIX}_wxLibraryPaths
-            ${AUE_PREFIX}_wxLibraries
-            ${AUE_PREFIX}_wxFrameworks
-    )
+                ${AUE_PREFIX}_CompileOptionsList
+                ${AUE_PREFIX}_DefinesList
+                ${AUE_PREFIX}_DependenciesList
+                ${AUE_PREFIX}_IncludePathsList
+                ${AUE_PREFIX}_LibrariesList
+                ${AUE_PREFIX}_LibraryPathsList
+                ${AUE_PREFIX}_LinkOptionsList
+                ${AUE_PREFIX}_PrefixPathsList
 
+                ${AUE_PREFIX}_wxCompilerOptions
+                ${AUE_PREFIX}_wxDefines
+                ${AUE_PREFIX}_wxIncludePaths
+                ${AUE_PREFIX}_wxLibraryPaths
+                ${AUE_PREFIX}_wxLibraries
+                ${AUE_PREFIX}_wxFrameworks
+        )
+    endif ()
 endmacro()
