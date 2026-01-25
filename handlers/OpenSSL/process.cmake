@@ -23,7 +23,7 @@ function(OpenSSL_process incs libs defs)
             get_filename_component(crypto_lib   "${crypto}" NAME)
             get_filename_component(lib_dir      "${crypto}" PATH)
 
-            message("\nUsing installed system OpenSSL libraries")
+            message("Using installed system OpenSSL libraries")
             list(APPEND libs    ${ssl_lib} ${crypto_lib})
             list(APPEND incs    "C:/Program Files/OpenSSL-Win64/include")
             list(APPEND paths   "${lib_dir}")
@@ -38,7 +38,7 @@ function(OpenSSL_process incs libs defs)
         set(ENV{OPENSSL_DIR} "${OPENSSL_PATH}")
         find_package(OpenSSL CONFIG)
         if(OpenSSL_FOUND)
-            message("\nUsing installed system OpenSSL libraries")
+            message("Using installed system OpenSSL libraries")
             list(APPEND libs OpenSSL::SSL OpenSSL::Crypto)
             set (_LibrariesList "${libs}" PARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
@@ -75,7 +75,7 @@ function(OpenSSL_process incs libs defs)
         set(OPENSSL_INSTALL make install)
     endif()
 
-    message([=[
+    message("
 ExternalProject_Add(OpenSSLProj
         GIT_REPOSITORY      https://github.com/openssl/openssl.git
         GIT_TAG             openssl-3.3.2
@@ -91,8 +91,7 @@ ExternalProject_Add(OpenSSLProj
         USES_TERMINAL_CONFIGURE ON
         USES_TERMINAL_BUILD     ON
         USES_TERMINAL_INSTALL   ON
-)
-    ]=])
+)")
     ExternalProject_Add(OpenSSLProj
             GIT_REPOSITORY      https://github.com/openssl/openssl.git
             GIT_TAG             openssl-3.3.2
