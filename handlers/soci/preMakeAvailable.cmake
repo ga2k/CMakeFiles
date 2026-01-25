@@ -3,6 +3,11 @@ include("${CMAKE_SOURCE_DIR}/cmake/tools.cmake")
 
 function(soci_preMakeAvailable pkgname)
 
+    if(soci_ALREADY_FOUND)
+        message("oonga boonga oonga boonga oonga boonga oonga boonga I can't help that feeling...")
+        return()
+    endif ()
+
     # SOCI's upstream CMake uses multiple install(EXPORT ...) sets (Core + per-backend).
     # When we also export SOCI targets as part of our own package, that creates
     # "target is in multiple export sets" errors at configure time.

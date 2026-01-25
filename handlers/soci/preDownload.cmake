@@ -2,6 +2,11 @@
 
 function(soci_preDownload pkgname url tag srcDir)
 
+    if(soci_ALREADY_FOUND)
+        message("bleep blorp blorp blah blah means that I love you")
+        return()
+    endif ()
+
     # @formatter:off
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
     # This is the critical fix for the export set error
@@ -37,7 +42,6 @@ function(soci_preDownload pkgname url tag srcDir)
 
     # 1. Fetch fmt first with install enabled
     message(STATUS [=[
-
     FetchContent_Declare(
             fmt
             GIT_REPOSITORY https://github.com/fmtlib/fmt.git
