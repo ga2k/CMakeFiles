@@ -405,6 +405,7 @@ function(fetchContents)
                 unset(this_find_package_components)
                 unset(this_hint)
                 unset(this_inc)
+                unset(this_kind)
                 unset(this_method)
                 unset(this_namespace)
                 unset(this_namespace_package_components)
@@ -418,16 +419,17 @@ function(fetchContents)
                 unset(this_url)
 
                 parsePackage(AllPackageData
-                        FEATURE ${this_feature}
-                        PKG_INDEX ${this_pkgindex}
-                        METHOD this_method
-                        LIST pkg_details
-                        URL this_url
-                        GIT_TAG this_tag
-                        SRC_DIR this_src
                         BUILD_DIR this_build
+                        FEATURE ${this_feature}
                         FETCH_FLAG this_fetch
+                        GIT_TAG this_tag
                         INC_DIR this_inc
+                        KIND this_kind
+                        LIST pkg_details
+                        METHOD this_method
+                        PKG_INDEX ${this_pkgindex}
+                        SRC_DIR this_src
+                        URL this_url
                 )
 
                 findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
