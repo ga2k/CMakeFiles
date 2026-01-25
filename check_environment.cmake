@@ -63,6 +63,10 @@ set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 #
 macro(check_environment PROJECT_ROOT)
 
+    if(NOT DEFINED ENV{buildPath})
+        message(FATAL_ERROR "Preset env var buildPath is missing. Are you configuring with the expected preset?")
+    endif()
+
     if (NOT checkCompleted)
 
         unset (BUILDING)
@@ -97,10 +101,8 @@ macro(check_environment PROJECT_ROOT)
         forceSet(CMAKE_BUILD_TYPE buildType Debug STRING)
 
         # Specify link type
-        forceSet(LINK_TYPE linkType Static STRING)
+        forceSet(LINK_TYPE linkType Shared STRING)
 
-        # Beautify. And you never know when CMake might become case sensitive
-        string(TOUPPER "${LINK_TYPE}" LINK_TYPE_UC)
 
         # Valid build types. Add your own if you want. I don't want.
         set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
@@ -134,6 +136,7 @@ macro(check_environment PROJECT_ROOT)
             set(LINK_FLAG "s")
         endif ()
         string(TOLOWER "${LINK_TYPE}" LINK_TYPE_LC)
+        string(TOUPPER "${LINK_TYPE}" LINK_TYPE_UC)
 
         # Set various transmutations required in different places around the traps
         if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
@@ -165,6 +168,7 @@ macro(check_environment PROJECT_ROOT)
         string(TOLOWER ${BUILD_TYPE} BUILD_TYPE_LC)
         string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
 
+        set(stemPath "${BUILD_TYPE_LC}/${LINK_TYPE_LC}")
         if (NOT BUILD_DIR)
             forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}" FILEPATH)
         endif ()

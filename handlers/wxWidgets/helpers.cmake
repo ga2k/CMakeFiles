@@ -136,65 +136,6 @@ function(wxWidgets_export_variables pkgname)
         endif()
     endif()
 
-    set(WX_OVERRIDE_PATH "${CMAKE_SOURCE_DIR}/include/overrides/wxWidgets/include")
-    if (EXISTS ${WX_OVERRIDE_PATH})
-        message(STATUS "wxWidgets: Patching system headers with local overrides...")
-
-        # 1. Find all files in your override folder
-        file(GLOB_RECURSE override_files RELATIVE "${WX_OVERRIDE_PATH}" "${WX_OVERRIDE_PATH}/*")
-
-        foreach(file_rel_path IN LISTS override_files)
-            set(system_file_path "${${pkglc}_SOURCE_DIR}/include/${file_rel_path}")
-            set(override_file_path "${WX_OVERRIDE_PATH}/${file_rel_path}")
-
-            if (EXISTS "${system_file_path}")
-                # Overwrite the system file instead of deleting it
-                # This keeps the CMake file list valid while giving us the fixed code
-                message(STATUS "  Patching: ${file_rel_path}")
-                file(COPY_FILE "${override_file_path}" "${system_file_path}")
-            endif()
-        endforeach()
-
-        # 2. We no longer need to mess with PREPEND or target_include_directories
-        # because we have physically patched the files in the wxWidgets source tree.
-        message(STATUS "wxWidgets: Source tree patched successfully.")
-    endif ()
-
-    # Explicitly silence common external warnings for this target
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        # Check all components, including 'mono'
-        set(_targets_to_patch ${components})
-        list(APPEND _targets_to_patch wxwidgets wxWidgets)
-        
-        foreach(lib IN LISTS _targets_to_patch)
-            foreach(_variant wx::${lib} wx${lib} ${lib})
-                if (TARGET ${_variant})
-                    get_target_property(_aliasTarget "${_variant}" ALIASED_TARGET)
-                    set(_actualTarget "${_variant}")
-                    if (_aliasTarget)
-                        set(_actualTarget "${_aliasTarget}")
-                    endif()
-
-                    target_compile_options(${_actualTarget} INTERFACE
-                            "-Wno-deprecated-anon-enum-enum-conversion"
-                            "-Wno-deprecated-declarations"
-                            "-Wno-deprecated-enum-enum-conversion"
-                            "-Wno-deprecated-this-capture"
-                            "-Wno-enum-compare-switch"
-                            "-Wno-extern-initializer"
-                            "-Wno-ignored-attributes"
-                            "-Wno-microsoft-exception-spec"
-                            "-Wno-unknown-pragmas"
-                            "-Wno-unused-command-line-argument"
-                            "-Wno-unused-lambda-capture"
-                            "-Wno-unused-local-typedef"
-                    )
-                    break()
-                endif()
-            endforeach ()
-        endforeach ()
-    endif ()
-
     list(APPEND local_libraries ${_wxLibraries})
     list(APPEND local_includes  ${_wxIncludePaths})
 
