@@ -124,6 +124,7 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   # Search upwards for the "include" directory
   set(_searchDir "${PACKAGE_PREFIX_DIR}")
   set(_stopDir "@APP_NAME@")
+  set(_justDir "")
   set(_foundInc OFF)
 
   while(NOT _foundInc)
@@ -214,26 +215,31 @@ if(WIN32)
   set(_libdir "${_impdir}")
 endif()
   
+# Import the exported targets first (defines @APP_VENDOR@::@APP_NAME@ and friends).
+# The cxx-modules export expects the target(s) to already exist.
+if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
+  include("${_libdir}/cmake/@APP_NAME@Target.cmake")
+endif()
+
+# In development (monorepo) include the build-tree export of module FILE_SET mappings.
+# For staged/installed layouts, load the installed cxx-modules export.
 if(_inDevelopment)
-  # In development (monorepo) include the build-tree export of module FILE_SET mappings
   file(GLOB _DEV_MODULE_EXPORT
        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
   if(_DEV_MODULE_EXPORT)
     list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
     include("${_DEV_MODULE_EXPORT_FILE}")
   endif()
-elseif(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
-  include("${_libdir}/cmake/@APP_NAME@Target.cmake")
 elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
   include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
 if(WIN32)
   # Add the wx/setup.h header to the include path
-  if (TARGET @APP_VENDOR@::wxWidgets)
+  if (TARGET @APP_VENDOR@::wxWidgets AND IS_DIRECTORY "${_incdir}/msvc")
     set_property(TARGET @APP_VENDOR@::wxWidgets
-        APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-            "${_incdir}/msvc"
+      APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+        "${_incdir}/msvc"
     )
   endif()
   set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")

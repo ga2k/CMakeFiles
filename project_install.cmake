@@ -159,6 +159,51 @@ install(EXPORT      ${APP_NAME}Target
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
+# For in-repo development, we also want a usable package under ${OUTPUT_DIR} without requiring
+# an explicit "cmake --install". Copy the generated export set files (and cxx-modules mapping)
+# into the output prefix so ${OUTPUT_DIR}/${APP_NAME}Config.cmake can include them via _libdir/cmake.
+if(DEFINED BUILD_DIR AND EXISTS "${BUILD_DIR}/CMakeFiles/Export")
+    file(GLOB _hs_export_roots LIST_DIRECTORIES true "${BUILD_DIR}/CMakeFiles/Export/*")
+    list(SORT _hs_export_roots)
+    if(_hs_export_roots)
+        list(GET _hs_export_roots 0 _hs_export_root)
+        set(_hs_dev_cmake_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
+        file(MAKE_DIRECTORY "${_hs_dev_cmake_dir}")
+
+        file(GLOB _hs_export_files "${_hs_export_root}/*Target*.cmake")
+        if(_hs_export_files)
+            file(COPY ${_hs_export_files} DESTINATION "${_hs_dev_cmake_dir}")
+        endif()
+
+        if(EXISTS "${_hs_export_root}/cxx")
+            file(COPY "${_hs_export_root}/cxx" DESTINATION "${_hs_dev_cmake_dir}")
+        endif()
+
+        unset(_hs_dev_cmake_dir)
+        unset(_hs_export_files)
+        unset(_hs_export_root)
+    endif()
+    unset(_hs_export_roots)
+endif()
+
+# Also stage the public headers and module interface units needed by the export FILE_SETs.
+# The generated ${APP_NAME}Target.cmake references these paths under the output prefix.
+if(EXISTS "${CMAKE_SOURCE_DIR}/include")
+    file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+    file(COPY "${CMAKE_SOURCE_DIR}/include/"
+            DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/src")
+    set(_hs_dev_cxx_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}")
+    file(MAKE_DIRECTORY "${_hs_dev_cxx_dir}")
+    file(COPY "${CMAKE_SOURCE_DIR}/src/"
+            DESTINATION "${_hs_dev_cxx_dir}"
+            FILES_MATCHING
+                PATTERN "*.ixx")
+    unset(_hs_dev_cxx_dir)
+endif()
+
 # Install the headers from the 3rd party libraries
 foreach(pkg IN LISTS _hs_install_targets)
     # FetchContent sets <lowercaseName>_SOURCE_DIR
