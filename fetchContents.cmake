@@ -707,16 +707,16 @@ function(fetchContents)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
 
-        propegateUpwards("Interim" ON)
+        propegateUpwards("Interim" OFF)
 
     endfunction()
 
     processFeatures("${unifiedFeatureList}")
-    propegateUpwards("Finally" ON)
+    propegateUpwards("Finally" OFF)
 
 endfunction()
 
-macro (propegateUpwards whereWeAre QUIET)
+macro (propegateUpwards whereWeAre REPORT)
 
     # @formatter:off
     list(APPEND ${AUE_PREFIX}_CompileOptionsList ${_CompileOptionsList} ${${AUE_PREFIX}_CompileOptionsList})
@@ -771,7 +771,7 @@ macro (propegateUpwards whereWeAre QUIET)
     set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
     # @formatter:on
 
-    if(NOT QUIET)
+    if(REPORT)
         log(TITLE "${whereWeAre}" LISTS
 
                 ${AUE_PREFIX}_CompileOptionsList
