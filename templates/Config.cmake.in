@@ -25,17 +25,19 @@ if(WIN32)
     )
 
     if (${resultVariable} GREATER 0)
-      message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
+      if(NOT PACKAGE_FIND_QUIETLY)
+        message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
+      endif()
     endif()
   else()
-    message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
+    if(NOT PACKAGE_FIND_QUIETLY)
+      message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
+    endif()    
   endif()
 
   # Find the CMake-style generated setup.h:
   #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
-  file(GLOB _wx_setup_h_candidates
-  "${_wx_lib_dir}/wx/include/*/wx/setup.h"
-  )
+  file(GLOB _wx_setup_h_candidates "${_wx_lib_dir}/wx/include/*/wx/setup.h")
   list(REMOVE_DUPLICATES _wx_setup_h_candidates)
 
   set(_wx_setup_include_dir "")
@@ -74,12 +76,14 @@ if(WIN32)
       IMPORTED_IMPLIB   "${_wx_mono_implib}"
       )
     else()
-      message(STATUS
-      "Gfx package: wx::wxmono shim not created (yet).\n"
-      "bin: ${_wx_bin_dir}\n"
-      "dll candidates: ${_wx_dll_candidates}\n"
-      "lib: ${_wx_lib_dir}\n"
-      "implib candidates: ${_wx_implib_candidates}")
+      if(NOT PACKAGE_FIND_QUIETLY)
+        message(STATUS
+        "Gfx package: wx::wxmono shim not created (yet).\n"
+        "bin: ${_wx_bin_dir}\n"
+        "dll candidates: ${_wx_dll_candidates}\n"
+        "lib: ${_wx_lib_dir}\n"
+        "implib candidates: ${_wx_implib_candidates}")
+      endif()  
     endif()
   endif()
 
@@ -115,10 +119,10 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   set(_installed      OFF)
 
   list(APPEND _searchDirs
-  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
   )
 
   # Search upwards for the "include" directory
@@ -146,8 +150,10 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   endwhile()
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
-  message(NOTICE "Staged")
-
+  if(NOT PACKAGE_FIND_QUIETLY)
+    message(NOTICE "Staged")
+  endif()
+        
   set(_inDevelopment  OFF)
   set(_inStaging      ON)
   set(_installed      OFF)
@@ -162,7 +168,9 @@ elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
   )
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
-  message(NOTICE "Installed")
+  if(NOT PACKAGE_FIND_QUIETLY)
+    message(NOTICE "Installed")
+  endif()
 
   set(_inDevelopment  OFF)
   set(_inStaging      OFF)
@@ -238,7 +246,7 @@ if(WIN32)
   # Add the wx/setup.h header to the include path
   if (TARGET @APP_VENDOR@::wxWidgets AND IS_DIRECTORY "${_incdir}/msvc")
     set_property(TARGET @APP_VENDOR@::wxWidgets
-      APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+      PREPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
         "${_incdir}/msvc"
     )
   endif()
