@@ -1,4 +1,8 @@
 function(_collect_targets_recursive dir out)
+    if(NOT EXISTS "${dir}")
+        set(${out} "" PARENT_SCOPE)
+        return()
+    endif ()
     get_property(tgts DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
     set(all "${tgts}")
     get_property(subs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
