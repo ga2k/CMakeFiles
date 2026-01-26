@@ -1228,7 +1228,7 @@ function(replaceFile target patchList)
 
                 else ()
                     set(errored ON)
-                    set(error_message "${system_file_path} doesn't exist.")
+                    set(error_message "destination file doesn't exist.")
                 endif ()
 
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
