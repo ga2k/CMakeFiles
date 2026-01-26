@@ -15,7 +15,11 @@ if(WIN32)
   set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
   if(EXISTS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h")
-    message(STATUS "Copying setup.h from ${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx to ${_wx_lib_dir}/vc_x64_dll/mswud/wx")
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+      message(STATUS "Copying setup.h from ${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx")
+      message(STATUS "                  to ${_wx_lib_dir}/vc_x64_dll/mswud/wx")
+      message(" ")
+    endif()
     execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory  "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
                     COMMAND "${CMAKE_COMMAND}" -E copy            "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
                                                                   "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
@@ -25,14 +29,10 @@ if(WIN32)
     )
 
     if (${resultVariable} GREATER 0)
-      if(NOT PACKAGE_FIND_QUIETLY)
         message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
-      endif()
     endif()
   else()
-    if(NOT PACKAGE_FIND_QUIETLY)
-      message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
-    endif()    
+    message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
   endif()
 
   # Find the CMake-style generated setup.h:
@@ -76,7 +76,7 @@ if(WIN32)
       IMPORTED_IMPLIB   "${_wx_mono_implib}"
       )
     else()
-      if(NOT PACKAGE_FIND_QUIETLY)
+      if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
         message(STATUS
         "Gfx package: wx::wxmono shim not created (yet).\n"
         "bin: ${_wx_bin_dir}\n"
@@ -111,7 +111,9 @@ if(WIN32)
 endif()
 
 if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
-  message(NOTICE "In development")
+  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+    message(NOTICE "In development")
+  endif()
   set(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
   set(_inDevelopment  ON)
@@ -150,7 +152,7 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
   endwhile()
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
-  if(NOT PACKAGE_FIND_QUIETLY)
+  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
     message(NOTICE "Staged")
   endif()
         
@@ -168,7 +170,7 @@ elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
   )
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
-  if(NOT PACKAGE_FIND_QUIETLY)
+  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
     message(NOTICE "Installed")
   endif()
 
@@ -195,12 +197,16 @@ foreach(_dir IN LISTS _searchDirs)
   if(EXISTS "${_dir}/${_actualLibName}")
     set(_lib    "${_dir}/${_actualLibName}")
     set(_libdir "${_dir}")
-#    message(AUTHOR_WARNING "LIB is ${_lib}")
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+      message(NOTICE "LIB is ${_lib}")
+    endif()
   endif()
   if(WIN32 AND EXISTS "${_dir}/${_winImpLibName}")
     set(_imp    "${_dir}/${_winImpLibName}")
     set(_impdir "${_dir}")
-#    message(AUTHOR_WARNING "IMP is ${_imp}")
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+      message(NOTICE "IMP is ${_imp}")
+    endif()
   endif()
 endforeach()
 
