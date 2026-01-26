@@ -38,7 +38,7 @@ function(soci_preMakeAvailable pkgname)
     elseif (EXISTS "${CMAKE_SOURCE_DIR}/cmake/patches/${pkgname}")
         unset(_patches)
         list(APPEND _patches "${pkgname}|${_soci_src}")
-        patchExternals("${pkgname}" ${_patches})
+        replaceFile("${pkgname}" ${_patches})
         set(${pkgname}_PATCHED ON PARENT_SCOPE)
     endif ()
 

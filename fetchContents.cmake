@@ -692,7 +692,7 @@ function(fetchContents)
                         elseif (NOT ${this_pkgname}_PATCHED AND EXISTS "${CMAKE_SOURCE_DIR}/cmake/patches/${this_pkgname}")
                             unset(patches)
                             list(APPEND patches "${this_pkgname}|${EXTERNALS_DIR}/${this_pkgname}")
-                            patchExternals("${this_pkgname}" ${patches})
+                            replaceFile("${this_pkgname}" ${patches})
                         endif ()
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)

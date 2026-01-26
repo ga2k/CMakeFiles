@@ -11,7 +11,7 @@ function(wxWidgets_fix target tag sourceDir)
             "${target}/include|${sourceDir}"
             "${target}/src|${sourceDir}"
     )
-    patchExternals(${target} "${patches}")
+    replaceFile(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
 
 endfunction()

@@ -16,7 +16,7 @@ function(soci_fix target tag sourceDir)
     #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
                 "soci/src|${sourceDir}"
         )
-        patchExternals(${target} "${patches}")
+        replaceFile(${target} "${patches}")
     endif ()
     set(${target}_PATCHED ON PARENT_SCOPE)
     set(HANDLED ON PARENT_SCOPE)

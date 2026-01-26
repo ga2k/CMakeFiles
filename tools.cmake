@@ -165,43 +165,6 @@ endfunction()
 ##
 ######################################################################################
 ##
-function(ReplaceFile fileToBeOverwritten sampleContents replacementFile)
-    string(LENGTH "${CMAKE_CURRENT_SOURCE_DIR}" srcLength)
-    math(EXPR srcLength "${srcLength} + 1")
-    string(SUBSTRING "${fileToBeOverwritten}" ${srcLength} -1 truncStr)
-    set(repositoryFolder "${CMAKE_CURRENT_SOURCE_DIR}/HoffSoft/cmake/replacements")
-
-    cmake_path(GET fileToBeOverwritten PARENT_PATH destPath)
-    cmake_path(GET replacementFile FILENAME destFile)
-
-    if (EXISTS "${repositoryFolder}/${replacementFile}")
-        if (EXISTS ${fileToBeOverwritten})
-            file(READ ${fileToBeOverwritten} contents)
-            string(FIND "${contents}" "${sampleContents}" posn)
-            if (NOT posn EQUAL -1)
-                file(COPY_FILE "${fileToBeOverwritten}" "${fileToBeOverwritten}.bak")
-                file(COPY_FILE "${repositoryFolder}/${replacementFile}" "${destPath}/${destFile}")
-                set(out_text "${replacementFile} replaced")
-            else ()
-                set(out_text "Already done? Replacement skipped for")
-            endif ()
-        else ()
-            file(COPY_FILE "${repositoryFolder}/${replacementFile}" "${destPath}/${destFile}")
-            set(out_text "${replacementFile} created")
-        endif ()
-    else ()
-        set(out_text "'${replacementFile}' doesn't exist")
-    endif ()
-
-    string(LENGTH "${out_text}" posn_len)
-    math(EXPR num_dots "42 - ${posn_len}")
-    string(REPEAT "." ${num_dots} dotty)
-
-    message("${out_text} ${dotty}... ${truncStr}")
-endfunction()
-##
-######################################################################################
-##
 function(ReplaceInList listname index newvalue)
     list(REMOVE_AT ${${listname}} ${index})
     list(INSERT ${${listname}} ${index} "${newvalue}")
@@ -1161,7 +1124,7 @@ function(patchExternals_ banner patchBranch externalTrunk)
     endif ()
 endfunction()
 
-function(patchExternals target patchList)
+function(replaceFile target patchList)
 
     string(ASCII 27 ESC)
     set(BOLD "${ESC}[1m")
