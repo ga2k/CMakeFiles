@@ -29,14 +29,26 @@ endfunction()
 function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
-    if(wxBUILD_MONOLITHIC)
+    set(_wx_is_monolithic OFF)
+    if (TARGET wx::wxmono OR TARGET wx::mono)
+        set(_wx_is_monolithic ON)
+    endif()
+
+    if(_wx_is_monolithic)
+        set(wxBUILD_MONOLITHIC ON)
         set(components mono)
-        set(_wx_main_target wx::mono)
-    else ()
+        # Prefer your shim name if that is what you export everywhere:
+        if (TARGET wx::wxmono)
+            set(_wx_main_target wx::wxmono)
+        else()
+            set(_wx_main_target wx::mono)
+        endif()
+    else()
+        set(wxBUILD_MONOLITHIC OFF)
         set(components core base aui gl html media net propgrid ribbon richtext webview xml)
         set(_wx_main_target wx::core)
-    endif ()
-    
+    endif()
+
     # Check both the CACHE variable and the local variable
     set(stc_enabled OFF)
     if (wxUSE_STC)
