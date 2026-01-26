@@ -24,7 +24,6 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
         if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "UTILITY")
             continue()
         endif()
-        target_compile_options("${t}" PRIVATE -w)
     endforeach()
 
     wxWidgets_export_variables(wxWidgets)
