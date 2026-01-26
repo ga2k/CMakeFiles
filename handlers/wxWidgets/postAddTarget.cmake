@@ -3,6 +3,7 @@ function (wxWidgets_postAddTarget _target)
     # This handler is called for each wxWidgets target (like wx::core, wx::base, etc.)
     # during the addTargetProperties call in fetchContents.cmake.
     # It helps clean up unwanted dependencies that cause installation export errors.
+
     target_compile_options("${_target}" PRIVATE -w)
 
     get_target_property(link_libs ${_target} INTERFACE_LINK_LIBRARIES)
