@@ -399,7 +399,7 @@ function(doDump)
         endif ()
     endforeach ()
 
-    list(POP_FRONT "${AA_UNPARSED_ARGUMENTS}" doDump_ITEMS doDump_TITLE)
+    list(POP_FRONT AA_UNPARSED_ARGUMENTS doDump_ITEMS doDump_TITLE)
 
     set(dunno)
     if (NOT DEFINED ${doDump_ITEMS})
@@ -430,11 +430,11 @@ function(doDump)
         else ()
             m (NOTICE               "${words}" VERBATIM)
         endif ()
-        return()
     endmacro()
 
     if(${dunno})
         mmmChocolate("${dunno}")
+        return()
     endif ()
 
     resolve(doDump_ITEMS VR VL)
@@ -674,8 +674,6 @@ function(log)
         else ()
             doDump (NOTICE          ${VVAR} "${AA_TITLE}")
         endif ()
-
-        doDump(${VVAR} "${AA_TITLE}")
     endforeach ()
 
     if (AA_TEMP_TITLE)
