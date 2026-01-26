@@ -290,21 +290,70 @@ endfunction()
 
 function(m)
 
-    foreach (m_ITEM ${ARGN})
-        string(TOUPPER ${m_ITEM} m_ITEM)
-        list(APPEND m_ARGN ${m_ITEM})
+    set(modes
+            FATAL_ERROR
+            SEND_ERROR
+            WARNING
+            AUTHOR_WARNING
+            DEPRECATION
+            NOTICE
+            STATUS
+            VERBOSE
+            DEBUG
+            TRACE
+    )
+
+    set(switches
+            ALWAYS
+            VERBATIM
+    )
+    set(options
+            ${modes}
+            ${switches}
+    )
+
+    cmake_parse_arguments(AA "${options}" "" "" ${ARGN})
+
+    set(alreadyHaveOne OFF)
+    foreach(mode IN LISTS modes)
+        if (AA_${mode})
+            if (alreadyHaveOne)
+                unset (AA_${mode})
+            else ()
+                set (alreadyHaveOne ON)
+            endif ()
+        endif ()
     endforeach ()
 
-    list(APPEND m_SWITCHES VERBATIM)
-    cmake_parse_arguments(M m_SWITCHES "" "" ${m_ARGN})
-
-    list(REMOVE_ITEM ARGN "VERBATIM")
-
-    set(M_TEXT ${ARGN})
-    if (NOT M_VERBATIM)
-        resolve(${M_TEXT} M_DC M_TEXT)
+    set(text "${AA_UNPARSED_ARGUMENTS}")
+    if (NOT AA_VERBATIM)
+        resolve(${text} dc text)
     endif ()
-    message(STATUS "${M_TEXT}")
+
+    if (APP_DEBUG OR AA_ALWAYS)
+        if (AA_FATAL_ERROR)
+            message (FATAL_ERROR    "${text}")
+        elseif (AA_SEND_ERROR)
+            message (SEND_ERROR     "${text}")
+        elseif (AA_WARNING)
+            message (WARNING        "${text}")
+        elseif (AA_AUTHOR_WARNING)
+            message (AUTHOR_WARNING "${text}")
+        elseif (AA_DEPRECATION)
+            message (DEPRECATION    "${text}")
+        elseif (AA_STATUS)
+            message (STATUS         "${text}")
+        elseif (AA_VERBOSE)
+            message (VERBOSE        "${text}")
+        elseif (AA_DEBUG)
+            message (DEBUG          "${text}")
+        elseif (AA_TRACE)
+            message (TRACE          "${text}")
+        else ()
+            message (NOTICE         "${text}")
+        endif ()
+    endif ()
+
 endfunction()
 
 function(brif doIt)
@@ -313,34 +362,94 @@ function(brif doIt)
     endif ()
 endfunction()
 
-function(br)
-    m(${ARGV})
-endfunction()
+function(doDump)
 
-function(doDump doDump_ITEMS doDump_TITLE)
+    set(modes
+            FATAL_ERROR
+            SEND_ERROR
+            WARNING
+            AUTHOR_WARNING
+            DEPRECATION
+            NOTICE
+            STATUS
+            VERBOSE
+            DEBUG
+            TRACE
+    )
 
+    set(switches
+            ALWAYS
+            VERBATIM
+    )
+    set(options
+            ${modes}
+            ${switches}
+    )
+
+    cmake_parse_arguments(AA "${options}" "" "" ${ARGN})
+
+    set(alreadyHaveOne OFF)
+    foreach(mode IN LISTS modes)
+        if (AA_${mode})
+            if (alreadyHaveOne)
+                unset (AA_${mode})
+            else ()
+                set (alreadyHaveOne ON)
+            endif ()
+        endif ()
+    endforeach ()
+
+    list(POP_FRONT "${AA_UNPARSED_ARGUMENTS}" doDump_ITEMS doDump_TITLE)
+
+    set(dunno)
     if (NOT DEFINED ${doDump_ITEMS})
-        m("${doDump_TITLE} (not defined)" VERBATIM)
-        return()
+        set(dunno "${doDump_TITLE} (not defined)")
+    elseif ("${${doDump_ITEMS}}" STREQUAL "")
+        set(dunno "${doDump_TITLE} (empty)")
     endif ()
-    if ("${${doDump_ITEMS}}" STREQUAL "")
-        m("${doDump_TITLE} (empty)" VERBATIM)
+
+    macro (mmmChocolate words)
+        if (AA_FATAL_ERROR)
+            m (FATAL_ERROR          "${words}" VERBATIM)
+        elseif (AA_SEND_ERROR)
+            m (SEND_ERROR           "${words}" VERBATIM)
+        elseif (AA_WARNING)
+            m (WARNING              "${words}" VERBATIM)
+        elseif (AA_AUTHOR_WARNING)
+            m (AUTHOR_WARNING       "${words}" VERBATIM)
+        elseif (AA_DEPRECATION)
+            m (DEPRECATION          "${words}" VERBATIM)
+        elseif (AA_STATUS)
+            m (STATUS               "${words}" VERBATIM)
+        elseif (AA_VERBOSE)
+            m (VERBOSE              "${words}" VERBATIM)
+        elseif (AA_DEBUG)
+            m (DEBUG                "${words}" VERBATIM)
+        elseif (AA_TRACE)
+            m (TRACE                "${words}" VERBATIM)
+        else ()
+            m (NOTICE               "${words}" VERBATIM)
+        endif ()
         return()
+    endmacro()
+
+    if(${dunno})
+        mmmChocolate("${dunno}")
     endif ()
 
     resolve(doDump_ITEMS VR VL)
 
     list(LENGTH ${doDump_ITEMS} length)
     if (${length} EQUAL 1)
-        m("${doDump_TITLE} ${VL}" VERBATIM)
+        mmmChocolate("${doDump_TITLE} ${VL}")
         return()
     endif ()
 
-    m("${doDump_TITLE}" VERBATIM)
-    list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    mmmChocolate("${doDump_TITLE}")
+    list(APPEND CMAKE_MESSAGE_INDENT "  ")
 
     foreach (l ${VL})
-        m(${l} VERBATIM)
+        mmmChocolate("${l}")
     endforeach ()
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
@@ -377,7 +486,32 @@ endfunction()
 #
 # #############################################################
 function(log)
-    set(options ALWAYS LF LF_ _LF INDENT OUTDENT)
+
+    set(modes
+            FATAL_ERROR
+            SEND_ERROR
+            WARNING
+            AUTHOR_WARNING
+            DEPRECATION
+            NOTICE
+            STATUS
+            VERBOSE
+            DEBUG
+            TRACE
+    )
+
+    set(switches
+            ALWAYS
+            LF
+            LF_
+            _LF
+            INDENT
+            OUTDENT
+    )
+    set(options
+            ${modes}
+            ${switches}
+    )
     set(oneValueArgs TITLE LIST)
     set(multiValueArgs LISTS)
 
@@ -396,115 +530,192 @@ function(log)
 #        math(EXPR index "${index} + 1")
 #    endforeach ()
 
-    cmake_parse_arguments(AA_DUMP "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    cmake_parse_arguments("AA" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    if (AA_DUMP_UNPARSED_ARGUMENTS AND NOT "${AA_DUMP_UNPARSED_ARGUMENTS}" STREQUAL "")
-        list(APPEND AA_DUMP_LISTS ${AA_DUMP_UNPARSED_ARGUMENTS})
+    if (AA_UNPARSED_ARGUMENTS AND NOT "${AA_UNPARSED_ARGUMENTS}" STREQUAL "")
+        list(APPEND AA_LISTS ${AA_UNPARSED_ARGUMENTS})
     endif ()
-#    if (${LIST_NAME} IN_LIST options)
+
+    if (AA_LIST AND NOT "${AA_LIST}" STREQUAL "")
+        list(APPEND AA_LISTS ${AA_LIST})
+        unset(AA_LIST)
+    endif ()
+
+    set(alreadyHaveOne OFF)
+    foreach(mode IN LISTS modes)
+        if (AA_${mode})
+            if (alreadyHaveOne)
+                unset (AA_${mode})
+            else ()
+                set (alreadyHaveOne ON)
+            endif ()
+        endif ()
+    endforeach ()
+
+    #    if (${LIST_NAME} IN_LIST options)
 #        string(TOUPPER "${LIST_NAME}" LIST_NAME)
-#        set(AA_DUMP_${LIST_NAME} TRUE)
+#        set(AA_${LIST_NAME} TRUE)
 #        unset(LIST_NAME)
 #    elseif (${LIST_NAME} IN_LIST oneValueArgs)
 #        string(TOUPPER "${LIST_NAME}" LIST_NAME)
-#        list(GET AA_DUMP_UNPARSED_ARGUMENTS 0 AA_DUMP_${LIST_NAME})
-#        list(REMOVE_AT AA_DUMP_UNPARSED_ARGUMENTS 0)
+#        list(GET AA_UNPARSED_ARGUMENTS 0 AA_${LIST_NAME})
+#        list(REMOVE_AT AA_UNPARSED_ARGUMENTS 0)
 #        unset(LIST_NAME)
 #    elseif (${LIST_NAME} IN_LIST multiValueArgs)
 #        string(TOUPPER "${LIST_NAME}" LIST_NAME)
-#        set(AA_DUMP_${LIST_NAME} ${AA_DUMP_UNPARSED_ARGUMENTS})
-#        unset(AA_DUMP_UNPARSED_ARGUMENTS)
+#        set(AA_${LIST_NAME} ${AA_UNPARSED_ARGUMENTS})
+#        unset(AA_UNPARSED_ARGUMENTS)
 #        unset(LIST_NAME)
 #    endif ()
 
-#    if (AA_DUMP_UNPARSED_ARGUMENTS)
-#        message(FATAL_ERROR "Unrecognised arguments : ${AA_DUMP_UNPARSED_ARGUMENTS}")
+#    if (AA_UNPARSED_ARGUMENTS)
+#        message(FATAL_ERROR "Unrecognised arguments : ${AA_UNPARSED_ARGUMENTS}")
 #        return() # Won't, really
 #    endif ()
 
     unset(LF_)
     unset(_LF)
 
-    if (AA_DUMP_LF OR AA_DUMP_LF_)
+    if (AA_LF OR AA_LF_)
         set(LF_ ON)
-        unset(AA_DUMP_LF_)
+        unset(AA_LF_)
     endif ()
 
-    if (AA_DUMP_LF OR AA_DUMP__LF)
+    if (AA_LF OR AA__LF)
         set(_LF ON)
-        unset(AA_DUMP__LF)
+        unset(AA__LF)
     endif ()
 
-    if (AA_DUMP_OUTDENT)
+    if (AA_OUTDENT)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
     endif ()
 
     brif(LF_)
 
-    if (AA_DUMP_LIST AND NOT "${AA_DUMP_LIST}" STREQUAL "")
-        list(APPEND AA_DUMP_LISTS ${AA_DUMP_LIST})
-        unset(AA_DUMP_LIST)
-    endif ()
-
-#    if (AA_DUMP_LIST)
+#    if (AA_LIST)
 #        list(FIND ARGN "LIST" listIndex)
 #        list(FIND ARGN "LISTS" listsIndex)
 #
 #        if (listIndex EQUAL -1 AND listsIndex GREATER_EQUAL 0)
 #            # LIST is first item in command arguments
-#            list(PREPEND AA_DUMP_LISTS ${AA_DUMP_LIST})
-#            unset(AA_DUMP_LIST)
+#            list(PREPEND AA_LISTS ${AA_LIST})
+#            unset(AA_LIST)
 #        elseif (listsIndex EQUAL -1 AND listIndex GREATER_EQUAL 0)
 #            # LISTS is first item in command arguments
-#            list(APPEND AA_DUMP_LISTS ${AA_DUMP_LIST})
-#            unset(AA_DUMP_LIST)
+#            list(APPEND AA_LISTS ${AA_LIST})
+#            unset(AA_LIST)
 #        elseif (listIndex LESS listsIndex)
 #            # LIST is before LISTS
-#            list(PREPEND AA_DUMP_LISTS ${AA_DUMP_LIST})
-#            unset(AA_DUMP_LIST)
+#            list(PREPEND AA_LISTS ${AA_LIST})
+#            unset(AA_LIST)
 #        elseif (listIndex GREATER listsIndex)
 #            # LIST is after LISTS
-#            list(APPEND AA_DUMP_LISTS ${AA_DUMP_LIST})
-#            unset(AA_DUMP_LIST)
+#            list(APPEND AA_LISTS ${AA_LIST})
+#            unset(AA_LIST)
 #        else ()
-#            set(AA_DUMP_LISTS ${AA_DUMP_LIST})
+#            set(AA_LISTS ${AA_LIST})
 #        endif ()
 #    endif ()
 
-    unset(AA_DUMP_TEMP_TITLE)
+    unset(AA_TEMP_TITLE)
 
-    if (AA_DUMP_TITLE)
-        set(AA_DUMP_TEMP_TITLE "${AA_DUMP_TITLE}")
-        set(AA_DUMP_TITLE_USED "${AA_DUMP_TEMP_TITLE}")
-        list(LENGTH AA_DUMP_LISTS numberOfLists)
-        set(AA_DUMP_TITLE_USED "${AA_DUMP_TEMP_TITLE} - Begin")
-        m(${AA_DUMP_TITLE_USED})
-        list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    if (AA_TITLE)
+        set(AA_TEMP_TITLE "${AA_TITLE}")
+        set(AA_TITLE_USED "${AA_TEMP_TITLE}")
+        set(AA_TITLE_USED "${AA_TEMP_TITLE} - Begin")
+
+        if (AA_FATAL_ERROR)
+            m (FATAL_ERROR          "${AA_TITLE_USED}")
+        elseif (AA_SEND_ERROR)
+            m (SEND_ERROR           "${AA_TITLE_USED}")
+        elseif (AA_WARNING)
+            m (WARNING              "${AA_TITLE_USED}")
+        elseif (AA_AUTHOR_WARNING)
+            m (AUTHOR_WARNING       "${AA_TITLE_USED}")
+        elseif (AA_DEPRECATION)
+            m (DEPRECATION          "${AA_TITLE_USED}")
+        elseif (AA_STATUS)
+            m (STATUS               "${AA_TITLE_USED}")
+        elseif (AA_VERBOSE)
+            m (VERBOSE              "${AA_TITLE_USED}")
+        elseif (AA_DEBUG)
+            m (DEBUG                "${AA_TITLE_USED}")
+        elseif (AA_TRACE)
+            m (TRACE                "${AA_TITLE_USED}")
+        else ()
+            m (NOTICE               "${AA_TITLE_USED}")
+        endif ()
+
+        list(APPEND CMAKE_MESSAGE_INDENT "  ")
     endif ()
 
-    foreach (AA_ ${AA_DUMP_LISTS})
+    foreach (AA_ ${AA_LISTS})
         resolve(${AA_} VVAR VVAL)
-        set(AA_DUMP_TITLE "Contents of $CACHE{VVAR}: ")
-        doDump(${VVAR} "${AA_DUMP_TITLE}")
+        set(AA_TITLE "Contents of $CACHE{VVAR}: ")
+
+        if (AA_FATAL_ERROR)
+            doDump (FATAL_ERROR     ${VVAR} "${AA_TITLE}")
+        elseif (AA_SEND_ERROR)
+            doDump (SEND_ERROR      ${VVAR} "${AA_TITLE}")
+        elseif (AA_WARNING)
+            doDump (WARNING         ${VVAR} "${AA_TITLE}")
+        elseif (AA_AUTHOR_WARNING)
+            doDump (AUTHOR_WARNING  ${VVAR} "${AA_TITLE}")
+        elseif (AA_DEPRECATION)
+            doDump (DEPRECATION     ${VVAR} "${AA_TITLE}")
+        elseif (AA_STATUS)
+            doDump (STATUS          ${VVAR} "${AA_TITLE}")
+        elseif (AA_VERBOSE)
+            doDump (VERBOSE         ${VVAR} "${AA_TITLE}")
+        elseif (AA_DEBUG)
+            doDump (DEBUG           ${VVAR} "${AA_TITLE}")
+        elseif (AA_TRACE)
+            doDump (TRACE           ${VVAR} "${AA_TITLE}")
+        else ()
+            doDump (NOTICE          ${VVAR} "${AA_TITLE}")
+        endif ()
+
+        doDump(${VVAR} "${AA_TITLE}")
     endforeach ()
 
-    if (AA_DUMP_TEMP_TITLE)
+    if (AA_TEMP_TITLE)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        set(AA_DUMP_TITLE_USED "${AA_DUMP_TEMP_TITLE}")
-        #        if (${numberOfLists} GREATER 1)
-        set(AA_DUMP_TITLE_USED "${AA_DUMP_TEMP_TITLE} - End")
-        #        endif ()
-        m(${AA_DUMP_TITLE_USED})
+        set(AA_TITLE_USED "${AA_TEMP_TITLE}")
+        set(AA_TITLE_USED "${AA_TEMP_TITLE} - End")
+
+        if (AA_FATAL_ERROR)
+            m (FATAL_ERROR          "${AA_TITLE_USED}")
+        elseif (AA_SEND_ERROR)
+            m (SEND_ERROR           "${AA_TITLE_USED}")
+        elseif (AA_WARNING)
+            m (WARNING              "${AA_TITLE_USED}")
+        elseif (AA_AUTHOR_WARNING)
+            m (AUTHOR_WARNING       "${AA_TITLE_USED}")
+        elseif (AA_DEPRECATION)
+            m (DEPRECATION          "${AA_TITLE_USED}")
+        elseif (AA_STATUS)
+            m (STATUS               "${AA_TITLE_USED}")
+        elseif (AA_VERBOSE)
+            m (VERBOSE              "${AA_TITLE_USED}")
+        elseif (AA_DEBUG)
+            m (DEBUG                "${AA_TITLE_USED}")
+        elseif (AA_TRACE)
+            m (TRACE                "${AA_TITLE_USED}")
+        else ()
+            m (NOTICE               "${AA_TITLE_USED}")
+        endif ()
     endif ()
 
-    if (AA_DUMP_INDENT)
-        list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    if (AA_INDENT)
+        list(APPEND CMAKE_MESSAGE_INDENT "  ")
     endif ()
+
+    brif(_LF)
+
 endfunction()
 
 function(msg)
-    set(options
-            ALWAYS
+    set(modes
             FATAL_ERROR
             SEND_ERROR
             WARNING
@@ -517,42 +728,49 @@ function(msg)
             TRACE
     )
 
-    cmake_parse_arguments(AA_MSG "${options}" "" "" ${ARGN})
-    set(AA_MSG_message_text "${AA_MSG_UNPARSED_ARGUMENTS}")
+    set(switches
+            ALWAYS
+    )
+    set(options
+            ${modes}
+            ${switches}
+    )
+
+    cmake_parse_arguments(AA "${options}" "" "" ${ARGN})
+    set(AA_message_text "${AA_UNPARSED_ARGUMENTS}")
+
     set(alreadyHaveOne OFF)
-    foreach(option IN LISTS options)
-        if (NOT ${option} STREQUAL "ALWAYS")
-            if (AA_MSG_${option})
-                if (alreadyHaveOne)
-                    unset (AA_MSG_${option})
-                else ()
-                    set (alreadyHaveOne ON)
-                endif ()
+    foreach(mode IN LISTS modes)
+        if (AA_${mode})
+            if (alreadyHaveOne)
+                unset (AA_${mode})
+            else ()
+                set (alreadyHaveOne ON)
             endif ()
         endif ()
     endforeach ()
 
-    if (AA_MSG_ALWAYS OR APP_DEBUG)
-        if (AA_MSG_FATAL_ERROR)
-            message (FATAL_ERROR "${AA_MSG_message_text}")
-        elseif (AA_MSG_SEND_ERROR)
-            message (SEND_ERROR "${AA_MSG_message_text}")
-        elseif (AA_MSG_WARNING)
-            message (WARNING "${AA_MSG_message_text}")
-        elseif (AA_MSG_AUTHOR_WARNING)
-            message (AUTHOR_WARNING "${AA_MSG_message_text}")
-        elseif (AA_MSG_DEPRECATION)
-            message (DEPRECATION "${AA_MSG_message_text}")
-        elseif (AA_MSG_STATUS)
-            message (STATUS "${AA_MSG_message_text}")
-        elseif (AA_MSG_VERBOSE)
-            message (VERBOSE "${AA_MSG_message_text}")
-        elseif (AA_MSG_DEBUG)
-            message (DEBUG "${AA_MSG_message_text}")
-        elseif (AA_MSG_TRACE)
-            message (TRACE "${AA_MSG_message_text}")
+    if (AA_ALWAYS OR APP_DEBUG)
+        if (AA_FATAL_ERROR)
+            message (FATAL_ERROR "${AA_message_text}")
+        elseif (AA_SEND_ERROR)
+            message (SEND_ERROR "${AA_message_text}")
+        elseif (AA_WARNING)
+            message (WARNING "${AA_message_text}")
+        elseif (AA_AUTHOR_WARNING)
+            message (AUTHOR_WARNING "${AA_message_text}")
+        elseif (AA_DEPRECATION)
+            message (DEPRECATION "${AA_message_text}")
+        elseif (AA_STATUS)
+            message (STATUS "${AA_message_text}")
+        elseif (AA_VERBOSE)
+            message (VERBOSE "${AA_message_text}")
+        elseif (AA_DEBUG)
+            message (DEBUG "${AA_message_text}")
+        elseif (AA_TRACE)
+            message (TRACE "${AA_message_text}")
         else ()
-            message (NOTICE "${AA_MSG_message_text}")
+            message (NOTICE "${AA_message_text}")
         endif ()
     endif ()
 endfunction()
