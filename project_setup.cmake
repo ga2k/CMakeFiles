@@ -155,7 +155,7 @@ if (FIND_PACKAGE_HINTS OR FIND_PACKAGE_PATHS)
                 list(APPEND candidates "${inOrder}")
             endif ()
 
-            log(LIST candidates)
+            log(candidates)
 
             set(listOfFolders)
             foreach (candidate IN LISTS candidates)
