@@ -38,7 +38,7 @@ function(fetchContents)
 
     createStandardPackageData()
 
-    set(options HELP DEBUG)
+    set(options HELP)
     set(oneValueArgs PREFIX)
     set(multiValueArgs USE;NOT;OVERRIDE_FIND_PACKAGE;FIND_PACKAGE_ARGS;FIND_PACKAGE_COMPONENTS;PREREQS)
     # NOT has precedence over USE
@@ -53,7 +53,7 @@ function(fetchContents)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
-    if (AUE_DEBUG)
+    if (APP_DEBUG)
         log(TITLE "Before tampering "
             LISTS
                 AUE_USE
@@ -328,7 +328,7 @@ function(fetchContents)
     endforeach ()
     message(" ")
 
-    if (AUE_DEBUG)
+    if (APP_DEBUG)
         log(TITLE "After tampering" LISTS unifiedFeatureList unifiedArgumentList unifiedComponentList)
     endif ()
 
@@ -336,7 +336,7 @@ function(fetchContents)
     resolveDependencies("${unifiedFeatureList}" AllPackageData reorderedList)
     set(unifiedFeatureList "${reorderedList}")
 
-    if (AUE_DEBUG)
+    if (APP_DEBUG)
         log(TITLE "After re-ordering by prerequisites" LISTS unifiedFeatureList)
     endif ()
 

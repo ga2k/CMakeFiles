@@ -493,6 +493,60 @@ function(log LIST_NAME)
     endif ()
 endfunction()
 
+function(msg message_text)
+    set(options
+            ALWAYS
+            FATAL_ERROR
+            SEND_ERROR
+            WARNING
+            AUTHOR_WARNING
+            DEPRECATION
+            NOTICE
+            STATUS
+            VERBOSE
+            DEBUG
+            TRACE
+    )
+
+    cmake_parse_arguments(AA_MSG "${options}" "" "" ${ARGN})
+
+    set(alreadyHaveOne OFF)
+    foreach(option IN LISTS options)
+        if (NOT ${option} STREQUAL "ALWAYS")
+            if (AA_MSG_${option})
+                if (alreadyHaveOne)
+                    unset (AA_MSG_${option})
+                else ()
+                    set (alreadyHaveOne ON)
+                endif ()
+            endif ()
+        endif ()
+    endforeach ()
+
+    if (AA_MGS_ALWAYS OR APP_DEBUG)
+        if (AA_MSG_FATAL_ERROR)
+            message (FATAL_ERROR "${message_text}")
+        elseif (AA_MSG_SEND_ERROR)
+            message (SEND_ERROR "${message_text}")
+        elseif (AA_MSG_WARNING)
+            message (WARNING "${message_text}")
+        elseif (AA_MSG_AUTHOR_WARNING)
+            message (AUTHOR_WARNING "${message_text}")
+        elseif (AA_MSG_DEPRECATION)
+            message (DEPRECATION "${message_text}")
+        elseif (AA_MSG_STATUS)
+            message (STATUS "${message_text}")
+        elseif (AA_MSG_VERBOSE)
+            message (VERBOSE "${message_text}")
+        elseif (AA_MSG_DEBUG)
+            message (DEBUG "${message_text}")
+        elseif (AA_MSG_TRACE)
+            message (TRACE "${message_text}")
+        else ()
+            message (TRACE "${message_text}")
+        endif ()
+    endif ()
+endfunction()
 # #############################################################
 # Dumps a list's contents formatted nicely
 #
