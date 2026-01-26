@@ -21,8 +21,8 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
     foreach(t IN LISTS _wx_targets)
         get_target_property(type "${t}" TYPE)
-        if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "UTILITY")
-            continue()
+        if(NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
+            target_compile_options("${t}" PRIVATE -w)
         endif()
     endforeach()
 
