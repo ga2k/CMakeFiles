@@ -717,7 +717,7 @@ function(fetchContents)
     endfunction()
 
     processFeatures("${unifiedFeatureList}")
-    propegateUpwards("Finally" OFF)
+    propegateUpwards("Finally" ON)
 
 endfunction()
 
