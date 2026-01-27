@@ -40,7 +40,7 @@ function(fetchContents)
 
     set(options HELP)
     set(oneValueArgs PREFIX)
-    set(multiValueArgs USE;NOT;OVERRIDE_FIND_PACKAGE;FIND_PACKAGE_ARGS;FIND_PACKAGE_COMPONENTS;PREREQS)
+    set(multiValueArgs USE;NOT)
     # NOT has precedence over USE
 
     cmake_parse_arguments(AUE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGV})
@@ -53,16 +53,7 @@ function(fetchContents)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
-    if (APP_DEBUG)
-        log(TITLE "Before tampering "
-            LISTS
-                AUE_USE
-                AUE_NOT
-                AUE_OVERRIDE_FIND_PACKAGE
-                AUE_FIND_PACKAGE_ARGS
-                AUE_FIND_PACKAGE_COMPONENTS
-                AUE_PREREQS)
-    endif ()
+    log(TITLE "Before tampering " LISTS AUE_USE AUE_NOT)
 
     set(FETCHCONTENT_QUIET OFF)
 

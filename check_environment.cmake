@@ -171,25 +171,16 @@ macro(check_environment PROJECT_ROOT)
         string(TOLOWER ${BUILD_TYPE} BUILD_TYPE_LC)
         string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
 
-#        if (NOT BUILD_DIR)
+        if (NOT PRESERVE_DIRS)
             forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
-#        endif ()
-        #        if(NOT OUTPUT_DIR)
             forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
-#        endif ()
-        #        if(NOT EXTERNALS_DIR)
             forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
-#        endif ()
 
-        # Set the output directories for runtime binaries (DLLs, executables)
-        forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
+            forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
+            forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
+            forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
+        endif ()
 
-        # Set the output directory for shared libraries (DLLs)
-        forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
-
-        # Set the output directory for static libraries
-        forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
-        # Set sensible cross-platform install defaults
         if(WIN32)
             if(DEFINED ENV{STAGE_DIR})
                 set(_PATH "$ENV{STAGE_DIR}")

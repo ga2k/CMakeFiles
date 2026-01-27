@@ -27,6 +27,6 @@ if ("${APP_FEATURES}" MATCHES "GFX")
 endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)
-if (NOT MONOREPO OR DEFINED MONOREPO_PROCESSED)
+# TODO: FOR NOW if (NOT MONOREPO OR DEFINED MONOREPO_PROCESSED)
     include(${CMAKE_SOURCE_DIR}/cmake/project_setup.cmake)
-endif ()
+# TODO: FOR NOW endif ()
