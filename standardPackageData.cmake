@@ -56,6 +56,10 @@ function(createStandardPackageData)
     addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
+
+    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS" NAMESPACE "SOCI"
+            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
+            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3) # GIT_SUBMODULES "")
     #
     ##
     ####
@@ -71,10 +75,6 @@ function(createStandardPackageData)
     ####
     ##
     #
-    addPackageData(FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS" NAMESPACE "SOCI"
-            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3) # GIT_SUBMODULES "")
-
     addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"

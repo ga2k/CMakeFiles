@@ -77,21 +77,24 @@ function(fetchContents)
     foreach (line IN LISTS SystemFeatureData)
         SplitAt(${line} "|" afeature dc)
         list(APPEND SystemFeatures ${afeature})
+        list(APPEND AllPackages    ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS LibraryFeatureData)
         SplitAt(${line} "|" afeature dc)
         list(APPEND LibraryFeatures ${afeature})
+        list(APPEND AllPackages     ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS UserFeatureData)
         SplitAt(${line} "|" afeature dc)
         list(APPEND OptionalFeatures ${afeature})
+        list(APPEND AllPackages      ${aFeature})
     endforeach ()
 
     list(APPEND AllPackageData ${SystemFeatureData} ${LibraryFeatureData} ${UserFeatureData})
 
-    list(APPEND PseudoFeatureagories
+    list(APPEND PseudoFeatures
             APPEARANCE
             PRINT
             LOGGER
@@ -100,227 +103,65 @@ function(fetchContents)
             googletest
     )
 
-    unset(USE_ALL)
-    if ("ALL" IN_LIST AUE_USE)
-        set(USE_ALL ON)
-        list(REMOVE_ITEM AUE_USE ALL)
-    endif ()
+    unset(unifiedFeatureList)
 
     # We don't search for pseudo packages
-    foreach (pseudoLibrary IN LISTS PseudoFeatureagories)
-        if (${pseudoLibrary} IN_LIST AUE_USE)
-            list(REMOVE_ITEM AUE_USE ${pseudoLibrary})
-            list(APPEND _DefinesList USING_${pseudoLibrary})
+    foreach (use IN LISTS AUE_USE)
+
+        # convert to a cmake list
+        string(REPLACE "|" ";" use "${use}")
+        list (GET use ${FeatureIX}        feature)
+        list (GET use ${FeaturePkgNameIX} pkgname)
+
+        if (${feature} IN_LIST PseudoFeatures)
+            # We don't search for plugins this way
+            list(APPEND _DefinesList USING_${feature})
+        elseif (${feature} IN_LIST SystemFeatures)
+            # We don't search for system packages this way, but we might ADD a package variant (if one exists)
+            if (NOT "${pkgname}" STREQUAL "")
+                getFeaturePackageByName(SystemFeatureData ${feature} ${pkgname} actualPkg index)
+                if (${index} EQUAL -1)
+                    msg(ALWAYS FATAL_ERROR "FEATURE ${feature} has no package called ${pkgname}")
+                elseif (${index} GREATER 0)
+                    string(REPLACE ";" "|" actualPkg "${actualPkg}")
+                    list(APPEND unifiedFeatureList "${feature}|${actualPkg}")
+                else ()
+                    msg(ALWAYS WARNING "System feature ${feature} requested, this is unnecessary")
+                endif ()
+            else ()
+                msg(ALWAYS WARNING "System feature ${feature} requested, this is unnecessary")
+            endif ()
+        else ()
+            set (nonSystemFeatureData "${LibraryFeatureData};${UserFeatureData}")
+            if(NOT "${pkgname}" STREQUAL "")
+                getFeaturePackageByName(nonSystemFeatureData ${feature} ${pkgname} actualPkg index)
+            else ()
+                set(index 0)
+                getFeaturePackage(nonSystemFeatureData ${feature} ${index} actualPkg)
+            endif ()
+            if (NOT ${actualPkg} STREQUAL "${feature}-NOTFOUND")
+                string(REPLACE ";" "|" actualPkg "${actualPkg}")
+                list(APPEND unifiedFeatureList "${feature}|${actualPkg}")
+            else ()
+                msg(ALWAYS FATAL_ERROR "FEATURE ${feature} is not available")
+            endif ()
         endif ()
     endforeach ()
-
-    # We don't search for system packages this way
-    list(REMOVE_ITEM AUE_USE ${SystemFeatures})
-
-    set(unifiedComponentList)
-    set(unifiedArgumentList)
-    set(unifiedFeatureList)
 
     # ensure the caller is using the system libraries
-    foreach (sys_feature IN LISTS SystemFeatures)
-        string(APPEND sys_feature ".0")
-        list(APPEND unifiedFeatureList "${sys_feature}")
+    foreach(systemFeature IN LISTS SystemFeatureData)
+        SplitAt("${systemFeature}"  "|" featureName systemPackages)
+        SplitAt("${systemPackages}" "," primarySystemPackage otherSystemPackages)
+
+        list (APPEND unifiedFeatureList "${featureName}|${primarySystemPackage}")
     endforeach ()
-
-    ## combine the caller's and the system's components and arguments into unified lists
-    ##
-    foreach (feature IN LISTS SystemFeatures)
-        ##
-        unset(callerArguments)
-        unset(callerComponents)
-        unset(combinedArguments)
-        unset(combinedComponents)
-        unset(index)
-        unset(pkg)
-        unset(sysArguments)
-        unset(sysComponents)
-        unset(temp)
-
-        ###########################################################
-        ## get the component and argument details for this feature
-        ##
-        ##
-        parsePackage(SystemFeatureData
-                FEATURE ${feature}
-                LIST pkgs
-                COMPONENTS sysComponents
-                ARGS sysArguments)
-        ##
-        ## All system packages are REQUIRED
-        list(APPEND combinedArguments "REQUIRED")
-        ##
-        findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${feature} " " callerComponents index)
-        combine("${sysComponents}" "${callerComponents}" combinedComponents)
-        if (index GREATER_EQUAL 0)
-            list(REMOVE_AT AUE_FIND_PACKAGE_COMPONENTS ${index})
-        endif ()
-        string(JOIN " " temp ${feature} ${combinedComponents})
-        if (NOT "${temp}" STREQUAL ${feature})
-            list(APPEND unifiedComponentList "${temp}")
-        endif ()
-        ##
-        findInList("${AUE_FIND_PACKAGE_ARGS}" ${feature} " " callerArguments index)
-        # Caller cannot tell us to make a system package optional
-        list(REMOVE_ITEM callerArguments "OPTIONAL")
-        combine("${sysArguments}" "${callerArguments}" combinedArguments OFF)
-        if (index GREATER_EQUAL 0)
-            list(REMOVE_AT AUE_FIND_PACKAGE_ARGS ${index})
-        endif ()
-        string(JOIN " " temp ${feature} ${combinedArguments})
-        if (NOT "${temp}" STREQUAL ${feature})
-            list(APPEND unifiedArgumentList "${temp}")
-        endif ()
-    endforeach ()
-
     ##
     ##########
     ##
-
-    # If the user wants some find_package_args added to ALL, we take care if
-    # that here, after the system packages have been added. This is because
-    # anything the callers wants done to the find_package_args don't have
-    # any effect on the system libraries, only the optional libraries, which
-    # we will deal with next
-
-    # UPDATE: Why not allow changes to the system libraries? If they break it,
-    # they own it...
-
-
-    unset(FIND_PACKAGE_ARGS_ALL)
-    unset(TARGET_LINE)
-    foreach (package_line IN LISTS AUE_FIND_PACKAGE_ARGS)
-        SplitAt("${package_line}" " " this_feature pkg_args)
-        if ("${this_feature}" STREQUAL "ALL")
-            set(FIND_PACKAGE_ARGS_ALL "${pkg_args}")
-            set(TARGET_LINE "${package_line}")
-            break()
-        endif ()
-    endforeach ()
-    if (TARGET_LINE)
-        list(REMOVE_ITEM AUE_FIND_PACKAGE_ARGS "${TARGET_LINE}")
-    endif ()
-
-    if (USE_ALL)
-        list(APPEND AUE_USE ${OptionalFeatures})
-    endif ()
-
-    list(REMOVE_DUPLICATES AUE_USE)
-
-    foreach (feature IN LISTS AUE_NOT)
-        # remove any features excluded by the AUE_NOT list
-        if (NOT ${feature} IN_LIST SystemFeatures)
-            list(REMOVE_ITEM AUE_USE ${feature})
-            list(FILTER AUE_FIND_PACKAGE_ARGS EXCLUDE REGEX "${feature}.*")
-            list(FILTER AUE_FIND_PACKAGE_COMPONENTS EXCLUDE REGEX "${feature}.*")
-        endif ()
-    endforeach ()
-    set(AUE_NOT "")
-    ##
-    ####################################################################################
-    ## combine the caller's and the optional components and arguments into unified lists
-    ##
-    unset(deadFeatures)
-
-    foreach (feature IN LISTS AUE_USE)
-
-        SplitAt(${feature} "=" kat pkg)
-        if (pkg)
-            getFeaturePkgList("${UserFeatureData}" ${kat} pkg_list)
-            list(FIND pkg_list ${pkg} this_pkgindex)
-            if (${this_pkgindex} EQUAL -1)
-                message(FATAL_ERROR "No pkg named '${pkg}' in feature '${feature}'")
-                continue()
-            endif ()
-            list(APPEND deadFeatures ${feature})
-            set(feature ${kat})
-        else ()
-            set(this_pkgindex 0)
-        endif ()
-
-        ##
-        ###########################################################
-        ## get the component and argument details for this feature
-        ##
-        unset(callerArguments)
-        unset(callerComponents)
-        unset(combinedArguments)
-        unset(combinedComponents)
-        unset(index)
-        unset(pkg)
-        unset(optArguments)
-        unset(optComponents)
-        unset(temp)
-        ##
-        set(bothLibAndUser "${LibraryFeatureData};${UserFeatureData}")
-        parsePackage(bothLibAndUser
-                FEATURE ${feature}
-                PKG_INDEX ${this_pkgindex}
-                LIST pkg
-                COMPONENTS optComponents
-                ARGS optArguments)
-
-        ##
-        if (NOT "${pkg}" STREQUAL "")
-            findInList("${AUE_FIND_PACKAGE_COMPONENTS}" ${feature} " " callerComponents index)
-            combine("${callerComponents}" "${optComponents}" combinedComponents)
-            if (DEFINED index)
-                if ("${index}" GREATER_EQUAL 0)
-                    list(REMOVE_AT AUE_FIND_PACKAGE_COMPONENTS ${index})
-                endif ()
-            endif ()
-            string(JOIN " " temp ${feature} ${combinedComponents})
-            if (NOT "${temp}" STREQUAL ${feature})
-                list(APPEND unifiedComponentList "${temp}")
-            endif ()
-            ##
-            findInList("${AUE_FIND_PACKAGE_ARGS}" ${feature} " " callerArguments index)
-            if (FIND_PACKAGE_ARGS_ALL)
-                list(APPEND callerArguments "${FIND_PACKAGE_ARGS_ALL}")
-            endif ()
-            if ("OPTIONAL" IN_LIST callerArguments)
-                list(REMOVE_ITEM callerArguments "REQUIRED")
-                list(REMOVE_ITEM optionalArguments "REQUIRED")
-            endif ()
-            combine("${callerArguments}" "${optArguments}" combinedArguments OFF)
-            if (DEFINED index)
-                if ("${index}" GREATER_EQUAL 0)
-                    list(REMOVE_AT AUE_FIND_PACKAGE_ARGS ${index})
-                endif ()
-            endif ()
-            string(JOIN " " temp ${feature} ${combinedArguments})
-            if (NOT "${temp}" STREQUAL ${feature})
-                list(APPEND unifiedArgumentList "${temp}")
-            endif ()
-            ##
-            list(APPEND unifiedFeatureList ${feature}.${this_pkgindex})
-            list(APPEND deadFeatures ${feature})
-        endif ()
-    endforeach ()
-
-    list(REMOVE_ITEM AUE_USE ${deadFeatures})
-
-    foreach (item IN LISTS AUE_USE)
-        if (NOT ${item} STREQUAL ${kat})
-            message("Unknown feature: ${item}")
-        endif ()
-    endforeach ()
-
-    foreach (item IN LISTS AUE_FIND_PACKAGE_COMPONENTS)
-        message("Unknown find_package_components: ${item}")
-    endforeach ()
-
-    foreach (item IN LISTS AUE_FIND_PACKAGE_ARGS)
-        message("Unknown find_package_args: ${item}")
-    endforeach ()
     message(" ")
 
     if (APP_DEBUG)
-        log(TITLE "After tampering" LISTS unifiedFeatureList unifiedArgumentList unifiedComponentList)
+        log(TITLE "After tampering" LISTS unifiedFeatureList)
     endif ()
 
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
@@ -377,17 +218,16 @@ function(fetchContents)
         foreach (pass_num RANGE 1)
             foreach (this_feature_entry IN LISTS unifiedFeatureList)
 
-                SplitAt(${this_feature_entry} "." this_feature this_tail)
-                SplitAt(${this_tail} "." this_pkgindex apf_IS_A_PREREQ)
+                SplitAt(${this_feature_entry} "|" this_feature this_tail)
 
-                if(${this_pkgindex} STREQUAL "P")
-                    set(apf_IS_A_PREREQ ON)
-                    set(this_pkgindex ".0")
-                    set(this_feature_entry "${this_feature}${this_pkgindex}")
-                elseif ("${apf_IS_A_PREREQ}" STREQUAL "P")
-                    set(apf_IS_A_PREREQ ON)
-                    set(this_feature_entry "${this_feature}.${this_pkgindex}")
-                endif ()
+#                if(${this_pkgindex} STREQUAL "P")
+#                    set(apf_IS_A_PREREQ ON)
+#                    set(this_pkgindex ".0")
+#                    set(this_feature_entry "${this_feature}${this_pkgindex}")
+#                elseif ("${apf_IS_A_PREREQ}" STREQUAL "P")
+#                    set(apf_IS_A_PREREQ ON)
+#                    set(this_feature_entry "${this_feature}.${this_pkgindex}")
+#                endif ()
                 unset(this_tail)
 
                 # Skip features already found/aliased, but only check this in the final pass

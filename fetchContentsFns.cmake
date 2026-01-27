@@ -371,9 +371,9 @@ endfunction()
 ##
 ######################################################################################
 ##
-function(getFeaturePkgList array feature list_var)
+function(getFeaturePkgList arrayName feature receivingVarName)
     # iterate over array to find line with feature
-    foreach (line IN LISTS array)
+    foreach (line IN LISTS ${arrayName})
         SplitAt("${line}" "|" this_feature packages)
         if ("${this_feature}" STREQUAL "${feature}")
 
@@ -387,7 +387,7 @@ function(getFeaturePkgList array feature list_var)
                 list(APPEND local ${this_pkg})
             endforeach ()
 
-            set(${list_var} ${local} PARENT_SCOPE)
+            set(${receivingVarName} ${local} PARENT_SCOPE)
             return()
         endif ()
     endforeach ()
@@ -395,33 +395,59 @@ endfunction()
 ##
 ######################################################################################
 ##
-function(getFeatureIndex array feature ix_var)
+function(getFeatureIndex arrayName feature receivingVarName)
     # iterate over array to find line with feature
     set(ix -1)
-    foreach (line IN LISTS "${array}")
+    foreach (line IN LISTS "${arrayName}")
         math(EXPR ix "${ix} + 1")
         SplitAt("${line}" "|" this_feature packages)
         if ("${this_feature}" STREQUAL "${feature}")
-            set(${ix_var} ${ix} PARENT_SCOPE)
+            set(${receivingVarName} ${ix} PARENT_SCOPE)
             return()
         endif ()
     endforeach ()
-    set(${ix_var} -1 PARENT_SCOPE)
+    set(${receivingVarName} -1 PARENT_SCOPE)
 endfunction()
 ##
 ######################################################################################
 ##
-function(getFeaturePackage array feature index var)
-    foreach (item IN LISTS ${array})
-#    foreach (item IN LISTS array)
+function(getFeaturePackage arrayName feature index receivingVarName)
+    foreach (item IN LISTS ${arrayName})
+#    foreach (item IN LISTS arrayName)
         SplitAt("${item}" "|" this_feature packages)
         if ("${this_feature}" STREQUAL "${feature}")
             string(REPLACE "," ";" list "${packages}")
             list(GET list ${index} package)
-            set(${var} "${package}" PARENT_SCOPE)
+            set(${receivingVarName} "${package}" PARENT_SCOPE)
             break()
         endif ()
     endforeach ()
+    set (${receivingVarName} "${name}-NOTFOUND")
+endfunction()
+##
+######################################################################################
+##
+function(getFeaturePackageByName arrayName feature name receivingVarName indexVarName)
+    foreach (item IN LISTS ${array})
+        set(ix -1)
+        SplitAt("${item}" "|" this_feature packages)
+        if ("${this_feature}" STREQUAL "${feature}")
+            string(REPLACE "," ";" list "${packages}")
+            foreach (pkg IN LISTS list)
+                math(EXPR ix "${ix} + 1")
+                SplitAt("${pkg}" "|" pkgName pkgData)
+                if ("${pkgName}" STREQUAL "${name}")
+                    set(${receivingVarName} "${pkg}" PARENT_SCOPE)
+                    set(${indexVarName} ${ix} PARENT_SCOPE)
+                    break()
+                endif ()
+            endforeach ()
+            set (${receivingVarName} "${name}-NOTFOUND")
+            set(${indexVarName} -1 PARENT_SCOPE)
+        endif ()
+    endforeach ()
+    set (${receivingVarName} "${name}-NOTFOUND")
+    set(${indexVarName} -2 PARENT_SCOPE)
 endfunction()
 ##
 ######################################################################################
@@ -449,7 +475,7 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-function(parsePackage pkgArray)
+function(parsePackage)
     set(options)
     set(one_value_args LIST
             FEATURE PKG_NAME PKG_INDEX
@@ -461,11 +487,11 @@ function(parsePackage pkgArray)
             PREREQS
             ARGS
     )
-    set(multi_value_args
-    )
+    set(multi_value_args)
 
     # Parse the arguments
-    cmake_parse_arguments(PARSE_ARGV 1 A_PP "${options}" "${one_value_args}" "${multi_value_args}")
+    cmake_parse_arguments(A_PP "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+    list(POP_FRONT A_PP_UNPARSED_ARGUMENTS pkgArrayName)
 
     if (NOT A_PP_LIST)
         message(FATAL_ERROR "parsePackage() needs LIST parameter")
@@ -480,12 +506,12 @@ function(parsePackage pkgArray)
     elseif (A_PP_PKG_INDEX AND A_PP_PKG_NAME)
         message(FATAL_ERROR "parsePackage() both PKG_NAME and PKG_FEATURE supplied. Need one or the other")
     elseif (NOT "${A_PP_PKG_NAME}" STREQUAL "")
-        getFeaturePkgList("${pkgArray}" ${A_PP_FEATURE} pkg_list)
+        getFeaturePkgList("${pkgArrayName}" ${A_PP_FEATURE} pkg_list)
         list(FIND pkg_list ${A_PP_PKG_NAME} A_PP_PKG_INDEX)
         set(A_PP_PKG_NAME)
     endif ()
 
-    getFeaturePackage("${pkgArray}" ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
+    getFeaturePackage("${pkgArrayName}" ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
     # Initialize output variables
     set(${A_PP_LIST}        "" PARENT_SCOPE)
     set(${A_PP_KIND}        "" PARENT_SCOPE)
@@ -774,16 +800,17 @@ function(resolveDependencies inputList allData outputList)
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS inputList)
-        SplitAt("${item}" "." _feat _idx)
-        parsePackage("${allData}" FEATURE "${_feat}" PKG_INDEX "${_idx}" KIND _kind LIST _dnc ARGS _args)
+        SplitAt("${item}" "|" _feat _pkg)
+        parsePackage(inputList FEATURE "${_feat}" PKG_INDEX 0 KIND _kind LIST _dnc ARGS _args)
         if ("${_kind}" STREQUAL "LIBRARY")
-            visit("${item}" OFF)
+            visit("${_feat}" OFF)
         endif()
     endforeach()
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS inputList)
-        visit("${item}" OFF)
+        SplitAt("${item}" "|" _feat _pkg)
+        visit("${_feat}" OFF)
     endforeach()
 
     set(${outputList}       ${resolved}         PARENT_SCOPE)
