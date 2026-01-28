@@ -1,0 +1,149 @@
+include_guard(GLOBAL)
+
+# pipelist(<VERB> <pipelistVar> ...)
+#
+# Treat a pipe-separated "record" stored in a variable like a list for basic operations.
+# NOTE: This assumes '|' does not appear inside fields. If it can, you need escaping/encoding.
+#
+# VERBS:
+#   pipelist(GET     <pipelistVar> <index> <outVar> [DEFAULT <val>] [REQUIRED])
+#   pipelist(LENGTH  <pipelistVar> <outVar>)
+#   pipelist(SET     <pipelistVar> <index> <newValue> [EXTEND])      # modifies <pipelistVar> in-place
+#   pipelist(REPLACE <pipelistVar> <index> <newValue> [EXTEND])      # alias of SET
+macro(pipelist verb pipelistVar)
+    if(NOT verb)
+        message(FATAL_ERROR "pipelist: missing verb (GET/LENGTH/SET/REPLACE)")
+    endif()
+    if(NOT pipelistVar)
+        message(FATAL_ERROR "pipelist: missing pipelist variable name")
+    endif()
+
+    string(TOUPPER "${verb}" _P_VERB)
+
+    if(_P_VERB STREQUAL "GET")
+        set(options REQUIRED)
+        set(oneValueArgs DEFAULT)
+        set(multiValueArgs "")
+        cmake_parse_arguments(_P "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+        list(LENGTH _P_UNPARSED_ARGUMENTS _argc)
+        if(NOT _argc EQUAL 2)
+            message(FATAL_ERROR "pipelist(GET): expected <pipelistVar> <index> <outVar> [DEFAULT <val>] [REQUIRED]")
+        endif()
+
+        list(GET _P_UNPARSED_ARGUMENTS 0 _index)
+        list(GET _P_UNPARSED_ARGUMENTS 1 _outVar)
+
+        if(NOT _index MATCHES "^[0-9]+$")
+            message(FATAL_ERROR "pipelist(GET): index must be a non-negative integer, got '${_index}'")
+        endif()
+
+        if(DEFINED ${pipelistVar})
+            set(_record "${${pipelistVar}}")
+        else()
+            set(_record "")
+        endif()
+
+        string(REPLACE "|" ";" _tmp_list "${_record}")
+        list(LENGTH _tmp_list _len)
+
+        if(_index GREATER_EQUAL _len)
+            if(_P_REQUIRED)
+                message(FATAL_ERROR "pipelist(GET): index ${_index} out of range (len=${_len}) for ${pipelistVar}='${_record}'")
+            endif()
+
+            if(DEFINED _P_DEFAULT)
+                set(${_outVar} "${_P_DEFAULT}")
+            else()
+                unset(${_outVar})
+            endif()
+        else()
+            list(GET _tmp_list ${_index} _value)
+            set(${_outVar} "${_value}")
+        endif()
+        unset(_record)
+        unset(_tmp_list)
+        unset(_len)
+        unset(_value)
+        unset(_index)
+        unset(_outVar)
+    elseif(_P_VERB STREQUAL "LENGTH")
+        list(LENGTH ARGN _argc)
+        if(NOT _argc EQUAL 1)
+            message(FATAL_ERROR "pipelist(LENGTH): expected <pipelistVar> <outVar>")
+        endif()
+
+        list(GET ARGN 0 _outVar)
+
+        if(DEFINED ${pipelistVar})
+            set(_record "${${pipelistVar}}")
+        else()
+            set(_record "")
+        endif()
+
+        string(REPLACE "|" ";" _tmp_list "${_record}")
+        list(LENGTH _tmp_list _len)
+        set(${_outVar} "${_len}")
+
+        unset(_record)
+        unset(_tmp_list)
+        unset(_len)
+        unset(_outVar)
+    elseif(_P_VERB STREQUAL "SET" OR _P_VERB STREQUAL "REPLACE")
+        set(options EXTEND)
+        set(oneValueArgs "")
+        set(multiValueArgs "")
+        cmake_parse_arguments(_P "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+        list(LENGTH _P_UNPARSED_ARGUMENTS _argc)
+        if(NOT _argc EQUAL 2)
+            message(FATAL_ERROR "pipelist(${_P_VERB}): expected <pipelistVar> <index> <newValue> [EXTEND]")
+        endif()
+
+        list(GET _P_UNPARSED_ARGUMENTS 0 _index)
+        list(GET _P_UNPARSED_ARGUMENTS 1 _newValue)
+
+        if(NOT _index MATCHES "^[0-9]+$")
+            message(FATAL_ERROR "pipelist(${_P_VERB}): index must be a non-negative integer, got '${_index}'")
+        endif()
+
+        if(DEFINED ${pipelistVar})
+            set(_record "${${pipelistVar}}")
+        else()
+            set(_record "")
+        endif()
+
+        string(REPLACE "|" ";" _tmp_list "${_record}")
+        list(LENGTH _tmp_list _len)
+
+        if(_index GREATER_EQUAL _len)
+            if(_P_EXTEND)
+                # Pad with empty fields up to index, then append value
+                while(_len LESS _index)
+                    list(APPEND _tmp_list "")
+                    list(LENGTH _tmp_list _len)
+                endwhile()
+                list(APPEND _tmp_list "${_newValue}")
+            else()
+                message(FATAL_ERROR "pipelist(${_P_VERB}): index ${_index} out of range (len=${_len}) for ${pipelistVar}='${_record}'. Use EXTEND to grow.")
+            endif()
+        else()
+            list(REMOVE_AT _tmp_list ${_index})
+            list(INSERT _tmp_list ${_index} "${_newValue}")
+        endif()
+
+        string(JOIN "|" _joined ${_tmp_list})
+        set(${pipelistVar} "${_joined}")
+
+        unset(_record)
+        unset(_tmp_list)
+        unset(_len)
+        unset(_joined)
+        unset(_index)
+        unset(_newValue)
+    else()
+        message(FATAL_ERROR "pipelist: unknown verb '${verb}' (GET/LENGTH/SET/REPLACE)")
+    endif()
+
+    unset(_P_VERB)
+endmacro()

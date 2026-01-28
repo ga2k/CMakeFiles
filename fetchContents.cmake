@@ -40,7 +40,7 @@ function(fetchContents)
 
     set(options HELP)
     set(oneValueArgs PREFIX)
-    set(multiValueArgs USE;NOT)
+    set(multiValueArgs FEATURES)
     # NOT has precedence over USE
 
     cmake_parse_arguments(AUE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGV})
@@ -54,6 +54,8 @@ function(fetchContents)
     endif ()
 
     log(TITLE "Before tampering " LISTS AUE_USE AUE_NOT)
+
+    processFeatures("${AUE_FEATURES}" AUE_USE)
 
     set(FETCHCONTENT_QUIET OFF)
 
@@ -75,19 +77,19 @@ function(fetchContents)
     set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
 
     foreach (line IN LISTS SystemFeatureData)
-        SplitAt(${line} "|" afeature dc)
+        pipelist(GET line 0 aFeature)
         list(APPEND SystemFeatures ${afeature})
         list(APPEND AllPackages    ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS LibraryFeatureData)
-        SplitAt(${line} "|" afeature dc)
+        pipelist(GET line 0 aFeature)
         list(APPEND LibraryFeatures ${afeature})
         list(APPEND AllPackages     ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS UserFeatureData)
-        SplitAt(${line} "|" afeature dc)
+        pipelist(GET line 0 aFeature)
         list(APPEND OptionalFeatures ${afeature})
         list(APPEND AllPackages      ${aFeature})
     endforeach ()
@@ -109,9 +111,8 @@ function(fetchContents)
     foreach (use IN LISTS AUE_USE)
 
         # convert to a cmake list
-        string(REPLACE "|" ";" use "${use}")
-        list (GET use ${FeatureIX}        feature)
-        list (GET use ${FeaturePkgNameIX} pkgname)
+        pipelist (GET use ${FeatureIX}        feature)
+        pipelist (GET use ${FeaturePkgNameIX} pkgname)
 
         if (${feature} IN_LIST PseudoFeatures)
             # We don't search for plugins this way
