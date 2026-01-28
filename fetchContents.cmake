@@ -53,7 +53,7 @@ function(fetchContents)
         message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
-    log(TITLE "Before tampering " LISTS AUE_USE AUE_NOT)
+    log(TITLE "Before tampering " LISTS AUE_FEATURES)
 
     processFeatures("${AUE_FEATURES}" AUE_USE)
 
