@@ -89,21 +89,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    #    if (WIN32 OR APPLE OR LINUX)
-    addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS")
-    #    else ()
-    #        addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "FETCH_CONTENTS"
-    #                GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
-    #                ARGS REQUIRED EXCLUDE_FROM_ALL)
-    #    endif ()
+    addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
+            ARGS REQUIRED EXCLUDE_FROM_ALL)
 
-#    if (BUILD_WX_FROM_SOURCE)
-        addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
-                GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master" # "v3.2.6"
-                ARG REQUIRED)
-#    else ()
-#        addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "PROCESS")
-#    endif ()
+    addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
+            ARG REQUIRED)
 
     set(SystemFeatureData  "${SystemFeatureData}"  PARENT_SCOPE)
     set(LibraryFeatureData "${LibraryFeatureData}" PARENT_SCOPE)

@@ -3,7 +3,7 @@ include(FetchContent)
 set(FeatureIX 0)
 set(FeaturePkgNameIX 1)
 set(FeatureNamespaceIX 2)
-set(FeatureMethodIX 3)
+set(FeatureKindIX 3)
 set(FeatureMethodIX 4)
 set(FeatureUrlIX 5)
 set(FeatureGitTagIX 6)
@@ -108,29 +108,36 @@ function(fetchContents)
     unset(unifiedFeatureList)
 
     # We don't search for pseudo packages
-    foreach (use IN LISTS AUE_USE)
+    foreach (userFeature IN LISTS AUE_USE)
+
+        # Where we manipulate the feature to be a union of the userFeaturers requirements (if any)
+        # and system requirements (if any)
+        set(regdFeature)
 
         # convert to a cmake list
-        pipelist (GET use ${FeatureIX}        feature)
-        pipelist (GET use ${FeaturePkgNameIX} pkgname)
+        pipelist(POP_FRONT userFeature feature)
+        pipelist(GET userFeature ${PkgNameIX} pkgname)
 
         if (${feature} IN_LIST PseudoFeatures)
             # We don't search for plugins this way
             list(APPEND _DefinesList USING_${feature})
+            continue()
         elseif (${feature} IN_LIST SystemFeatures)
             # We don't search for system packages this way, but we might ADD a package variant (if one exists)
             if (NOT "${pkgname}" STREQUAL "")
                 getFeaturePackageByName(SystemFeatureData ${feature} ${pkgname} actualPkg index)
                 if (${index} EQUAL -1)
                     msg(ALWAYS FATAL_ERROR "FEATURE ${feature} has no package called ${pkgname}")
+                    continue()
                 elseif (${index} GREATER 0)
-                    string(REPLACE ";" "|" actualPkg "${actualPkg}")
-                    list(APPEND unifiedFeatureList "${feature}|${actualPkg}")
+                    string(REPLACE ";" "|" regdFeature "${actualPkg}")
                 else ()
-                    msg(ALWAYS WARNING "System feature ${feature} requested, this is unnecessary")
+                    msg(ALWAYS WARNING "Redundant addition of System feature ${feature}")
+                    continue()
                 endif ()
             else ()
-                msg(ALWAYS WARNING "System feature ${feature} requested, this is unnecessary")
+                msg(ALWAYS WARNING "Redundant addition of System feature ${feature}")
+                continue()
             endif ()
         else ()
             set (nonSystemFeatureData "${LibraryFeatureData};${UserFeatureData}")
@@ -141,12 +148,49 @@ function(fetchContents)
                 getFeaturePackage(nonSystemFeatureData ${feature} ${index} actualPkg)
             endif ()
             if (NOT ${actualPkg} STREQUAL "${feature}-NOTFOUND")
-                string(REPLACE ";" "|" actualPkg "${actualPkg}")
-                list(APPEND unifiedFeatureList "${feature}|${actualPkg}")
+                string(REPLACE ";" "|" regdFeature "${actualPkg}")
             else ()
                 msg(ALWAYS FATAL_ERROR "FEATURE ${feature} is not available")
+                continue()
             endif ()
         endif ()
+
+        # If we are here, we have the users feature and options in ${userFeature}
+        # and the corresponding registered  feature and options in ${regdFeature}
+        # The merged feature will be in ${wip}
+
+        set (wip "${regdFeature}")
+
+        # Step 1. Sanity check the set pkgname
+        pipelist(GET userFeature ${PkgNameIX} _uPkg TOUPPER)
+        pipelist(GET regdFeature ${PkgNameIX} _rPkg TOUPPER)
+
+        if (NOT "${uPkg}" STREQUAL "" AND NOT "${_uPkg}" STREQUAL "${_rPkg}")
+            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch")
+        endif ()
+
+        # Step 2. Merge Args
+        pipelist(GET userFeature ${PkgArgsIX} _userBits)
+        pipelist(GET regdFeature ${PkgArgsIX} _regdBits)
+        string(REPLACE " " ";" _userBits "${_userBits}")
+        string(REPLACE " " ";" _regdBits "${_regdBits}")
+        list(APPEND _regdBits ${_userBits})
+        list(REMOVE_DUPLICATES _regdBits)
+        string(JOIN ":" _bits ${_regdBits})
+        pipelist(REPLACE wip ${PkgArgsIX} "${_bits}")
+
+        # Step 3. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
+        pipelist(GET userFeature ${PkgComponentsIX} _userBits)
+        pipelist(GET regdFeature ${PkgComponentsIX} _regdBits)
+        string(REPLACE ":" ";" _userBits "${_userBits}")
+        string(REPLACE ":" ";" _regdBits "${_regdBits}")
+        list(APPEND _regdBits ${_userBits})
+        list(REMOVE_DUPLICATES _regdBits)
+        string(JOIN ":" _bits ${_regdBits})
+        pipelist(REPLACE wip ${PkgComponentsIX} "${_bits}")
+
+        list(APPEND unifiedFeatureList "${feature}|${wip}")
+
     endforeach ()
 
     # ensure the caller is using the system libraries
@@ -159,7 +203,7 @@ function(fetchContents)
     ##
     ##########
     ##
-    message(" ")
+    msg(" ")
 
     if (APP_DEBUG)
         log(TITLE "After tampering" LISTS unifiedFeatureList)
@@ -167,10 +211,11 @@ function(fetchContents)
 
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
     resolveDependencies("${unifiedFeatureList}" AllPackageData reorderedList)
-    set(unifiedFeatureList "${reorderedList}")
+    set(features "${reorderedList}")
+    set(featuresList "${unifiedFeatureList}")
 
     if (APP_DEBUG)
-        log(TITLE "After re-ordering by prerequisites" LISTS unifiedFeatureList)
+        log(TITLE "After re-ordering by prerequisites" LISTS features packages)
     endif ()
 
     ####################################################################################################################
@@ -197,7 +242,7 @@ function(fetchContents)
     ## Nested function. How fancy
     ##
 
-    function(processFeatures featureList)
+    function(processFeatures features featureList)
 
         unset(removeFromDependencies)
 
@@ -207,8 +252,12 @@ function(fetchContents)
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
-        message("\n-----------------------------------------------------------------------------------------------\n")
-        string(JOIN ", " l ${packageList})
+        message("\n------------------------------------------------------------------------------------------------------------------------\n")
+
+        foreach(p IN LISTS featureList)
+            pipelist(GET p ${FeatureIX} k)
+            string(JOIN ", " l ${l} ${k})
+        endforeach ()
 
         message(CHECK_START "${YELLOW}Processing features${NC}${BOLD} ${l}${NC}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
@@ -217,27 +266,16 @@ function(fetchContents)
         unset(combinedLibraryComponents)
 
         foreach (pass_num RANGE 1)
-            foreach (this_feature_entry IN LISTS unifiedFeatureList)
-
-                SplitAt(${this_feature_entry} "|" this_feature this_tail)
-
-#                if(${this_pkgindex} STREQUAL "P")
-#                    set(apf_IS_A_PREREQ ON)
-#                    set(this_pkgindex ".0")
-#                    set(this_feature_entry "${this_feature}${this_pkgindex}")
-#                elseif ("${apf_IS_A_PREREQ}" STREQUAL "P")
-#                    set(apf_IS_A_PREREQ ON)
-#                    set(this_feature_entry "${this_feature}.${this_pkgindex}")
-#                endif ()
-                unset(this_tail)
-
+            foreach (featureName IN LISTS features)
+                getFeaturePackage(featureList ${featureName} 0 package)
+                pipelist(GET package ${PkgNameIX} this_package)
                 # Skip features already found/aliased, but only check this in the final pass
                 # to allow declarations to overlap if necessary.
 #                if (${pass_num} EQUAL 1)
-                    if (TARGET ${this_feature} OR TARGET ${this_feature}::${this_feature} OR ${this_feature}_FOUND OR ${this_feature}_ALREADY_FOUND)
+                    if (TARGET ${this_package} OR TARGET ${this_package}::${this_package} OR ${this_package}_FOUND OR ${this_package}_ALREADY_FOUND)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(CHECK_PASS "Feature already available without re-processing: skipped")
-                        list(APPEND removeFromDependencies "${this_feature_entry}" "${this_feature}")
+                        list(APPEND removeFromDependencies "${featureName}" "${this_package}")
                         continue()
                     endif ()
 #                endif ()
@@ -267,9 +305,9 @@ function(fetchContents)
 
                 unsetLocalVars()
 
-                parsePackage(AllPackageData
+                parsePackage(feature
                         BUILD_DIR this_build
-                        FEATURE ${this_feature}
+                        FEATURE ${this_package}
                         FETCH_FLAG this_fetch
                         GIT_TAG this_tag
                         INC_DIR this_inc
@@ -280,9 +318,6 @@ function(fetchContents)
                         SRC_DIR this_src
                         URL this_url
                 )
-
-                findInList("${unifiedComponentList}" ${this_feature} " " this_find_package_components)
-                findInList("${unifiedArgumentList}" ${this_feature} " " this_find_package_args)
 
                 list(POP_FRONT pkg_details this_pkgname this_namespace)
                 string(TOLOWER "${this_pkgname}" this_pkglc)
@@ -330,7 +365,7 @@ function(fetchContents)
                             if (${this_pkgname}_ALREADY_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
                                 message(STATUS "${this_pkgname} already supplied by a library target. Skipping FetchContent.")
                                 set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
-                                list(APPEND removeFromDependencies "${this_feature_entry}" "${this_feature}")
+                                list(APPEND removeFromDependencies "${featureName}" "${this_package}")
                                 set(fn "${this_pkgname}_postDeclare")
                                 if (COMMAND "${fn}")
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
@@ -464,13 +499,13 @@ function(fetchContents)
                     message(CHECK_START "${GREEN}${this_pkgname} ${padding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-                    if(${this_feature}_PASS_TWO_COMPLETED)
+                    if(${this_package}_PASS_TWO_COMPLETED)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(" ")
                         message(CHECK_PASS "(already been done)")
                     else ()
                         if (apf_IS_A_PREREQ)
-                            set(${this_feature}_PASS_TWO_COMPLETED ON)
+                            set(${this_package}_PASS_TWO_COMPLETED ON)
                         endif ()
 
                         if ("${this_method}" STREQUAL "FIND_PACKAGE")
@@ -497,7 +532,7 @@ function(fetchContents)
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
                                 endif ()
 
-                                if (NOT HANDLED AND NOT ${this_feature} STREQUAL TESTING)
+                                if (NOT HANDLED AND NOT ${this_package} STREQUAL TESTING)
                                     message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
                                     FetchContent_MakeAvailable(${this_pkgname})
                                     handleTarget(${this_pkgname})
@@ -539,7 +574,7 @@ function(fetchContents)
                     endif ()
                 endif ()
 
-            endforeach () # this_feature_entry
+            endforeach () # featureName
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
@@ -548,7 +583,7 @@ function(fetchContents)
 
     endfunction()
 
-    processFeatures("${unifiedFeatureList}")
+    processFeatures("${features}" "${featuresList}")
     propegateUpwards("Finally" ON)
 
 endfunction()
