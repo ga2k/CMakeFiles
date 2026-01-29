@@ -241,6 +241,18 @@ macro(check_environment PROJECT_ROOT)
 
         list(REMOVE_DUPLICATES debugFlags)
 
+        string(ASCII 27 ESC)
+        set(RED     "${ESC}[31m")
+        set(GREEN   "${ESC}[32m")
+        set(YELLOW  "${ESC}[33m")
+        set(BLUE    "${ESC}[34m")
+        set(MAGENTA "${ESC}[35m")
+        set(CYAN    "${ESC}[36m")
+        set(WHITE   "${ESC}[37m")
+        set(DEFAULT "${ESC}[38m")
+        set(BOLD    "${ESC}[1m" )
+        set(NC      "${ESC}[0m" )
+
         # @formatter:off
         # set(APP_VENDOR_LC       ${APP_VENDOR_LC}        PARENT_SCOPE)
         # set(APP_NAME_LC         ${APP_NAME_LC}          PARENT_SCOPE)

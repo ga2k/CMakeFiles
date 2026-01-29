@@ -40,7 +40,6 @@ function(createStandardPackageData)
     #   [, ...] More packages in the same feature, if any
     #
 
-
     addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
             COMPONENT "cpptrace" ARG REQUIRED)
@@ -57,9 +56,21 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" METHOD "FETCH_CONTENTS" NAMESPACE "SOCI"
+    addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "nlohmann_json" NAMESPACE "nlohmann_json" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/nlohmann/json.git" GIT_TAG "v3.11.3"
+            ARG REQUIRED)
+
+    addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/marzer/tomlplusplus.git" GIT_TAG "v3.4.0"
+            ARG REQUIRED)
+
+    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" NAMESPACE "SOCI" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
             ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3) # GIT_SUBMODULES "")
+
+    addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "sqliteOrm" NAMESPACE "sqlite_orm" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
+            ARG CONFIG)
     #
     ##
     ####
