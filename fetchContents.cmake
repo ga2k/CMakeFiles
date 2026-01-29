@@ -213,6 +213,13 @@ function(fetchContents)
 
         foreach(p IN LISTS featureList)
             pipelist(GET p ${FeatureIX} k)
+            SplitAt("${k}" "." left rite)
+            if (rite)
+                if ("${rite}" MATCHES "P")
+                    set(apf_IS_A_PREREQ ON)
+                endif ()
+                set(k "${left}")
+            endif ()
             string(JOIN ", " l ${l} ${k})
         endforeach ()
 
@@ -224,18 +231,18 @@ function(fetchContents)
         foreach (pass_num RANGE 1)
             message("${GREEN}\n-------------------------------------------------------------------------------\n${NC}")
             foreach (featureName IN LISTS features)
-                getFeaturePackage(featureList ${featureName} 0 package)
-                pipelist(GET package ${PkgNameIX} this_package)
-                # Skip features already found/aliased, but only check this in the final pass
-                # to allow declarations to overlap if necessary.
-#                if (${pass_num} EQUAL 1)
-                    if (TARGET ${this_package} OR TARGET ${this_package}::${this_package} OR ${this_package}_FOUND OR ${this_package}_ALREADY_FOUND)
-                        list(POP_BACK CMAKE_MESSAGE_INDENT)
-                        message(CHECK_PASS "Feature already available without re-processing: skipped")
-                        list(APPEND removeFromDependencies "${featureName}" "${this_package}")
-                        continue()
-                    endif ()
-#                endif ()
+#                getFeaturePackage(featureList ${featureName} 0 package)
+#                pipelist(GET package ${PkgNameIX} this_package)
+#                # Skip features already found/aliased, but only check this in the final pass
+#                # to allow declarations to overlap if necessary.
+##                if (${pass_num} EQUAL 1)
+#                    if (TARGET ${this_package} OR TARGET ${this_package}::${this_package} OR ${this_package}_FOUND OR ${this_package}_ALREADY_FOUND)
+#                        list(POP_BACK CMAKE_MESSAGE_INDENT)
+#                        message(CHECK_PASS "Feature already available without re-processing: skipped")
+#                        list(APPEND removeFromDependencies "${featureName}" "${this_package}")
+#                        continue()
+#                    endif ()
+##                endif ()
 
                 macro(unsetLocalVars)
                     unset(COMPONENTS_KEYWORD)
@@ -262,21 +269,22 @@ function(fetchContents)
 
                 unsetLocalVars()
 
-                parsePackage(feature
-                        BUILD_DIR this_build
-                        FEATURE ${this_package}
-                        FETCH_FLAG this_fetch
-                        GIT_TAG this_tag
-                        INC_DIR this_inc
-                        KIND this_kind
-                        OUTPUT pkg_details
-                        METHOD this_method
-                        PKG_INDEX ${this_pkgindex}
-                        SRC_DIR this_src
-                        URL this_url
+                parsePackage(featureList
+                        FEATURE     ${featureName}
+                        PKG_INDEX   0
+                        BUILD_DIR   this_build
+                        FETCH_FLAG  this_fetch
+                        GIT_TAG     this_tag
+                        INC_DIR     this_inc
+                        KIND        this_kind
+                        METHOD      this_method
+                        OUTPUT      pkg_details
+                        SRC_DIR     this_src
+                        URL         this_url
+                        NAME        this_pkgname
+                        NAMESPACE   this_namespace
                 )
 
-                list(POP_FRONT pkg_details this_pkgname this_namespace)
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
 
