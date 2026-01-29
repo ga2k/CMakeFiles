@@ -264,7 +264,7 @@ function(fetchContents)
 
                 parsePackage(feature
                         BUILD_DIR this_build
-                        FEAT_NAME ${this_package}
+                        FEATURE ${this_package}
                         FETCH_FLAG this_fetch
                         GIT_TAG this_tag
                         INC_DIR this_inc
