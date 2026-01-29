@@ -223,7 +223,7 @@ function(fetchContents)
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${n}${NC})")
         endforeach ()
 
-        message(CHECK_START "${BOLD}Processing features${NC} ${l}")
+        message(CHECK_START "\n${BOLD}Processing features${NC} ${l}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(combinedLibraryComponents)
@@ -462,10 +462,15 @@ function(fetchContents)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
+                    string(LENGTH "${featureName}" this_featurenameLength)
+                    math(EXPR paddingChars "${longestFeatureName} - ${this_featurenameLength}")
+                    string(REPEAT " " ${paddingChars} fpadding )
+
                     string(LENGTH "${this_pkgname}" this_pkgnameLength)
                     math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
-                    string(REPEAT "." ${paddingChars} padding )
-                    message(CHECK_START "${GREEN}${this_pkgname} ${padding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
+                    string(REPEAT "." ${paddingChars} ppadding )
+                    message(CHECK_START "${YELLOW}${fpadding}${featureName}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
+                    message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if(${this_package}_PASS_TWO_COMPLETED)
