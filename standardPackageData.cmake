@@ -53,7 +53,7 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(SYSTEM FEATURE "YAML" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
+    addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
             ARG REQUIRED)
 

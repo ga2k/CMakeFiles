@@ -30,6 +30,6 @@ endif()
 # Usually provided as GTest::gtest, GTest::gtest_main by FetchContent_MakeAvailable(googletest)
 # If missing, you can optionally add a fallback imported/INTERFACE – but prefer the official one.
 
-# YAML: yaml-cpp (compiled lib)
+# STORAGE: yaml-cpp (compiled lib)
 # Prefer the real yaml-cpp target from FetchContent. If not yet available, you can declare an imported target
 # but it’s better to rely on the one successfully built by FetchContent.
