@@ -192,7 +192,7 @@ function(initialiseFeatureHandlers)
 
         string(LENGTH ${handlerName} length)
         math(EXPR num_spaces "${longest} - ${length}")
-        string(REPEAT "${spaces}" ${num_spaces} padding)
+        string(REPEAT " " ${num_spaces} padding)
 
         set(msg "Adding handler ${padding}${BOLD}${handlerName}${NC} for ${BOLD}${packageName}${NC}")
         if (${handlerName} STREQUAL "init")

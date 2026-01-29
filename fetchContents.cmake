@@ -509,7 +509,7 @@ function(fetchContents)
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
                                 endif ()
 
-                                if (NOT HANDLED AND NOT ${this_package} STREQUAL TESTING)
+                                if (NOT HANDLED AND NOT ${featureName} STREQUAL TESTING)
                                     message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
                                     FetchContent_MakeAvailable(${this_pkgname})
                                     handleTarget(${this_pkgname})
