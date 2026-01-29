@@ -474,10 +474,23 @@ endfunction()
 ##
 ########################################################################################################################
 ##
+## parsePackage can be called with a    * A list of features like "SystemFeatureList" which is a list of features
+##                                      * A single feature, which is a list of packages
+##                                      * A single package, which is a list of attributes.
+##
+## If INPUT_TYPE is provided, we'll verify that
+## If INPUT_TYPE is not provided, we'll work it out
+##
 function(parsePackage)
     set(options)
-    set(one_value_args LIST
-            FEATURE PKG_NAME PKG_INDEX
+    set(one_value_args
+#           Keyword         Type        Direction   Description
+            OUTPUT      #   VARNAME     OUT         Receive a copy of the PACKAGE
+            FEAT_NAME   #   STRING      IN          Feature to select from inputList
+                        #                           If INPUT_TYPE is FEATURE or PACKAGE, FEAT_NAME is ignored
+            PKG_NAME    #   STRING      IN          Package to select by name from Feature
+                        #                           If INPUT_TYPE is PACKAGE, PKG_NAME is ignored
+            PKG_INDEX   #   INTEGER     IN
             URL GIT_TAG
             SRC_DIR BUILD_DIR INC_DIR
             FETCH_FLAG
@@ -490,11 +503,7 @@ function(parsePackage)
 
     # Parse the arguments
     cmake_parse_arguments(A_PP "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
-    list(POP_FRONT A_PP_UNPARSED_ARGUMENTS pkgArrayName)
-
-    if (NOT A_PP_LIST)
-        message(FATAL_ERROR "parsePackage() needs LIST parameter")
-    endif ()
+    list(POP_FRONT A_PP_UNPARSED_ARGUMENTS inputListName)
 
     if (NOT A_PP_FEATURE)
         message(FATAL_ERROR "parsePackage() needs FEATURE parameter")
@@ -505,28 +514,51 @@ function(parsePackage)
     elseif (A_PP_PKG_INDEX AND A_PP_PKG_NAME)
         message(FATAL_ERROR "parsePackage() both PKG_NAME and PKG_FEATURE supplied. Need one or the other")
     elseif (NOT "${A_PP_PKG_NAME}" STREQUAL "")
-        getFeaturePkgList("${pkgArrayName}" ${A_PP_FEATURE} pkg_list)
+        getFeaturePkgList("${inputListName}" ${A_PP_FEATURE} pkg_list)
         list(FIND pkg_list ${A_PP_PKG_NAME} A_PP_PKG_INDEX)
         set(A_PP_PKG_NAME)
     endif ()
 
-    getFeaturePackage("${pkgArrayName}" ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
+    getFeaturePackage("${inputListName}" ${A_PP_FEATURE} ${A_PP_PKG_INDEX} local)
     # Initialize output variables
-    set(${A_PP_LIST}        "" PARENT_SCOPE)
-    set(${A_PP_KIND}        "" PARENT_SCOPE)
-    set(${A_PP_METHOD}      "" PARENT_SCOPE)
-    set(${A_PP_URL}         "" PARENT_SCOPE)
-    set(${A_PP_GIT_TAG}     "" PARENT_SCOPE)
-    set(${A_PP_SRC_DIR}     "" PARENT_SCOPE)
-    set(${A_PP_BUILD_DIR}   "" PARENT_SCOPE)
-    set(${A_PP_FETCH_FLAG}  ON PARENT_SCOPE)
-    set(${A_PP_INC_DIR}     "" PARENT_SCOPE)
-    set(${A_PP_COMPONENTS}  "" PARENT_SCOPE)
-    set(${A_PP_ARGS}        "" PARENT_SCOPE)
-    set(${A_PP_PREREQS}     "" PARENT_SCOPE)
+    if(DEFINED ${A_PP_LIST})
+        set(${A_PP_LIST}        "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_KIND})
+        set(${A_PP_KIND}        "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_METHOD})
+        set(${A_PP_METHOD}      "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_URL})
+        set(${A_PP_URL}         "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_GIT_TAG})
+        set(${A_PP_GIT_TAG}     "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_SRC_DIR})
+        set(${A_PP_SRC_DIR}     "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_BUILD_DIR})
+        set(${A_PP_BUILD_DIR}   "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_FETCH_FLAG})
+        set(${A_PP_FETCH_FLAG}  ON PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_INC_DIR})
+        set(${A_PP_INC_DIR}     "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_COMPONENTS})
+        set(${A_PP_COMPONENTS}  "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_ARGS})
+        set(${A_PP_ARGS}        "" PARENT_SCOPE)
+    endif ()
+    if(DEFINED ${A_PP_PREREQS})
+        set(${A_PP_PREREQS}     "" PARENT_SCOPE)
+    endif ()
 
     string(REPLACE "|" ";" pkg_deets "${local}")
-    set(${A_PP_LIST} "${pkg_deets}" PARENT_SCOPE)
     list(LENGTH pkg_deets length)
 
     if (${length} GREATER 4)
@@ -726,28 +758,32 @@ function(combine primaryList secondaryList outputList)  # Optionally, add TRUE o
     set(${outputList} "${allItems}" PARENT_SCOPE)
 
 endfunction()
-
+##
+########################################################################################################################
+##
 function(resolveDependencies inputList allData outputList)
+    # inputList is unifiedFeatureList
+    # allData   is AllPackageData
+
     set(resolved "")
     set(packageList "")
     set(visited "")
     set(longestPkgName 0)
 
     # Internal helper to walk dependencies
-    macro(visit entry is_a_prereq)
-        if (NOT "${entry}" IN_LIST visited)
-            list(APPEND visited "${entry}")
+    macro(visit feature_name pkg is_a_prereq)
+        if (NOT "${feature_name}" IN_LIST visited)
+            list(APPEND visited "${feature_name}")
 
-            SplitAt("${entry}" "." feat_ idx_)
+            SplitAt("${feature_name}" "." feat_ idx_)
             parsePackage("${allData}"
                     FEATURE "${feat_}"
                     PKG_INDEX "${idx_}"
                     PREREQS pre_
-                    LIST dnc_
                     ARGS args_
             )
 
-            list(GET dnc_ 0 pkgname_)
+            pipelist(GET pkg 0 pkgname_)
             string(LENGTH "${pkgname_}" this_pkglength_)
             if (${this_pkglength_} GREATER ${longestPkgName})
                 set(longestPkgName ${this_pkglength_})
@@ -762,7 +798,8 @@ function(resolveDependencies inputList allData outputList)
                 endif()
 
                 set(found_entry_in_input_ "")
-                foreach(e_ IN LISTS inputList)
+                # TODO: Line below changed from inputLiist to allData
+                foreach(e_ IN LISTS allData) # inputList)
                     if(e_ MATCHES "^${pr_feat_}\\.")
                         set(found_entry_in_input_ "${e_}")
                         break()
@@ -770,7 +807,7 @@ function(resolveDependencies inputList allData outputList)
                 endforeach()
 
                 if(found_entry_in_input_)
-                    visit("${found_entry_in_input_}" ON)
+                    visit("${found_entry_in_input_}" "${_pkg}" ON)
                 endif()
             endforeach()
 
@@ -800,25 +837,31 @@ function(resolveDependencies inputList allData outputList)
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS inputList)
-        SplitAt("${item}" "|" _feat _pkg)
-        parsePackage(inputList FEATURE "${_feat}" PKG_INDEX 0 KIND _kind LIST _dnc ARGS _args)
+        SplitAt("${item}" "|" _feature_name _pkg)
+        parsePackage(inputList FEATURE "${_feature_name}" PKG_INDEX 0 KIND _kind ARGS _args)
         if ("${_kind}" STREQUAL "LIBRARY")
-            visit("${_feat}" OFF)
+            visit("${_feature_name}" "${_pkg}" OFF)
         endif()
     endforeach()
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS inputList)
-        SplitAt("${item}" "|" _feat _pkg)
-        visit("${_feat}" OFF)
+        SplitAt("${item}" "|" _feature_name _pkg)
+        visit("${_feature_name}" "${_pkg}" OFF)
     endforeach()
 
     set(${outputList}       ${resolved}         PARENT_SCOPE)
     set(longestPkgName      ${longestPkgName}   PARENT_SCOPE)
     set(packageList         ${packageList}      PARENT_SCOPE)
 
-endfunction()
+    unset(item)
+    unset(_feature_name)
+    unset(_pkg)
+    unset(_kind)
+    unset(_dnc)
+    unset(_args)
 
+endfunction()
 ##
 ########################################################################################################################
 ##
@@ -914,7 +957,9 @@ function(scanLibraryTargets libName packageData)
     set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
 
 endfunction()
-
+##
+########################################################################################################################
+##
 macro(handleTarget _pkgname)
     string(TOLOWER "${_pkgname}" pkgnamelc)
     if (this_incdir)
@@ -986,8 +1031,9 @@ macro(handleTarget _pkgname)
     unset(_pkglc)
 
 endmacro()
-
-
+##
+########################################################################################################################
+##
 function(processFeatures featureList returnVarName)
 
     function(replacePositionalParameters tokenString outputVar addAllRegardless)

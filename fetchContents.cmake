@@ -13,6 +13,7 @@ set(FeatureIncDirIX 7)
 set(FeatureComponentsIX 8)
 set(FeatureArgsIX 9)
 set(FeaturePrereqsIX 10)
+math(EXPR FeatureIXCount "${FeaturePrereqsIX} + 1")
 
 set(PkgNameIX 0)
 set(PkgNamespaceIX 1)
@@ -26,6 +27,7 @@ set(PkgIncDirIX 6)
 set(PkgComponentsIX 7)
 set(PkgArgsIX 8)
 set(PkgPrereqsIX 9)
+math(EXPR PkgIXCount "${PkgPrereqsIX} + 1")
 
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
@@ -252,7 +254,6 @@ function(fetchContents)
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
-        message("\n------------------------------------------------------------------------------------------------------------------------\n")
 
         foreach(p IN LISTS featureList)
             pipelist(GET p ${FeatureIX} k)
@@ -261,11 +262,11 @@ function(fetchContents)
 
         message(CHECK_START "${YELLOW}Processing features${NC}${BOLD} ${l}${NC}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
-        message(" ")
 
         unset(combinedLibraryComponents)
 
         foreach (pass_num RANGE 1)
+            message("${GREEN}\n-------------------------------------------------------------------------------\n${NC}")
             foreach (featureName IN LISTS features)
                 getFeaturePackage(featureList ${featureName} 0 package)
                 pipelist(GET package ${PkgNameIX} this_package)
