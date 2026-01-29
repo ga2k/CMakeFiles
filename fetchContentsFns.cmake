@@ -578,12 +578,12 @@ function(parsePackage)
         # SET           A CMake LIST of FEATURES. Each FEATURE will be one PIPELIST
 
         # See if this is a PIPELIST
-        list(LENGTH inputListName listLength)
-        pipelist(LENGTH inputListName pipeLength)
+        list(LENGTH ${inputListName} listLength)
+        pipelist(LENGTH ${inputListName} pipeLength)
 
         if (${listLength} EQUAL 1 AND ${pipeLength} EQUAL 1)
             set(inputListVerifyFailed "INPUT_TYPE needed - analysis failed")
-        elseif (${listLength} GREATER_EQUAL 1 AND ${pipeLength} EQUAL 0)
+        elseif (${listLength} GREATER_EQUAL 1)
             # Can ONLY be a set. We'll check if it is later
             set(A_PP_INPUT_TYPE "SET")
         elseif (${listLength} EQUAL 1 AND ${pipeLength} EQUAL ${PkgIXCount})
@@ -601,12 +601,12 @@ function(parsePackage)
         # Ok, we know what inputListName is SUPPOSED to be, let's verify it
 
         if (${A_PP_INPUT_TYPE} MATCHES "PACKAGE")
-            pipelist(LENGTH inputListName len)
+            pipelist(LENGTH ${inputListName} len)
             if (NOT ${len} EQUAL "${PkgIXCount}")
                 set(inputListVerifyFailed "PACKAGE length of ${len} should be ${PkgIXCount}")
             endif ()
         elseif (${A_PP_INPUT_TYPE} MATCHES "FEATURE")
-            pipelist(LENGTH inputListName len)
+            pipelist(LENGTH ${inputListName} len)
             if (NOT ${len} GREATER_EQUAL "${FeatureIXCount}")
                 set(inputListVerifyFailed "FEATURE length of ${len} should be 1 + n * ${PkgIXCount}")
             else ()
