@@ -964,7 +964,7 @@ function(resolveDependencies inputList allData outputList)
             if (${is_a_prereq})
                 list(APPEND resolved "${feature_name}.P")
             else ()
-                list(APPEND resolved "${feature_name}.0")
+                list(APPEND resolved "${feature_name}")
             endif ()
 
             list(APPEND packageList ${pkgname_})

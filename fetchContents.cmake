@@ -211,10 +211,10 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
 
-        foreach(p IN LISTS featureList)
+        foreach(p IN LISTS features)
             pipelist(GET p ${FeatureIX} k)
             SplitAt("${k}" "." left rite)
-            if (rite)
+            if (NOT ${rite} STREQUAL "")
                 if ("${rite}" MATCHES "P")
                     set(apf_IS_A_PREREQ ON)
                 endif ()
