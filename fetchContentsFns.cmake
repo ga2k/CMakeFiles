@@ -536,7 +536,8 @@ function(parsePackage)
             PKG_INDEX   #   INTEGER     IN          Package to select by index from Feature
                         #                           If INPUT_TYPE is PACKAGE, PKG_INDEX is ignored
             OUTPUT      #   VARNAME     OUT         Receive a copy of the entire PACKAGE
-            INDEX       #   VARNAME     OUT         Receive a copy of the package index (if applicable)
+            INDEX       #   VARNAME     OUT         Receive a copy of the package index
+            NAME        #   VARNAME     OUT         Receive a copy of the package name
             URL         #   VARNAME     OUT         Receive a copy of the URL attribute (if applicable)
             GIT_TAG     #   VARNAME     OUT         Receive a copy of the GIT_TAG attribute (if applicable)
             SRC_DIR     #   VARNAME     OUT         Receive a copy of the SRCDIR attribute (if applicable)
@@ -651,28 +652,37 @@ function(parsePackage)
         msg (ALWAYS FATAL_ERROR "parsePackage() needs FEATURE parameter")
     endif ()
 
-    if (NOT ((A_SET OR A_FEATURE) AND (DEFINED A_PP_PACKAGE OR DEFINED A_PP_PKG_INDEX)))
+    if (NOT ((A_SET OR A_FEATURE) AND (A_PP_PACKAGE OR DEFINED A_PP_PKG_INDEX)))
         msg (ALWAYS FATAL_ERROR "parsePackage() needs PACKAGE or PKG_INDEX parameter")
     endif ()
 
-    if (A_PP_PKG_INDEX AND A_PP_PACKAGE)
-        message(FATAL_ERROR "parsePackage() both PACKAGE and PKG_FEATURE supplied. Need one or the other")
+    if (DEFINED A_PP_PKG_INDEX AND A_PP_PACKAGE)
+        msg(ALWAYS WARNING "parsePackage() both PACKAGE and PKG_FEATURE supplied. Need one or the other")
     endif ()
 
     if(A_SET OR A_FEATURE)
         if(DEFINED A_PP_PKG_INDEX)
             getFeaturePackage(${inputListName} "${A_PP_FEATURE}" "${A_PP_PKG_INDEX}" local)
+            SplitAt("${local}" "|" name dc)
             set(index ${A_PP_PKG_INDEX})
         else ()
             getFeaturePackageByName(inputListName "${A_PP_FEATURE}" "${A_PP_PACKAGE}" local index)
+            set(name "${A_PP_PACKAGE}")
         endif ()
         if(DEFINED A_PP_INDEX)
             set(${A_PP_INDEX} ${index} PARENT_SCOPE)
+        endif ()
+        if(DEFINED A_PP_NAME)
+            set(${A_PP_NAME} ${name} PARENT_SCOPE)
         endif ()
     else()
         set(local ${${inputListName}})
         if(DEFINED A_PP_INDEX)
             set(${A_PP_INDEX} "UNKNOWN" PARENT_SCOPE)
+        endif ()
+        if(DEFINED A_PP_NAME)
+            SplitAt("${local}" "|" name dc)
+            set(${A_PP_NAME} ${name} PARENT_SCOPE)
         endif ()
     endif ()
 
@@ -855,8 +865,6 @@ function(parsePackage)
                 string(REGEX REPLACE ":" ";" temp ${temp})
                 set(${A_PP_COMPONENTS} ${temp} PARENT_SCOPE)
             endif ()
-        else ()
-            set(${A_PP_COMPONENTS} "" PARENT_SCOPE)
         endif ()
     endif ()
 
@@ -867,8 +875,6 @@ function(parsePackage)
                 string(REGEX REPLACE ":" ";" temp ${temp})
                 set(${A_PP_ARGS} ${temp} PARENT_SCOPE)
             endif ()
-        else ()
-            set(${A_PP_ARGS} "" PARENT_SCOPE)
         endif ()
     endif ()
 
@@ -879,8 +885,6 @@ function(parsePackage)
                 string(REGEX REPLACE " " ";" temp ${temp})
                 set(${A_PP_PREREQS} ${temp} PARENT_SCOPE)
             endif ()
-        else ()
-            set(${A_PP_PREREQS} "" PARENT_SCOPE)
         endif ()
     endif ()
 
@@ -923,15 +927,15 @@ function(resolveDependencies inputList allData outputList)
         if (NOT "${feature_name}" IN_LIST visited)
             list(APPEND visited "${feature_name}")
 
-            SplitAt("${feature_name}" "." feat_ idx_)
-            parsePackage("${allData}"
-                    FEATURE "${feat_}"
-                    PKG_INDEX "${idx_}"
+            parsePackage(${allData}
+                    FEATURE "${feature_name}"
+                    PKG_INDEX 0
+                    INDEX idx_
                     PREREQS pre_
                     ARGS args_
+                    NAME pkgname_
             )
 
-            pipelist(GET pkg 0 pkgname_)
             string(LENGTH "${pkgname_}" this_pkglength_)
             if (${this_pkglength_} GREATER ${longestPkgName})
                 set(longestPkgName ${this_pkglength_})
@@ -947,9 +951,10 @@ function(resolveDependencies inputList allData outputList)
 
                 set(found_entry_in_input_ "")
                 # TODO: Line below changed from inputLiist to allData
-                foreach(e_ IN LISTS allData) # inputList)
-                    if(e_ MATCHES "^${pr_feat_}\\.")
-                        set(found_entry_in_input_ "${e_}")
+                foreach(e_ IN LISTS ${allData}) # inputList)
+                    SplitAt("${e_}" fname_ dc_)
+                    if(fname_ MATCHES "^${pr_feat_}\\.")
+                        set(found_entry_in_input_ "${fname_}")
                         break()
                     endif()
                 endforeach()
@@ -960,9 +965,9 @@ function(resolveDependencies inputList allData outputList)
             endforeach()
 
             if (${is_a_prereq})
-                list(APPEND resolved "${entry}.P")
+                list(APPEND resolved "${feature_name}.P")
             else ()
-                list(APPEND resolved "${entry}")
+                list(APPEND resolved "${feature_name}")
             endif ()
 
             list(APPEND packageList ${pkgname_})
@@ -1000,7 +1005,7 @@ function(resolveDependencies inputList allData outputList)
 
     set(${outputList}       ${resolved}         PARENT_SCOPE)
     set(longestPkgName      ${longestPkgName}   PARENT_SCOPE)
-    set(packageList         ${packageList}      PARENT_SCOPE)
+    set(packages            ${packageList}      PARENT_SCOPE)
 
     unset(item)
     unset(_feature_name)

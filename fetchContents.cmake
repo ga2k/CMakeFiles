@@ -188,7 +188,7 @@ function(fetchContents)
     set(featuresList "${unifiedFeatureList}")
 
     if (APP_DEBUG)
-        log(TITLE "After re-ordering by prerequisites" LISTS features packages)
+        log(TITLE "After re-ordering by prerequisites" LISTS features packages featuresList)
     endif ()
 
     ####################################################################################################################
@@ -543,81 +543,81 @@ function(fetchContents)
     processFeatures("${features}" "${featuresList}")
     propegateUpwards("Finally" ON)
 
+
+    macro (propegateUpwards whereWeAre REPORT)
+
+        # @formatter:off
+        list(APPEND ${AUE_PREFIX}_CompileOptionsList ${_CompileOptionsList} ${${AUE_PREFIX}_CompileOptionsList})
+        list(APPEND ${AUE_PREFIX}_DefinesList        ${_DefinesList}        ${${AUE_PREFIX}_DefinesList})
+        list(APPEND ${AUE_PREFIX}_DependenciesList   ${_DependenciesList}   ${${AUE_PREFIX}_DependenciesList})
+
+        list(REMOVE_ITEM ${AUE_PREFIX}_DependenciesList ${removeFromDependencies})
+
+        list(APPEND ${AUE_PREFIX}_IncludePathsList   ${_IncludePathsList}   ${${AUE_PREFIX}_IncludePathsList})
+        list(APPEND ${AUE_PREFIX}_LibrariesList      ${_LibrariesList}      ${${AUE_PREFIX}_LibrariesList})
+        list(APPEND ${AUE_PREFIX}_LibraryPathsList   ${_LibraryPathsList}   ${${AUE_PREFIX}_LibraryPathsList})
+        list(APPEND ${AUE_PREFIX}_LinkOptionsList    ${_LinkOptionsList}    ${${AUE_PREFIX}_LinkOptionsList})
+        list(APPEND ${AUE_PREFIX}_PrefixPathsList    ${_PrefixPathsList}    ${${AUE_PREFIX}_PrefixPathsList})
+
+        list(APPEND ${AUE_PREFIX}_wxCompilerOptions  ${_wxCompilerOptions}  ${${AUE_PREFIX}_wxCompilerOptions})
+        list(APPEND ${AUE_PREFIX}_wxDefines          ${_wxDefines}          ${${AUE_PREFIX}_wxDefines})
+        list(APPEND ${AUE_PREFIX}_wxIncludePaths     ${_wxIncludePaths}     ${${AUE_PREFIX}_wxIncludePaths})
+        list(APPEND ${AUE_PREFIX}_wxLibraryPaths     ${_wxLibraryPaths}     ${${AUE_PREFIX}_wxLibraryPaths})
+        list(APPEND ${AUE_PREFIX}_wxLibraries        ${_wxLibraries}        ${${AUE_PREFIX}_wxLibraries})
+        list(APPEND ${AUE_PREFIX}_wxFrameworks       ${_wxFrameworks}       ${${AUE_PREFIX}_wxFrameworks})
+
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_CompileOptionsList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_DefinesList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_DependenciesList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_IncludePathsList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibrariesList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibraryPathsList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_LinkOptionsList)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_PrefixPathsList)
+
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxCompilerOptions)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxDefines)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxIncludePaths)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxLibraryPaths)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxLibraries)
+        list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxFrameworks)
+
+        set(${AUE_PREFIX}_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList} PARENT_SCOPE)
+        set(${AUE_PREFIX}_DefinesList        ${${AUE_PREFIX}_DefinesList}        PARENT_SCOPE)
+        set(${AUE_PREFIX}_DependenciesList   ${${AUE_PREFIX}_DependenciesList}   PARENT_SCOPE)
+        set(${AUE_PREFIX}_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList}   PARENT_SCOPE)
+        set(${AUE_PREFIX}_LibrariesList      ${${AUE_PREFIX}_LibrariesList}      PARENT_SCOPE)
+        set(${AUE_PREFIX}_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList}   PARENT_SCOPE)
+        set(${AUE_PREFIX}_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList}    PARENT_SCOPE)
+        set(${AUE_PREFIX}_PrefixPathsList    ${${AUE_PREFIX}_PrefixPathsList}    PARENT_SCOPE)
+
+        set(${AUE_PREFIX}_wxCompilerOptions  ${${AUE_PREFIX}_wxCompilerOptions}  PARENT_SCOPE)
+        set(${AUE_PREFIX}_wxDefines          ${${AUE_PREFIX}_wxDefines}          PARENT_SCOPE)
+        set(${AUE_PREFIX}_wxIncludePaths     ${${AUE_PREFIX}_wxIncludePaths}     PARENT_SCOPE)
+        set(${AUE_PREFIX}_wxLibraryPaths     ${${AUE_PREFIX}_wxLibraryPaths}     PARENT_SCOPE)
+        set(${AUE_PREFIX}_wxLibraries        ${${AUE_PREFIX}_wxLibraries}        PARENT_SCOPE)
+        set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
+        # @formatter:on
+
+        if(REPORT)
+            log(TITLE "${whereWeAre}" LISTS
+
+                    ${AUE_PREFIX}_CompileOptionsList
+                    ${AUE_PREFIX}_DefinesList
+                    ${AUE_PREFIX}_DependenciesList
+                    ${AUE_PREFIX}_IncludePathsList
+                    ${AUE_PREFIX}_LibrariesList
+                    ${AUE_PREFIX}_LibraryPathsList
+                    ${AUE_PREFIX}_LinkOptionsList
+                    ${AUE_PREFIX}_PrefixPathsList
+
+                    ${AUE_PREFIX}_wxCompilerOptions
+                    ${AUE_PREFIX}_wxDefines
+                    ${AUE_PREFIX}_wxIncludePaths
+                    ${AUE_PREFIX}_wxLibraryPaths
+                    ${AUE_PREFIX}_wxLibraries
+                    ${AUE_PREFIX}_wxFrameworks
+            )
+        endif ()
+    endmacro()
 endfunction()
-
-macro (propegateUpwards whereWeAre REPORT)
-
-    # @formatter:off
-    list(APPEND ${AUE_PREFIX}_CompileOptionsList ${_CompileOptionsList} ${${AUE_PREFIX}_CompileOptionsList})
-    list(APPEND ${AUE_PREFIX}_DefinesList        ${_DefinesList}        ${${AUE_PREFIX}_DefinesList})
-    list(APPEND ${AUE_PREFIX}_DependenciesList   ${_DependenciesList}   ${${AUE_PREFIX}_DependenciesList})
-
-    list(REMOVE_ITEM ${AUE_PREFIX}_DependenciesList ${removeFromDependencies})
-
-    list(APPEND ${AUE_PREFIX}_IncludePathsList   ${_IncludePathsList}   ${${AUE_PREFIX}_IncludePathsList})
-    list(APPEND ${AUE_PREFIX}_LibrariesList      ${_LibrariesList}      ${${AUE_PREFIX}_LibrariesList})
-    list(APPEND ${AUE_PREFIX}_LibraryPathsList   ${_LibraryPathsList}   ${${AUE_PREFIX}_LibraryPathsList})
-    list(APPEND ${AUE_PREFIX}_LinkOptionsList    ${_LinkOptionsList}    ${${AUE_PREFIX}_LinkOptionsList})
-    list(APPEND ${AUE_PREFIX}_PrefixPathsList    ${_PrefixPathsList}    ${${AUE_PREFIX}_PrefixPathsList})
-
-    list(APPEND ${AUE_PREFIX}_wxCompilerOptions  ${_wxCompilerOptions}  ${${AUE_PREFIX}_wxCompilerOptions})
-    list(APPEND ${AUE_PREFIX}_wxDefines          ${_wxDefines}          ${${AUE_PREFIX}_wxDefines})
-    list(APPEND ${AUE_PREFIX}_wxIncludePaths     ${_wxIncludePaths}     ${${AUE_PREFIX}_wxIncludePaths})
-    list(APPEND ${AUE_PREFIX}_wxLibraryPaths     ${_wxLibraryPaths}     ${${AUE_PREFIX}_wxLibraryPaths})
-    list(APPEND ${AUE_PREFIX}_wxLibraries        ${_wxLibraries}        ${${AUE_PREFIX}_wxLibraries})
-    list(APPEND ${AUE_PREFIX}_wxFrameworks       ${_wxFrameworks}       ${${AUE_PREFIX}_wxFrameworks})
-
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_CompileOptionsList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_DefinesList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_DependenciesList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_IncludePathsList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibrariesList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibraryPathsList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_LinkOptionsList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_PrefixPathsList)
-
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxCompilerOptions)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxDefines)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxIncludePaths)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxLibraryPaths)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxLibraries)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_wxFrameworks)
-
-    set(${AUE_PREFIX}_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList} PARENT_SCOPE)
-    set(${AUE_PREFIX}_DefinesList        ${${AUE_PREFIX}_DefinesList}        PARENT_SCOPE)
-    set(${AUE_PREFIX}_DependenciesList   ${${AUE_PREFIX}_DependenciesList}   PARENT_SCOPE)
-    set(${AUE_PREFIX}_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList}   PARENT_SCOPE)
-    set(${AUE_PREFIX}_LibrariesList      ${${AUE_PREFIX}_LibrariesList}      PARENT_SCOPE)
-    set(${AUE_PREFIX}_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList}   PARENT_SCOPE)
-    set(${AUE_PREFIX}_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList}    PARENT_SCOPE)
-    set(${AUE_PREFIX}_PrefixPathsList    ${${AUE_PREFIX}_PrefixPathsList}    PARENT_SCOPE)
-
-    set(${AUE_PREFIX}_wxCompilerOptions  ${${AUE_PREFIX}_wxCompilerOptions}  PARENT_SCOPE)
-    set(${AUE_PREFIX}_wxDefines          ${${AUE_PREFIX}_wxDefines}          PARENT_SCOPE)
-    set(${AUE_PREFIX}_wxIncludePaths     ${${AUE_PREFIX}_wxIncludePaths}     PARENT_SCOPE)
-    set(${AUE_PREFIX}_wxLibraryPaths     ${${AUE_PREFIX}_wxLibraryPaths}     PARENT_SCOPE)
-    set(${AUE_PREFIX}_wxLibraries        ${${AUE_PREFIX}_wxLibraries}        PARENT_SCOPE)
-    set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
-    # @formatter:on
-
-    if(REPORT)
-        log(TITLE "${whereWeAre}" LISTS
-
-                ${AUE_PREFIX}_CompileOptionsList
-                ${AUE_PREFIX}_DefinesList
-                ${AUE_PREFIX}_DependenciesList
-                ${AUE_PREFIX}_IncludePathsList
-                ${AUE_PREFIX}_LibrariesList
-                ${AUE_PREFIX}_LibraryPathsList
-                ${AUE_PREFIX}_LinkOptionsList
-                ${AUE_PREFIX}_PrefixPathsList
-
-                ${AUE_PREFIX}_wxCompilerOptions
-                ${AUE_PREFIX}_wxDefines
-                ${AUE_PREFIX}_wxIncludePaths
-                ${AUE_PREFIX}_wxLibraryPaths
-                ${AUE_PREFIX}_wxLibraries
-                ${AUE_PREFIX}_wxFrameworks
-        )
-    endif ()
-endmacro()
