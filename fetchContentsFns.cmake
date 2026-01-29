@@ -962,7 +962,7 @@ function(resolveDependencies inputList allData outputList)
             endforeach()
 
             if (${is_a_prereq})
-                list(APPEND resolved "${feature_name}.P")
+                list(APPEND resolved "${feature_name}.*")
             else ()
                 list(APPEND resolved "${feature_name}")
             endif ()
