@@ -184,7 +184,6 @@ function(initialiseFeatureHandlers)
     endif ()
 
     string(LENGTH "postMakeAvailable" longest)
-    set(spaces "                         ")
 
     foreach (handler IN LISTS handlers)
         get_filename_component(handlerName "${handler}" NAME_WE)
@@ -193,9 +192,9 @@ function(initialiseFeatureHandlers)
 
         string(LENGTH ${handlerName} length)
         math(EXPR num_spaces "${longest} - ${length}")
-        string(SUBSTRING "${spaces}" 0 ${num_spaces} padding)
+        string(REPEAT "${spaces}" ${num_spaces} padding)
 
-        set(msg "Adding handler ${padding}${handlerName} for ${packageName}")
+        set(msg "Adding handler ${padding}${BOLD}${handlerName}${NC} for ${BOLD}${packageName}${NC}")
         if (${handlerName} STREQUAL "init")
             string(APPEND msg " and calling it ...")
         endif ()
@@ -925,6 +924,7 @@ function(resolveDependencies inputList allData outputList)
     set(packageList "")
     set(visited "")
     set(longestPkgName 0)
+    set(longestFeatureName 0)
 
     # Internal helper to walk dependencies
     macro(visit feature_name pkg is_a_prereq)
@@ -943,6 +943,11 @@ function(resolveDependencies inputList allData outputList)
             string(LENGTH "${pkgname_}" this_pkglength_)
             if (${this_pkglength_} GREATER ${longestPkgName})
                 set(longestPkgName ${this_pkglength_})
+            endif ()
+
+            string(LENGTH "${feature_name}" this_featurelength_)
+            if (${this_featurelength_} GREATER ${longestFeatureName})
+                set(longestFeatureName ${this_featurelength_})
             endif ()
 
             foreach(pr_entry_ IN LISTS pre_)
@@ -989,6 +994,7 @@ function(resolveDependencies inputList allData outputList)
         unset(pr_feat_)
         unset(pre_)
         unset(this_pkglength_)
+        unset(this_featurelength_)
 
     endmacro()
 
@@ -1007,9 +1013,10 @@ function(resolveDependencies inputList allData outputList)
         visit("${_feature_name}" "${_pkg}" OFF)
     endforeach()
 
-    set(${outputList}       ${resolved}         PARENT_SCOPE)
-    set(longestPkgName      ${longestPkgName}   PARENT_SCOPE)
-    set(packages            ${packageList}      PARENT_SCOPE)
+    set(${outputList}       ${resolved}             PARENT_SCOPE)
+    set(longestPkgName      ${longestPkgName}       PARENT_SCOPE)
+    set(longestFeatureName  ${longestFeatureName}   PARENT_SCOPE)
+    set(packages            ${packageList}          PARENT_SCOPE)
 
     unset(item)
     unset(_feature_name)
