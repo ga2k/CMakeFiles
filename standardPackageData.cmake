@@ -77,7 +77,7 @@ function(createStandardPackageData)
     ##
     #
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG) # PREREQ DATABASE)
+            ARGS REQUIRED CONFIG PREREQ DATABASE=soci)
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
             ARGS REQUIRED CONFIG PREREQ CORE)
