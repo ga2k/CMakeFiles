@@ -1,8 +1,8 @@
 ########################################################################################################################
 function(createStandardPackageData)
 
-    # 0          1          2            3      4        5                6                     7          8                                            9                        10
-    # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
+    # 0         1          2            3      4        5                6                       7          8                                            9                        10
+    # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BUILDDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
@@ -28,7 +28,7 @@ function(createStandardPackageData)
     #                                   ${BUILD_DIR}/_deps
     #       ----------------------------------------------------------------------------------------------------
     #   [7] GIT_TAG     for identifying which git branch/tag to retrieve, OR
-    #       BINDIR      is the build directory if you have manually downloaded the source. Format as SRCDIR
+    #       BUILDDIR    is the build directory if you have manually downloaded the source. Format as SRCDIR
     #
     #   [8] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
     #

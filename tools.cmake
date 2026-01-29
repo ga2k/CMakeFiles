@@ -1123,9 +1123,9 @@ endfunction()
 #           so make sure you use THAT name in the template.
 # ##################################################################
 function(configure_stringify)
-    set(FLAGS "CR;NOCR;QUOTES;NOQUOTES")
-    set(SINGLE_ARGS "IN;SOURCE;OUT;DESTINATION;SEP;LIST")
-    set(MULTI_ARGS "LISTS")
+    set(FLAGS CR NOCR QUOTES NOQUOTES)
+    set(SINGLE_ARGS  IN SOURCE OUT DESTINATION SEP LIST)
+    set(MULTI_ARGS LISTS)
 
     cmake_parse_arguments(A_CS "${FLAGS}" "${SINGLE_ARGS}" "${MULTI_ARGS}" ${ARGN})
 

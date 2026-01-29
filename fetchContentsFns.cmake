@@ -1,5 +1,46 @@
 cmake_minimum_required(VERSION 3.28)
 
+set(FeatureIX 0)
+set(FeaturePkgNameIX 1)
+set(FeatureNamespaceIX 2)
+set(FeatureKindIX 3)
+set(FeatureMethodIX 4)
+set(FeatureUrlIX 5)
+set(FeatureGitTagIX 6)
+set(FeatureSrcDirIX 5)
+set(FeatureBuildDirIX 6)
+set(FeatureIncDirIX 7)
+set(FeatureComponentsIX 8)
+set(FeatureArgsIX 9)
+set(FeaturePrereqsIX 10)
+math(EXPR FeatureIXCount "${FeaturePrereqsIX} + 1")
+
+set(PkgNameIX 0)
+set(PkgNamespaceIX 1)
+set(PkgKindIX 2)
+set(PkgMethodIX 3)
+set(PkgUrlIX 4)
+set(PkgGitTagIX 5)
+set(PkgSrcDirIX 4)
+set(PkgBuildDirIX 5)
+set(PkgIncDirIX 6)
+set(PkgComponentsIX 7)
+set(PkgArgsIX 8)
+set(PkgPrereqsIX 9)
+math(EXPR PkgIXCount "${PkgPrereqsIX} + 1")
+
+string(ASCII 27 ESC)
+set(RED     "${ESC}[31m")
+set(GREEN   "${ESC}[32m")
+set(YELLOW  "${ESC}[33m")
+set(BLUE    "${ESC}[34m")
+set(MAGENTA "${ESC}[35m")
+set(CYAN    "${ESC}[36m")
+set(WHITE   "${ESC}[37m")
+set(DEFAULT "${ESC}[38m")
+set(BOLD    "${ESC}[1m" )
+set(NC      "${ESC}[0m" )
+
 macro(fetchContentsHelp)
 
     set(help_msg "[=[
@@ -485,28 +526,105 @@ function(parsePackage)
     set(options)
     set(one_value_args
 #           Keyword         Type        Direction   Description
-            OUTPUT      #   VARNAME     OUT         Receive a copy of the PACKAGE
+            INPUT_TYPE  #   STRING      IN          Type of list supplied in inputListName
+                        #                           One of (SET,FEATURE,PACKAGE).
+                        #                           If omitted, an attempt to determine it will be made
             FEAT_NAME   #   STRING      IN          Feature to select from inputList
                         #                           If INPUT_TYPE is FEATURE or PACKAGE, FEAT_NAME is ignored
             PKG_NAME    #   STRING      IN          Package to select by name from Feature
                         #                           If INPUT_TYPE is PACKAGE, PKG_NAME is ignored
-            PKG_INDEX   #   INTEGER     IN
-            URL GIT_TAG
-            SRC_DIR BUILD_DIR INC_DIR
-            FETCH_FLAG
-            KIND METHOD
-            COMPONENTS
-            PREREQS
-            ARGS
+            PKG_INDEX   #   INTEGER     IN          Package to select by index from Feature
+                        #                           If INPUT_TYPE is PACKAGE, PKG_INDEX is ignored
+            OUTPUT      #   VARNAME     OUT         Receive a copy of the entire PACKAGE
+            URL         #   VARNAME     OUT         Receive a copy of the URL attribute (if applicable)
+            GIT_TAG     #   VARNAME     OUT         Receive a copy of the GIT_TAG attribute (if applicable)
+            SRC_DIR     #   VARNAME     OUT         Receive a copy of the SRCDIR attribute (if applicable)
+            BUILD_DIR   #   VARNAME     OUT         Receive a copy of the BUILDDIR attribute (if applicable)
+            INC_DIR     #   VARNAME     OUT         Receive a copy of the INCDIR attribute (if applicable)
+            FETCH_FLAG  #   VARNAME     OUT         Indication that this PACKAGE needs to be downloaded somehow
+            KIND        #   VARNAME     OUT         Receive a copy of the KIND attribute (SYSTEM/LIBRARY/USER)
+            METHOD      #   VARNAME     OUT         Receive a copy of the METHOD attribute (FETCH_CONTENT/FIND_PACKAGE/PROCESS)
+            COMPONENTS  #   VARNAME     OUT         Receive a copy of the COMPONENT attribute in CMake LIST format
+            PREREQS     #   VARNAME     OUT         Receive a copy of the PREREQ attribute in CMake LIST format
+            ARGS        #   VARNAME     OUT         Receive a copy of the ARG attribute in CMake LIST format
     )
     set(multi_value_args)
+    unset(A_PP_UNDEFINED_ARGUMENTS)
 
     # Parse the arguments
     cmake_parse_arguments(A_PP "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+    if (NOT DEFINED A_PP_UNPARSED_ARGUMENTS)
+        msg(ALWAYS FATAL_ERROR "NO inputListName found in call to parsePackage()")
+    endif ()
+
     list(POP_FRONT A_PP_UNPARSED_ARGUMENTS inputListName)
 
+    if (NOT DEFINED ${inputListName})
+        msg(ALWAYS FATAL_ERROR "NO input list called \"${inputListName}\" exists in call to parsePackage()")
+    endif ()
+
+    unset(inputListVerifyFailed)
+
+    if (NOT DEFINED A_PP_INPUT_TYPE)
+        # How we know what we have;
+        # Definitions
+        # PIPELIST      Like a CMAKE LIST, except each record separator ";" is replaced by a PIPE ("|") symbol.
+        #               The list(LENGTH...)    of a PIPELIST will be 1.
+        #               The piplist(LENGTH...) of a PIPELIST will be from ${PkgIXCount} to ${FeatureIXCount} + n * ${PkgIXCount}
+        # PACKAGE       A PIPELIST. pipelist(LENGTH...) will be ${PkgIXCount}
+        # FEATURE       A PIPELIST that Looks like this <FEATURE_NAME><PACKAGE>[,<PACKAGE>[...]]
+        #               so a FEATURE has the length of ${FeatureIXCount} + n * ${PkgIXCount}
+        # SET           A CMake LIST of FEATURES. Each FEATURE will be one PIPELIST
+
+        # See if this is a PIPELIST
+        list(LENGTH inputListName listLength)
+        pipelist(LENGTH inputListName pipeLength)
+
+        if (${listLength} EQUAL 1 AND ${pipeLength} EQUAL 1)
+            set(inputListVerifyFailed "INPUT_TYPE needed - analysis failed")
+        elseif (${listLength} GREATER_EQUAL 1 AND ${pipeLength} EQUAL 0)
+            # Can ONLY be a set. We'll check if it is later
+            set(A_PP_INPUT_TYPE "SET")
+        elseif (${listLength} EQUAL 1 AND ${pipeLength} EQUAL ${PkgIXCount})
+            # Can ONLY be a PACKAGE. We'll check if it is later
+            set(A_PP_INPUT_TYPE "PACKAGE")
+        elseif (${listLength} EQUAL 1 AND ${pipeLength} GREATER_EQUAL ${FeatureIXCount})
+            # Can ONLY be a FEATURE. We'll check if it is later
+            set(A_PP_INPUT_TYPE "FEATURE")
+        else ()
+            set(inputListVerifyFailed "INPUT_TYPE needed - analysis failed")
+        endif ()
+    endif ()
+
+    if (NOT inputListVerifyFailed)
+        # Ok, we know what inputListName is SUPPOSED to be, let's verify it
+
+        if (${A_PP_INPUT_TYPE} MATCHES "PACKAGE")
+            pipelist(LENGTH inputListName len)
+            if (NOT ${len} EQUAL "${PkgIXCount}")
+                set(inputListVerifyFailed "PACKAGE length of ${len} should be ${PkgIXCount}")
+            endif ()
+        elseif (${A_PP_INPUT_TYPE} MATCHES "FEATURE")
+            pipelist(LENGTH inputListName len)
+            if (NOT ${len} GREATER_EQUAL "${FeatureIXCount}")
+                set(inputListVerifyFailed "FEATURE length of ${len} should be 1 + n * ${PkgIXCount}")
+            else ()
+                math(EXPR featurePackages "(${len} - 1) % ${PkgIXCount})")
+                math(EXPR expectedFields "1 + ${featurePackages} * ${PkgIXCount}")
+                if (NOT ${len} EQUAL "${expectedFields}")
+                    set(inputListVerifyFailed "FEATURE length of ${len} should be 1 + n * ${PkgIXCount}")
+                endif ()
+            endif ()
+        endif ()
+    endif ()
+
+    if(inputListVerifyFailed)
+        msg(ALWAYS FATAL_ERROR "${RED}${BOLD}parsePackage() FAIL:${NC} ${inputListVerifyFailed}")
+    endif()
+
     if (NOT A_PP_FEATURE)
-        message(FATAL_ERROR "parsePackage() needs FEATURE parameter")
+        message(FATAL_ERROR "parsePackage() needs FEAT_NAME parameter")
     endif ()
 
     if (NOT A_PP_PKG_INDEX AND NOT A_PP_PKG_NAME)
@@ -777,7 +895,7 @@ function(resolveDependencies inputList allData outputList)
 
             SplitAt("${feature_name}" "." feat_ idx_)
             parsePackage("${allData}"
-                    FEATURE "${feat_}"
+                    FEAT_NAME "${feat_}"
                     PKG_INDEX "${idx_}"
                     PREREQS pre_
                     ARGS args_
@@ -838,7 +956,7 @@ function(resolveDependencies inputList allData outputList)
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS inputList)
         SplitAt("${item}" "|" _feature_name _pkg)
-        parsePackage(inputList FEATURE "${_feature_name}" PKG_INDEX 0 KIND _kind ARGS _args)
+        parsePackage(inputList FEAT_NAME "${_feature_name}" PKG_INDEX 0 KIND _kind ARGS _args)
         if ("${_kind}" STREQUAL "LIBRARY")
             visit("${_feature_name}" "${_pkg}" OFF)
         endif()

@@ -1,34 +1,5 @@
 include(FetchContent)
 
-set(FeatureIX 0)
-set(FeaturePkgNameIX 1)
-set(FeatureNamespaceIX 2)
-set(FeatureKindIX 3)
-set(FeatureMethodIX 4)
-set(FeatureUrlIX 5)
-set(FeatureGitTagIX 6)
-set(FeatureSrcDirIX 5)
-set(FeatureBuildDirIX 6)
-set(FeatureIncDirIX 7)
-set(FeatureComponentsIX 8)
-set(FeatureArgsIX 9)
-set(FeaturePrereqsIX 10)
-math(EXPR FeatureIXCount "${FeaturePrereqsIX} + 1")
-
-set(PkgNameIX 0)
-set(PkgNamespaceIX 1)
-set(PkgKindIX 2)
-set(PkgMethodIX 3)
-set(PkgUrlIX 4)
-set(PkgGitTagIX 5)
-set(PkgSrcDirIX 4)
-set(PkgBuildDirIX 5)
-set(PkgIncDirIX 6)
-set(PkgComponentsIX 7)
-set(PkgArgsIX 8)
-set(PkgPrereqsIX 9)
-math(EXPR PkgIXCount "${PkgPrereqsIX} + 1")
-
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
 
@@ -225,21 +196,6 @@ function(fetchContents)
     ################################ T H E   R E A L   W O R K   B E G I N S   H E R E #################################
     ####################################################################################################################
     ####################################################################################################################
-
-    string(ASCII 27 ESC)
-    set(RED     "${ESC}[31m")
-    set(GREEN   "${ESC}[32m")
-    set(YELLOW  "${ESC}[33m")
-    set(BLUE    "${ESC}[34m")
-    set(MAGENTA "${ESC}[35m")
-    set(CYAN    "${ESC}[36m")
-    set(WHITE   "${ESC}[37m")
-    set(DEFAULT "${ESC}[38m")
-    set(BOLD    "${ESC}[1m" )
-    set(NC      "${ESC}[0m" )
-
-
-
     ##
     ## Nested function. How fancy
     ##
@@ -308,12 +264,12 @@ function(fetchContents)
 
                 parsePackage(feature
                         BUILD_DIR this_build
-                        FEATURE ${this_package}
+                        FEAT_NAME ${this_package}
                         FETCH_FLAG this_fetch
                         GIT_TAG this_tag
                         INC_DIR this_inc
                         KIND this_kind
-                        LIST pkg_details
+                        OUTPUT pkg_details
                         METHOD this_method
                         PKG_INDEX ${this_pkgindex}
                         SRC_DIR this_src
