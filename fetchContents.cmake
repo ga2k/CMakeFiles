@@ -305,17 +305,20 @@ function(fetchContents)
                 parsePackage(featureList
                         FEATURE     ${featureName}
                         PKG_INDEX   0
+                        ARGS        this_find_package_args
                         BUILD_DIR   this_build
+                        COMPONENTS  this_find_package_components
                         FETCH_FLAG  this_fetch
                         GIT_TAG     this_tag
                         INC_DIR     this_inc
                         KIND        this_kind
                         METHOD      this_method
-                        OUTPUT      pkg_details
-                        SRC_DIR     this_src
-                        URL         this_url
                         NAME        this_pkgname
                         NAMESPACE   this_namespace
+                        OUTPUT      pkg_details
+                        PREREQS     this_prereqs
+                        SRC_DIR     this_src
+                        URL         this_url
                 )
 
                 string(TOLOWER "${this_pkgname}" this_pkglc)
