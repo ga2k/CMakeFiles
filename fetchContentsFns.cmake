@@ -325,22 +325,22 @@ function(addPackageData)
         set(APD_PREREQS "-")
     endif ()
 
-    pipelist(REPLACE output "${FeatureIX}"           "${APD_FEATURE}")
-    pipelist(REPLACE output "${FeaturePkgNameIX}"    "${APD_PKGNAME}")
-    pipelist(REPLACE output "${FeatureNamespaceIX}"  "${APD_NAMESPACE}")
-    pipelist(REPLACE output "${FeatureKindIX}"       "${APD_KIND}")
-    pipelist(REPLACE output "${FeatureMethodIX}"     "${APD_METHOD}")
-    pipelist(REPLACE output "${FeatureUrlIX}"        "${URLorSRCDIR}")
-    pipelist(REPLACE output "${FeatureGitTagIX}"     "${TAGorBINDIR}")
-    pipelist(REPLACE output "${FeatureIncDirIX}"     "${APD_INCDIR}")
-    pipelist(REPLACE output "${FeatureComponentsIX}" "${APD_COMPONENTS}")
-    pipelist(REPLACE output "${FeatureArgsIX}"       "${APD_ARGS}")
-    pipelist(REPLACE output "${FeaturePrereqsIX}"    "${APD_PREREQS}")
+    array(REPLACE output "${FeatureIX}"           "${APD_FEATURE}")
+    array(REPLACE output "${FeaturePkgNameIX}"    "${APD_PKGNAME}")
+    array(REPLACE output "${FeatureNamespaceIX}"  "${APD_NAMESPACE}")
+    array(REPLACE output "${FeatureKindIX}"       "${APD_KIND}")
+    array(REPLACE output "${FeatureMethodIX}"     "${APD_METHOD}")
+    array(REPLACE output "${FeatureUrlIX}"        "${URLorSRCDIR}")
+    array(REPLACE output "${FeatureGitTagIX}"     "${TAGorBINDIR}")
+    array(REPLACE output "${FeatureIncDirIX}"     "${APD_INCDIR}")
+    array(REPLACE output "${FeatureComponentsIX}" "${APD_COMPONENTS}")
+    array(REPLACE output "${FeatureArgsIX}"       "${APD_ARGS}")
+    array(REPLACE output "${FeaturePrereqsIX}"    "${APD_PREREQS}")
 
-    pipelist(LENGTH output len)
+    array(LENGTH output len)
     message("${output} should be ${FeatureIXCount} fields, but it's ${len}")
     foreach(ix RANGE 0 ${FeatureSeparators})
-        pipelist(GET output ${ix} var)
+        array(GET output ${ix} var)
         message("${ix}\t ${var}")
     endforeach ()
     message()
@@ -372,7 +372,7 @@ function(addPackageData)
         msg("Adding feature${padding}${BOLD}${APD_FEATURE}${NC} for package ${BOLD}${APD_PKGNAME}${NC}")
     else ()
         list(GET ${activeArray} ${pkgIndex} existing_feature)
-        pipelist(POP_FRONT output dc) # Convert it to a PACKAGE
+        array(POP_FRONT output dc) # Convert it to a PACKAGE
         string(JOIN "," combined_feature "${existing_feature}" "${output}")
         list(REMOVE_AT ${activeArray} ${pkgIndex})
         list(INSERT ${activeArray} ${pkgIndex} "${combined_feature}")
@@ -552,14 +552,14 @@ function(parsePackage)
         # PIPELIST      Like a CMAKE LIST, except each record separator ";" is replaced by a PIPE ("|") symbol.
         #               The list(LENGTH...)    of a PIPELIST will be 1.
         #               The piplist(LENGTH...) of a PIPELIST will be from ${PkgIXCount} to ${FeatureIXCount} + n * ${PkgIXCount}
-        # PACKAGE       A PIPELIST. pipelist(LENGTH...) will be ${PkgIXCount}
+        # PACKAGE       A PIPELIST. array(LENGTH...) will be ${PkgIXCount}
         # FEATURE       A PIPELIST that Looks like this <FEATURE_NAME><PACKAGE>[,<PACKAGE>[...]]
         #               so a FEATURE has the length of ${FeatureIXCount} + n * ${PkgIXCount}
         # SET           A CMake LIST of FEATURES. Each FEATURE will be one PIPELIST
 
         # See if this is a PIPELIST
         list(LENGTH ${inputListName} listLength)
-        pipelist(LENGTH ${inputListName} pipeLength)
+        array(LENGTH ${inputListName} pipeLength)
 
         if (${listLength} GREATER_EQUAL 2)
             # Can ONLY be a set. We'll check if it is later
@@ -585,7 +585,7 @@ function(parsePackage)
         if (${A_PP_INPUT_TYPE} MATCHES "PACKAGE")
             set(A_PACKAGE ON)
 
-            pipelist(LENGTH ${${inputListName}} len)
+            array(LENGTH ${${inputListName}} len)
             if (NOT ${len} EQUAL "${PkgIXCount}")
                 set(inputListVerifyFailed "Input PACKAGE length of ${len} should be ${PkgIXCount}")
             endif ()
@@ -593,7 +593,7 @@ function(parsePackage)
         elseif (${A_PP_INPUT_TYPE} MATCHES "FEATURE")
             set(A_FEATURE ON)
 
-            pipelist(LENGTH ${inputListName} len)
+            array(LENGTH ${inputListName} len)
             if (NOT ${len} GREATER_EQUAL "${FeatureIXCount}")
                 set(inputListVerifyFailed "Input FEATURE length of ${len} should be at least ${PkgIXCount}")
             else ()
@@ -613,7 +613,7 @@ function(parsePackage)
                 string(REPLACE "," ";" sampleList "${sample}")
                 list(LENGTH sampleList pkgCount)
                 string(REPLACE ";" "|" samplePipelist "${sampleList}")
-                pipelist(LENGTH samplePipelist len)
+                array(LENGTH samplePipelist len)
                 math(EXPR expectedFields "1 + (${pkgCount} * ${PkgIXCount})")
                 if (NOT (${len} EQUAL ${PkgIXCount} OR ${len} EQUAL "${expectedFields}"))
                     list(APPEND inputListVerifyFailed "FEATURE #${whichElement} of ${numElements} in input list is invalid\n${sample}\n")
@@ -932,8 +932,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
                 set(found_entry_in_input_ "")
                 # TODO: Line below changed from inputLiist to allData
                 foreach(e_ IN LISTS ${lol}) # inputList)
-                    pipelist(GET e_ ${FeatureIX} pr_fname_)
-                    pipelist(GET e_ ${FeaturePkgNameIX} pr_pname_)
+                    array(GET e_ ${FeatureIX} pr_fname_)
+                    array(GET e_ ${FeaturePkgNameIX} pr_pname_)
                     if("${pr_feat_}" MATCHES "${pr_fname_}" AND "${pr_pkgname_}" STREQUAL "${pr_pname_}")
                         set(found_entry_in_input_ "${pr_fname_}=${pr_pname_}")
                         getFeaturePackageByName("${lol}" "${pr_fname_}" "${pr_pname_}" prereq_pkg prereq_idx)
@@ -982,8 +982,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS ${inputFeaturesList})
-        pipelist(GET item ${FeatureIX} _feature_name)
-        pipelist(GET item ${FeatureKindIX} _kind)
+        array(GET item ${FeatureIX} _feature_name)
+        array(GET item ${FeatureKindIX} _kind)
         if ("${_kind}" STREQUAL "LIBRARY")
             visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
         endif()
@@ -991,7 +991,7 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS ${inputFeaturesList})
-        pipelist(GET item ${FeatureIX} _feature_name)
+        array(GET item ${FeatureIX} _feature_name)
         visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
     endforeach()
 
@@ -1416,17 +1416,17 @@ function(processFeatures featureList returnVarName)
 
         #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
-        pipelist(REPLACE new_feature "${FeatureIX}"             "${_feature}")
-        pipelist(REPLACE new_feature "${FeaturePkgNameIX}"      "${_pkg}")
-        pipelist(REPLACE new_feature "${FeatureNamespaceIX}"    "${_ns}")
-        pipelist(REPLACE new_feature "${FeatureKindIX}"         "${_kind}")
-        pipelist(REPLACE new_feature "${FeatureMethodIX}"       "${_method}")
-        pipelist(REPLACE new_feature "${FeatureUrlIX}"          "${_url}")
-        pipelist(REPLACE new_feature "${FeatureGitTagIX}"       "${_tag}")
-        pipelist(REPLACE new_feature "${FeatureIncDirIX}"       "${_incdir}")
-        pipelist(REPLACE new_feature "${FeatureComponentsIX}"   "${_components}")
-        pipelist(REPLACE new_feature "${FeatureArgsIX}"         "${_args}")
-        pipelist(REPLACE new_feature "${FeaturePrereqsIX}"      "${_prerequisites}")
+        array(REPLACE new_feature "${FeatureIX}"             "${_feature}")
+        array(REPLACE new_feature "${FeaturePkgNameIX}"      "${_pkg}")
+        array(REPLACE new_feature "${FeatureNamespaceIX}"    "${_ns}")
+        array(REPLACE new_feature "${FeatureKindIX}"         "${_kind}")
+        array(REPLACE new_feature "${FeatureMethodIX}"       "${_method}")
+        array(REPLACE new_feature "${FeatureUrlIX}"          "${_url}")
+        array(REPLACE new_feature "${FeatureGitTagIX}"       "${_tag}")
+        array(REPLACE new_feature "${FeatureIncDirIX}"       "${_incdir}")
+        array(REPLACE new_feature "${FeatureComponentsIX}"   "${_components}")
+        array(REPLACE new_feature "${FeatureArgsIX}"         "${_args}")
+        array(REPLACE new_feature "${FeaturePrereqsIX}"      "${_prerequisites}")
 
         string(REPLACE "-" ""   new_feature "${new_feature}")
         string(REPLACE "::" ":" new_feature "${new_feature}")
