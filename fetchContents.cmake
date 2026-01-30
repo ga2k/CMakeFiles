@@ -296,6 +296,12 @@ function(fetchContents)
 
                 unsetLocalVars()
 
+                # See if this is a prereqisuite package. If it is, we do both phases together
+                SplitAt(${featureName} "." featureName flagChar)
+                if ("${flagChar}" STREQUAL "*")
+                    set(apf_IS_A_PREREQ ON)
+                endif ()
+
                 parsePackage(featureList
                         FEATURE     ${featureName}
                         PKG_INDEX   0
