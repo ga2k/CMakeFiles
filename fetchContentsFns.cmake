@@ -612,7 +612,7 @@ function(parsePackage)
                 math(EXPR whichElement "${whichElement} + 1")
                 string(REPLACE "," ";" sampleList "${sample}")
                 list(LENGTH sampleList pkgCount)
-                string(REPLACE ";" "|" samplePipelist "${sampleList}")
+                string(REPLACE ";" "&" samplePipelist "${sampleList}")
                 array(LENGTH samplePipelist len)
                 math(EXPR expectedFields "1 + (${pkgCount} * ${PkgIXCount})")
                 if (NOT (${len} EQUAL ${PkgIXCount} OR ${len} EQUAL "${expectedFields}"))
@@ -658,7 +658,7 @@ function(parsePackage)
         SplitAt("${local}" "|" localName dc)
     endif ()
 
-    string(REPLACE "|" ";" pkg "${local}")
+    string(REPLACE "&" ";" pkg "${local}")
     list(LENGTH pkg length)
 
     # Easy ones
@@ -1059,7 +1059,7 @@ function(scanLibraryTargets libName packageData)
                     # 4. Extract package details
                     # Format is usually: PKGNAME|NAMESPACE|KIND|METHOD|URL|GIT_TAG|INCDIR|COMPONENTS|ARGS|PREREQS
                     # but let's be careful about how many | there are.
-                    string(REPLACE "|" ";" pkg_details "${pkg_entry}")
+                    string(REPLACE "&" ";" pkg_details "${pkg_entry}")
                     list(GET pkg_details ${PkgNameIX} pkg_name)
                     list(GET pkg_details ${PkgNamespaceIX} ns)
                     list(GET pkg_details ${PkgComponentsIX} components) # COMPONENTS are at index 7 (0-based)
@@ -1319,7 +1319,7 @@ function(processFeatures featureList returnVarName)
 
         string(REPEAT "|" ${FeatureIXCount} new_feature)
 
-        string(REPLACE "|" ";" feature "${feature}")
+        string(REPLACE "&" ";" feature "${feature}")
         separate_arguments(feature NATIVE_COMMAND "${feature}")
         cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
         list (POP_FRONT AA_UNPARSED_ARGUMENTS _feature)

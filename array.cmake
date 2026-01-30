@@ -48,7 +48,7 @@ function(array verb arrayVar)
             set(_record "")
         endif()
 
-        string(REPLACE "|" ";" _tmp_list "${_record}")
+        string(REPLACE "&" ";" _tmp_list "${_record}")
         list(LENGTH _tmp_list _len)
 
         if(_index GREATER_EQUAL _len)
@@ -96,7 +96,7 @@ function(array verb arrayVar)
             set(_record "")
         endif()
 
-        string(REPLACE "|" ";" _tmp_list "${_record}")
+        string(REPLACE "&" ";" _tmp_list "${_record}")
         list(LENGTH _tmp_list _len)
         set(${_outVar} "${_len}" PARENT_SCOPE)
 
@@ -128,7 +128,7 @@ function(array verb arrayVar)
             set(_record "")
         endif()
 
-        string(REPLACE "|" ";" _tmp_list "${_record}")
+        string(REPLACE "&" ";" _tmp_list "${_record}")
         list(LENGTH _tmp_list _len)
 
         if(_index GREATER_EQUAL _len)
@@ -147,7 +147,7 @@ function(array verb arrayVar)
             list(INSERT _tmp_list ${_index} "${_newValue}")
         endif()
 
-        string(REPLACE ";" "|" _joined "${_tmp_list}")
+        string(REPLACE ";" "&" _joined "${_tmp_list}")
         set(${arrayVar} "${_joined}" PARENT_SCOPE)
 
         unset(_record)
@@ -170,7 +170,7 @@ function(array verb arrayVar)
             set(_record "")
         endif()
 
-        string(REPLACE "|" ";" _tmp_list "${_record}")
+        string(REPLACE "&" ";" _tmp_list "${_record}")
 
         if("${_P_VERB}" STREQUAL "POP_FRONT")
             list(POP_FRONT _tmp_list _value)
@@ -179,7 +179,7 @@ function(array verb arrayVar)
         endif ()
         set(${_outVar} "${_value}" PARENT_SCOPE)
 
-        string(REPLACE ";" "|" _record "${_tmp_list}")
+        string(REPLACE ";" "&" _record "${_tmp_list}")
         set(${arrayVar} "${_record}" PARENT_SCOPE)
 
         unset(_record)
