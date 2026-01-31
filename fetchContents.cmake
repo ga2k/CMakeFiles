@@ -9,6 +9,8 @@ set(UserFeatureData)
 ########################################################################################################################
 function(fetchContents)
 
+    array(CREATE FEATURES ARRAYS)
+    array(DUMP FEATURES)
     createStandardPackageData()
 
     set(options HELP)
