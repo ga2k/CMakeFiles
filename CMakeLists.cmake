@@ -1,29 +1,30 @@
 ## HoffSoft build framework delegator (split into global + per-project)
+include (cmake/array.cmake)
 
 message (NOTICE "\n\t\tProcessing ${APP_NAME}\n")
 
 unset (PLUGINS)
 
 if ("${APP_FEATURES}" MATCHES "APPEARANCE")
-    list(APPEND PLUGINS Appearance)
+    record(APPEND PLUGINS Appearance)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "LOGGER")
-    list(APPEND PLUGINS Logger)
+    record(APPEND PLUGINS Logger)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "PRINT")
-    list(APPEND PLUGINS Print)
+    record(APPEND PLUGINS Print)
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "CORE")
-    list(APPEND REQD_LIBS "HoffSoft")
-    list(APPEND FIND_PACKAGE_PATHS "CORE REQUIRED CONFIG PATHS {HoffSoft}" )
+    record(APPEND REQD_LIBS "HoffSoft")
+    record(APPEND FIND_PACKAGE_PATHS "CORE REQUIRED CONFIG PATHS {HoffSoft}" )
 endif ()
 
 if ("${APP_FEATURES}" MATCHES "GFX")
-    list(APPEND REQD_LIBS "Gfx")
-    list(APPEND FIND_PACKAGE_PATHS "GFX  REQUIRED CONFIG PATHS {Gfx}" )
+    record(APPEND REQD_LIBS "Gfx")
+    record(APPEND FIND_PACKAGE_PATHS "GFX REQUIRED CONFIG PATHS {Gfx}" )
 endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)

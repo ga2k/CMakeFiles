@@ -1,4 +1,5 @@
 include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
 
 set(FeatureIX 0)
 set(FeaturePkgNameIX 1)
@@ -14,7 +15,7 @@ set(FeatureComponentsIX 8)
 set(FeatureArgsIX 9)
 set(FeaturePrereqsIX 10)
 set(FeatureSeparators ${FeaturePrereqsIX})
-math(EXPR FeatureFields "${FeaturePrereqsIX} + 1")
+math(EXPR FeatureLength "${FeaturePrereqsIX} + 1")
 
 set(PkgNameIX 0)
 set(PkgNamespaceIX 1)
@@ -59,7 +60,7 @@ HELP
     Currently available package features are
 ]=]")
 
-    list(LENGTH PKG_FEATURES items)
+    record(LENGTH PKG_FEATURES items)
     math(EXPR last_item "${items} - 1")
 
     # Find longest package feature
@@ -108,12 +109,12 @@ function(addTargetProperties target pkgname addToLists)
     unset(at_DependenciesList)
     unset(at_LibraryPathsList)
 
-    message(" ")
-    message("addTargetProperties called for '${target}'")
+    msg(" ")
+    msg("addTargetProperties called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
     if (NOT ${_aliasTarget} STREQUAL "_aliasTarget-NOTFOUND")
-        message("Target ${target} is an alias. Retargeting target to target target ${_aliasTarget}")
+        msg("Target ${target} is an alias. Retargeting target to target target ${_aliasTarget}")
         addTargetProperties(${_aliasTarget} "${pkgname}" ${addToLists})
         if(addToLists)
             set(_LibrariesList      ${_LibrariesList}       PARENT_SCOPE)
@@ -200,7 +201,7 @@ function(initialiseFeatureHandlers)
         if (${handlerName} STREQUAL "init")
             string(APPEND msg " and calling it ...")
         endif ()
-        message("${msg}")
+        msg(ALWAYS "${msg}")
         include("${handler}")
         if ("${handlerName}" STREQUAL "init")
             ############################################################################################################
@@ -217,22 +218,17 @@ endfunction()
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
-function(initialiseFunctionHandlers)
-endfunction()
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-
 function(addPackageData)
     set(switches SYSTEM USER LIBRARY)
     set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ)
     set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS)
 
-    string(REPEAT "${array_sep}" ${FeatureSeparators} output)
+    record(CREATE output ${FeatureLength})
+
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
 
     if (NOT APD_METHOD OR (NOT ${APD_METHOD} STREQUAL "PROCESS" AND NOT ${APD_METHOD} STREQUAL "FETCH_CONTENTS" AND NOT ${APD_METHOD} STREQUAL "FIND_PACKAGE"))
-        message(FATAL_ERROR "addPackageData: One of METHOD FIND_PACKAGE/FETCH_CONTENTS/PROCESS required for ${APD_FEATURE}")
+        msg(ALWAYS FATAL_ERROR "addPackageData: One of METHOD FIND_PACKAGE/FETCH_CONTENTS/PROCESS required for ${APD_FEATURE}")
     endif ()
 
     if (NOT APD_SYSTEM AND NOT APD_USER AND NOT APD_LIBRARY)
@@ -240,7 +236,7 @@ function(addPackageData)
     endif ()
 
     if ((APD_SYSTEM AND APD_USER) OR (APD_SYSTEM AND APD_LIBRARY) OR (APD_USER AND APD_LIBRARY))
-        message(FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER/LIBRARY allowed")
+        msg(ALWAYS FATAL_ERROR "addPackageData: Zero or one of SYSTEM/USER/LIBRARY allowed")
     else ()
         if(APD_SYSTEM)
             set(APD_KIND "SYSTEM")
@@ -252,28 +248,28 @@ function(addPackageData)
     endif ()
 
     if (NOT APD_PKGNAME)
-        message(FATAL_ERROR "addPackageData: PKGNAME required")
+        msg(ALWAYS FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
     if (
     (APD_URL AND APD_GIT_REPOSITORY) OR
     (APD_URL AND APD_SRCDIR) OR
     (APD_GIT_REPOSITORY AND APD_SRCDIR)
     )
-        message(FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
+        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
     endif ()
     if (NOT APD_URL AND NOT APD_GIT_REPOSITORY AND NOT APD_SRCDIR AND APD_METHOD STREQUAL "FETCH_CONTENTS")
-        message(FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR required")
+        msg(ALWAYS FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR required")
     endif ()
     if ((APD_GIT_REPOSITORY AND NOT APD_GIT_TAG) OR
     (NOT APD_GIT_REPOSITORY AND APD_GIT_TAG))
-        message(FATAL_ERROR "addPackageData: Neither or both GIT_REPOSITORY/GIT_TAG allowed")
+        msg(ALWAYS FATAL_ERROR "addPackageData: Neither or both GIT_REPOSITORY/GIT_TAG allowed")
     endif ()
     if ((APD_URL AND APD_GIT_TAG) OR
     (APD_SRCDIR AND APD_GIT_TAG))
-        message(FATAL_ERROR "addPackageData: GIT_TAG only allowed with GIT_REPOSITORY")
+        msg(ALWAYS FATAL_ERROR "addPackageData: GIT_TAG only allowed with GIT_REPOSITORY")
     endif ()
     if (APD_GIT_TAG AND APD_BINDIR)
-        message(FATAL_ERROR "addPackageData: Only one of GIT_TAG or BINDIR allowed")
+        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of GIT_TAG or BINDIR allowed")
     endif ()
 
     if (APD_COMPONENT)
@@ -325,22 +321,22 @@ function(addPackageData)
         set(APD_PREREQS "-")
     endif ()
 
-    array(REPLACE output "${FeatureIX}"           "${APD_FEATURE}")
-    array(REPLACE output "${FeaturePkgNameIX}"    "${APD_PKGNAME}")
-    array(REPLACE output "${FeatureNamespaceIX}"  "${APD_NAMESPACE}")
-    array(REPLACE output "${FeatureKindIX}"       "${APD_KIND}")
-    array(REPLACE output "${FeatureMethodIX}"     "${APD_METHOD}")
-    array(REPLACE output "${FeatureUrlIX}"        "${URLorSRCDIR}")
-    array(REPLACE output "${FeatureGitTagIX}"     "${TAGorBINDIR}")
-    array(REPLACE output "${FeatureIncDirIX}"     "${APD_INCDIR}")
-    array(REPLACE output "${FeatureComponentsIX}" "${APD_COMPONENTS}")
-    array(REPLACE output "${FeatureArgsIX}"       "${APD_ARGS}")
-    array(REPLACE output "${FeaturePrereqsIX}"    "${APD_PREREQS}")
+    record(REPLACE output "${FeatureIX}"           "${APD_FEATURE}")
+    record(REPLACE output "${FeaturePkgNameIX}"    "${APD_PKGNAME}")
+    record(REPLACE output "${FeatureNamespaceIX}"  "${APD_NAMESPACE}")
+    record(REPLACE output "${FeatureKindIX}"       "${APD_KIND}")
+    record(REPLACE output "${FeatureMethodIX}"     "${APD_METHOD}")
+    record(REPLACE output "${FeatureUrlIX}"        "${URLorSRCDIR}")
+    record(REPLACE output "${FeatureGitTagIX}"     "${TAGorBINDIR}")
+    record(REPLACE output "${FeatureIncDirIX}"     "${APD_INCDIR}")
+    record(REPLACE output "${FeatureComponentsIX}" "${APD_COMPONENTS}")
+    record(REPLACE output "${FeatureArgsIX}"       "${APD_ARGS}")
+    record(REPLACE output "${FeaturePrereqsIX}"    "${APD_PREREQS}")
 
-#    array(LENGTH output len)
+#    record(LENGTH output len)
 #    message("${output} should be ${FeatureFields} fields, but it's ${len}")
 #    foreach(ix RANGE 0 ${FeatureSeparators})
-#        array(GET output ${ix} var)
+#        record(GET output ${ix} var)
 #        message("${ix}\t ${var}")
 #    endforeach ()
 #    message()
@@ -367,18 +363,17 @@ function(addPackageData)
     string(REPEAT " " ${paddingCount} padding)
 
     if (${pkgIndex} EQUAL -1)
-        list(APPEND ${activeArray} "${output}")
+        array(APPEND ${activeArray} "${output}")
         set(${activeArray} "${${activeArray}}" PARENT_SCOPE)
         msg("Adding feature${padding}${BOLD}${APD_FEATURE}${NC} for package ${BOLD}${APD_PKGNAME}${NC}")
     else ()
-        list(GET ${activeArray} ${pkgIndex} existing_feature)
-        array(POP_FRONT output dc) # Convert it to a PACKAGE
-        string(JOIN "," combined_feature "${existing_feature}" "${output}")
-        list(REMOVE_AT ${activeArray} ${pkgIndex})
-        list(INSERT ${activeArray} ${pkgIndex} "${combined_feature}")
+        array(GET ${activeArray} ${pkgIndex} existing_feature)
+        record(POP_FRONT output dc) # Convert it to a PACKAGE
+        record(APPEND existing_feature ${output})
+        array(SET ${activeArray} ${pkgIndex} existing_feature)
         set(${activeArray} "${${activeArray}}" PARENT_SCOPE)
         msg("${YELLOW}Extend${NC} feature${padding}${BOLD}${APD_FEATURE}${NC} for package ${BOLD}${APD_PKGNAME}${NC}")
-    endif ()
+     endif ()
 
     #
     set(LibraryFeatureData "${LibraryFeatureData}"  PARENT_SCOPE)
@@ -559,7 +554,7 @@ function(parsePackage)
 
         # See if this is a PIPELIST
         list(LENGTH ${inputListName} listLength)
-        array(LENGTH ${inputListName} pipeLength)
+        record(LENGTH ${inputListName} pipeLength)
 
         if (${listLength} GREATER_EQUAL 2)
             # Can ONLY be a set. We'll check if it is later
@@ -585,7 +580,7 @@ function(parsePackage)
         if (${A_PP_INPUT_TYPE} MATCHES "PACKAGE")
             set(A_PACKAGE ON)
 
-            array(LENGTH ${${inputListName}} len)
+            record(LENGTH ${${inputListName}} len)
             if (NOT ${len} EQUAL "${PkgFields}")
                 set(inputListVerifyFailed "Input PACKAGE length of ${len} should be ${PkgFields}")
             endif ()
@@ -593,7 +588,7 @@ function(parsePackage)
         elseif (${A_PP_INPUT_TYPE} MATCHES "FEATURE")
             set(A_FEATURE ON)
 
-            array(LENGTH ${inputListName} len)
+            record(LENGTH ${inputListName} len)
             if (NOT ${len} GREATER_EQUAL "${FeatureFields}")
                 set(inputListVerifyFailed "Input FEATURE length of ${len} should be at least ${PkgFields}")
             else ()
@@ -613,7 +608,7 @@ function(parsePackage)
                 string(REPLACE "," ";" sampleList "${sample}")
                 list(LENGTH sampleList pkgCount)
                 string(REPLACE ";" "&" samplePipelist "${sampleList}")
-                array(LENGTH samplePipelist len)
+                record(LENGTH samplePipelist len)
                 math(EXPR expectedFields "1 + (${pkgCount} * ${PkgFields})")
                 if (NOT (${len} EQUAL ${PkgFields} OR ${len} EQUAL "${expectedFields}"))
                     list(APPEND inputListVerifyFailed "FEATURE #${whichElement} of ${numElements} in input list is invalid\n${sample}\n")
@@ -932,8 +927,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
                 set(found_entry_in_input_ "")
                 # TODO: Line below changed from inputLiist to allData
                 foreach(e_ IN LISTS ${lol}) # inputList)
-                    array(GET e_ ${FeatureIX} pr_fname_)
-                    array(GET e_ ${FeaturePkgNameIX} pr_pname_)
+                    record(GET e_ ${FeatureIX} pr_fname_)
+                    record(GET e_ ${FeaturePkgNameIX} pr_pname_)
                     if("${pr_feat_}" MATCHES "${pr_fname_}" AND "${pr_pkgname_}" STREQUAL "${pr_pname_}")
                         set(found_entry_in_input_ "${pr_fname_}=${pr_pname_}")
                         getFeaturePackageByName("${lol}" "${pr_fname_}" "${pr_pname_}" prereq_pkg prereq_idx)
@@ -982,8 +977,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS ${inputFeaturesList})
-        array(GET item ${FeatureIX} _feature_name)
-        array(GET item ${FeatureKindIX} _kind)
+        record(GET item ${FeatureIX} _feature_name)
+        record(GET item ${FeatureKindIX} _kind)
         if ("${_kind}" STREQUAL "LIBRARY")
             visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
         endif()
@@ -991,7 +986,7 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS ${inputFeaturesList})
-        array(GET item ${FeatureIX} _feature_name)
+        record(GET item ${FeatureIX} _feature_name)
         visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
     endforeach()
 
@@ -1317,7 +1312,7 @@ function(processFeatures featureList returnVarName)
 
         _()
 
-        array(CREATE output ${FeatureFields})
+        record(CREATE output ${FeatureFields})
 
         separate_arguments(feature NATIVE_COMMAND "${feature}")
         cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
@@ -1415,17 +1410,17 @@ function(processFeatures featureList returnVarName)
 
         #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
-        array(REPLACE output "${FeatureIX}"             "${_feature}")
-        array(REPLACE output "${FeaturePkgNameIX}"      "${_pkg}")
-        array(REPLACE output "${FeatureNamespaceIX}"    "${_ns}")
-        array(REPLACE output "${FeatureKindIX}"         "${_kind}")
-        array(REPLACE output "${FeatureMethodIX}"       "${_method}")
-        array(REPLACE output "${FeatureUrlIX}"          "${_url}")
-        array(REPLACE output "${FeatureGitTagIX}"       "${_tag}")
-        array(REPLACE output "${FeatureIncDirIX}"       "${_incdir}")
-        array(REPLACE output "${FeatureComponentsIX}"   "${_components}")
-        array(REPLACE output "${FeatureArgsIX}"         "${_args}")
-        array(REPLACE output "${FeaturePrereqsIX}"      "${_prerequisites}")
+        record(REPLACE output "${FeatureIX}"             "${_feature}")
+        record(REPLACE output "${FeaturePkgNameIX}"      "${_pkg}")
+        record(REPLACE output "${FeatureNamespaceIX}"    "${_ns}")
+        record(REPLACE output "${FeatureKindIX}"         "${_kind}")
+        record(REPLACE output "${FeatureMethodIX}"       "${_method}")
+        record(REPLACE output "${FeatureUrlIX}"          "${_url}")
+        record(REPLACE output "${FeatureGitTagIX}"       "${_tag}")
+        record(REPLACE output "${FeatureIncDirIX}"       "${_incdir}")
+        record(REPLACE output "${FeatureComponentsIX}"   "${_components}")
+        record(REPLACE output "${FeatureArgsIX}"         "${_args}")
+        record(REPLACE output "${FeaturePrereqsIX}"      "${_prerequisites}")
 
         string(REPLACE "-" ""   output "${output}")
         string(REPLACE "::" ":" output "${output}")

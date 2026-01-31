@@ -50,32 +50,32 @@ function(fetchContents)
     set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
 
     foreach (line IN LISTS SystemFeatureData)
-        list(APPEND AllFeatureData   "${line}")
+        record(APPEND AllFeatureData   "${line}")
 
-        array(GET line 0 aFeature)
-        list(APPEND SystemFeatures   ${aFeature})
-        list(APPEND AllPackages      ${aFeature})
+        record(GET line 0 aFeature)
+        record(APPEND SystemFeatures   ${aFeature})
+        record(APPEND AllPackages      ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS LibraryFeatureData)
-        list(APPEND AllFeatureData   "${line}")
-        list(APPEND MiscFeatureData  "${line}")
+        record(APPEND AllFeatureData   "${line}")
+        record(APPEND MiscFeatureData  "${line}")
 
-        array(GET line 0 aFeature)
-        list(APPEND LibraryFeatures  ${aFeature})
-        list(APPEND AllPackages      ${aFeature})
+        record(GET line 0 aFeature)
+        record(APPEND LibraryFeatures  ${aFeature})
+        record(APPEND AllPackages      ${aFeature})
     endforeach ()
 
     foreach (line IN LISTS UserFeatureData)
-        list(APPEND AllFeatureData   "${line}")
-        list(APPEND MiscFeatureData  "${line}")
+        record(APPEND AllFeatureData   "${line}")
+        record(APPEND MiscFeatureData  "${line}")
 
-        array(GET line 0 aFeature)
-        list(APPEND UserFeatures     ${aFeature})
-        list(APPEND AllPackages      ${aFeature})
+        record(GET line 0 aFeature)
+        record(APPEND UserFeatures     ${aFeature})
+        record(APPEND AllPackages      ${aFeature})
     endforeach ()
 
-    list(APPEND PseudoFeatures
+    record(APPEND PseudoFeatures
             APPEARANCE
             PRINT
             LOGGER
@@ -94,8 +94,8 @@ function(fetchContents)
         set(potentialFeature)
 
         # convert to a cmake list
-        array(GET requestedFeature ${FeatureIX}        featureName)    # POP_FRONT on a FEATURE turns it into a PACKAGE
-        array(GET requestedFeature ${FeaturePkgNameIX} packageName)
+        record(GET requestedFeature ${FeatureIX}        featureName)    # POP_FRONT on a FEATURE turns it into a PACKAGE
+        record(GET requestedFeature ${FeaturePkgNameIX} packageName)
 
         if (${featureName} IN_LIST PseudoFeatures)
             # We don't search for plugins this way
@@ -131,7 +131,7 @@ function(fetchContents)
             else ()
                 set(index 0)
                 getFeaturePackage(MiscFeatureData ${featureName} ${index} potentialFeature)
-                array(GET potentialFeature ${PkgNameIX} packageName)
+                record(GET potentialFeature ${PkgNameIX} packageName)
             endif ()
             if (NOT potentialFeature OR "${potentialFeature}" STREQUAL "" OR "${potentialFeature}" STREQUAL "${featureName}-NOTFOUND")
                 msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} is not available")
@@ -152,16 +152,16 @@ function(fetchContents)
         unset(_bits)
 
         # Step 1. Sanity check the set pkgname
-        array(GET requestedFeature ${FeatureIX} _uPkg TOUPPER)
-        array(GET potentialFeature ${FeatureIX} _rPkg TOUPPER)
+        record(GET requestedFeature ${FeatureIX} _uPkg TOUPPER)
+        record(GET potentialFeature ${FeatureIX} _rPkg TOUPPER)
 
         if (NOT "${_uPkg}" STREQUAL "" AND NOT "${_uPkg}" STREQUAL "${_rPkg}")
             msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch")
         endif ()
 
         # Step 2. Merge Args
-        array(GET requestedFeature ${FeatureArgsIX} _userBits)
-        array(GET potentialFeature ${FeatureArgsIX} _regdBits)
+        record(GET requestedFeature ${FeatureArgsIX} _userBits)
+        record(GET potentialFeature ${FeatureArgsIX} _regdBits)
         if("${_userBits}" STREQUAL "${_regdBits}")
             continue()
         endif ()
@@ -175,18 +175,18 @@ function(fetchContents)
         list(APPEND _regdBits ${_userBits})
         list(REMOVE_DUPLICATES _regdBits)
         string(JOIN ":" _bits ${_regdBits})
-        array(REPLACE wip ${FeatureArgsIX} "${_bits}")
+        record(REPLACE wip ${FeatureArgsIX} "${_bits}")
 
         # Step 3. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
-        array(GET requestedFeature ${FeatureComponentsIX} _userBits)
-        array(GET potentialFeature ${FeatureComponentsIX} _regdBits)
+        record(GET requestedFeature ${FeatureComponentsIX} _userBits)
+        record(GET potentialFeature ${FeatureComponentsIX} _regdBits)
         if(NOT "${_userBits}" STREQUAL "${_regdBits}")
             string(REPLACE ":" ";" _userBits "${_userBits}")
             string(REPLACE ":" ";" _regdBits "${_regdBits}")
             list(APPEND _regdBits ${_userBits})
             list(REMOVE_DUPLICATES _regdBits)
             string(JOIN ":" _bits ${_regdBits})
-            array(REPLACE wip ${FeatureComponentsIX} "${_bits}")
+            record(REPLACE wip ${FeatureComponentsIX} "${_bits}")
         endif ()
 
         list(APPEND unifiedFeatureList "${wip}")
@@ -239,9 +239,9 @@ function(fetchContents)
 
         set(fix 0)
         foreach(k IN LISTS featureList)
-            array(GET features ${fix} c)
-            array(GET k ${FeatureIX} f)
-            array(GET k ${FeaturePkgNameIX} n)
+            record(GET features ${fix} c)
+            record(GET k ${FeatureIX} f)
+            record(GET k ${FeaturePkgNameIX} n)
             math(EXPR fix "${fix} + 1")
             SplitAt("${c}" "" x g)
             if ("${g}" STREQUAL "*")
@@ -259,7 +259,7 @@ function(fetchContents)
             message("${GREEN}\n-------------------------------------------------------------------------------\n${NC}")
             foreach (featureName IN LISTS features)
 #                getFeaturePackage(featureList ${featureName} 0 package)
-#                array(GET package ${FeatureNameIX} this_package)
+#                record(GET package ${FeatureNameIX} this_package)
 #                # Skip features already found/aliased, but only check this in the final pass
 #                # to allow declarations to overlap if necessary.
 ##                if (${pass_num} EQUAL 1)

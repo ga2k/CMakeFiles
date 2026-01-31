@@ -8,13 +8,13 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
     set(dependenciesList    ${_DependenciesList})
 
     if(EXISTS "${sourceDir}/include")
-        list(APPEND includePathsList "${sourceDir}/include")
+        record(APPEND includePathsList "${sourceDir}/include")
     endif ()
     if(EXISTS "${buildDir}/include")
-        list(APPEND includePathsList "${buildDir}/include")
+        record(APPEND includePathsList "${buildDir}/include")
     endif ()
 
-    list(APPEND SOCI_PLUGINS_HANDLED )
+    record(APPEND SOCI_PLUGINS_HANDLED )
 
     unset(_soci_targets)
 

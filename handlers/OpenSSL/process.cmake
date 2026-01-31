@@ -24,7 +24,7 @@ function(OpenSSL_process incs libs defs)
             get_filename_component(lib_dir      "${crypto}" PATH)
 
             message("Using installed system OpenSSL libraries")
-            list(APPEND libs    ${ssl_lib} ${crypto_lib})
+            record(APPEND libs    ${ssl_lib} ${crypto_lib})
             list(APPEND incs    "C:/Program Files/OpenSSL-Win64/include")
             list(APPEND paths   "${lib_dir}")
 
