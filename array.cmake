@@ -148,13 +148,13 @@ endfunction()
 # Extended verbs/behaviors are implemented explicitly (GET case conversion, SET growth policy, CONVERT, CREATE, DUMP, etc.).
 #
 # Supported extensions:
-#   record(GET <recVar> <fieldIndex> <outVar>... TOUPPER|TOLOWER)
-#   record(POP_FRONT|POP_BACK <recVar> <outVar>... TOUPPER|TOLOWER)
+#   record(GET <recVar> <fieldIndex> <outVarName>... TOUPPER|TOLOWER)
+#   record(POP_FRONT|POP_BACK <recVar> <outVarName>... TOUPPER|TOLOWER)
 #   record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
 #   record(APPEND|PREPEND <recVar> <newValue>...)
 #   record(CONVERT <recVar> [LIST|RECORD])
 #   record(CREATE <recVar> <numFields>)
-#   record(DUMP <recVar> [<outVar>])
+#   record(DUMP <recVar> [<outVarName>])
 #
 # NOTE: record() is a MACRO so outputs behave like list() (affecting the caller scope).
 # ======================================================================================================================
@@ -242,7 +242,7 @@ macro(record)
     # -------------------- Extended: DUMP --------------------
     elseif(_recVerbUC STREQUAL "DUMP")
         if(NOT (${_rec_argc} EQUAL 2 OR ${_rec_argc} EQUAL 3))
-            message(FATAL_ERROR "record(DUMP): expected record(DUMP <recVar> [<outVar>])")
+            message(FATAL_ERROR "record(DUMP): expected record(DUMP <recVar> [<outVarName>])")
         endif()
 
         set(_txt "${${_recVar}}")
@@ -398,9 +398,9 @@ macro(record)
 
     # -------------------- Extended: GET / POP_* with multi-out and case + "-"->"" --------------------
     elseif(_recVerbUC STREQUAL "GET")
-        # record(GET <recVar> <fieldIndex> <outVar>... [TOUPPER|TOLOWER])
+        # record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])
         if(${_rec_argc} LESS 4)
-            message(FATAL_ERROR "record(GET): expected record(GET <recVar> <fieldIndex> <outVar>... [TOUPPER|TOLOWER])")
+            message(FATAL_ERROR "record(GET): expected record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])")
         endif()
 
         set(_ix "${ARGV2}")
@@ -462,9 +462,9 @@ macro(record)
         unset(_recVerbUC)
 
     elseif(_recVerbUC STREQUAL "POP_FRONT" OR _recVerbUC STREQUAL "POP_BACK")
-        # record(POP_FRONT|POP_BACK <recVar> <outVar>... [TOUPPER|TOLOWER])
+        # record(POP_FRONT|POP_BACK <recVar> <outVarName>... [TOUPPER|TOLOWER])
         if(${_rec_argc} LESS 3)
-            message(FATAL_ERROR "record(${_recVerbUC}): expected record(${_recVerbUC} <recVar> <outVar>... [TOUPPER|TOLOWER])")
+            message(FATAL_ERROR "record(${_recVerbUC}): expected record(${_recVerbUC} <recVar> <outVarName>... [TOUPPER|TOLOWER])")
         endif()
 
         set(_case "")
@@ -558,33 +558,35 @@ endmacro()
 #
 # Keyworded API to remove ambiguity:
 #
-#   array(CREATE <arrayVar> RECORDS|ARRAYS)         # create typed empty array (with marker only)
-#   array(APPEND  <arrayVar> RECORD <rec>...)       # append record(s)
-#   array(APPEND  <arrayVar> ARRAY  <arr>...)       # append array(s)
-#   array(PREPEND <arrayVar> RECORD <rec>...)
-#   array(PREPEND <arrayVar> ARRAY  <arr>...)
+#   array(CREATE  <arrayVarName> RECORDS|ARRAYS)        # create typed empty array (with marker only)
+#   array(APPEND  <arrayVarName> RECORD <rec>...)       # append record(s)
+#   array(APPEND  <arrayVarName> ARRAY  <arr>...)       # append array(s)
+#   array(PREPEND <arrayVarName> RECORD <rec>...)
+#   array(PREPEND <arrayVarName> ARRAY  <arr>...)
 #
 # List-like operations (operate on elements = records or arrays):
-#   array(LENGTH <arrayVar> <outVar>)
-#   array(GET    <arrayVar> <recIndex> <outVar>...)                 # get element(s)
-#   array(GET    <arrayVar> <recIndex> <fieldIndex> <outVar>...)    # get field(s) from a record element
-#   array(SET    <arrayVar> <recIndex> RECORD <rec> [FAIL|QUIET])
-#   array(SET    <arrayVar> <recIndex> ARRAY  <arr> [FAIL|QUIET])
-#   array(FIND   <arrayVar> <fieldIndex> MATCHING <regex> <outVar>) # records-only
-#   array(DUMP   <arrayVar> [<outVar>])
+#   array(LENGTH  <arrayVarName> <outVarName>)                              
+#   array(KIND    <arrayType>)                                              # Either RECORDS or ARRAYS
+#   array(KIND_AT <arrayVarName> <index> <outVarName>)                      # Either RECORDS or ARRAYS
+#   array(GET     <arrayVarName> <recIndex> <outVarName>...)                # get element(s)
+#   array(GET     <arrayVarName> <recIndex> <fieldIndex> <outVarName>...)   # get field(s) from a record element
+#   array(SET     <arrayVarName> <recIndex> RECORD <rec> [FAIL|QUIET])
+#   array(SET     <arrayVarName> <recIndex> ARRAY  <arr> [FAIL|QUIET])
+#   array(FIND    <arrayVarName> <fieldIndex> MATCHING <regex> <outVarName>) # records-only
+#   array(DUMP    <arrayVarName> [<outVarName>])
 #
-# NOTE: array() is a FUNCTION (it updates <arrayVar> via PARENT_SCOPE).
+# NOTE: array() is a FUNCTION (it updates <arrayVarName> via PARENT_SCOPE).
 # ======================================================================================================================
-
-function(array verb arrayVar)
-    if(NOT verb OR NOT arrayVar)
-        message(FATAL_ERROR "array: expected array(<VERB> <arrayVar> ...)")
+function(array verb arrayVarName)
+    
+    if(NOT verb OR NOT arrayVarName)
+        message(FATAL_ERROR "array: expected array(<VERB> <arrayVarName> ...)")
     endif()
 
     string(TOUPPER "${verb}" _V)
 
-    if(DEFINED ${arrayVar})
-        set(_A "${${arrayVar}}")
+    if(DEFINED ${arrayVarName})
+        set(_A "${${arrayVarName}}")
     else()
         set(_A "")
     endif()
@@ -592,13 +594,13 @@ function(array verb arrayVar)
     # -------------------- CREATE --------------------
     if(_V STREQUAL "CREATE")
         if(NOT ${ARGC} EQUAL 3)
-            message(FATAL_ERROR "array(CREATE): expected array(CREATE <arrayVar> RECORDS|ARRAYS)")
+            message(FATAL_ERROR "array(CREATE): expected array(CREATE <arrayVarName> RECORDS|ARRAYS)")
         endif()
         string(TOUPPER "${ARGV2}" _kind)
         if(_kind STREQUAL "RECORDS")
-            set(${arrayVar} "${RS}" PARENT_SCOPE)
+            set(${arrayVarName} "${RS}" PARENT_SCOPE)
         elseif(_kind STREQUAL "ARRAYS")
-            set(${arrayVar} "${GS}" PARENT_SCOPE)
+            set(${arrayVarName} "${GS}" PARENT_SCOPE)
         else()
             message(FATAL_ERROR "array(CREATE): invalid kind '${ARGV2}' (expected RECORDS|ARRAYS)")
         endif()
@@ -608,7 +610,7 @@ function(array verb arrayVar)
     # -------------------- DUMP --------------------
     if(_V STREQUAL "DUMP")
         if(NOT (${ARGC} EQUAL 2 OR ${ARGC} EQUAL 3))
-            message(FATAL_ERROR "array(DUMP): expected array(DUMP <arrayVar> [<outVar>])")
+            message(FATAL_ERROR "array(DUMP): expected array(DUMP <arrayVarName> [<outVarName>])")
         endif()
         set(_txt "${_A}")
         string(REPLACE "${GS}" "<GS>" _txt "${_txt}")
@@ -617,7 +619,58 @@ function(array verb arrayVar)
         if(${ARGC} EQUAL 3)
             set(${ARGV2} "${_txt}" PARENT_SCOPE)
         else()
-            message(STATUS "array(${arrayVar})='${_txt}'")
+            message(STATUS "array(${arrayVarName})='${_txt}'")
+        endif()
+        return()
+    endif()
+
+    # -------------------- KIND --------------------
+    if(_V STREQUAL "KIND")
+        if(NOT ${ARGC} EQUAL 3)
+            message(FATAL_ERROR "array(KIND): expected array(KIND <arrayVarName> <outVarName>)")
+        endif()
+        set(_outVarName ${ARGV2})
+
+        # Determine array kind (or UNSET)
+        _hs__array_get_kind("${arrayVarName}" _k _s)
+
+        if(_k STREQUAL "RECORDS" OR _k STREQUAL "ARRAYS")
+            set(${outVarName} "${_k}" PARENT_SCOPE)
+        elseif(_k STREQUAL "UNSET")
+            message(WARNING "array(KIND): array kind is not set yet")
+            set(${outVarName} "${_k}" PARENT_SCOPE)
+        else()
+            message(FATAL_ERROR "array(KIND): called on a record")
+        endif()
+        return()
+    endif()
+
+    # -------------------- KIND_AT --------------------
+    if(_V STREQUAL "KIND_AT")
+        if(NOT ${ARGC} EQUAL 4)
+            message(FATAL_ERROR "array(KIND_AT): expected array(KIND_AT <arrayVarName> <index> <outVarName> )")
+        endif()
+        set(_index       ${ARGV2})
+        set(_outVarName "${ARGV3}")
+
+        if(NOT _index MATCHES "^[0-9]+$")
+            message(FATAL_ERROR "array(KIND_AT): <index> must be a non-negative integer, got '${_index}'")
+        endif()
+
+        list(LENGTH ${arrayVarName} _len)
+
+        if(_index GREATER_EQUAL _len)
+            message(FATAL_ERROR "array(KIND_AT): index ${_ix} out of range (len=${_len})")
+        endif ()
+
+        array(GET ${arrayVarVame} _index __sub_array)
+        _hs__array_get_kind("__sub_array" __child_kind _dc)
+
+        if(__child_kind STREQUAL "RECORDS" OR _kind STREQUAL "ARRAYS")
+            set(${outVarName} "${__child_kind}" PARENT_SCOPE)
+        elseif(_kind STREQUAL "UNSET")
+            message(WARNING "array(KIND_AT): sub-array kind is not set yet")
+            set(${outVarName} "${_kind}" PARENT_SCOPE)
         endif()
         return()
     endif()
@@ -628,11 +681,11 @@ function(array verb arrayVar)
     # -------------------- APPEND / PREPEND (keyworded) --------------------
     if(_V STREQUAL "APPEND" OR _V STREQUAL "PREPEND")
         if(${ARGC} LESS 4)
-            message(FATAL_ERROR "array(${_V}): expected array(${_V} <arrayVar> RECORD|ARRAY <value>...)")
+            message(FATAL_ERROR "array(${_V}): expected array(${_V} <arrayVarName> RECORD|ARRAY <value>...)")
         endif()
         string(TOUPPER "${ARGV2}" _itemKind)
         if(NOT (_itemKind STREQUAL "RECORD" OR _itemKind STREQUAL "ARRAY"))
-            message(FATAL_ERROR "array(${_V}): expected RECORD|ARRAY after <arrayVar>")
+            message(FATAL_ERROR "array(${_V}): expected RECORD|ARRAY after <arrayVarName>")
         endif()
 
         # If array is UNSET, choose kind now
@@ -681,14 +734,14 @@ function(array verb arrayVar)
         endwhile()
 
         _hs__list_to_array("${_lst}" "${_kind}" _Aout)
-        set(${arrayVar} "${_Aout}" PARENT_SCOPE)
+        set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
         return()
     endif()
 
     # -------------------- LENGTH --------------------
     if(_V STREQUAL "LENGTH")
         if(NOT ${ARGC} EQUAL 3)
-            message(FATAL_ERROR "array(LENGTH): expected array(LENGTH <arrayVar> <outVar>)")
+            message(FATAL_ERROR "array(LENGTH): expected array(LENGTH <arrayVarName> <outVarName>)")
         endif()
         _hs__array_to_list("${_A}" "${_sep}" _lst)
         list(LENGTH _lst _len)
@@ -699,7 +752,7 @@ function(array verb arrayVar)
     # -------------------- GET overloads --------------------
     if(_V STREQUAL "GET")
         if(${ARGC} LESS 4)
-            message(FATAL_ERROR "array(GET): expected array(GET <arrayVar> <recIndex> <outVar>...) OR array(GET <arrayVar> <recIndex> <fieldIndex> <outVar>...)")
+            message(FATAL_ERROR "array(GET): expected array(GET <arrayVarName> <recIndex> <outVarName>...) OR array(GET <arrayVarName> <recIndex> <fieldIndex> <outVarName>...)")
         endif()
 
         set(_recIndex "${ARGV2}")
@@ -772,7 +825,7 @@ function(array verb arrayVar)
     # -------------------- SET (keyworded) --------------------
     if(_V STREQUAL "SET")
         if(${ARGC} LESS 5)
-            message(FATAL_ERROR "array(SET): expected array(SET <arrayVar> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])")
+            message(FATAL_ERROR "array(SET): expected array(SET <arrayVarName> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])")
         endif()
 
         set(_ix "${ARGV2}")
@@ -804,7 +857,7 @@ function(array verb arrayVar)
             if(_mode STREQUAL "FAIL")
                 message(FATAL_ERROR "array(SET): index ${_ix} out of range (len=${_len})")
             elseif(NOT _mode STREQUAL "QUIET")
-                message(WARNING "array(SET): extending array '${arrayVar}' to index ${_ix}")
+                message(WARNING "array(SET): extending array '${arrayVarName}' to index ${_ix}")
             endif()
             # extend with placeholders (forbidden empty record/array => choose typed empty array if ARRAYS, or sentinel record?)
             # Since you forbid empty records, we cannot auto-extend RECORDS arrays safely. Force FAIL unless QUIET/WARN?:
@@ -822,14 +875,14 @@ function(array verb arrayVar)
         list(REMOVE_AT _lst ${_ix})
         list(INSERT _lst ${_ix} "${_val}")
         _hs__list_to_array("${_lst}" "${_kind}" _Aout)
-        set(${arrayVar} "${_Aout}" PARENT_SCOPE)
+        set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
         return()
     endif()
 
     # -------------------- FIND (records-only) --------------------
     if(_V STREQUAL "FIND")
         if(NOT ${ARGC} EQUAL 6)
-            message(FATAL_ERROR "array(FIND): expected array(FIND <arrayVar> <fieldIndex> MATCHING <regex> <outVar>)")
+            message(FATAL_ERROR "array(FIND): expected array(FIND <arrayVarName> <fieldIndex> MATCHING <regex> <outVarName>)")
         endif()
 #        if(NOT _kind STREQUAL "RECORDS")
 #            message(FATAL_ERROR "array(FIND): only valid for RECORDS arrays")

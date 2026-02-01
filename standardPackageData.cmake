@@ -108,10 +108,13 @@ function(createStandardPackageData)
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    set(FEATURES "${FEATURES}" PARENT_SCOPE)
-    set(SystemFeatureData  "${SystemFeatureData}"  PARENT_SCOPE)
-    set(LibraryFeatureData "${LibraryFeatureData}" PARENT_SCOPE)
-    set(UserFeatureData    "${UserFeatureData}"    PARENT_SCOPE)
+    set(FEATURES         "${FEATURES}"         PARENT_SCOPE)
+    set(SYSTEM_NAMES     "${SYSTEM_NAMES}"     PARENT_SCOPE)
+    set(SYSTEM_PACKAGES  "${SYSTEM_PACKAGES}"  PARENT_SCOPE)
+    set(LIBRARY_NAMES    "${LIBRARY_NAMES}"    PARENT_SCOPE)
+    set(LIBRARY_PACKAGES "${LIBRARY_PACKAGES}" PARENT_SCOPE)
+    set(USER_NAMES       "${USER_NAMES}"       PARENT_SCOPE)
+    set(USER_PACKAGES    "${USER_PACKAGES}"    PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################
