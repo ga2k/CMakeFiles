@@ -2,6 +2,7 @@ include(FetchContent)
 
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
 
 set(SystemFeatureData)
 set(UserFeatureData)
@@ -9,7 +10,7 @@ set(UserFeatureData)
 ########################################################################################################################
 function(fetchContents)
 
-    array(CREATE FEATURES ARRAYS)
+    array(CREATE "FEATURES" ARRAYS)
     array(DUMP FEATURES)
     createStandardPackageData()
 
@@ -51,150 +52,121 @@ function(fetchContents)
     set(_wxLibraryPaths ${${AUE_PREFIX}_wxLibraryPaths})
     set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
 
-    foreach (line IN LISTS SystemFeatureData)
-        record(APPEND AllFeatureData   "${line}")
-
-        record(GET line 0 aFeature)
-        record(APPEND SystemFeatures   ${aFeature})
-        record(APPEND AllPackages      ${aFeature})
-    endforeach ()
-
-    foreach (line IN LISTS LibraryFeatureData)
-        record(APPEND AllFeatureData   "${line}")
-        record(APPEND MiscFeatureData  "${line}")
-
-        record(GET line 0 aFeature)
-        record(APPEND LibraryFeatures  ${aFeature})
-        record(APPEND AllPackages      ${aFeature})
-    endforeach ()
-
-    foreach (line IN LISTS UserFeatureData)
-        record(APPEND AllFeatureData   "${line}")
-        record(APPEND MiscFeatureData  "${line}")
-
-        record(GET line 0 aFeature)
-        record(APPEND UserFeatures     ${aFeature})
-        record(APPEND AllPackages      ${aFeature})
-    endforeach ()
-
-    record(APPEND PseudoFeatures
-            APPEARANCE
-            PRINT
-            LOGGER
-    )
-    list(APPEND NoLibPackages
-            googletest
-    )
+    list(APPEND PseudoFeatures APPEARANCE PRINT LOGGER)
+    list(APPEND NoLibPackages googletest)
 
     unset(unifiedFeatureList)
 
     # We don't search for pseudo packages
-    foreach (requestedFeature IN LISTS AUE_USE)
+    array(LENGTH AUE_USE numFeatures)
+    array(DUMP AUE_USE VERBOSE)
+    if(numFeatures)
+        foreach(pkgIndex RANGE ${numFeatures})
+            array(GET AUE_USE ${pkgIndex} requestedFeature)
 
-        # Where we manipulate the feature to be a union of the requestedFeature requirements (if any)
-        # and system requirements (if any)
-        set(potentialFeature)
+            # Where we manipulate the feature to be a union of the requestedFeature requirements (if any)
+            # and system requirements (if any)
+            set(potentialFeature)
 
-        # convert to a cmake list
-        record(GET requestedFeature ${FeatureIX}        featureName)    # POP_FRONT on a FEATURE turns it into a PACKAGE
-        record(GET requestedFeature ${FeaturePkgNameIX} packageName)
+            record(GET requestedFeature ${FeatureIX}        featureName)    # POP_FRONT on a FEATURE turns it into a PACKAGE
+            record(GET requestedFeature ${FeaturePkgNameIX} packageName)
 
-        if (${featureName} IN_LIST PseudoFeatures)
-            # We don't search for plugins this way
-            list(APPEND _DefinesList USING_${featureName})
-            continue()
-        elseif (${featureName} IN_LIST SystemFeatures)
-            # We don't search for system packages this way, but we might ADD a package variant (if one exists)
-            if (NOT "${packageName}" STREQUAL "")
-                getFeaturePackageByName(SystemFeatureData ${featureName} ${packageName} potentialFeature index)
-                if (${index} EQUAL -1)
-                    msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} has no package called ${packageName}")
-                    continue()
-                elseif (${index} EQUAL -2)
+            if (${featureName} IN_LIST PseudoFeatures)
+                # We don't search for plugins this way
+                list(APPEND _DefinesList USING_${featureName})
+                continue()
+            elseif (${featureName} IN_LIST SystemFeatures)
+                # We don't search for system packages this way, but we might ADD a package variant (if one exists)
+                if (NOT "${packageName}" STREQUAL "")
+                    getFeaturePackageByName(SystemFeatureData ${featureName} ${packageName} potentialFeature index)
+                    if (${index} EQUAL -1)
+                        msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} has no package called ${packageName}")
+                        continue()
+                    elseif (${index} EQUAL -2)
+                        msg(ALWAYS "Redundant addition of System feature ${featureName} ignored")
+                        continue()
+                    else ()
+                        set(potentialFeature "${featureName}|${potentialFeature}")
+                    endif ()
+                else ()
                     msg(ALWAYS "Redundant addition of System feature ${featureName} ignored")
                     continue()
+                endif ()
+            else ()
+                if(NOT "${packageName}" STREQUAL "")
+                    getFeaturePackageByName(MiscFeatureData ${featureName} ${packageName} potentialFeature index)
+                    if (${index} EQUAL -1)
+                        msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} has no package called ${packageName}")
+                        continue()
+                    elseif (${index} EQUAL -2)
+                        msg(ALWAYS "Redundant addition of System feature ${featureName} ignored")
+                        continue()
+                    endif ()
+                else ()
+                    set(index 0)
+                    getFeaturePackage(MiscFeatureData ${featureName} ${index} potentialFeature)
+                    record(GET potentialFeature ${PkgNameIX} packageName)
+                endif ()
+                if (NOT potentialFeature OR "${potentialFeature}" STREQUAL "" OR "${potentialFeature}" STREQUAL "${featureName}-NOTFOUND")
+                    msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} is not available")
                 else ()
                     set(potentialFeature "${featureName}|${potentialFeature}")
                 endif ()
-            else ()
-                msg(ALWAYS "Redundant addition of System feature ${featureName} ignored")
+            endif ()
+
+            # If we are here, we have the users feature and options in ${requestedFeature}
+            # and the corresponding registered  feature and options in ${potentialFeature}
+            # The merged feature will be in ${wip}
+
+            set (wip "${potentialFeature}")
+            unset(_uPkg)
+            unset(_rPkg)
+            unset(_userBits)
+            unset(_regdBits)
+            unset(_bits)
+
+            # Step 1. Sanity check the set pkgname
+            record(GET requestedFeature ${FeatureIX} _uPkg TOUPPER)
+            record(GET potentialFeature ${FeatureIX} _rPkg TOUPPER)
+
+            if (NOT "${_uPkg}" STREQUAL "" AND NOT "${_uPkg}" STREQUAL "${_rPkg}")
+                msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch")
+            endif ()
+
+            # Step 2. Merge Args
+            record(GET requestedFeature ${FeatureArgsIX} _userBits)
+            record(GET potentialFeature ${FeatureArgsIX} _regdBits)
+            if("${_userBits}" STREQUAL "${_regdBits}")
                 continue()
             endif ()
-        else ()
-            if(NOT "${packageName}" STREQUAL "")
-                getFeaturePackageByName(MiscFeatureData ${featureName} ${packageName} potentialFeature index)
-                if (${index} EQUAL -1)
-                    msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} has no package called ${packageName}")
-                    continue()
-                elseif (${index} EQUAL -2)
-                    msg(ALWAYS "Redundant addition of System feature ${featureName} ignored")
-                    continue()
-                endif ()
-            else ()
-                set(index 0)
-                getFeaturePackage(MiscFeatureData ${featureName} ${index} potentialFeature)
-                record(GET potentialFeature ${PkgNameIX} packageName)
-            endif ()
-            if (NOT potentialFeature OR "${potentialFeature}" STREQUAL "" OR "${potentialFeature}" STREQUAL "${featureName}-NOTFOUND")
-                msg(ALWAYS FATAL_ERROR "FEATURE ${featureName} is not available")
-            else ()
-                set(potentialFeature "${featureName}|${potentialFeature}")
-            endif ()
-        endif ()
-
-        # If we are here, we have the users feature and options in ${requestedFeature}
-        # and the corresponding registered  feature and options in ${potentialFeature}
-        # The merged feature will be in ${wip}
-
-        set (wip "${potentialFeature}")
-        unset(_uPkg)
-        unset(_rPkg)
-        unset(_userBits)
-        unset(_regdBits)
-        unset(_bits)
-
-        # Step 1. Sanity check the set pkgname
-        record(GET requestedFeature ${FeatureIX} _uPkg TOUPPER)
-        record(GET potentialFeature ${FeatureIX} _rPkg TOUPPER)
-
-        if (NOT "${_uPkg}" STREQUAL "" AND NOT "${_uPkg}" STREQUAL "${_rPkg}")
-            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch")
-        endif ()
-
-        # Step 2. Merge Args
-        record(GET requestedFeature ${FeatureArgsIX} _userBits)
-        record(GET potentialFeature ${FeatureArgsIX} _regdBits)
-        if("${_userBits}" STREQUAL "${_regdBits}")
-            continue()
-        endif ()
-        string(REPLACE ":" ";" _userBits "${_userBits}")
-        string(REPLACE ":" ";" _regdBits "${_regdBits}")
-        if (REQUIRED IN_LIST _regdBits AND OPTIONAL IN_LIST _userBits)
-            list(REMOVE_ITEM _userBits OPTIONAL)
-        elseif (REQUIRED IN_LIST _userBits AND OPTIONAL IN_LIST _regdBits)
-            list(REMOVE_ITEM _regdBits OPTIONAL)
-        endif ()
-        list(APPEND _regdBits ${_userBits})
-        list(REMOVE_DUPLICATES _regdBits)
-        string(JOIN ":" _bits ${_regdBits})
-        record(REPLACE wip ${FeatureArgsIX} "${_bits}")
-
-        # Step 3. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
-        record(GET requestedFeature ${FeatureComponentsIX} _userBits)
-        record(GET potentialFeature ${FeatureComponentsIX} _regdBits)
-        if(NOT "${_userBits}" STREQUAL "${_regdBits}")
             string(REPLACE ":" ";" _userBits "${_userBits}")
             string(REPLACE ":" ";" _regdBits "${_regdBits}")
+            if (REQUIRED IN_LIST _regdBits AND OPTIONAL IN_LIST _userBits)
+                list(REMOVE_ITEM _userBits OPTIONAL)
+            elseif (REQUIRED IN_LIST _userBits AND OPTIONAL IN_LIST _regdBits)
+                list(REMOVE_ITEM _regdBits OPTIONAL)
+            endif ()
             list(APPEND _regdBits ${_userBits})
             list(REMOVE_DUPLICATES _regdBits)
             string(JOIN ":" _bits ${_regdBits})
-            record(REPLACE wip ${FeatureComponentsIX} "${_bits}")
-        endif ()
+            record(REPLACE wip ${FeatureArgsIX} "${_bits}")
 
-        list(APPEND unifiedFeatureList "${wip}")
+            # Step 3. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
+            record(GET requestedFeature ${FeatureComponentsIX} _userBits)
+            record(GET potentialFeature ${FeatureComponentsIX} _regdBits)
+            if(NOT "${_userBits}" STREQUAL "${_regdBits}")
+                string(REPLACE ":" ";" _userBits "${_userBits}")
+                string(REPLACE ":" ";" _regdBits "${_regdBits}")
+                list(APPEND _regdBits ${_userBits})
+                list(REMOVE_DUPLICATES _regdBits)
+                string(JOIN ":" _bits ${_regdBits})
+                record(REPLACE wip ${FeatureComponentsIX} "${_bits}")
+            endif ()
 
-    endforeach ()
+            list(APPEND unifiedFeatureList "${wip}")
 
+        endforeach ()
+    endif ()
     unset(featureName)
 
     # ensure the caller is using the system libraries
