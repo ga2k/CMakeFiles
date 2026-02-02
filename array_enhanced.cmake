@@ -1,0 +1,1272 @@
+include_guard(GLOBAL)
+
+# ======================================================================================================================
+# Hierarchical "list replacement" primitives with NAMED objects and path-based access:
+#
+#   - record     : Named FS-separated fields (ASCII 0x1C) stored in a single CMake variable.
+#                  Format: {FS}NAME{FS}field1{FS}field2...
+#                  First field is always the name.
+#
+#   - array      : Named sequence of records OR arrays (but never mixed) stored in a single variable.
+#                  Format: {RS}NAME{RS}elem1{RS}elem2... OR {GS}NAME{GS}elem1{GS}elem2...
+#                  First element after marker is always the name.
+#
+#   - collection : Named key-value map where values can be records, arrays, or other collections.
+#                  Format: {US}key1{US}value1{US}key2{US}value2...
+#                  Uses US (Unit Separator, ASCII 0x1F) as delimiter.
+#
+# Path-based access:
+#   - array(GET myArray EQUAL "DATABASE/SOCI" outVar)
+#   - collection(GET myCol "PACKAGES/DATABASE/SOCI" outVar)
+#
+# Design constraints / invariants:
+#   - "Empty field" is stored as the sentinel "-" (literal hyphen).
+#   - "Empty record" (zero fields) is forbidden (but can have all "-" fields).
+#   - Names are mandatory for all records, arrays, and collection keys.
+#   - Control characters (FS/GS/RS/US) must not appear inside user payload values.
+#   - Names within same container must be unique, but no global uniqueness required.
+#
+# ======================================================================================================================
+
+set(list_sep ";")
+string(ASCII 28 FS) # File Separator  (record field delimiter)
+string(ASCII 29 GS) # Group Separator (array-of-arrays delimiter)
+string(ASCII 30 RS) # Record Separator (array-of-records delimiter)
+string(ASCII 31 US) # Unit Separator (collection key-value delimiter)
+
+set(RECORD_EMPTY_FIELD_SENTINEL "-")
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Internal helpers (intentionally underscore-prefixed, not stable API)
+
+function(_hs__assert_no_ctrl_chars _where _value)
+    foreach(_c IN ITEMS "${FS}" "${GS}" "${RS}" "${US}")
+        string(FIND "${_value}" "${_c}" _pos)
+        if(NOT _pos EQUAL -1)
+            msg(ALWAYS FATAL_ERROR "${_where}: value contains a forbidden control separator character (ASCII ${_c})")
+        endif()
+    endforeach()
+endfunction()
+
+function(_hs__field_to_storage _in _outVar)
+    # Map "" -> "-" for storage
+    if("${_in}" STREQUAL "")
+        set(${_outVar} "${RECORD_EMPTY_FIELD_SENTINEL}" PARENT_SCOPE)
+    else()
+        set(${_outVar} "${_in}" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(_hs__field_to_user _in _outVar)
+    # Map "-" -> "" for presentation
+    if("${_in}" STREQUAL "${RECORD_EMPTY_FIELD_SENTINEL}")
+        set(${_outVar} "" PARENT_SCOPE)
+    else()
+        set(${_outVar} "${_in}" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(_hs__record_to_list _rec _outVar)
+    string(REPLACE "${FS}" "${list_sep}" _tmp "${_rec}")
+    set(${_outVar} "${_tmp}" PARENT_SCOPE)
+endfunction()
+
+function(_hs__list_to_record _lst _outVar)
+    string(REPLACE "${list_sep}" "${FS}" _tmp "${_lst}")
+    set(${_outVar} "${_tmp}" PARENT_SCOPE)
+endfunction()
+
+function(_hs__get_object_type _value _typeOut)
+    # Returns: RECORD | ARRAY_RECORDS | ARRAY_ARRAYS | COLLECTION | UNSET | UNKNOWN
+    if("${_value}" STREQUAL "")
+        set(${_typeOut} "UNSET" PARENT_SCOPE)
+        return()
+    endif()
+
+    string(SUBSTRING "${_value}" 0 1 _m)
+    if(_m STREQUAL "${FS}")
+        set(${_typeOut} "RECORD" PARENT_SCOPE)
+    elseif(_m STREQUAL "${RS}")
+        set(${_typeOut} "ARRAY_RECORDS" PARENT_SCOPE)
+    elseif(_m STREQUAL "${GS}")
+        set(${_typeOut} "ARRAY_ARRAYS" PARENT_SCOPE)
+    elseif(_m STREQUAL "${US}")
+        set(${_typeOut} "COLLECTION" PARENT_SCOPE)
+    else()
+        set(${_typeOut} "UNKNOWN" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(_hs__array_get_kind _arrayValue _kindOut _sepOut)
+    # Returns:
+    #   kind = RECORDS | ARRAYS | UNSET
+    #   sep  = RS | GS | ""
+    if("${_arrayValue}" STREQUAL "")
+        set(${_kindOut} "UNSET" PARENT_SCOPE)
+        set(${_sepOut} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    string(SUBSTRING "${_arrayValue}" 0 1 _m)
+    if(_m STREQUAL "${RS}")
+        set(${_kindOut} "RECORDS" PARENT_SCOPE)
+        set(${_sepOut} "${RS}" PARENT_SCOPE)
+    elseif(_m STREQUAL "${GS}")
+        set(${_kindOut} "ARRAYS" PARENT_SCOPE)
+        set(${_sepOut} "${GS}" PARENT_SCOPE)
+    else()
+        set(${_kindOut} "UNKNOWN" PARENT_SCOPE)
+        set(${_sepOut} "" PARENT_SCOPE)
+        msg(ALWAYS WARNING "array: missing type marker (must start with RS or GS)")
+    endif()
+endfunction()
+
+function(_hs__array_to_list _arrayValue _sep _outVar)
+    # Converts array to CMake list, stripping leading marker
+    string(LENGTH "${_arrayValue}" _L)
+    if(_L LESS 1)
+        set(${_outVar} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    string(SUBSTRING "${_arrayValue}" 1 -1 _payload)
+    if("${_payload}" STREQUAL "")
+        set(${_outVar} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    string(REPLACE "${_sep}" "${list_sep}" _lst "${_payload}")
+    set(${_outVar} "${_lst}" PARENT_SCOPE)
+endfunction()
+
+function(_hs__list_to_array _lst _kind _outVar)
+    if("${_kind}" STREQUAL "RECORDS")
+        set(_sep "${RS}")
+    elseif("${_kind}" STREQUAL "ARRAYS")
+        set(_sep "${GS}")
+    else()
+        msg(ALWAYS FATAL_ERROR "_hs__list_to_array: invalid kind '${_kind}'")
+    endif()
+
+    if("${_lst}" STREQUAL "")
+        # Empty array with just marker
+        set(${_outVar} "${_sep}" PARENT_SCOPE)
+        return()
+    endif()
+
+    string(REPLACE "${list_sep}" "${_sep}" _payload "${_lst}")
+    set(${_outVar} "${_sep}${_payload}" PARENT_SCOPE)
+endfunction()
+
+function(_hs__get_name _value _nameOut)
+    # Extract name from a named object (record or array)
+    # Format: {SEP}NAME{SEP}...
+    _hs__get_object_type("${_value}" _type)
+    
+    if(_type STREQUAL "RECORD")
+        set(_sep "${FS}")
+    elseif(_type STREQUAL "ARRAY_RECORDS")
+        set(_sep "${RS}")
+    elseif(_type STREQUAL "ARRAY_ARRAYS")
+        set(_sep "${GS}")
+    else()
+        set(${_nameOut} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    # Strip leading separator
+    string(SUBSTRING "${_value}" 1 -1 _rest)
+    string(FIND "${_rest}" "${_sep}" _pos)
+    
+    if(_pos LESS 0)
+        # No second separator - entire thing is the name
+        set(${_nameOut} "${_rest}" PARENT_SCOPE)
+    else()
+        string(SUBSTRING "${_rest}" 0 ${_pos} _name)
+        set(${_nameOut} "${_name}" PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(_hs__resolve_path _containerValue _path _resultOut)
+    # Resolve a path like "DATABASE/SOCI" within a container
+    # Returns the matching object or empty string if not found
+    
+    if("${_path}" STREQUAL "")
+        set(${_resultOut} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    # Split path by '/'
+    string(REPLACE "/" ";" _pathParts "${_path}")
+    list(LENGTH _pathParts _numParts)
+    
+    if(_numParts EQUAL 0)
+        set(${_resultOut} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    list(GET _pathParts 0 _currentName)
+    
+    _hs__get_object_type("${_containerValue}" _containerType)
+    
+    # Search within container for matching name
+    if(_containerType STREQUAL "ARRAY_RECORDS" OR _containerType STREQUAL "ARRAY_ARRAYS")
+        _hs__array_get_kind("${_containerValue}" _kind _sep)
+        _hs__array_to_list("${_containerValue}" "${_sep}" _elements)
+        
+        # Skip first element (array name itself)
+        list(LENGTH _elements _len)
+        if(_len LESS 2)
+            set(${_resultOut} "" PARENT_SCOPE)
+            return()
+        endif()
+        
+        # Start from element 1 (element 0 is the array's own name)
+        set(_i 1)
+        while(_i LESS _len)
+            list(GET _elements ${_i} _elem)
+            _hs__get_name("${_elem}" _elemName)
+            
+            if("${_elemName}" STREQUAL "${_currentName}")
+                # Found matching element
+                if(_numParts EQUAL 1)
+                    # End of path - return this element
+                    set(${_resultOut} "${_elem}" PARENT_SCOPE)
+                    return()
+                else()
+                    # Continue down the path
+                    list(REMOVE_AT _pathParts 0)
+                    string(REPLACE ";" "/" _remainingPath "${_pathParts}")
+                    _hs__resolve_path("${_elem}" "${_remainingPath}" _subResult)
+                    set(${_resultOut} "${_subResult}" PARENT_SCOPE)
+                    return()
+                endif()
+            endif()
+            
+            math(EXPR _i "${_i} + 1")
+        endwhile()
+        
+        # Not found
+        set(${_resultOut} "" PARENT_SCOPE)
+        return()
+        
+    elseif(_containerType STREQUAL "COLLECTION")
+        # Search collection by key
+        string(SUBSTRING "${_containerValue}" 1 -1 _payload)
+        string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        
+        list(LENGTH _kvList _kvLen)
+        set(_i 0)
+        while(_i LESS _kvLen)
+            list(GET _kvList ${_i} _key)
+            math(EXPR _i "${_i} + 1")
+            if(_i GREATER_EQUAL _kvLen)
+                break()
+            endif()
+            list(GET _kvList ${_i} _value)
+            
+            if("${_key}" STREQUAL "${_currentName}")
+                if(_numParts EQUAL 1)
+                    set(${_resultOut} "${_value}" PARENT_SCOPE)
+                    return()
+                else()
+                    list(REMOVE_AT _pathParts 0)
+                    string(REPLACE ";" "/" _remainingPath "${_pathParts}")
+                    _hs__resolve_path("${_value}" "${_remainingPath}" _subResult)
+                    set(${_resultOut} "${_subResult}" PARENT_SCOPE)
+                    return()
+                endif()
+            endif()
+            
+            math(EXPR _i "${_i} + 1")
+        endwhile()
+        
+        set(${_resultOut} "" PARENT_SCOPE)
+        return()
+    else()
+        # Can't traverse further
+        set(${_resultOut} "" PARENT_SCOPE)
+        return()
+    endif()
+endfunction()
+
+# ======================================================================================================================
+# record() - Named record operations
+#
+# Extended signature:
+#   record(CREATE <recVar> <name> <numFields>)
+#   record(GET <recVar> NAME <outVar>)
+#   record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])
+#   record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
+#   record(APPEND|PREPEND <recVar> <newValue>...)
+#   record(POP_FRONT|POP_BACK <recVar> <outVarName>... [TOUPPER|TOLOWER])
+#   record(CONVERT <recVar> [LIST|RECORD])
+#   record(DUMP <recVar> [<outVarName>] [VERBOSE])
+#
+# ======================================================================================================================
+
+function(record)
+    if(${ARGC} LESS 2)
+        msg(ALWAYS FATAL_ERROR "record: expected record(<VERB> <recVar> ...)")
+    endif()
+
+    set(_recVerb "${ARGV0}")
+    set(_recVar  "${ARGV1}")
+    string(TOUPPER "${_recVerb}" _recVerbUC)
+    
+    # -------------------- Extended: CREATE with NAME --------------------
+    if(_recVerbUC STREQUAL "CREATE")
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "record(CREATE): expected record(CREATE <recVar> <name> <numFields>)")
+        endif()
+        
+        set(_name "${ARGV2}")
+        _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
+        
+        set(_n "${ARGV3}")
+        if(NOT _n MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
+        endif()
+        if(_n EQUAL 0)
+            msg(ALWAYS FATAL_ERROR "record(CREATE): empty record is forbidden (numFields must be >= 1)")
+        endif()
+
+        # Create: {FS}NAME{FS}field1{FS}field2...
+        set(_tmpList "${_name}")
+        foreach(_i RANGE 1 ${_n})
+            list(APPEND _tmpList "${RECORD_EMPTY_FIELD_SENTINEL}")
+        endforeach()
+        string(REPLACE "${list_sep}" "${FS}" _result "${_tmpList}")
+        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Extended: GET NAME --------------------
+    elseif(_recVerbUC STREQUAL "GET")
+        if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "NAME")
+            if(NOT ${ARGC} EQUAL 4)
+                msg(ALWAYS FATAL_ERROR "record(GET NAME): expected record(GET <recVar> NAME <outVarName>)")
+            endif()
+            
+            set(_recValue "${${_recVar}}")
+            _hs__get_name("${_recValue}" _name)
+            set(${ARGV3} "${_name}" PARENT_SCOPE)
+            return()
+        endif()
+        
+        # Regular field GET (skip name at index 0)
+        if(${ARGC} LESS 4)
+            msg(ALWAYS FATAL_ERROR "record(GET): expected record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+        list(LENGTH _lst _len)
+
+        set(_ix "${ARGV2}")
+        if(NOT _ix MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "record(GET): <fieldIndex> must be a non-negative integer, got '${_ix}'")
+        endif()
+
+        # Check for TOUPPER/TOLOWER at end
+        math(EXPR _lastArg "${ARGC} - 1")
+        set(_lastWord "${ARGV${_lastArg}}")
+        string(TOUPPER "${_lastWord}" _lastWordUC)
+
+        set(_caseMode "")
+        set(_endIdx ${ARGC})
+        if(_lastWordUC STREQUAL "TOUPPER" OR _lastWordUC STREQUAL "TOLOWER")
+            set(_caseMode "${_lastWordUC}")
+            set(_endIdx ${_lastArg})
+        endif()
+
+        # Output variables from index 3 to _endIdx-1
+        # NOTE: Field indices are now offset by +1 because index 0 is the name
+        set(_k 3)
+        set(_cur ${_ix})
+        math(EXPR _cur "${_cur} + 1")  # Offset for name
+        while(_k LESS ${_endIdx})
+            set(_outName "${ARGV${_k}}")
+            if(_cur GREATER_EQUAL _len)
+                set(${_outName} "" PARENT_SCOPE)
+            else()
+                list(GET _lst ${_cur} _vStore)
+                _hs__field_to_user("${_vStore}" _v)
+
+                if(_caseMode STREQUAL "TOUPPER")
+                    string(TOUPPER "${_v}" _v)
+                elseif(_caseMode STREQUAL "TOLOWER")
+                    string(TOLOWER "${_v}" _v)
+                endif()
+
+                set(${_outName} "${_v}" PARENT_SCOPE)
+            endif()
+            math(EXPR _k "${_k} + 1")
+            math(EXPR _cur "${_cur} + 1")
+        endwhile()
+        return()
+
+    # -------------------- Extended: SET (adjusted for name) --------------------
+    elseif(_recVerbUC STREQUAL "SET")
+        if(${ARGC} LESS 4)
+            msg(ALWAYS FATAL_ERROR "record(SET): expected record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])")
+        endif()
+
+        set(_ix "${ARGV2}")
+        if(NOT _ix MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "record(SET): <fieldIndex> must be a non-negative integer, got '${_ix}'")
+        endif()
+
+        set(_newVal "${ARGV3}")
+        _hs__assert_no_ctrl_chars("record(SET)" "${_newVal}")
+        _hs__field_to_storage("${_newVal}" _newValStore)
+
+        set(_mode "")
+        if(${ARGC} GREATER 4)
+            string(TOUPPER "${ARGV4}" _mode)
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+        list(LENGTH _lst _len)
+
+        # Offset index for name at position 0
+        math(EXPR _actualIx "${_ix} + 1")
+
+        if(_actualIx GREATER_EQUAL _len)
+            if(_mode STREQUAL "FAIL")
+                msg(ALWAYS FATAL_ERROR "record(SET): index ${_ix} out of range (len=${_len})")
+            elseif(NOT _mode STREQUAL "QUIET")
+                msg(WARNING "record(SET): extending record '${_recVar}' to index ${_ix}")
+            endif()
+
+            # Extend with "-" sentinel
+            while(_len LESS_EQUAL _actualIx)
+                list(APPEND _lst "${RECORD_EMPTY_FIELD_SENTINEL}")
+                list(LENGTH _lst _len)
+            endwhile()
+        endif()
+
+        list(REMOVE_AT _lst ${_actualIx})
+        list(INSERT _lst ${_actualIx} "${_newValStore}")
+
+        _hs__list_to_record("${_lst}" _result)
+        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Extended: APPEND / PREPEND (skip name) --------------------
+    elseif(_recVerbUC STREQUAL "APPEND" OR _recVerbUC STREQUAL "PREPEND")
+        if(${ARGC} LESS 3)
+            msg(ALWAYS FATAL_ERROR "record(${_recVerbUC}): expected record(${_recVerbUC} <recVar> <newValue>...)")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+
+        set(_k 2)
+        while(_k LESS ${ARGC})
+            set(_val "${ARGV${_k}}")
+            _hs__assert_no_ctrl_chars("record(${_recVerbUC})" "${_val}")
+            _hs__field_to_storage("${_val}" _vStore)
+
+            if(_recVerbUC STREQUAL "APPEND")
+                list(APPEND _lst "${_vStore}")
+            else()
+                # PREPEND after name (index 1)
+                list(INSERT _lst 1 "${_vStore}")
+            endif()
+            math(EXPR _k "${_k} + 1")
+        endwhile()
+
+        _hs__list_to_record("${_lst}" _result)
+        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Extended: POP_FRONT / POP_BACK (skip name) --------------------
+    elseif(_recVerbUC STREQUAL "POP_FRONT" OR _recVerbUC STREQUAL "POP_BACK")
+        if(${ARGC} LESS 3)
+            msg(ALWAYS FATAL_ERROR "record(${_recVerbUC}): expected record(${_recVerbUC} <recVar> <outVarName>... [TOUPPER|TOLOWER])")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+
+        # Check for TOUPPER/TOLOWER
+        math(EXPR _lastArg "${ARGC} - 1")
+        set(_lastWord "${ARGV${_lastArg}}")
+        string(TOUPPER "${_lastWord}" _lastWordUC)
+
+        set(_caseMode "")
+        set(_endIdx ${ARGC})
+        if(_lastWordUC STREQUAL "TOUPPER" OR _lastWordUC STREQUAL "TOLOWER")
+            set(_caseMode "${_lastWordUC}")
+            set(_endIdx ${_lastArg})
+        endif()
+
+        set(_k 2)
+        while(_k LESS ${_endIdx})
+            set(_outName "${ARGV${_k}}")
+            list(LENGTH _lst _len)
+            if(_len LESS 2)  # Need at least name + 1 field
+                set(${_outName} "" PARENT_SCOPE)
+            else()
+                if(_recVerbUC STREQUAL "POP_FRONT")
+                    # Pop from index 1 (skip name at index 0)
+                    list(GET _lst 1 _vStore)
+                    list(REMOVE_AT _lst 1)
+                else()
+                    math(EXPR _lastIdx "${_len} - 1")
+                    list(GET _lst ${_lastIdx} _vStore)
+                    list(REMOVE_AT _lst ${_lastIdx})
+                endif()
+
+                _hs__field_to_user("${_vStore}" _v)
+
+                if(_caseMode STREQUAL "TOUPPER")
+                    string(TOUPPER "${_v}" _v)
+                elseif(_caseMode STREQUAL "TOLOWER")
+                    string(TOLOWER "${_v}" _v)
+                endif()
+
+                set(${_outName} "${_v}" PARENT_SCOPE)
+            endif()
+            math(EXPR _k "${_k} + 1")
+        endwhile()
+
+        _hs__list_to_record("${_lst}" _result)
+        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Extended: DUMP --------------------
+    elseif(_recVerbUC STREQUAL "DUMP")
+        if(ARGC LESS 2 OR ARGC GREATER 4)
+            msg(ALWAYS FATAL_ERROR "record(DUMP): expected record(DUMP <recVar> [<outVarName>] [VERBOSE])")
+        endif()
+
+        set(_verbose OFF)
+        set(_outVarName "")
+
+        if(ARGC GREATER_EQUAL 3)
+            if("${ARGV2}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            else()
+                set(_outVarName "${ARGV2}")
+            endif()
+        endif()
+
+        if(ARGC EQUAL 4)
+            if("${ARGV3}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            endif()
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+
+        list(LENGTH _lst _len)
+        if(_len EQUAL 0)
+            set(_dumpStr "record '${_recVar}' = [] (empty/uninitialized)\n")
+        else()
+            list(GET _lst 0 _name)
+            math(EXPR _numFields "${_len} - 1")
+            set(_dumpStr "record '${_recVar}' (name='${_name}', fields=${_numFields}) = [\n")
+
+            set(_i 1)
+            set(_fieldIdx 0)
+            while(_i LESS _len)
+                list(GET _lst ${_i} _f)
+                _hs__field_to_user("${_f}" _v)
+                
+                if(_verbose)
+                    set(_displayVal "${_v}")
+                    string(LENGTH "${_displayVal}" _vlen)
+                    if(_vlen GREATER 50)
+                        string(SUBSTRING "${_displayVal}" 0 50 _displayVal)
+                        string(APPEND _displayVal "...")
+                    endif()
+                    string(APPEND _dumpStr "  [${_fieldIdx}] = \"${_displayVal}\"\n")
+                else()
+                    string(APPEND _dumpStr "  [${_fieldIdx}] = \"${_v}\"\n")
+                endif()
+                
+                math(EXPR _i "${_i} + 1")
+                math(EXPR _fieldIdx "${_fieldIdx} + 1")
+            endwhile()
+            string(APPEND _dumpStr "]")
+        endif()
+
+        if("${_outVarName}" STREQUAL "")
+            message("${_dumpStr}")
+        else()
+            set(${_outVarName} "${_dumpStr}" PARENT_SCOPE)
+        endif()
+        return()
+
+    # -------------------- Extended: CONVERT --------------------
+    elseif(_recVerbUC STREQUAL "CONVERT")
+        if(${ARGC} GREATER 3)
+            msg(ALWAYS FATAL_ERROR "record(CONVERT): expected record(CONVERT <recVar> [LIST|RECORD])")
+        endif()
+
+        set(_target "")
+        if(${ARGC} EQUAL 3)
+            string(TOUPPER "${ARGV2}" _target)
+        endif()
+
+        set(_in "${${_recVar}}")
+        string(FIND "${_in}" "${FS}" _hasFS)
+        string(FIND "${_in}" "${list_sep}" _hasSC)
+
+        if("${_target}" STREQUAL "")
+            if(_hasFS GREATER_EQUAL 0 AND _hasSC LESS 0)
+                set(_target "LIST")
+            elseif(_hasSC GREATER_EQUAL 0 AND _hasFS LESS 0)
+                set(_target "RECORD")
+            else()
+                msg(ALWAYS FATAL_ERROR "record(CONVERT): ambiguous format; specify LIST or RECORD")
+            endif()
+        endif()
+
+        if(_target STREQUAL "LIST")
+            _hs__record_to_list("${_in}" _out)
+        elseif(_target STREQUAL "RECORD")
+            _hs__list_to_record("${_in}" _out)
+        else()
+            msg(ALWAYS FATAL_ERROR "record(CONVERT): invalid target '${_target}'")
+        endif()
+
+        set(${_recVar} "${_out}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Fallback: Forward to CMake list() --------------------
+    else()
+        msg(ALWAYS FATAL_ERROR "record: unknown verb '${_recVerbUC}'")
+    endif()
+endfunction()
+
+# ======================================================================================================================
+# array() - Named array operations
+#
+# Extended signature:
+#   array(CREATE <arrayVarName> <name> RECORDS|ARRAYS)
+#   array(GET <arrayVarName> NAME <outVar>)
+#   array(GET <arrayVarName> EQUAL <path> <outVar>)
+#   array(GET <arrayVarName> MATCHING <regex> <outVar>)
+#   array(GET <arrayVarName> <recIndex> <outVarName>...)
+#   array(LENGTH <arrayVarName> <outVarName>)
+#   array(SET <arrayVarName> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])
+#   array(APPEND|PREPEND <arrayVarName> RECORD|ARRAY <value>...)
+#   array(FIND <arrayVarName> <path> <outVarName>)
+#   array(DUMP <arrayVarName> [<outVarName>] [VERBOSE])
+#
+# ======================================================================================================================
+
+function(array)
+    if(${ARGC} LESS 2)
+        msg(ALWAYS FATAL_ERROR "array: expected array(<VERB> <arrayVarName> ...)")
+    endif()
+
+    set(_V "${ARGV0}")
+    string(TOUPPER "${_V}" _V)
+
+    set(arrayVarName "${ARGV1}")
+    set(_A "${${arrayVarName}}")
+
+    _hs__array_get_kind("${_A}" _kind _sep)
+
+    # -------------------- CREATE with NAME --------------------
+    if(_V STREQUAL "CREATE")
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "array(CREATE): expected array(CREATE <arrayVarName> <name> RECORDS|ARRAYS)")
+        endif()
+        
+        set(_name "${ARGV2}")
+        _hs__assert_no_ctrl_chars("array(CREATE) name" "${_name}")
+        
+        string(TOUPPER "${ARGV3}" _typeArg)
+        if(_typeArg STREQUAL "RECORDS")
+            set(_marker "${RS}")
+        elseif(_typeArg STREQUAL "ARRAYS")
+            set(_marker "${GS}")
+        else()
+            msg(ALWAYS FATAL_ERROR "array(CREATE): type must be RECORDS or ARRAYS, got '${ARGV3}'")
+        endif()
+
+        # Format: {SEP}NAME (just marker and name, no elements yet)
+        set(${arrayVarName} "${_marker}${_name}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- GET NAME --------------------
+    if(_V STREQUAL "GET")
+        if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "NAME")
+            if(NOT ${ARGC} EQUAL 4)
+                msg(ALWAYS FATAL_ERROR "array(GET NAME): expected array(GET <arrayVarName> NAME <outVarName>)")
+            endif()
+            
+            _hs__get_name("${_A}" _name)
+            set(${ARGV3} "${_name}" PARENT_SCOPE)
+            return()
+        endif()
+
+        # -------------------- GET by EQUAL path --------------------
+        if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "EQUAL")
+            if(NOT ${ARGC} EQUAL 5)
+                msg(ALWAYS FATAL_ERROR "array(GET EQUAL): expected array(GET <arrayVarName> EQUAL <path> <outVarName>)")
+            endif()
+            
+            set(_path "${ARGV3}")
+            _hs__resolve_path("${_A}" "${_path}" _result)
+            set(${ARGV4} "${_result}" PARENT_SCOPE)
+            return()
+        endif()
+
+        # -------------------- GET by MATCHING regex --------------------
+        if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "MATCHING")
+            if(NOT ${ARGC} EQUAL 5)
+                msg(ALWAYS FATAL_ERROR "array(GET MATCHING): expected array(GET <arrayVarName> MATCHING <regex> <outVarName>)")
+            endif()
+            
+            set(_regex "${ARGV3}")
+            _hs__array_to_list("${_A}" "${_sep}" _lst)
+            
+            # Skip element 0 (array's own name)
+            list(LENGTH _lst _len)
+            set(_i 1)
+            while(_i LESS _len)
+                list(GET _lst ${_i} _elem)
+                _hs__get_name("${_elem}" _elemName)
+                if(_elemName MATCHES "${_regex}")
+                    set(${ARGV4} "${_elem}" PARENT_SCOPE)
+                    return()
+                endif()
+                math(EXPR _i "${_i} + 1")
+            endwhile()
+            
+            # Not found
+            set(${ARGV4} "" PARENT_SCOPE)
+            return()
+        endif()
+
+        # -------------------- Regular GET by index --------------------
+        if(${ARGC} LESS 4)
+            msg(ALWAYS FATAL_ERROR "array(GET): expected array(GET <arrayVarName> <recIndex> <outVarName>...)")
+        endif()
+
+        set(_recIndex "${ARGV2}")
+        if(NOT _recIndex MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "array(GET): <recIndex> must be a non-negative integer, got '${_recIndex}'")
+        endif()
+
+        _hs__array_to_list("${_A}" "${_sep}" _lst)
+        list(LENGTH _lst _len)
+
+        # Offset index by +1 to skip array's own name at position 0
+        math(EXPR _actualIdx "${_recIndex} + 1")
+
+        set(_k 3)
+        set(_cur "${_actualIdx}")
+        while(_k LESS ${ARGC})
+            set(_outName "${ARGV${_k}}")
+            if(_cur GREATER_EQUAL _len)
+                set(${_outName} "" PARENT_SCOPE)
+            else()
+                list(GET _lst ${_cur} _elem)
+                set(${_outName} "${_elem}" PARENT_SCOPE)
+            endif()
+            math(EXPR _k "${_k} + 1")
+            math(EXPR _cur "${_cur} + 1")
+        endwhile()
+        return()
+    endif()
+
+    # -------------------- LENGTH (exclude name) --------------------
+    if(_V STREQUAL "LENGTH")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "array(LENGTH): expected array(LENGTH <arrayVarName> <outVarName>)")
+        endif()
+        _hs__array_to_list("${_A}" "${_sep}" _lst)
+        list(LENGTH _lst _len)
+        # Subtract 1 to exclude the array's own name
+        if(_len GREATER 0)
+            math(EXPR _len "${_len} - 1")
+        endif()
+        set(${ARGV2} "${_len}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- FIND by path --------------------
+    if(_V STREQUAL "FIND")
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "array(FIND): expected array(FIND <arrayVarName> <path> <outVarName>)")
+        endif()
+
+        set(_path "${ARGV2}")
+        _hs__resolve_path("${_A}" "${_path}" _result)
+        
+        if("${_result}" STREQUAL "")
+            set(${ARGV3} "-1" PARENT_SCOPE)
+        else()
+            # Find the index of this element
+            _hs__array_to_list("${_A}" "${_sep}" _lst)
+            list(FIND _lst "${_result}" _idx)
+            # Adjust for name offset
+            if(_idx GREATER 0)
+                math(EXPR _idx "${_idx} - 1")
+            endif()
+            set(${ARGV3} "${_idx}" PARENT_SCOPE)
+        endif()
+        return()
+    endif()
+
+    # -------------------- DUMP --------------------
+    if(_V STREQUAL "DUMP")
+        if(ARGC LESS 2 OR ARGC GREATER 4)
+            msg(ALWAYS FATAL_ERROR "array(DUMP): expected array(DUMP <arrayVarName> [<outVarName>] [VERBOSE])")
+        endif()
+
+        set(_verbose OFF)
+        set(_outVarName "")
+
+        if(ARGC GREATER_EQUAL 3)
+            if("${ARGV2}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            else()
+                set(_outVarName "${ARGV2}")
+            endif()
+        endif()
+
+        if(ARGC EQUAL 4)
+            if("${ARGV3}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            endif()
+        endif()
+
+        _hs__array_to_list("${_A}" "${_sep}" _lst)
+
+        list(LENGTH _lst _len)
+        if(_len EQUAL 0)
+            set(_dumpStr "array '${arrayVarName}' = [] (empty/uninitialized)\n")
+        else()
+            list(GET _lst 0 _arrName)
+            math(EXPR _numElems "${_len} - 1")
+            set(_dumpStr "array '${arrayVarName}' (name='${_arrName}', kind=${_kind}, elements=${_numElems}) = [\n")
+
+            set(_i 1)
+            set(_elemIdx 0)
+            while(_i LESS _len)
+                list(GET _lst ${_i} _elem)
+                _hs__get_name("${_elem}" _elemName)
+                
+                if(_verbose)
+                    string(LENGTH "${_elem}" _elen)
+                    if(_elen GREATER 100)
+                        string(SUBSTRING "${_elem}" 0 100 _displayElem)
+                        string(APPEND _displayElem "...")
+                    else()
+                        set(_displayElem "${_elem}")
+                    endif()
+                    string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' = \"${_displayElem}\"\n")
+                else()
+                    string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}'\n")
+                endif()
+                
+                math(EXPR _i "${_i} + 1")
+                math(EXPR _elemIdx "${_elemIdx} + 1")
+            endwhile()
+            string(APPEND _dumpStr "]")
+        endif()
+
+        if("${_outVarName}" STREQUAL "")
+            message("${_dumpStr}")
+        else()
+            set(${_outVarName} "${_dumpStr}" PARENT_SCOPE)
+        endif()
+        return()
+    endif()
+
+    # -------------------- APPEND / PREPEND --------------------
+    if(_V STREQUAL "APPEND" OR _V STREQUAL "PREPEND")
+        if(${ARGC} LESS 4)
+            msg(ALWAYS FATAL_ERROR "array(${_V}): expected array(${_V} <arrayVarName> RECORD|ARRAY <value>...)")
+        endif()
+
+        string(TOUPPER "${ARGV2}" _itemKind)
+
+        if(_kind STREQUAL "UNSET")
+            msg(ALWAYS FATAL_ERROR "array(${_V}): array is uninitialized; call array(CREATE ...) first")
+        endif()
+
+        if(_itemKind STREQUAL "RECORD" AND NOT _kind STREQUAL "RECORDS")
+            msg(ALWAYS FATAL_ERROR "array(${_V}): cannot add RECORD to an ARRAYS array")
+        elseif(_itemKind STREQUAL "ARRAY" AND NOT _kind STREQUAL "ARRAYS")
+            msg(ALWAYS FATAL_ERROR "array(${_V}): cannot add ARRAY to a RECORDS array")
+        endif()
+
+        _hs__array_to_list("${_A}" "${_sep}" _lst)
+
+        set(_k 3)
+        while(_k LESS ${ARGC})
+            set(_item "${ARGV${_k}}")
+
+            if(_itemKind STREQUAL "RECORD")
+                _hs__get_object_type("${_item}" _itemType)
+                if(NOT _itemType STREQUAL "RECORD")
+                    msg(ALWAYS FATAL_ERROR "array(${_V}): value is not a valid RECORD")
+                endif()
+            else()
+                _hs__get_object_type("${_item}" _itemType)
+                if(NOT _itemType STREQUAL "ARRAY_RECORDS" AND NOT _itemType STREQUAL "ARRAY_ARRAYS")
+                    msg(ALWAYS FATAL_ERROR "array(${_V}): value is not a valid ARRAY")
+                endif()
+            endif()
+
+            if(_V STREQUAL "APPEND")
+                list(APPEND _lst "${_item}")
+            else()
+                # PREPEND after name (index 1)
+                list(INSERT _lst 1 "${_item}")
+            endif()
+
+            math(EXPR _k "${_k} + 1")
+        endwhile()
+
+        _hs__list_to_array("${_lst}" "${_kind}" _Aout)
+        set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- SET --------------------
+    if(_V STREQUAL "SET")
+        if(${ARGC} LESS 5)
+            msg(ALWAYS FATAL_ERROR "array(SET): expected array(SET <arrayVarName> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])")
+        endif()
+
+        set(_ix "${ARGV2}")
+        if(NOT _ix MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "array(SET): <recIndex> must be a non-negative integer, got '${_ix}'")
+        endif()
+
+        string(TOUPPER "${ARGV3}" _itemKind)
+        set(_val "${ARGV4}")
+        set(_mode "")
+        if(${ARGC} GREATER 5)
+            string(TOUPPER "${ARGV5}" _mode)
+        endif()
+
+        if(_kind STREQUAL "UNSET")
+            msg(ALWAYS FATAL_ERROR "array(SET): array is uninitialized")
+        endif()
+
+        if(_itemKind STREQUAL "RECORD" AND NOT _kind STREQUAL "RECORDS")
+            msg(ALWAYS FATAL_ERROR "array(SET): cannot set RECORD into an ARRAYS array")
+        elseif(_itemKind STREQUAL "ARRAY" AND NOT _kind STREQUAL "ARRAYS")
+            msg(ALWAYS FATAL_ERROR "array(SET): cannot set ARRAY into a RECORDS array")
+        endif()
+
+        _hs__array_to_list("${_A}" "${_sep}" _lst)
+        list(LENGTH _lst _len)
+
+        # Offset index
+        math(EXPR _actualIx "${_ix} + 1")
+
+        if(_actualIx GREATER_EQUAL _len)
+            if(_mode STREQUAL "FAIL")
+                msg(ALWAYS FATAL_ERROR "array(SET): index ${_ix} out of range")
+            elseif(NOT _mode STREQUAL "QUIET")
+                msg(WARNING "array(SET): extending array '${arrayVarName}' to index ${_ix}")
+            endif()
+
+            if(_kind STREQUAL "RECORDS")
+                msg(ALWAYS FATAL_ERROR "array(SET): cannot auto-extend RECORDS array (empty records forbidden)")
+            else()
+                while(_len LESS_EQUAL _actualIx)
+                    list(APPEND _lst "${RS}unnamed")
+                    list(LENGTH _lst _len)
+                endwhile()
+            endif()
+        endif()
+
+        list(REMOVE_AT _lst ${_actualIx})
+        list(INSERT _lst ${_actualIx} "${_val}")
+        _hs__list_to_array("${_lst}" "${_kind}" _Aout)
+        set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
+        return()
+    endif()
+
+    msg(ALWAYS FATAL_ERROR "array: unknown verb '${_V}'")
+endfunction()
+
+# ======================================================================================================================
+# collection() - Key-value map operations
+#
+# Signature:
+#   collection(CREATE <collectionVarName>)
+#   collection(SET <collectionVarName> <key> <value>)
+#   collection(GET <collectionVarName> <key> <outVarName>)
+#   collection(GET <collectionVarName> EQUAL <path> <outVarName>)
+#   collection(REMOVE <collectionVarName> <key>)
+#   collection(KEYS <collectionVarName> <outVarName>)
+#   collection(LENGTH <collectionVarName> <outVarName>)
+#   collection(DUMP <collectionVarName> [<outVarName>])
+#
+# ======================================================================================================================
+
+function(collection)
+    if(${ARGC} LESS 2)
+        msg(ALWAYS FATAL_ERROR "collection: expected collection(<VERB> <collectionVarName> ...)")
+    endif()
+
+    set(_V "${ARGV0}")
+    string(TOUPPER "${_V}" _V)
+
+    set(collectionVarName "${ARGV1}")
+    set(_C "${${collectionVarName}}")
+
+    # -------------------- CREATE --------------------
+    if(_V STREQUAL "CREATE")
+        if(NOT ${ARGC} EQUAL 2)
+            msg(ALWAYS FATAL_ERROR "collection(CREATE): expected collection(CREATE <collectionVarName>)")
+        endif()
+
+        # Empty collection is just the US marker
+        set(${collectionVarName} "${US}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- SET --------------------
+    if(_V STREQUAL "SET")
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "collection(SET): expected collection(SET <collectionVarName> <key> <value>)")
+        endif()
+
+        set(_key "${ARGV2}")
+        set(_value "${ARGV3}")
+
+        _hs__assert_no_ctrl_chars("collection(SET) key" "${_key}")
+
+        # Parse existing collection
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        if("${_payload}" STREQUAL "")
+            # Empty collection
+            set(_kvList "")
+        else()
+            string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        endif()
+
+        # Check if key exists
+        list(LENGTH _kvList _kvLen)
+        set(_found OFF)
+        set(_i 0)
+        while(_i LESS _kvLen)
+            list(GET _kvList ${_i} _existingKey)
+            if("${_existingKey}" STREQUAL "${_key}")
+                # Update existing value
+                math(EXPR _valIdx "${_i} + 1")
+                if(_valIdx LESS _kvLen)
+                    list(REMOVE_AT _kvList ${_valIdx})
+                    list(INSERT _kvList ${_valIdx} "${_value}")
+                else()
+                    list(APPEND _kvList "${_value}")
+                endif()
+                set(_found ON)
+                break()
+            endif()
+            math(EXPR _i "${_i} + 2")
+        endwhile()
+
+        if(NOT _found)
+            # Add new key-value pair
+            list(APPEND _kvList "${_key}" "${_value}")
+        endif()
+
+        # Rebuild collection
+        if("${_kvList}" STREQUAL "")
+            set(${collectionVarName} "${US}" PARENT_SCOPE)
+        else()
+            string(REPLACE "${list_sep}" "${US}" _payload "${_kvList}")
+            set(${collectionVarName} "${US}${_payload}" PARENT_SCOPE)
+        endif()
+        return()
+    endif()
+
+    # -------------------- GET --------------------
+    if(_V STREQUAL "GET")
+        if(${ARGC} EQUAL 5 AND "${ARGV2}" STREQUAL "EQUAL")
+            # Path-based GET
+            set(_path "${ARGV3}")
+            _hs__resolve_path("${_C}" "${_path}" _result)
+            set(${ARGV4} "${_result}" PARENT_SCOPE)
+            return()
+        endif()
+
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "collection(GET): expected collection(GET <collectionVarName> <key> <outVarName>) or collection(GET <collectionVarName> EQUAL <path> <outVarName>)")
+        endif()
+
+        set(_key "${ARGV2}")
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        
+        if("${_payload}" STREQUAL "")
+            set(${ARGV3} "" PARENT_SCOPE)
+            return()
+        endif()
+
+        string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        list(LENGTH _kvList _kvLen)
+        
+        set(_i 0)
+        while(_i LESS _kvLen)
+            list(GET _kvList ${_i} _existingKey)
+            if("${_existingKey}" STREQUAL "${_key}")
+                math(EXPR _valIdx "${_i} + 1")
+                if(_valIdx LESS _kvLen)
+                    list(GET _kvList ${_valIdx} _value)
+                    set(${ARGV3} "${_value}" PARENT_SCOPE)
+                else()
+                    set(${ARGV3} "" PARENT_SCOPE)
+                endif()
+                return()
+            endif()
+            math(EXPR _i "${_i} + 2")
+        endwhile()
+
+        # Key not found
+        set(${ARGV3} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- REMOVE --------------------
+    if(_V STREQUAL "REMOVE")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "collection(REMOVE): expected collection(REMOVE <collectionVarName> <key>)")
+        endif()
+
+        set(_key "${ARGV2}")
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        
+        if("${_payload}" STREQUAL "")
+            return()  # Nothing to remove
+        endif()
+
+        string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        list(LENGTH _kvList _kvLen)
+        
+        set(_i 0)
+        while(_i LESS _kvLen)
+            list(GET _kvList ${_i} _existingKey)
+            if("${_existingKey}" STREQUAL "${_key}")
+                # Remove key and value
+                list(REMOVE_AT _kvList ${_i})
+                if(_i LESS _kvLen)
+                    list(REMOVE_AT _kvList ${_i})
+                endif()
+                break()
+            endif()
+            math(EXPR _i "${_i} + 2")
+        endwhile()
+
+        # Rebuild
+        if("${_kvList}" STREQUAL "")
+            set(${collectionVarName} "${US}" PARENT_SCOPE)
+        else()
+            string(REPLACE "${list_sep}" "${US}" _payload "${_kvList}")
+            set(${collectionVarName} "${US}${_payload}" PARENT_SCOPE)
+        endif()
+        return()
+    endif()
+
+    # -------------------- KEYS --------------------
+    if(_V STREQUAL "KEYS")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "collection(KEYS): expected collection(KEYS <collectionVarName> <outVarName>)")
+        endif()
+
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        
+        if("${_payload}" STREQUAL "")
+            set(${ARGV2} "" PARENT_SCOPE)
+            return()
+        endif()
+
+        string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        
+        set(_keys "")
+        list(LENGTH _kvList _kvLen)
+        set(_i 0)
+        while(_i LESS _kvLen)
+            list(GET _kvList ${_i} _key)
+            list(APPEND _keys "${_key}")
+            math(EXPR _i "${_i} + 2")
+        endwhile()
+
+        set(${ARGV2} "${_keys}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- LENGTH --------------------
+    if(_V STREQUAL "LENGTH")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "collection(LENGTH): expected collection(LENGTH <collectionVarName> <outVarName>)")
+        endif()
+
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        
+        if("${_payload}" STREQUAL "")
+            set(${ARGV2} "0" PARENT_SCOPE)
+            return()
+        endif()
+
+        string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+        list(LENGTH _kvList _kvLen)
+        math(EXPR _numPairs "${_kvLen} / 2")
+        
+        set(${ARGV2} "${_numPairs}" PARENT_SCOPE)
+        return()
+    endif()
+
+    # -------------------- DUMP --------------------
+    if(_V STREQUAL "DUMP")
+        if(ARGC LESS 2 OR ARGC GREATER 3)
+            msg(ALWAYS FATAL_ERROR "collection(DUMP): expected collection(DUMP <collectionVarName> [<outVarName>])")
+        endif()
+
+        set(_outVarName "")
+        if(ARGC EQUAL 3)
+            set(_outVarName "${ARGV2}")
+        endif()
+
+        string(SUBSTRING "${_C}" 1 -1 _payload)
+        
+        if("${_payload}" STREQUAL "")
+            set(_dumpStr "collection '${collectionVarName}' = {} (empty)\n")
+        else()
+            string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
+            list(LENGTH _kvList _kvLen)
+            math(EXPR _numPairs "${_kvLen} / 2")
+            
+            set(_dumpStr "collection '${collectionVarName}' (pairs=${_numPairs}) = {\n")
+            
+            set(_i 0)
+            while(_i LESS _kvLen)
+                list(GET _kvList ${_i} _key)
+                math(EXPR _valIdx "${_i} + 1")
+                if(_valIdx LESS _kvLen)
+                    list(GET _kvList ${_valIdx} _value)
+                    _hs__get_object_type("${_value}" _valueType)
+                    string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n")
+                endif()
+                math(EXPR _i "${_i} + 2")
+            endwhile()
+            string(APPEND _dumpStr "}")
+        endif()
+
+        if("${_outVarName}" STREQUAL "")
+            message("${_dumpStr}")
+        else()
+            set(${_outVarName} "${_dumpStr}" PARENT_SCOPE)
+        endif()
+        return()
+    endif()
+
+    msg(ALWAYS FATAL_ERROR "collection: unknown verb '${_V}'")
+endfunction()
