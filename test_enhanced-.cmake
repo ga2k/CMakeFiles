@@ -10,9 +10,12 @@ endfunction()
 
 message("=== RECORD Examples ===")
 
-# Create a named record for a package using BULK SET (fast!)
+# Create a named record for a package
 record(CREATE soci_pkg "SOCI" 4)
-record(SET soci_pkg 0 "https://github.com/SOCI/soci" "v4.0.3" "SQL database library" "MIT")
+record(SET soci_pkg 0 "https://github.com/SOCI/soci")
+record(SET soci_pkg 1 "v4.0.3")
+record(SET soci_pkg 2 "SQL database library")
+record(SET soci_pkg 3 "MIT")
 
 # Get the record name
 record(GET soci_pkg NAME pkg_name)
@@ -27,37 +30,17 @@ message("  Version: ${version}")
 # Dump the record
 record(DUMP soci_pkg)
 
-message("\n=== Bulk SET Performance Test ===")
-
-# Method 1: Individual SETs (slower)
-record(CREATE test1 "SlowMethod" 5)
-record(SET test1 0 "field0")
-record(SET test1 1 "field1")
-record(SET test1 2 "field2")
-record(SET test1 3 "field3")
-record(SET test1 4 "field4")
-message("Individual SETs: 5 conversions")
-
-# Method 2: Bulk SET (faster)
-record(CREATE test2 "FastMethod" 5)
-record(SET test2 0 "field0" "field1" "field2" "field3" "field4")
-message("Bulk SET: 1 conversion - 5x faster!")
-
-# Verify they're identical
-record(GET test1 0 v1_0 v1_1 v1_2)
-record(GET test2 0 v2_0 v2_1 v2_2)
-if("${v1_0}${v1_1}${v1_2}" STREQUAL "${v2_0}${v2_1}${v2_2}")
-    message("✓ Both methods produce identical results")
-endif()
-
 message("\n=== ARRAY Examples ===")
 
 # Create named array of records
 array(CREATE database_packages "DATABASE_PACKAGES" RECORDS)
 
-# Create more package records using bulk SET
+# Create more package records
 record(CREATE sqlite_pkg "SQLITE_ORM" 4)
-record(SET sqlite_pkg 0 "https://github.com/fnc12/sqlite_orm" "v1.8.2" "SQLite ORM for C++" "BSD-3")
+record(SET sqlite_pkg 0 "https://github.com/fnc12/sqlite_orm")
+record(SET sqlite_pkg 1 "v1.8.2")
+record(SET sqlite_pkg 2 "SQLite ORM for C++")
+record(SET sqlite_pkg 3 "BSD-3")
 
 # Append records to array
 array(APPEND database_packages RECORD ${soci_pkg})
@@ -78,34 +61,6 @@ message("First package: ${first_name}")
 
 # Dump array
 array(DUMP database_packages)
-message("\n=== NAME-based SET Example ===")
-
-# Create and populate array
-array(CREATE test_array "TestArray" RECORDS)
-record(CREATE rec1 "First" 2)
-record(SET rec1 0 "value1" "data1")
-record(CREATE rec2 "Second" 2)
-record(SET rec2 0 "value2" "data2")
-array(APPEND test_array RECORD ${rec1})
-array(APPEND test_array RECORD ${rec2})
-
-message("Before NAME-based SET:")
-array(DUMP test_array)
-
-# Update by name instead of index
-record(CREATE updated "Second" 2)
-record(SET updated 0 "UPDATED_VALUE" "UPDATED_DATA")
-array(SET test_array NAME "Second" RECORD ${updated})
-
-message("\nAfter NAME-based SET:")
-array(DUMP test_array)
-
-# Verify the update
-array(GET test_array EQUAL "Second" check)
-record(GET check 0 val)
-if("${val}" STREQUAL "UPDATED_VALUE")
-    message("✓ NAME-based SET successful!")
-endif()
 
 message("\n=== PATH-BASED ACCESS Examples ===")
 
@@ -116,10 +71,16 @@ array(CREATE all_packages "ALL_PACKAGES" ARRAYS)
 array(CREATE storage_packages "STORAGE_PACKAGES" RECORDS)
 
 record(CREATE yaml_pkg "YAML" 4)
-record(SET yaml_pkg 0 "https://github.com/jbeder/yaml-cpp" "yaml-cpp-0.7.0" "YAML parser" "MIT")
+record(SET yaml_pkg 0 "https://github.com/jbeder/yaml-cpp")
+record(SET yaml_pkg 1 "yaml-cpp-0.7.0")
+record(SET yaml_pkg 2 "YAML parser")
+record(SET yaml_pkg 3 "MIT")
 
 record(CREATE toml_pkg "TOML" 4)
-record(SET toml_pkg 0 "https://github.com/ToruNiina/toml11" "v3.7.1" "TOML parser" "MIT")
+record(SET toml_pkg 0 "https://github.com/ToruNiina/toml11")
+record(SET toml_pkg 1 "v3.7.1")
+record(SET toml_pkg 2 "TOML parser")
+record(SET toml_pkg 3 "MIT")
 
 array(APPEND storage_packages RECORD ${yaml_pkg})
 array(APPEND storage_packages RECORD ${toml_pkg})
@@ -193,7 +154,9 @@ collection(SET required_deps "STORAGE" ${storage_packages})
 collection(CREATE optional_deps)
 array(CREATE networking_packages "NETWORKING" RECORDS)
 record(CREATE curl_pkg "CURL" 3)
-record(SET curl_pkg 0 "https://github.com/curl/curl" "curl-8_5_0" "HTTP client")
+record(SET curl_pkg 0 "https://github.com/curl/curl")
+record(SET curl_pkg 1 "curl-8_5_0")
+record(SET curl_pkg 2 "HTTP client")
 array(APPEND networking_packages RECORD ${curl_pkg})
 collection(SET optional_deps "NETWORKING" ${networking_packages})
 

@@ -1,64 +1,29 @@
 include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/array_enhanced.cmake)
 
-set(FeatureIX 0)
-set(FeaturePkgNameIX 1)
-set(FeatureNamespaceIX 2)
-set(FeatureKindIX 3)
-set(FeatureMethodIX 4)
-set(FeatureUrlIX 5)
-set(FeatureGitTagIX 6)
-set(FeatureSrcDirIX 5)
-set(FeatureBuildDirIX 6)
-set(FeatureIncDirIX 7)
-set(FeatureComponentsIX 8)
-set(FeatureArgsIX 9)
-set(FeaturePrereqsIX 10)
-set(FeatureSeparators ${FeaturePrereqsIX})
-math(EXPR FeatureLength "${FeaturePrereqsIX} + 1")
-
-set(PkgNameIX 0)
-set(PkgNamespaceIX 1)
-set(PkgKindIX 2)
-set(PkgMethodIX 3)
-set(PkgUrlIX 4)
-set(PkgGitTagIX 5)
-set(PkgSrcDirIX 4)
-set(PkgBuildDirIX 5)
-set(PkgIncDirIX 6)
-set(PkgComponentsIX 7)
-set(PkgArgsIX 8)
-set(PkgPrereqsIX 9)
-#set(PkgPrereqsIX ${PkgPrereqsIX})
-math(EXPR PkgFields "${PkgPrereqsIX} + 1")
+set(FIXName 0)
+set(FIXPkgName 1)
+set(FIXNamespace 2)
+set(FIXKind 3)
+set(FIXMethod 4)
+set(FIXUrl 5)
+set(FIXGitTag 6)
+set(FIXSrcDir 5)
+set(FIXBuildDir 6)
+set(FIXIncDir 7)
+set(FIXComponents 8)
+set(FIXArgs 9)
+set(FIXPrereqs 10)
+math(EXPR FIXLength "${FIXPrereqs} + 1")
 
 macro(fetchContentsHelp)
 
-    set(help_msg "[=[
-Valid options for fetchContents()
-
-USE <ALL | FEATURE[:ALT] [FEATURE[:ALT] [...]]>
-        FetchContent() the named package features
-
-NOT <FEATURE [FEATURE [...]]>
-        Don't Fetch_Content() these package features
-
-OVERRIDE_FIND_PACKAGE ALL | FEATURE [FEATURE [...]]
-        Redirect calls to find_package() to this local cache
-
-FIND_PACKAGE_ARGS ALL [args]
-FIND_PACKAGE_ARGS FEATURE [args] [FEATURE [args] [...]]
-        These args to find_package will take precedence over or supplement the user's args.
-        If ALL [args] supplied, [args] will be prepended to each FEATURE's args.
-
-FIND_PACKAGE_COMPONENTS FEATURE=component[,component[,... ]] [FEATURE=component[,component[,... ]] [ ... ]]
-        COMPONENTS parameter to pass to find_package.
-
+    set(help_msg [=[
 HELP
         Print this help and exit
 
     Currently available package features are
-]=]")
+]=])
 
     record(LENGTH PKG_FEATURES items)
     math(EXPR last_item "${items} - 1")
@@ -101,7 +66,6 @@ HELP
 endmacro()
 
 include(FetchContent)
-
 
 function(addTargetProperties target pkgname addToLists)
 
@@ -223,8 +187,6 @@ function(addPackageData)
     set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ)
     set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS)
 
-    record(CREATE output ${FeatureLength})
-    record(DUMP output)
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
 
     if (NOT APD_METHOD OR (NOT ${APD_METHOD} STREQUAL "PROCESS" AND NOT ${APD_METHOD} STREQUAL "FETCH_CONTENTS" AND NOT ${APD_METHOD} STREQUAL "FIND_PACKAGE"))
@@ -321,44 +283,139 @@ function(addPackageData)
 #        set(APD_PREREQS "-")
     endif ()
 
-#    unset(ARGN)
-#    unset(ARGV)
-#    unset(ARGC)
+    record(CREATE output ${APD_FEATURE} ${FIXLength})
+    record(SET output "${FIXName}"
+            "${APD_FEATURE}"
+            "${APD_PKGNAME}"
+            "${APD_NAMESPACE}"
+            "${APD_KIND}"
+            "${APD_METHOD}"
+            "${URLorSRCDIR}"
+            "${TAGorBINDIR}"
+            "${APD_INCDIR}"
+            "${APD_COMPONENTS}"
+            "${APD_ARGS}"
+            "${APD_PREREQS}"
+    )
+    record(DUMP output)
+    record(DUMP output VERBOSE)
+    function(createOrAppendCollectionObject)
 
-    record(REPLACE output "${FeatureIX}"           "${APD_FEATURE}")
-    record(REPLACE output "${FeaturePkgNameIX}"    "${APD_PKGNAME}")
-    record(REPLACE output "${FeatureNamespaceIX}"  "${APD_NAMESPACE}")
-    record(REPLACE output "${FeatureKindIX}"       "${APD_KIND}")
-    record(REPLACE output "${FeatureMethodIX}"     "${APD_METHOD}")
-    record(REPLACE output "${FeatureUrlIX}"        "${URLorSRCDIR}")
-    record(REPLACE output "${FeatureGitTagIX}"     "${TAGorBINDIR}")
-    record(REPLACE output "${FeatureIncDirIX}"     "${APD_INCDIR}")
-    record(REPLACE output "${FeatureComponentsIX}" "${APD_COMPONENTS}")
-    record(REPLACE output "${FeatureArgsIX}"       "${APD_ARGS}")
-    record(REPLACE output "${FeaturePrereqsIX}"    "${APD_PREREQS}")
+        set(switches QUIET REPLACE EXTEND UNIQUE)
+        set(args OBJECT FEATURE DATA FIELD TEXT)
+        set(lists "")
 
-    function(createOrAppendFeaturePkgList arrName featureName pkgName newRecord)
+        set(caco_object  "")
+        set(caco_quiet   OFF)
+        set(caco_extend  ON)
+        set(caco_replace OFF)
+        set(caco_unique  OFF)
+        set(caco_feature "")
+        set(caco_data    "")
+        set(caco_field   "")
+        set(caco_text    "")
 
-        getFeaturePkgList(${arrName} ${featureName} pkgArray)
+        cmake_parse_arguments("CACO" "${switches}" "${args}" "${lists}" ${ARGN})
 
-        if (pkgArray STREQUAL "NOTFOUND" )
-            array(CREATE newFeature RECORDS)
-            array(DUMP newFeature)
-            record(DUMP output)
-            array(APPEND newFeature RECORD "${newRecord}")
-            array(APPEND ${arrName} ARRAY "${newFeature}")
-            msg("Adding feature${padding}${BOLD}${featureName}${NC} for package ${BOLD}${pkgName}${NC}")
+        if(NOT CACO_OBJECT OR "${CACO_OBJECT}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no OBJECT in call to createOrAppendCollectionObject()")
         else ()
-            getFeatureIndex(${arrName} ${featureName} pkgIndex)
-            array(GET ${arrName} ${pkgIndex} existing_feature)
-            array(APPEND existing_feature RECORD ${newRecord})
-            array(SET ${arrName} ${pkgIndex} ARRAY "${existing_feature}")
-            msg("${YELLOW}Extend${NC} feature${padding}${BOLD}${featureName}${NC} for package ${BOLD}${pkgName}${NC}")
+            set(caco_object "${CACO_OBJECT}")
         endif ()
-        set(${arrName} "${${arrName}}" PARENT_SCOPE)
+
+        if(CACO_QUIET)
+            set(caco_quiet ON)
+        endif ()
+        if(CACO_REPLACE)
+            set(caco_extend  OFF)
+            set(caco_replace ON)
+        endif ()
+        if(CACO_EXTEND)
+            set(caco_extend  ON)
+            set(caco_replace OFF)
+        endif ()
+        if(CACO_UNIQUE)
+            set(caco_unique ON)
+        endif ()
+        if(NOT CACO_FEATURE OR "${CACO_FEATURE}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no FEATURE in call to createOrAppendCollectionObject()")
+        else ()
+            set(caco_feature "${CACO_FEATURE}")
+        endif ()
+        if(CACO_DATA AND NOT "${CACO_DATA}" STREQUAL "")
+            set(caco_data "${CACO_DATA}")
+        endif ()
+        if(CACO_FIELD AND NOT "${CACO_FIELD}" STREQUAL "")
+            set(caco_field "${CACO_FIELD}")
+        endif ()
+        if(CACO_TEXT AND NOT "${CACO_TEXT}" STREQUAL "")
+            set(caco_text "${CACO_TEXT}")
+        endif ()
+
+        collection(GET ${caco_object} EQUAL ${caco_feature} existingData)
+
+        if(caco_field)
+            # if a field, wrap it in a RECORD and put it in an ARRAY
+            record(CREATE "${caco_field}" "${caco_field}" 1)
+            array(CREATE newFeature "${caco_feature}" RECORDS)
+            array(APPEND newFeature RECORD "${${caco_field}}")
+        endif ()
+
+        if (NOT existingData)
+            if(caco_field)
+                # if nothing - newFeature array already created above
+            elseif (caco_data)
+                array(CREATE newFeature "${caco_feature}" RECORDS)
+                array(APPEND newFeature RECORD "${caco_data}")
+            else ()
+                msg(ALWAYS FATAL_ERROR "no DATA or FIELD in call to createOrAppendCollectionObject()")
+            endif ()
+            collection(SET ${caco_object} "${caco_feature}" "${newFeature}")
+            collection(DUMP ${caco_object})
+            if(caco_text AND NOT caco_quiet)
+                msg("Adding ${caco_text}")
+            endif ()
+        else ()
+            if (caco_field)
+                if(caco_extend)
+                    if(caco_unique)
+                        array(FIND existingData "${caco_field}" index)
+                        if (index EQUAL -1)
+                            collection(SET ${caco_object} "${caco_feature}" "${newFeature}")
+                        else ()
+                            # else nothing
+                        endif ()
+                    else ()
+                        collection(SET ${caco_object} "${caco_feature}" "${newFeature}")
+                    endif ()
+                else ()
+                    array(SET existingData NAME "${caco_feature}" ARRAY "${newFeature}")
+                    collection(SET ${caco_object} "${caco_feature}" "${existingData}")
+                endif ()
+            elseif (caco_data)
+                if(caco_extend)
+                    array(CREATE newFeature "${caco_feature}" RECORDS)
+                    array(APPEND newFeature RECORD "${caco_data}")
+                    array(APPEND existingData RECORD "${caco_data}")
+                else ()
+                    array(CREATE newFeature "${caco_feature}" RECORDS)
+                    array(APPEND newFeature RECORD "${caco_data}")
+                    array(SET existingData NAME "${caco_feature}" RECORD "${caco_data}")
+                endif ()
+                collection(SET ${caco_object} "${caco_feature}" "${existingData}")
+            else ()
+                msg(ALWAYS FATAL_ERROR "no DATA or FIELD in call to createOrAppendCollectionObject()")
+            endif ()
+            if(caco_text AND NOT caco_quiet)
+                msg("${YELLOW}Extend${NC} ${caco_text}")
+            endif ()
+        endif ()
+
+        set(${caco_object} "${${caco_object}}" PARENT_SCOPE)
 
     endfunction()
 
+    # For prettiness, not useful
     string(LENGTH "${APD_FEATURE}" this_feature_length)
     if (NOT DEFINED MAX_FEATURE_LENGTH)
         string(LENGTH "postMakeAvailable" MAX_FEATURE_LENGTH)
@@ -372,44 +429,55 @@ function(addPackageData)
     math(EXPR paddingCount "${MAX_FEATURE_LENGTH} - ${this_feature_length} + 1")
     string(REPEAT " " ${paddingCount} padding)
 
-    if(NOT APD_FEATURE IN_LIST FEATURE_NAMES)
-        list(APPEND FEATURE_NAMES "${APD_FEATURE}")
-    endif ()
-    list(APPEND FEATURE_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
-    createOrAppendFeaturePkgList("FEATURES" ${APD_FEATURE} ${APD_PKGNAME} "${output}")
+    set(displayed "feature${padding}${BOLD}${APD_FEATURE}${NC} for package ${BOLD}${APD_PKGNAME}${NC}")
+
+    # Add new feature/pkg to the global FEATURES collection
+    createOrAppendCollectionObject(OBJECT "FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} EXTEND UNIQUE QUIET)
+    createOrAppendCollectionObject(OBJECT "FEATURES" FEATURE "PACKAGES"       FIELD ${APD_PKGNAME} EXTEND QUIET)
+    createOrAppendCollectionObject(OBJECT "FEATURES" FEATURE "${APD_FEATURE}" DATA "${output}"     EXTEND  TEXT "${displayed}")
+
     if(APD_KIND MATCHES "SYSTEM")
-        if(NOT APD_FEATURE IN_LIST SYSTEM_NAMES)
-            list(APPEND SYSTEM_NAMES "${APD_FEATURE}")
-        endif ()
-        list(APPEND  SYSTEM_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
-        createOrAppendFeaturePkgList(SYSTEM_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}")
+        createOrAppendCollectionObject(OBJECT "SYSTEM_FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} EXTEND UNIQUE QUIET)
+        createOrAppendCollectionObject(OBJECT "SYSTEM_FEATURES" FEATURE "PACKAGES"       FIELD ${APD_PKGNAME} EXTEND QUIET)
+        createOrAppendCollectionObject(OBJECT "SYSTEM_FEATURES" FEATURE "${APD_FEATURE}" DATA "${output}"     EXTEND  TEXT "${displayed}")
+#        if(NOT APD_FEATURE IN_LIST SYSTEM_NAMES)
+#            list(APPEND SYSTEM_NAMES "${APD_FEATURE}")
+#        endif ()
+#        list(APPEND  SYSTEM_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
+#        createOrAppendFeaturePkgList(SYSTEM_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}" "${displayed}")
     elseif(APD_KIND MATCHES "LIBRARY")
-        if(NOT APD_FEATURE IN_LIST LIBRARY_NAMES)
-            list(APPEND LIBRARY_NAMES "${APD_FEATURE}")
-        endif ()
-        list(APPEND  LIBRARY_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
-        createOrAppendFeaturePkgList(LIBRARY_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}")
+        createOrAppendCollectionObject(OBJECT "LIBRARY_FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} EXTEND UNIQUE QUIET)
+        createOrAppendCollectionObject(OBJECT "LIBRARY_FEATURES" FEATURE "PACKAGES"       FIELD ${APD_PKGNAME} EXTEND QUIET)
+        createOrAppendCollectionObject(OBJECT "LIBRARY_FEATURES" FEATURE "${APD_FEATURE}" DATA "${output}"     EXTEND  TEXT "${displayed}")
+#        if(NOT APD_FEATURE IN_LIST LIBRARY_NAMES)
+#            list(APPEND LIBRARY_NAMES "${APD_FEATURE}")
+#        endif ()
+#        list(APPEND  LIBRARY_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
+#        createOrAppendFeaturePkgList(LIBRARY_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}" "${displayed}")
     elseif(APD_KIND MATCHES "USER")
-        if(NOT APD_FEATURE IN_LIST USER_NAMES)
-            list(APPEND USER_NAMES "${APD_FEATURE}")
-        endif ()
-        list(APPEND  USER_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
-        createOrAppendFeaturePkgList(USER_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}")
+        createOrAppendCollectionObject(OBJECT "USER_FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} REPLACE QUIET)
+        createOrAppendCollectionObject(OBJECT "USER_FEATURES" FEATURE "PACKAGES"       FIELD ${APD_PKGNAME} REPLACE QUIET)
+        createOrAppendCollectionObject(OBJECT "USER_FEATURES" FEATURE "${APD_FEATURE}" DATA "${output}"     EXTEND  TEXT "${displayed}")
+#        if(NOT APD_FEATURE IN_LIST USER_NAMES)
+#            list(APPEND USER_NAMES "${APD_FEATURE}")
+#        endif ()
+#        list(APPEND  USER_PACKAGES "${APD_FEATURE}=${APD_PKGNAME}")
+#        createOrAppendFeaturePkgList(USER_FEATURES ${APD_FEATURE} ${APD_PKGNAME} "${output}" "${displayed}")
     endif()
 
     #
     set(FEATURES         "${FEATURES}"         PARENT_SCOPE)
-    set(FEATURE_NAMES    "${FEATURE_NAMES}"    PARENT_SCOPE)
-    set(FEATURE_PACKAGES "${FEATURE_PACKAGES}" PARENT_SCOPE)
+#    set(FEATURE_NAMES    "${FEATURE_NAMES}"    PARENT_SCOPE)
+#    set(FEATURE_PACKAGES "${FEATURE_PACKAGES}" PARENT_SCOPE)
     set(SYSTEM_FEATURES  "${SYSTEM_FEATURES}"  PARENT_SCOPE)
-    set(SYSTEM_NAMES     "${SYSTEM_NAMES}"     PARENT_SCOPE)
-    set(SYSTEM_PACKAGES  "${SYSTEM_PACKAGES}"  PARENT_SCOPE)
+#    set(SYSTEM_NAMES     "${SYSTEM_NAMES}"     PARENT_SCOPE)
+#    set(SYSTEM_PACKAGES  "${SYSTEM_PACKAGES}"  PARENT_SCOPE)
     set(LIBRARY_FEATURES "${LIBRARY_FEATURES}" PARENT_SCOPE)
-    set(LIBRARY_NAMES    "${LIBRARY_NAMES}"    PARENT_SCOPE)
-    set(LIBRARY_PACKAGES "${LIBRARY_PACKAGES}" PARENT_SCOPE)
+#    set(LIBRARY_NAMES    "${LIBRARY_NAMES}"    PARENT_SCOPE)
+#    set(LIBRARY_PACKAGES "${LIBRARY_PACKAGES}" PARENT_SCOPE)
     set(USER_FEATURES    "${USER_FEATURES}"    PARENT_SCOPE)
-    set(USER_NAMES       "${USER_NAMES}"       PARENT_SCOPE)
-    set(USER_PACKAGES    "${USER_PACKAGES}"    PARENT_SCOPE)
+#    set(USER_NAMES       "${USER_NAMES}"       PARENT_SCOPE)
+#    set(USER_PACKAGES    "${USER_PACKAGES}"    PARENT_SCOPE)
 
 endfunction()
 ##
@@ -429,7 +497,7 @@ function(getFeaturePkgList arrayName feature receivingVarName)
                 set("${receivingVarName}" "${receivingVarName}" PARENT_SCOPE)
                 return()
             endif ()
-            array(FIND "_thisArray" ${FeatureIX} MATCHING "${feature}" _foundAt)
+            array(FIND "_thisArray" ${FIXName} MATCHING "${feature}" _foundAt)
             if (_foundAt GREATER_EQUAL 0)
                 set(${receivingVarName} "${_thisArray}" PARENT_SCOPE)
                 return()
@@ -443,7 +511,7 @@ endfunction()
 ##
 function(getFeatureIndex arrayName feature receivingVarName)
     # iterate over array to find line with feature
-    array(FIND "${arrayName}" ${FeatureIX} MATCHING "${feature}" _foundAt)
+    array(FIND "${arrayName}" ${FIXName} MATCHING "${feature}" _foundAt)
     set(${receivingVarName} "${_foundAt}" PARENT_SCOPE)
 endfunction()
 ##
@@ -459,7 +527,7 @@ function(getFeaturePackage arrayName feature index receivingVarName)
             if (numPackages)
                 array(GET item ${index} pkg)
                 record(DUMP pkg VERBOSE)
-                record(GET pkg ${FeatureIX} thisFeatureName thisPackageName)
+                record(GET pkg ${FIXName} thisFeatureName thisPackageName)
                 if (feature STREQUAL thisFeatureName)
                     set(${receivingVarName} ${pkg} PARENT_SCOPE)
                     return()
@@ -484,7 +552,7 @@ function(getFeaturePackageByName arrayName feature name receivingVarName indexVa
                 foreach(packageIndex RANGE ${numPackages})
                     array(GET item ${packageIndex} pkg)
                     record(DUMP pkg VERBOSE)
-                    record(GET pkg ${FeatureIX} thisFeatureName thisPackageName)
+                    record(GET pkg ${FIXName} thisFeatureName thisPackageName)
                     if (feature STREQUAL thisFeatureName AND name STREQUAL thisPackageName)
                         set(${receivingVarName} ${pkg} PARENT_SCOPE)
                         set(${indexVarName} ${packageIndex} PARENT_SCOPE)
@@ -963,8 +1031,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
                 set(found_entry_in_input_ "")
                 # TODO: Line below changed from inputLiist to allData
                 foreach(e_ IN LISTS ${lol}) # inputList)
-                    record(GET e_ ${FeatureIX} pr_fname_)
-                    record(GET e_ ${FeaturePkgNameIX} pr_pname_)
+                    record(GET e_ ${FIXName} pr_fname_)
+                    record(GET e_ ${FIXPkgName} pr_pname_)
                     if("${pr_feat_}" MATCHES "${pr_fname_}" AND "${pr_pkgname_}" STREQUAL "${pr_pname_}")
                         set(found_entry_in_input_ "${pr_fname_}=${pr_pname_}")
                         getFeaturePackageByName("${lol}" "${pr_fname_}" "${pr_pname_}" prereq_pkg prereq_idx)
@@ -1013,8 +1081,8 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     foreach(item IN LISTS ${inputFeaturesList})
-        record(GET item ${FeatureIX} _feature_name)
-        record(GET item ${FeatureKindIX} _kind)
+        record(GET item ${FIXName} _feature_name)
+        record(GET item ${FIXKind} _kind)
         if ("${_kind}" STREQUAL "LIBRARY")
             visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
         endif()
@@ -1022,7 +1090,7 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
 
     # Pass 2: Handle everything else
     foreach(item IN LISTS ${inputFeaturesList})
-        record(GET item ${FeatureIX} _feature_name)
+        record(GET item ${FIXName} _feature_name)
         visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
     endforeach()
 
@@ -1348,7 +1416,7 @@ function(processFeatures featureList returnVarName)
 
         _()
 
-        record(CREATE output ${FeatureLength})
+        record(CREATE output ${FIXLength})
 
         separate_arguments(feature NATIVE_COMMAND "${feature}")
         cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
@@ -1446,17 +1514,17 @@ function(processFeatures featureList returnVarName)
 
         #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
-        record(REPLACE output "${FeatureIX}"             "${_feature}")
-        record(REPLACE output "${FeaturePkgNameIX}"      "${_pkg}")
-        record(REPLACE output "${FeatureNamespaceIX}"    "${_ns}")
-        record(REPLACE output "${FeatureKindIX}"         "${_kind}")
-        record(REPLACE output "${FeatureMethodIX}"       "${_method}")
-        record(REPLACE output "${FeatureUrlIX}"          "${_url}")
-        record(REPLACE output "${FeatureGitTagIX}"       "${_tag}")
-        record(REPLACE output "${FeatureIncDirIX}"       "${_incdir}")
-        record(REPLACE output "${FeatureComponentsIX}"   "${_components}")
-        record(REPLACE output "${FeatureArgsIX}"         "${_args}")
-        record(REPLACE output "${FeaturePrereqsIX}"      "${_prerequisites}")
+        record(REPLACE output "${FIXName}"             "${_feature}")
+        record(REPLACE output "${FIXPkgName}"      "${_pkg}")
+        record(REPLACE output "${FIXNamespace}"    "${_ns}")
+        record(REPLACE output "${FIXKind}"         "${_kind}")
+        record(REPLACE output "${FIXMethod}"       "${_method}")
+        record(REPLACE output "${FIXUrl}"          "${_url}")
+        record(REPLACE output "${FIXGitTag}"       "${_tag}")
+        record(REPLACE output "${FIXIncDir}"       "${_incdir}")
+        record(REPLACE output "${FIXComponents}"   "${_components}")
+        record(REPLACE output "${FIXArgs}"         "${_args}")
+        record(REPLACE output "${FIXPrereqs}"      "${_prerequisites}")
 
         string(REPLACE "-" ""   output "${output}")
         string(REPLACE "::" ":" output "${output}")

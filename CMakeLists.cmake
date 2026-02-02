@@ -1,5 +1,6 @@
 ## HoffSoft build framework delegator (split into global + per-project)
-include (cmake/array.cmake)
+include (cmake/array_enhanced.cmake)
+#include (cmake/test_enhanced.cmake)
 
 message (NOTICE "\n\t\tProcessing ${APP_NAME}\n")
 

@@ -405,10 +405,10 @@ function(record)
         endwhile()
         return()
 
-    # -------------------- Extended: SET (adjusted for name, supports bulk setting) --------------------
+    # -------------------- Extended: SET (adjusted for name) --------------------
     elseif(_recVerbUC STREQUAL "SET")
         if(${ARGC} LESS 4)
-            msg(ALWAYS FATAL_ERROR "record(SET): expected record(SET <recVar> <fieldIndex> <newValue>... [FAIL|QUIET])")
+            msg(ALWAYS FATAL_ERROR "record(SET): expected record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])")
         endif()
 
         set(_ix "${ARGV2}")
@@ -416,57 +416,38 @@ function(record)
             msg(ALWAYS FATAL_ERROR "record(SET): <fieldIndex> must be a non-negative integer, got '${_ix}'")
         endif()
 
-        # Check if last arg is FAIL or QUIET
-        math(EXPR _lastArg "${ARGC} - 1")
-        set(_lastWord "${ARGV${_lastArg}}")
-        string(TOUPPER "${_lastWord}" _lastWordUC)
-        
+        set(_newVal "${ARGV3}")
+        _hs__assert_no_ctrl_chars("record(SET)" "${_newVal}")
+        _hs__field_to_storage("${_newVal}" _newValStore)
+
         set(_mode "")
-        set(_endIdx ${ARGC})
-        if(_lastWordUC STREQUAL "FAIL" OR _lastWordUC STREQUAL "QUIET")
-            set(_mode "${_lastWordUC}")
-            set(_endIdx ${_lastArg})
+        if(${ARGC} GREATER 4)
+            string(TOUPPER "${ARGV4}" _mode)
         endif()
 
         set(_recValue "${${_recVar}}")
         _hs__record_to_list("${_recValue}" _lst)
-
-        # Leading RS begone
-        list(POP_FRONT _lst)
-
         list(LENGTH _lst _len)
 
-        # Process all values from ARGV3 to _endIdx-1
-        set(_k 3)
-        set(_currentIdx ${_ix})
-        while(_k LESS ${_endIdx})
-            set(_newVal "${ARGV${_k}}")
-            _hs__assert_no_ctrl_chars("record(SET)" "${_newVal}")
-            _hs__field_to_storage("${_newVal}" _newValStore)
+        # Offset index for name at position 0
+        math(EXPR _actualIx "${_ix} + 1")
 
-            # Offset index for name at position 0
-            math(EXPR _actualIx "${_currentIdx} + 1")
-
-            if(_actualIx GREATER_EQUAL _len)
-                if(_mode STREQUAL "FAIL")
-                    msg(ALWAYS FATAL_ERROR "record(SET): index ${_currentIdx} out of range (len=${_len})")
-                elseif(NOT _mode STREQUAL "QUIET")
-                    msg(WARNING "record(SET): extending record '${_recVar}' to index ${_currentIdx}")
-                endif()
-
-                # Extend with "-" sentinel
-                while(_len LESS_EQUAL _actualIx)
-                    list(APPEND _lst "${RECORD_EMPTY_FIELD_SENTINEL}")
-                    list(LENGTH _lst _len)
-                endwhile()
+        if(_actualIx GREATER_EQUAL _len)
+            if(_mode STREQUAL "FAIL")
+                msg(ALWAYS FATAL_ERROR "record(SET): index ${_ix} out of range (len=${_len})")
+            elseif(NOT _mode STREQUAL "QUIET")
+                msg(WARNING "record(SET): extending record '${_recVar}' to index ${_ix}")
             endif()
 
-            list(REMOVE_AT _lst ${_actualIx})
-            list(INSERT _lst ${_actualIx} "${_newValStore}")
+            # Extend with "-" sentinel
+            while(_len LESS_EQUAL _actualIx)
+                list(APPEND _lst "${RECORD_EMPTY_FIELD_SENTINEL}")
+                list(LENGTH _lst _len)
+            endwhile()
+        endif()
 
-            math(EXPR _k "${_k} + 1")
-            math(EXPR _currentIdx "${_currentIdx} + 1")
-        endwhile()
+        list(REMOVE_AT _lst ${_actualIx})
+        list(INSERT _lst ${_actualIx} "${_newValStore}")
 
         _hs__list_to_record("${_lst}" _result)
         set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
@@ -579,28 +560,22 @@ function(record)
         endif()
 
         set(_recValue "${${_recVar}}")
-
-        # Get name using the proper helper
-        _hs__get_name("${_recValue}" _name)
-
-        # Convert to list for field access
         _hs__record_to_list("${_recValue}" _lst)
 
         list(LENGTH _lst _len)
         if(_len EQUAL 0)
             set(_dumpStr "record '${_recVar}' = [] (empty/uninitialized)\n")
         else()
-            # _len includes empty first element from split, so subtract 2 (empty + name)
-            math(EXPR _numFields "${_len} - 2")
+            list(GET _lst 0 _name)
+            math(EXPR _numFields "${_len} - 1")
             set(_dumpStr "record '${_recVar}' (name='${_name}', fields=${_numFields}) = [\n")
 
-            # Start at index 2 (skip empty and name)
-            set(_i 2)
+            set(_i 1)
             set(_fieldIdx 0)
             while(_i LESS _len)
                 list(GET _lst ${_i} _f)
                 _hs__field_to_user("${_f}" _v)
-
+                
                 if(_verbose)
                     set(_displayVal "${_v}")
                     string(LENGTH "${_displayVal}" _vlen)
@@ -612,7 +587,7 @@ function(record)
                 else()
                     string(APPEND _dumpStr "  [${_fieldIdx}] = \"${_v}\"\n")
                 endif()
-
+                
                 math(EXPR _i "${_i} + 1")
                 math(EXPR _fieldIdx "${_fieldIdx} + 1")
             endwhile()
@@ -963,67 +938,9 @@ function(array)
     # -------------------- SET --------------------
     if(_V STREQUAL "SET")
         if(${ARGC} LESS 5)
-            msg(ALWAYS FATAL_ERROR "array(SET): expected array(SET <arrayVarName> <recIndex>|NAME <name> RECORD|ARRAY <value> [FAIL|QUIET])")
+            msg(ALWAYS FATAL_ERROR "array(SET): expected array(SET <arrayVarName> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])")
         endif()
 
-        # Check if setting by NAME
-        if("${ARGV2}" STREQUAL "NAME")
-            if(${ARGC} LESS 6)
-                msg(ALWAYS FATAL_ERROR "array(SET NAME): expected array(SET <arrayVarName> NAME <n> RECORD|ARRAY <value> [FAIL|QUIET])")
-            endif()
-
-            set(_targetName "${ARGV3}")
-            string(TOUPPER "${ARGV4}" _itemKind)
-            set(_val "${ARGV5}")
-            set(_mode "")
-            if(${ARGC} GREATER 6)
-                string(TOUPPER "${ARGV6}" _mode)
-            endif()
-
-            # Find element by name
-            if(_kind STREQUAL "UNSET")
-                msg(ALWAYS FATAL_ERROR "array(SET NAME): array is uninitialized")
-            endif()
-
-            if(_itemKind STREQUAL "RECORD" AND NOT _kind STREQUAL "RECORDS")
-                msg(ALWAYS FATAL_ERROR "array(SET NAME): cannot set RECORD into an ARRAYS array")
-            elseif(_itemKind STREQUAL "ARRAY" AND NOT _kind STREQUAL "ARRAYS")
-                msg(ALWAYS FATAL_ERROR "array(SET NAME): cannot set ARRAY into a RECORDS array")
-            endif()
-
-            _hs__array_to_list("${_A}" "${_sep}" _lst)
-            list(LENGTH _lst _len)
-
-            # Search for matching name (skip array's own name at index 0)
-            set(_foundIdx -1)
-            set(_i 1)
-            while(_i LESS _len)
-                list(GET _lst ${_i} _elem)
-                _hs__get_name("${_elem}" _elemName)
-                if("${_elemName}" STREQUAL "${_targetName}")
-                    set(_foundIdx ${_i})
-                    break()
-                endif()
-                math(EXPR _i "${_i} + 1")
-            endwhile()
-
-            if(_foundIdx LESS 0)
-                if(_mode STREQUAL "FAIL")
-                    msg(ALWAYS FATAL_ERROR "array(SET NAME): element '${_targetName}' not found")
-                else()
-                    msg(ALWAYS FATAL_ERROR "array(SET NAME): element '${_targetName}' not found (use APPEND to add new elements)")
-                endif()
-            endif()
-
-            # Replace at found index
-            list(REMOVE_AT _lst ${_foundIdx})
-            list(INSERT _lst ${_foundIdx} "${_val}")
-            _hs__list_to_array("${_lst}" "${_kind}" _Aout)
-            set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
-            return()
-        endif()
-
-        # Normal index-based SET
         set(_ix "${ARGV2}")
         if(NOT _ix MATCHES "^[0-9]+$")
             msg(ALWAYS FATAL_ERROR "array(SET): <recIndex> must be a non-negative integer, got '${_ix}'")

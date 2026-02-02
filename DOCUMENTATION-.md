@@ -100,24 +100,14 @@ record(GET pkg 0 url TOUPPER) # Get first field as uppercase
 
 #### SET
 ```cmake
-record(SET <recVar> <fieldIndex> <newValue>... [FAIL|QUIET])
+record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
 ```
-Sets one or more consecutive field values starting at fieldIndex. Auto-extends if index out of range (unless FAIL specified).
-
-**Bulk setting** is significantly faster than multiple SET calls because it only converts to/from list format once.
+Sets a field value. Auto-extends if index out of range (unless FAIL specified).
 
 Example:
 ```cmake
-# Single value
 record(SET pkg 0 "https://github.com/yaml")
-
-# Multiple consecutive values (FAST!)
-record(SET pkg 0 "https://github.com/yaml" "v0.7.0" "MIT")
-# This sets fields 0, 1, and 2 in one operation
-
-# With error handling
 record(SET pkg 5 "value" FAIL)  # Error if index 5 doesn't exist
-record(SET pkg 0 "val1" "val2" QUIET)  # Suppress warnings if extending
 ```
 
 #### APPEND / PREPEND
@@ -195,30 +185,10 @@ array(LENGTH <arrayVar> <outVar>)
 Returns number of elements (excluding the array's own name).
 
 #### SET
-
-**By Index:**
 ```cmake
-array(SET <arrayVarName> <recIndex> RECORD|ARRAY <value> [FAIL|QUIET])
+array(SET <arrayVar> <index> RECORD|ARRAY <value> [FAIL|QUIET])
 ```
 Sets element at index. Type must match array's type.
-
-**By Name:**
-```cmake
-array(SET <arrayVarName> NAME <n> RECORD|ARRAY <value> [FAIL|QUIET])
-```
-Finds and replaces the element with the given name. Fails if name not found (cannot auto-create like index-based SET).
-
-Example:
-```cmake
-# Index-based
-array(SET db_pkgs 0 RECORD ${updated_soci})
-
-# Name-based (finds "SOCI" and replaces it)
-array(SET db_pkgs NAME "SOCI" RECORD ${updated_soci})
-array(SET db_pkgs NAME "SOCI" RECORD ${updated_soci} FAIL)  # Error if SOCI not found
-```
-
-**Note**: NAME-based SET only replaces existing elements. To add new elements, use APPEND or PREPEND.
 
 #### APPEND / PREPEND
 ```cmake
@@ -489,29 +459,6 @@ array(GET pkgs EQUAL "Package1" result)         # NEW: Get by name
 - **Depth**: Path resolution is recursive; very deep nesting may hit CMake limits.
 - **Best for**: Structured configuration, metadata, and build system organization.
 - **Not ideal for**: Large datasets that need frequent iteration (use CMake lists instead).
-
-### Record Initialization Performance
-
-When creating and populating records, **bulk SET is significantly faster**:
-
-```cmake
-# ❌ SLOW: Multiple SET calls (3n string conversions)
-record(CREATE pkg "YAML" 4)
-record(SET pkg 0 "https://github.com/yaml")
-record(SET pkg 1 "v0.7.0")
-record(SET pkg 2 "MIT")
-record(SET pkg 3 "YAML parser")
-
-# ✅ FAST: Single bulk SET (1 string conversion)
-record(CREATE pkg "YAML" 4)
-record(SET pkg 0 "https://github.com/yaml" "v0.7.0" "MIT" "YAML parser")
-
-# ⚠️ MEDIUM: CREATE with 0 + APPEND (n string conversions, but list grows)
-record(CREATE pkg "YAML" 0)
-record(APPEND pkg "https://github.com/yaml" "v0.7.0" "MIT" "YAML parser")
-```
-
-**Recommendation**: Use bulk SET for initialization when you know all values upfront. It's 3x faster for large records.
 
 ## Limitations
 
