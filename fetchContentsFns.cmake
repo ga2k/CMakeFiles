@@ -493,7 +493,7 @@ function(addPackageData)
         endif ()
         collection(SET ${caf_object} "${caf_feature}" ${targetRecord})
 
-        if (NOT car_quiet)
+        if (NOT caf_quiet)
             string(REPLACE "${caf_marker}" "${caf_action}" caf_text "${caf_text}")
             msg("${caf_text}")
         endif ()
