@@ -302,7 +302,10 @@ function(addPackageData)
             "${APD_ARGS}"
             "${APD_PREREQS}"
     )
-
+    record(DUMP output)
+    record(DUMP output VERBOSE)
+    record(DUMP output RAW)
+    message(FATAL_ERROR "Boo! Were you scared?")
 
     function(createOrAppendRecord)
 
