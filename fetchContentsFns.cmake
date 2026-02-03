@@ -502,9 +502,9 @@ function(addPackageData)
 
     endfunction()
 
-    longest(CURRENT ${__longest_feature} GAP LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED padded_feature)
-    longest(CURRENT ${__longest_feature} GAP LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED padded_package)
-    longest(CURRENT ${__longest_feature} GAP LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED padded_feature)
+    longest(CURRENT ${__longest_feature} LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED padded_feature)
+    longest(CURRENT ${__longest_feature} LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED padded_package)
+    longest(CURRENT ${__longest_feature} LEFT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED padded_feature)
 
     set(globalfeatureText  "       Feature ${BOLD}${padded_feature}${NC} created and added to the global feature collection")
     set(systemfeatureText  "       Feature ${BOLD}${padded_feature}${NC} created and added to the system feature collection")
