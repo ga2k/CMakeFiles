@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+include_guard(GLOBAL)
 
 set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 
@@ -772,100 +772,101 @@ function(msg)
         endif ()
     endif ()
 endfunction()
-# #############################################################
-# Dumps a list's contents formatted nicely
-#
-# Required args:-
-#
-# TEXT          The text literal to print
-#
-# Optional args
-#
-# ALWAYS        Always present the list. If set, the
-# message list will ALWAYS be printed,
-# as STATUS.
-#
-# If not present, the list may or may not
-# print, accoring to CMAKE_MESSAGE_LOG_LEVEL
-#
-# NOTICE        Print if CMAKE_MESSAGE_LOG_LEVEL <= NOTICE
-# STATUS        Print if CMAKE_MESSAGE_LOG_LEVEL <= STATUS
-#         Print if CMAKE_MESSAGE_LOG_LEVEL <= DEBUG
-# WARNING       Printed at WARNING
-# FATAL_ERROR   Printed as FATAL_ERROR
-#
-# LEVEL <level> One of NOTICE, STATUS etc.
-#
-# LF            Print a blank line before outputting
-#
-# VAR           TEXT is the name of a string variable
-# LIST          TEXT is the name of a list variable
-# LISTS lists   A number of lists to log
-# TITLE <str>   Print this instead of "Contents of <list>"
-#
-# #############################################################
-function(lorg)
-    dump(${ARGV})
-    return()
 
-    set(options LF LF_ _LF CHECK_START CHECK_PASS CHECK_FAIL INDENT OUTDENT)
-    set(oneValueArgs TITLE LIST VAR)
-    set(multiValueArgs LISTS VARS)
+function(longest)
+    set(switches LEFT RIGHT GAP)
+    set(args CURRENT MIN_LENGTH PAD_CHAR TEXT LONGEST PADDED JUSTIFY)
+    set(lists)
 
-    cmake_parse_arguments(AA_LOG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    cmake_parse_arguments("LONG" "${switches}" "${args}" "${lists}" ${ARGN})
 
-    set(AA_LOG_TEXT)
-    string(JOIN " " AA_LOG_TEXT ${TEXT} ${AA_LOG_UNPARSED_ARGUMENTS})
-
-    if (AA_LOG_LIST OR AA_LOG_LISTS) # Let dump handle it
-        dump(${ARGV})
-        return()
-    endif ()
-
-    unset(LF_)
-    unset(_LF)
-    unset(LL)
-
-    if (AA_LOG_LF OR AA_LOG_LF_)
-        set(LF_ TRUE)
-        unset(AA_LOG_LF)
-        unset(AA_LOG_LF_)
-    endif ()
-
-    if (AA_LOG__LF)
-        set(_LF TRUE)
-        unset(AA_LOG__LF)
-    endif ()
-
-    if (AA_LOG_OUTDENT)
-        list(POP_BACK CMAKE_MESSAGE_INDENT)
-    endif ()
-
-    set(AA_LOG_PREPAD)
-    set(AA_LOG_BODY)
-    set(AA_LOG_POSTPAD)
-
-    if (AA_LOG_VAR)
-        set(AA_LOG_TEXT "${${AA_LOG_VAR}}") # Convert VAR into TEXT
-
-        if (NOT AA_LOG_TITLE) # Add our own TITLE if none
-            set(AA_LOG_TITLE "Contents of ${AA_LOG_VAR}: ")
+    if(LONG_JUSTIFY)
+        string(TOUPPER "${LONG_JUSTIFY}" LONG_JUSTIFY)
+        if(NOT LONG_JUSTIFY STREQUAL "LEFT" AND NOT LONG_JUSTIFY STREQUAL "RIGHT")
+            msg(ALWAYS WARNING "longest(): JUSTIFY must be LEFT or RIGHT, got '${LONG_JUSTIFY}'. Defaulted to LEFT")
+            set(LONG_LEFT ON)
+            set(LONG_RIGHT OFF)
+            set(LONG_JUSTIFY "LEFT")
+        else ()
+            if(LONG_JUSTIFY STREQUAL "LEFT")
+                set(LONG_LEFT ON)
+                set(LONG_RIGHT OFF)
+            else ()
+                set(LONG_LEFT OFF)
+                set(LONG_RIGHT ON)
+            endif ()
         endif ()
-
+    endif ()
+    if(LONG_LEFT AND LONG_RIGHT)
+        msg(ALWAYS WARNING "longest(): Can't have both LEFT and RIGHT padding. Pick one. Defaulted to LEFT")
+        set(LONG_LEFT ON)
+        set(LONG_RIGHT OFF)
+        set(LONG_JUSTIFY "LEFT")
+    elseif(LONG_LEFT AND LONG_JUSTIFY AND LONG_JUSTIFY STREQUAL "RIGHT")
+        msg(ALWAYS WARNING "longest(): Can't have both LEFT and JUSTIFY RIGHT padding. Pick one. Defaulted to LEFT")
+        set(LONG_LEFT ON)
+        set(LONG_RIGHT OFF)
+        set(LONG_JUSTIFY "LEFT")
+    elseif(LONG_RIGHT AND LONG_JUSTIFY AND LONG_JUSTIFY STREQUAL "LEFT")
+        msg(ALWAYS WARNING "longest(): Can't have both RIGHT and JUSTIFY LEFT padding. Pick one. Defaulted to LEFT")
+        set(LONG_LEFT ON)
+        set(LONG_RIGHT OFF)
+        set(LONG_JUSTIFY "LEFT")
     else ()
-        set(AA_LOG_TEXT "${AA_LOG_TEXT}") # Special sauce
+        set(LONG_LEFT ON)
+        set(LONG_RIGHT OFF)
+        set(LONG_JUSTIFY "LEFT")
+    endif ()
+    if(NOT DEFINED LONG_CURRENT OR LONG_CURRENT STREQUAL "")
+        set(LONG_CURRENT 0)
+    else ()
+        if(NOT LONG_CURRENT MATCHES "^[0-9]+$")
+            msg(ALWAYS WARNING "longest(): CURRENT must be a non-negative integer, got '${LONG_CURRENT}'")
+            set(LONG_CURRENT 0)
+        endif()
+    endif ()
+    if(NOT LONG_MIN_LENGTH OR LONG_MIN_LENGTH STREQUAL "")
+        set(LONG_MIN_LENGTH 0)
+    else ()
+        if(NOT LONG_MIN_LENGTH MATCHES "^[0-9]+$")
+            msg(ALWAYS WARNING "longest(): MIN_LENGTH must be a non-negative integer, got '${LONG_MIN_LENGTH}'")
+            set(LONG_MIN_LENGTH 0)
+        endif()
+    endif ()
+    if(NOT LONG_PAD_CHAR OR LONG_PAD_CHAR STREQUAL "")
+        set(LONG_PAD_CHAR " ")
+    endif ()
+    if(LONG_GAP)
+        set(gap " ")
+    endif ()
+    string(REPEAT "${LONG_PAD_CHAR}" ${LONG_MIN_LENGTH} fixed_padding)
+    if(LONG_LEFT)
+        set(fixed_padding "${gap}${fixed_padding}")
+    else ()
+        set(fixed_padding "${fixed_padding}${gap}")
     endif ()
 
-    set(AA_LOG_OUTPUT "${AA_LOG_PREPAD}${AA_LOG_TITLE}${AA_LOG_TEXT}${AA_LOG_POSTPAD}")
-
-    m(${AA_LOG_OUTPUT})
-
-    if (AA_LOG_INDENT)
-        list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    if(NOT LONG_TEXT OR LONG_TEXT STREQUAL "")
+        msg(ALWAYS WARNING "longest(): TEST string must not empty")
+        set(LONG_TEXT "")
     endif ()
 
-    if (AA_LOG_SAVED)
-        set(CMAKE_MESSAGE_LOG_LEVEL ${AA_LOG_SAVED})
+    string(LENGTH "${LONG_TEXT}" this_length)
+
+    if(${this_length} GREATER ${LONG_CURRENT})
+        set (${LONG_LONGEST} ${this_length} PARENT_SCOPE)
+    else ()
+        set (${LONG_LONGEST} ${LONG_CURRENT} PARENT_SCOPE)
+    endif ()
+    math(EXPR DIFFERENCE "${LONG_CURRENT} - ${this_length}")
+    if (DIFFERENCE GREATER_EQUAL 0)
+        string(REPEAT "${LONG_PAD_CHAR}" ${DIFFERENCE} needed_padding)
+    endif ()
+
+    if(LONG_LEFT)
+        set("${LONG_PADDED}" "${LONG_TEXT}${fixed_padding}${needed_padding}" PARENT_SCOPE)
+    else ()
+        set("${LONG_PADDED}" "${needed_padding}${fixed_padding}${LONG_TEXT}" PARENT_SCOPE)
     endif ()
 endfunction()
 

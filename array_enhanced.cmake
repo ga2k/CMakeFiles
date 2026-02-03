@@ -295,13 +295,16 @@ endfunction()
 #
 # Extended signature:
 #   record(CREATE <recVar> <name> <numFields>)
-#   record(GET <recVar> NAME <outVar>)
-#   record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])
-#   record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
 #   record(APPEND|PREPEND <recVar> <newValue>...)
-#   record(POP_FRONT|POP_BACK <recVar> <outVarName>... [TOUPPER|TOLOWER])
 #   record(CONVERT <recVar> [LIST|RECORD])
 #   record(DUMP <recVar> [<outVarName>] [VERBOSE])
+#   record(FIND <recVar> EQUAL <value> <outVarName>)
+#   record(FIND <recVar> MATCHING <regex> <outVarName>)
+#   record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])
+#   record(GET <recVar> NAME <outVar>)
+#   record(NAME <recVar> <outVarName>)
+#   record(POP_FRONT|POP_BACK <recVar> <outVarName>... [TOUPPER|TOLOWER])
+#   record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
 #
 # ======================================================================================================================
 
@@ -313,7 +316,8 @@ function(record)
     set(_recVerb "${ARGV0}")
     set(_recVar  "${ARGV1}")
     string(TOUPPER "${_recVerb}" _recVerbUC)
-    
+
+
     # -------------------- Extended: CREATE with NAME --------------------
     if(_recVerbUC STREQUAL "CREATE")
         if(NOT ${ARGC} EQUAL 4)
@@ -340,8 +344,35 @@ function(record)
         set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
         return()
 
+    # -------------------- Extended: FIND --------------------
+    elseif(_recVerbUC STREQUAL "FIND")
+        if(NOT ${ARGC} EQUAL 4)
+            msg(ALWAYS FATAL_ERROR "record(FIND): expected record(FIND <recVar> EQUAL|MATCHING <pattern> <outVarName>)")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        set(_pattern "${ARGV2}")
+
+        _hs__record_to_list("${_recValue}" _lst)
+        list(POP_FRONT _lst dc dc dc dc)
+        list(FIND _lst "${_pattern}" outVar)
+
+        set(${ARGV3} "${outVar}" PARENT_SCOPE)
+        return()
+
+    # -------------------- Extended: NAME --------------------
+    elseif(_recVerbUC STREQUAL "NAME")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "record(NAME): expected record(NAME <recVar> <outVarName>)")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__get_name("${_recValue}" _name)
+        set(${ARGV2} "${_name}" PARENT_SCOPE)
+        return()
+
     # -------------------- Extended: GET NAME --------------------
-    elseif(_recVerbUC STREQUAL "GET")
+    elseif(_recVerbUC STREQUAL "GET")   # DEPRECATED: USE record(NAME)
         if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "NAME")
             if(NOT ${ARGC} EQUAL 4)
                 msg(ALWAYS FATAL_ERROR "record(GET NAME): expected record(GET <recVar> NAME <outVarName>)")
@@ -350,6 +381,7 @@ function(record)
             set(_recValue "${${_recVar}}")
             _hs__get_name("${_recValue}" _name)
             set(${ARGV3} "${_name}" PARENT_SCOPE)
+            msg(ALWAYS DEPRECATED "use record(NAME) instead")
             return()
         endif()
         
@@ -673,6 +705,7 @@ endfunction()
 #
 # Extended signature:
 #   array(CREATE <arrayVarName> <name> RECORDS|ARRAYS)
+#   array(NAME <arrayVarName> <outVar>
 #   array(GET <arrayVarName> NAME <outVar>)
 #   array(GET <arrayVarName> EQUAL <path> <outVar>)
 #   array(GET <arrayVarName> MATCHING <regex> <outVar>)
@@ -721,6 +754,16 @@ function(array)
         return()
     endif()
 
+    # -------------------- NAME --------------------
+    if(_V STREQUAL "NAME")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "array(NAME): expected array(NAME <arrayVarName> <outVarName>)")
+        endif()
+
+        _hs__get_name("${_A}" _name)
+        set(${ARGV2} "${_name}" PARENT_SCOPE)
+        return()
+    endif ()
     # -------------------- GET NAME --------------------
     if(_V STREQUAL "GET")
         if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "NAME")
@@ -730,6 +773,7 @@ function(array)
             
             _hs__get_name("${_A}" _name)
             set(${ARGV3} "${_name}" PARENT_SCOPE)
+            msg(ALWAYS DEPRECATED "use array(NAME)")
             return()
         endif()
 
@@ -1084,6 +1128,7 @@ endfunction()
 #
 # Signature:
 #   collection(CREATE <collectionVarName>)
+#   collection(NAME <collectionVarName> <outVarName>)
 #   collection(SET <collectionVarName> <key> <value>)
 #   collection(GET <collectionVarName> <key> <outVarName>)
 #   collection(GET <collectionVarName> EQUAL <path> <outVarName>)
@@ -1115,6 +1160,17 @@ function(collection)
         set(${collectionVarName} "${US}" PARENT_SCOPE)
         return()
     endif()
+
+    # -------------------- NAME --------------------
+    if(_V STREQUAL "NAME")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "collection(NAME): expected collection(NAME <collectionVarName> <outVarName>)")
+        endif()
+
+        _hs__get_name("${_A}" _name)
+        set(${ARGV2} "${_name}" PARENT_SCOPE)
+        return()
+    endif ()
 
     # -------------------- SET --------------------
     if(_V STREQUAL "SET")

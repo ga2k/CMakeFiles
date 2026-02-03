@@ -86,25 +86,25 @@ function(createStandardPackageData)
     ####
     ##
     #
-    addPackageData(FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
+    addPackageData(USER FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
             ARGS REQUIRED NAMES GTest googletest)
 
-    addPackageData(FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
+    addPackageData(USER FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENTS system date_time regex url algorithm
             ARGS NAMES Boost)
 
-    addPackageData(FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
+    addPackageData(USER FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED)
 
-    addPackageData(FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
+    addPackageData(USER FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
             ARGS REQUIRED EXCLUDE_FROM_ALL)
 
-    addPackageData(FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
+    addPackageData(USER FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED)
 

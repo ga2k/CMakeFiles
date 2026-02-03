@@ -58,7 +58,7 @@ function(fetchContents)
     list(APPEND NoLibPackages googletest)
 
     unset(unifiedFeatureList)
-    array(CREATE unifiedFeatureList RECORDS)
+    array(CREATE unifiedFeatureList unifiedFeatureList RECORDS)
     # We don't search for pseudo packages
     array(LENGTH AUE_USE numPackages)
     array(DUMP AUE_USE VERBOSE)
@@ -174,10 +174,13 @@ function(fetchContents)
 
 
     # ensure the caller is using the system libraries
-    foreach(systemFeature IN LISTS SYSTEM_NAMES)
-        msg("systemFeature=${systemFeature}")
-        getFeaturePackage(SYSTEM_FEATURES ${systemFeature} 0 sysFeature)
-        array(APPEND unifiedFeatureList RECORD "${sysFeature}")
+    collection(GET SYSTEM_FEATURES "NAMES" featureNames)
+    array(LENGTH featureNames numFeatureNames)
+    foreach(featureIndex RANGE ${numFeatureNames})
+        array(GET featureNames ${featureIndex} thisFeatureName)
+        collection(GET SYSTEM_FEATURES "${thisFeatureName}" thisFeature)
+        array(GET thisFeature 0 defaultPackage)
+        array(APPEND unifiedFeatureList RECORD "${defaultPackage}")
     endforeach ()
     ##
     ##########
