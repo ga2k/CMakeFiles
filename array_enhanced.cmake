@@ -360,6 +360,18 @@ function(record)
         set(${ARGV3} "${outVar}" PARENT_SCOPE)
         return()
 
+    # -------------------- Extended: LENGTH --------------------
+    elseif(_recVerbUC STREQUAL "LENGTH")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "record(LENGTH): expected record(LENGTH <recVar> <outVarName>)")
+        endif()
+
+        set(_recValue "${${_recVar}}")
+        _hs__record_to_list("${_recValue}" _lst)
+        list(LENGTH recValue _len)
+        set(${ARGV2} "${_len}" PARENT_SCOPE)
+        return()
+
     # -------------------- Extended: NAME --------------------
     elseif(_recVerbUC STREQUAL "NAME")
         if(NOT ${ARGC} EQUAL 3)

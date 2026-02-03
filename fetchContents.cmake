@@ -175,7 +175,7 @@ function(fetchContents)
 
     # ensure the caller is using the system libraries
     collection(GET SYSTEM_FEATURES "NAMES" featureNames)
-    array(LENGTH featureNames numFeatureNames)
+    record(LENGTH featureNames numFeatureNames)
     foreach(featureIndex RANGE ${numFeatureNames})
         array(GET featureNames ${featureIndex} thisFeatureName)
         collection(GET SYSTEM_FEATURES "${thisFeatureName}" thisFeature)
