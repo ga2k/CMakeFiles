@@ -510,17 +510,17 @@ function(addPackageData)
 
     set(globalfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
     set(systemfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
-    set(libraryfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${CYAN}${BOLD}LIBRARY${NC} feature collection")
+    set(libraryfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
     set(generalfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BOLD}OPTIONAL${NC} feature collection")
 
     set(globalpackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
     set(systempackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
-    set(librarypackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${CYAN}${BOLD}LIBRARY${NC} feature collection")
+    set(librarypackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
     set(generalpackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BOLD}OPTIONAL${NC} feature collection")
 
     set(globalnameText     "               ${BOLD}${right_padded_feature}${NC} {} the ${GREEN}${BOLD}GLOBAL${NC} feature names")
     set(systemnameText     "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BLUE}${BOLD}SYSTEM${NC} feature names")
-    set(librarynameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${CYAN}${BOLD}LIBRARY${NC} feature names")
+    set(librarynameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${YELLOW}${BOLD}LIBRARY${NC} feature names")
     set(generalnameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BOLD}OPTIONAL${NC} feature names")
 
     set(APD_FEATPKG "${APD_FEATURE}/${APD_PKGNAME}")
