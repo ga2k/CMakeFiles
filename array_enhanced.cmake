@@ -318,37 +318,53 @@ function(record)
     string(TOUPPER "${_recVerb}" _recVerbUC)
 
 
-    # -------------------- Extended: CREATE with NAME --------------------
+    # -------------------- Extended: CREATE --------------------
+
     if(_recVerbUC STREQUAL "CREATE")
-        if(NOT ${ARGC} EQUAL 4)
-            msg(ALWAYS FATAL_ERROR "record(CREATE): expected record(CREATE <recVar> <name> <numFields>)")
-        endif()
-        
-        set(_name "${ARGV2}")
-        _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
-        
-        set(_n "${ARGV3}")
-        if(NOT _n MATCHES "^[0-9]+$")
-            msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
-        endif()
-        if(_n EQUAL 0)
-            msg(ALWAYS FATAL_ERROR "record(CREATE): empty record is forbidden (numFields must be >= 1)")
+        if(${ARGC} LESS 3 OR ${ARGC} GREATER 4)
+            msg(ALWAYS FATAL_ERROR "record(CREATE): expected record(CREATE <recVar> <name> [numFields])")
         endif()
 
-        # Create: {FS}NAME{FS}field1{FS}field2...
-        set(_tmpList "${_name}")
-        foreach(_i RANGE 1 ${_n})
-            list(APPEND _tmpList "${RECORD_EMPTY_FIELD_SENTINEL}")
-        endforeach()
-        string(REPLACE "${list_sep}" "${FS}" _result "${_tmpList}")
-        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        set(_name "${ARGV2}")
+        _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
+
+        if(${ARGC} EQUAL 4)
+            set(_n "${ARGV3}")
+            if(NOT _n MATCHES "^[0-9]+$")
+                msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
+            endif()
+        else ()
+            set(_n 0)
+        endif ()
+
+        if(_n EQUAL 0)
+            # Empty record: just name, no fields
+            set(${_recVar} "${FS}${_name}" PARENT_SCOPE)
+        else()
+            # Create: {FS}NAME{FS}field1{FS}field2...
+            set(_tmpList "${_name}")
+            foreach(_i RANGE 1 ${_n})
+                list(APPEND _tmpList "${RECORD_EMPTY_FIELD_SENTINEL}")
+            endforeach()
+            string(REPLACE "${list_sep}" "${FS}" _result "${_tmpList}")
+
+            _hs__get_object_type("${_result}" Ak As)
+            if(Ak STREQUAL "UNKNOWN")
+                set(dodgyExtraFS "${FS}")
+            endif ()
+            set(${_recVar} "${dodgyExtraFS}${_result}" PARENT_SCOPE)
+        endif()
         return()
 
     # -------------------- Extended: FIND --------------------
+
     elseif(_recVerbUC STREQUAL "FIND")
         if(NOT ${ARGC} EQUAL 4)
             msg(ALWAYS FATAL_ERROR "record(FIND): expected record(FIND <recVar> EQUAL|MATCHING <pattern> <outVarName>)")
         endif()
+
+        # undefine the output variable
+        set(${ARGV3} "" PARENT_SCOPE)
 
         set(_recValue "${${_recVar}}")
         set(_pattern "${ARGV2}")
@@ -357,7 +373,9 @@ function(record)
         list(POP_FRONT _lst dc dc dc dc)
         list(FIND _lst "${_pattern}" outVar)
 
-        set(${ARGV3} "${outVar}" PARENT_SCOPE)
+        if(NOT outVar EQUAL -1)
+            set(${ARGV3} "${outVar}" PARENT_SCOPE)
+        endif ()
         return()
 
     # -------------------- Extended: LENGTH --------------------
@@ -366,10 +384,17 @@ function(record)
             msg(ALWAYS FATAL_ERROR "record(LENGTH): expected record(LENGTH <recVar> <outVarName>)")
         endif()
 
+        # undefine the output variable
+        set(${ARGV2} "" PARENT_SCOPE)
+
         set(_recValue "${${_recVar}}")
         _hs__record_to_list("${_recValue}" _lst)
-        list(LENGTH recValue _len)
+        list(LENGTH _lst _len)
+
+        # Account for record name
+        math(EXPR _len "${_len} - 2")
         set(${ARGV2} "${_len}" PARENT_SCOPE)
+
         return()
 
     # -------------------- Extended: NAME --------------------
@@ -378,9 +403,14 @@ function(record)
             msg(ALWAYS FATAL_ERROR "record(NAME): expected record(NAME <recVar> <outVarName>)")
         endif()
 
+        # undefine the output variable
+        set(${ARGV2} "" PARENT_SCOPE)
+
         set(_recValue "${${_recVar}}")
         _hs__get_name("${_recValue}" _name)
-        set(${ARGV2} "${_name}" PARENT_SCOPE)
+        if(NOT _name STREQUAL "")
+            set(${ARGV2} "${_name}" PARENT_SCOPE)
+        endif ()
         return()
 
     # -------------------- Extended: GET NAME --------------------
@@ -389,10 +419,15 @@ function(record)
             if(NOT ${ARGC} EQUAL 4)
                 msg(ALWAYS FATAL_ERROR "record(GET NAME): expected record(GET <recVar> NAME <outVarName>)")
             endif()
-            
+
+            # undefine the output variable
+            set(${ARGV3} "" PARENT_SCOPE)
+
             set(_recValue "${${_recVar}}")
             _hs__get_name("${_recValue}" _name)
-            set(${ARGV3} "${_name}" PARENT_SCOPE)
+            if(NOT _name STREQUAL "")
+                set(${ARGV3} "${_name}" PARENT_SCOPE)
+            endif ()
             msg(ALWAYS DEPRECATED "use record(NAME) instead")
             return()
         endif()
@@ -424,15 +459,26 @@ function(record)
         endif()
 
         # Output variables from index 3 to _endIdx-1
-        # NOTE: Field indices are now offset by +1 because index 0 is the name
-        set(_k 3)
+        # NOTE: Field indices are now offset by +2 because index 0 is a marker and index 0 is the name
         set(_cur ${_ix})
-        math(EXPR _cur "${_cur} + 1")  # Offset for name
+        math(EXPR _cur "${_cur} + 2")  # Offset for name and leading separator!!!
+
+        # First, undefine all the output variables
+        set(_k 3)
         while(_k LESS ${_endIdx})
             set(_outName "${ARGV${_k}}")
-            if(_cur GREATER_EQUAL _len)
-                set(${_outName} "" PARENT_SCOPE)
-            else()
+
+            # undefine the output variable
+            set(${_outName} "" PARENT_SCOPE)
+            math(EXPR _k "${_k} + 1")
+        endwhile ()
+
+        # Second, do it
+        set(_k 3)
+        while(_k LESS ${_endIdx})
+            set(_outName "${ARGV${_k}}")
+
+            if(_cur LESS _len)
                 list(GET _lst ${_cur} _vStore)
                 _hs__field_to_user("${_vStore}" _v)
 
@@ -442,78 +488,90 @@ function(record)
                     string(TOLOWER "${_v}" _v)
                 endif()
 
-                set(${_outName} "${_v}" PARENT_SCOPE)
+                if(NOT _outName STREQUAL "")
+                    set(${_outName} "${_v}" PARENT_SCOPE)
+                endif ()
             endif()
             math(EXPR _k "${_k} + 1")
             math(EXPR _cur "${_cur} + 1")
         endwhile()
         return()
 
-    # -------------------- Extended: SET (adjusted for name, supports bulk setting) --------------------
-    elseif(_recVerbUC STREQUAL "SET")
+    # -------------------- Extended: SET/REPLACE (adjusted for name, supports bulk setting) --------------------
+    elseif(_recVerbUC STREQUAL "SET" OR _recVerbUC STREQUAL "REPLACE")
         if(${ARGC} LESS 4)
-            msg(ALWAYS FATAL_ERROR "record(SET): expected record(SET <recVar> <fieldIndex> <newValue>... [FAIL|QUIET])")
+            set(mess "record(${_recVerbUC}): expected record(${_recVerbUC} <recVar> <fieldIndex> <newValue>... ")
+            if(_recVerbUC STREQUAL "SET")
+                set(mess "${mess}[FAIL|QUIET])")
+            else ()
+                set(mess "${mess})")
+            endif ()
+            msg(ALWAYS FATAL_ERROR "${mess}")
         endif()
 
-        set(_ix "${ARGV2}")
-        if(NOT _ix MATCHES "^[0-9]+$")
-            msg(ALWAYS FATAL_ERROR "record(SET): <fieldIndex> must be a non-negative integer, got '${_ix}'")
+        set(_logicalIX "${ARGV2}")
+        if(NOT _logicalIX MATCHES "^[0-9]+$")
+            msg(ALWAYS FATAL_ERROR "record(${_recVerbUC}): <fieldIndex> must be a non-negative integer, got '${_logicalIX}'")
         endif()
+        math(EXPR _physicalIX "${_logicalIX} + 2")
 
-        # Check if last arg is FAIL or QUIET
-        math(EXPR _lastArg "${ARGC} - 1")
-        set(_lastWord "${ARGV${_lastArg}}")
-        string(TOUPPER "${_lastWord}" _lastWordUC)
-        
         set(_mode "")
         set(_endIdx ${ARGC})
-        if(_lastWordUC STREQUAL "FAIL" OR _lastWordUC STREQUAL "QUIET")
-            set(_mode "${_lastWordUC}")
-            set(_endIdx ${_lastArg})
-        endif()
+
+        # Check if command is SET and if last arg is FAIL or QUIET
+        if(_recVerbUC STREQUAL "SET")
+            math(EXPR _lastArg "${ARGC} - 1")
+            set(_lastWord "${ARGV${_lastArg}}")
+            string(TOUPPER "${_lastWord}" _lastWordUC)
+
+            if(_lastWordUC STREQUAL "FAIL" OR _lastWordUC STREQUAL "QUIET")
+                set(_mode "${_lastWordUC}")
+                set(_endIdx ${_lastArg})
+            endif()
+        endif ()
 
         set(_recValue "${${_recVar}}")
         _hs__record_to_list("${_recValue}" _lst)
 
-        # Leading RS begone
-        list(POP_FRONT _lst)
-
-        list(LENGTH _lst _len)
+        list(LENGTH _lst _phyicalLen)
+        math(EXPR _logicalLen "${_phyicalLen} - 2")
 
         # Process all values from ARGV3 to _endIdx-1
         set(_k 3)
-        set(_currentIdx ${_ix})
         while(_k LESS ${_endIdx})
             set(_newVal "${ARGV${_k}}")
-            _hs__assert_no_ctrl_chars("record(SET)" "${_newVal}")
+            _hs__assert_no_ctrl_chars("record(${_recVerbUC})" "${_newVal}")
             _hs__field_to_storage("${_newVal}" _newValStore)
 
-            # Offset index for name at position 0
-            math(EXPR _actualIx "${_currentIdx} + 1")
-
-            if(_actualIx GREATER_EQUAL _len)
+            if(_logicalIX GREATER_EQUAL _logicalLen)
                 if(_mode STREQUAL "FAIL")
-                    msg(ALWAYS FATAL_ERROR "record(SET): index ${_currentIdx} out of range (len=${_len})")
+                    msg(ALWAYS FATAL_ERROR "record(${_recVerbUC}): index ${_logicalIX} out of range (len=${_logicalLen})")
                 elseif(NOT _mode STREQUAL "QUIET")
-                    msg(WARNING "record(SET): extending record '${_recVar}' to index ${_currentIdx}")
+                    msg(WARNING "record(${_recVerbUC}): extending record '${_recVar}' to index ${_logicalIX}")
                 endif()
 
                 # Extend with "-" sentinel
-                while(_len LESS_EQUAL _actualIx)
+                while(_phyicalLen LESS_EQUAL _physicalIX)
                     list(APPEND _lst "${RECORD_EMPTY_FIELD_SENTINEL}")
-                    list(LENGTH _lst _len)
+                    list(LENGTH _lst _phyicalLen)
+                    math(EXPR _logicalLen  "${_logicalLen} + 1")
                 endwhile()
             endif()
 
-            list(REMOVE_AT _lst ${_actualIx})
-            list(INSERT _lst ${_actualIx} "${_newValStore}")
+            list(REMOVE_AT _lst ${_physicalIX})
+            list(INSERT _lst ${_physicalIX} "${_newValStore}")
 
             math(EXPR _k "${_k} + 1")
-            math(EXPR _currentIdx "${_currentIdx} + 1")
+            math(EXPR _physicalIX "${_physicalIX} + 1")
+            math(EXPR _logicalIX  "${_logicalIX}  + 1")
         endwhile()
 
         _hs__list_to_record("${_lst}" _result)
-        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        _hs__get_object_type("${_result}" Ak As)
+        if(NOT Ak STREQUAL "RECORD")
+            set(dodgyExtraFS "${FS}")
+        endif ()
+        set(${_recVar} "${dodgyExtraFS}${_result}" PARENT_SCOPE)
         return()
 
     # -------------------- Extended: APPEND / PREPEND (skip name) --------------------
@@ -541,7 +599,11 @@ function(record)
         endwhile()
 
         _hs__list_to_record("${_lst}" _result)
-        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        _hs__get_object_type("${_result}" Ak As)
+        if(NOT Ak STREQUAL "RECORD")
+            set(dodgyExtraFS "${FS}")
+        endif ()
+        set(${_recVar} "${dodgyExtraFS}${_result}" PARENT_SCOPE)
         return()
 
     # -------------------- Extended: POP_FRONT / POP_BACK (skip name) --------------------
@@ -565,6 +627,10 @@ function(record)
             set(_endIdx ${_lastArg})
         endif()
 
+        set(_k 2)
+        while(_k LESS ${_endIdx})
+            set("${ARGV${_k}}" "" PARENT_SCOPE)
+        endwhile ()
         set(_k 2)
         while(_k LESS ${_endIdx})
             set(_outName "${ARGV${_k}}")
@@ -596,7 +662,7 @@ function(record)
         endwhile()
 
         _hs__list_to_record("${_lst}" _result)
-        set(${_recVar} "${FS}${_result}" PARENT_SCOPE)
+        set(${_recVar} "${_result}" PARENT_SCOPE)
         return()
 
     # -------------------- Extended: DUMP --------------------
@@ -642,6 +708,10 @@ function(record)
         list(LENGTH _lst _len)
         if(_len EQUAL 0)
             set(_dumpStr "record '${_recVar}' = [] (empty/uninitialized)\n")
+        elseif(_len EQUAL 1)
+            # Just the name, no fields (empty record after split: ["", "Name"])
+            _hs__get_name("${_recValue}" _name)
+            set(_dumpStr "record '${_recVar}' (name='${_name}', fields=0) = []\n")
         else()
             if(_verbose)
                 # _len includes empty first element from split, so subtract 2 (empty + name)
@@ -672,12 +742,13 @@ function(record)
                 endwhile()
                 string(APPEND _dumpStr "]")
             elseif (_raw)
-                set(_txt "${${_recVar}}")
-                string(REPLACE "${FS}" "<FS>" _txt "${_txt}")
+                set(_txt "${_lst}")
+                string(REPLACE ";" "<FS>" _dumpStr "${_txt}")
             else ()
-                list(POP_FRONT _recVar)
-                set(_txt "${${_recVar}}")
-                string(REPLACE "${FS}" "<FS>" _txt "${_txt}")
+                list(POP_FRONT _lst _mkr _name)
+                set(_txt "${_lst}")
+                string(REPLACE ";" "<FS>" _txt "${_txt}")
+                string(REPLACE ">-" ">" _dumpStr "${_txt}")
             endif ()
         endif()
 
@@ -790,6 +861,9 @@ function(array)
             msg(ALWAYS FATAL_ERROR "array(NAME): expected array(NAME <arrayVarName> <outVarName>)")
         endif()
 
+        # undefine the output variable
+        set(${ARGV2} "" PARENT_SCOPE)
+
         _hs__get_name("${_A}" _name)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
         return()
@@ -800,7 +874,10 @@ function(array)
             if(NOT ${ARGC} EQUAL 4)
                 msg(ALWAYS FATAL_ERROR "array(GET NAME): expected array(GET <arrayVarName> NAME <outVarName>)")
             endif()
-            
+
+            # undefine the output variable
+            set(${ARGV3} "" PARENT_SCOPE)
+
             _hs__get_name("${_A}" _name)
             set(${ARGV3} "${_name}" PARENT_SCOPE)
             msg(ALWAYS DEPRECATED "use array(NAME)")
@@ -827,7 +904,8 @@ function(array)
             
             set(_regex "${ARGV3}")
             _hs__array_to_list("${_A}" "${_sep}" _lst)
-            
+            set(${ARGV4} "" PARENT_SCOPE)
+
             # Skip element 0 (array's own name)
             list(LENGTH _lst _len)
             set(_i 1)
@@ -883,6 +961,7 @@ function(array)
         if(NOT ${ARGC} EQUAL 3)
             msg(ALWAYS FATAL_ERROR "array(LENGTH): expected array(LENGTH <arrayVarName> <outVarName>)")
         endif()
+        set("${ARGV2}" "" PARENT_SCOPE)
         _hs__array_to_list("${_A}" "${_sep}" _lst)
         list(LENGTH _lst _len)
         # Subtract 1 to exclude the array's own name
@@ -903,7 +982,7 @@ function(array)
         _hs__resolve_path("${_A}" "${_path}" _result)
         
         if("${_result}" STREQUAL "")
-            set(${ARGV3} "-1" PARENT_SCOPE)
+            set(${ARGV3} "" PARENT_SCOPE)
         else()
             # Find the index of this element
             _hs__array_to_list("${_A}" "${_sep}" _lst)
@@ -948,27 +1027,61 @@ function(array)
         else()
             list(GET _lst 0 _arrName)
             math(EXPR _numElems "${_len} - 1")
-            set(_dumpStr "array '${arrayVarName}' (name='${_arrName}', kind=${_kind}, elements=${_numElems}) = [\n")
+
+            # Show separator type
+            if(_sep STREQUAL "${RS}")
+                set(_sepName "<RS>")
+            elseif(_sep STREQUAL "${GS}")
+                set(_sepName "<GS>")
+            else()
+                set(_sepName "<??>")
+            endif()
+
+            set(_dumpStr "array '${arrayVarName}' (name='${_arrName}', kind=${_kind}, sep=${_sepName}, elements=${_numElems}) = [\n")
 
             set(_i 1)
             set(_elemIdx 0)
             while(_i LESS _len)
                 list(GET _lst ${_i} _elem)
                 _hs__get_name("${_elem}" _elemName)
-                
+                _hs__get_object_type("${_elem}" _elemType)
+
                 if(_verbose)
-                    string(LENGTH "${_elem}" _elen)
-                    if(_elen GREATER 100)
-                        string(SUBSTRING "${_elem}" 0 100 _displayElem)
-                        string(APPEND _displayElem "...")
+                    # Recursively dump nested structures
+                    if(_elemType STREQUAL "RECORD")
+                        # Delegate to record(DUMP)
+                        set(_temp_rec_var "_hs_temp_rec_${_elemIdx}")
+                        set(${_temp_rec_var} "${_elem}")
+                        record(DUMP ${_temp_rec_var} _elem_dump VERBOSE)
+                        unset(${_temp_rec_var})
+                        # Indent the nested dump
+                        string(REPLACE "\n" "\n    " _elem_dump_indented "${_elem_dump}")
+                        string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' (RECORD) =\n    ${_elem_dump_indented}\n")
+                    elseif(_elemType STREQUAL "ARRAY_RECORDS" OR _elemType STREQUAL "ARRAY_ARRAYS")
+                        # Recursively dump array
+                        set(_temp_arr_var "_hs_temp_arr_${_elemIdx}")
+                        set(${_temp_arr_var} "${_elem}")
+                        array(DUMP ${_temp_arr_var} _elem_dump VERBOSE)
+                        unset(${_temp_arr_var})
+                        # Indent the nested dump
+                        string(REPLACE "\n" "\n    " _elem_dump_indented "${_elem_dump}")
+                        string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' (${_elemType}) =\n    ${_elem_dump_indented}\n")
                     else()
-                        set(_displayElem "${_elem}")
+                        # Unknown type - show raw
+                        string(LENGTH "${_elem}" _elen)
+                        if(_elen GREATER 100)
+                            string(SUBSTRING "${_elem}" 0 100 _displayElem)
+                            string(APPEND _displayElem "...")
+                        else()
+                            set(_displayElem "${_elem}")
+                        endif()
+                        string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' (${_elemType}) = \"${_displayElem}\"\n")
                     endif()
-                    string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' = \"${_displayElem}\"\n")
                 else()
-                    string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}'\n")
+                    # Non-verbose: just show name and type
+                    string(APPEND _dumpStr "  [${_elemIdx}] '${_elemName}' (${_elemType})\n")
                 endif()
-                
+
                 math(EXPR _i "${_i} + 1")
                 math(EXPR _elemIdx "${_elemIdx} + 1")
             endwhile()
@@ -1030,6 +1143,7 @@ function(array)
         endwhile()
 
         _hs__list_to_array("${_lst}" "${_kind}" _Aout)
+        _hs__array_get_kind("${_Aout}" kk ss)
         set(${arrayVarName} "${_Aout}" PARENT_SCOPE)
         return()
     endif()
@@ -1197,6 +1311,8 @@ function(collection)
             msg(ALWAYS FATAL_ERROR "collection(NAME): expected collection(NAME <collectionVarName> <outVarName>)")
         endif()
 
+        set(${ARGV2} "" PARENT_SCOPE)
+
         _hs__get_name("${_A}" _name)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
         return()
@@ -1351,9 +1467,9 @@ function(collection)
         endif()
 
         string(SUBSTRING "${_C}" 1 -1 _payload)
-        
+        set(${ARGV2} "" PARENT_SCOPE)
+
         if("${_payload}" STREQUAL "")
-            set(${ARGV2} "" PARENT_SCOPE)
             return()
         endif()
 
@@ -1378,6 +1494,7 @@ function(collection)
             msg(ALWAYS FATAL_ERROR "collection(LENGTH): expected collection(LENGTH <collectionVarName> <outVarName>)")
         endif()
 
+        set(${ARGV2} "0" PARENT_SCOPE)
         string(SUBSTRING "${_C}" 1 -1 _payload)
         
         if("${_payload}" STREQUAL "")
@@ -1395,26 +1512,38 @@ function(collection)
 
     # -------------------- DUMP --------------------
     if(_V STREQUAL "DUMP")
-        if(ARGC LESS 2 OR ARGC GREATER 3)
-            msg(ALWAYS FATAL_ERROR "collection(DUMP): expected collection(DUMP <collectionVarName> [<outVarName>])")
+        if(ARGC LESS 2 OR ARGC GREATER 4)
+            msg(ALWAYS FATAL_ERROR "collection(DUMP): expected collection(DUMP <collectionVarName> [<outVarName>] [VERBOSE])")
         endif()
 
+        set(_verbose OFF)
         set(_outVarName "")
-        if(ARGC EQUAL 3)
-            set(_outVarName "${ARGV2}")
+
+        if(ARGC GREATER_EQUAL 3)
+            if("${ARGV2}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            else()
+                set(_outVarName "${ARGV2}")
+            endif()
+        endif()
+
+        if(ARGC EQUAL 4)
+            if("${ARGV3}" STREQUAL "VERBOSE")
+                set(_verbose ON)
+            endif()
         endif()
 
         string(SUBSTRING "${_C}" 1 -1 _payload)
-        
+
         if("${_payload}" STREQUAL "")
             set(_dumpStr "collection '${collectionVarName}' = {} (empty)\n")
         else()
             string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
             list(LENGTH _kvList _kvLen)
             math(EXPR _numPairs "${_kvLen} / 2")
-            
+
             set(_dumpStr "collection '${collectionVarName}' (pairs=${_numPairs}) = {\n")
-            
+
             set(_i 0)
             while(_i LESS _kvLen)
                 list(GET _kvList ${_i} _key)
@@ -1422,7 +1551,45 @@ function(collection)
                 if(_valIdx LESS _kvLen)
                     list(GET _kvList ${_valIdx} _value)
                     _hs__get_object_type("${_value}" _valueType)
-                    string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n")
+
+                    if(_verbose)
+                        # Recursively dump based on type
+                        if(_valueType STREQUAL "RECORD")
+                            set(_temp_rec_var "_hs_temp_rec_${_i}")
+                            set(${_temp_rec_var} "${_value}")
+                            record(DUMP ${_temp_rec_var} _value_dump VERBOSE)
+                            unset(${_temp_rec_var})
+                            string(REPLACE "\n" "\n    " _value_dump_indented "${_value_dump}")
+                            string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n    ${_value_dump_indented}\n")
+                        elseif(_valueType STREQUAL "ARRAY_RECORDS" OR _valueType STREQUAL "ARRAY_ARRAYS")
+                            set(_temp_arr_var "_hs_temp_arr_${_i}")
+                            set(${_temp_arr_var} "${_value}")
+                            array(DUMP ${_temp_arr_var} _value_dump VERBOSE)
+                            unset(${_temp_arr_var})
+                            string(REPLACE "\n" "\n    " _value_dump_indented "${_value_dump}")
+                            string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n    ${_value_dump_indented}\n")
+                        elseif(_valueType STREQUAL "COLLECTION")
+                            set(_temp_col_var "_hs_temp_col_${_i}")
+                            set(${_temp_col_var} "${_value}")
+                            collection(DUMP ${_temp_col_var} _value_dump VERBOSE)
+                            unset(${_temp_col_var})
+                            string(REPLACE "\n" "\n    " _value_dump_indented "${_value_dump}")
+                            string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n    ${_value_dump_indented}\n")
+                        else()
+                            # Unknown type
+                            string(LENGTH "${_value}" _vlen)
+                            if(_vlen GREATER 100)
+                                string(SUBSTRING "${_value}" 0 100 _displayVal)
+                                string(APPEND _displayVal "...")
+                            else()
+                                set(_displayVal "${_value}")
+                            endif()
+                            string(APPEND _dumpStr "  \"${_key}\" => (${_valueType}) \"${_displayVal}\"\n")
+                        endif()
+                    else()
+                        # Non-verbose: just show key and type
+                        string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n")
+                    endif()
                 endif()
                 math(EXPR _i "${_i} + 2")
             endwhile()

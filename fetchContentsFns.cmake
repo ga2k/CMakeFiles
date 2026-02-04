@@ -21,55 +21,6 @@ math(EXPR FIXLength "${FIXPrereqs} + 1")
 set(__longest_feature "17" CACHE INTERNAL "")
 set(__longest_handler "17" CACHE INTERNAL "")
 
-macro(fetchContentsHelp)
-
-    set(help_msg [=[
-HELP
-        Print this help and exit
-
-    Currently available package features are
-]=])
-
-    record(LENGTH PKG_FEATURES items)
-    math(EXPR last_item "${items} - 1")
-
-    # Find longest package feature
-    string(LENGTH "Package Feature" TITLE_LENGTH)
-    set(LONGEST_PKG_LENGTH ${TITLE_LENGTH})
-
-    foreach (x IN LISTS ${PKG_FEATURES})
-        unset(THS_PKG_FEATURE)
-        getPkgFeature("${x}" THIS_PKG_FEATURE)
-        string(LENGTH ${THS_PKG_FEATURE} THS_PKG_LENGTH)
-        if (${THS_PKG_LENGTH} GREATER ${LONGEST_PKG_LENGTH})
-            set(LONGEST_PKG_LENGTH ${THS_PKG_LENGTH})
-        endif ()
-    endforeach ()
-
-    set(NAME "Package Feature")
-    math(EXPR PADDING "${LONGEST_PKG_LENGTH} - ${TITLE_LENGTH} + 3")
-    string(REPEAT "." ${PADDING} PAD)
-    list(APPEND help_msg "\t${NAME} ${PAD} Package Options")
-    list(APPEND help_msg "\t---------------- ${PAD} ---------------")
-
-    foreach (x IN LISTS PKG_FEATURES)
-        unset(THS_PKG_FEATURE)
-        unset(THS_PKG_NAME_LIST)
-        getPkgFeature("${x}" THIS_PKG_FEATURE)
-        getPkgNameList("${x}" THS_PKG_NAME_LIST)
-        string(REPLACE ";" ", " THS_PKG_LIST "${THS_PKG_NAME_LIST}")
-        string(LENGTH ${THIS_PKG_FEATURE} THS_PKG_LENGTH)
-        math(EXPR PADDING "${LONGEST_PKG_LENGTH} - ${THS_PKG_LENGTH} + 3")
-        string(REPEAT "." ${PADDING} PAD)
-        list(APPEND help_msg "\t${THIS_PKG_FEATURE} ${PAD} ${THS_PKG_LIST}")
-    endforeach ()
-    list(APPEND help_msg " ")
-
-    log(LIST help_msg)
-    message(FATAL_ERROR ${msg})
-
-endmacro()
-
 include(FetchContent)
 
 function(addTargetProperties target pkgname addToLists)
@@ -218,9 +169,9 @@ function(addPackageData)
         msg(ALWAYS FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
     if (
-    (APD_URL AND APD_GIT_REPOSITORY) OR
-    (APD_URL AND APD_SRCDIR) OR
-    (APD_GIT_REPOSITORY AND APD_SRCDIR)
+            (APD_URL AND APD_GIT_REPOSITORY) OR
+            (APD_URL AND APD_SRCDIR) OR
+            (APD_GIT_REPOSITORY AND APD_SRCDIR)
     )
         msg(ALWAYS FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
     endif ()
@@ -251,45 +202,26 @@ function(addPackageData)
         list(APPEND APD_PREREQS ${APD_PREREQ})
     endif ()
 
-#    if ("${APD_NAMESPACE}" STREQUAL "")
-#        set(APD_NAMESPACE "-")
-#    endif ()
     if (APD_GIT_REPOSITORY)
         set(URLorSRCDIR "${APD_GIT_REPOSITORY}")
     elseif (APD_SRCDIR)
         set(URLorSRCDIR "${APD_SRCDIR}")
     elseif (APD_URL)
         set(URLorSRCDIR "${APD_URL}")
-#    else ()
-#        set(URLorSRCDIR "-")
     endif ()
     if (APD_GIT_TAG)
         set(TAGorBINDIR "${APD_GIT_TAG}")
     elseif (APD_BINDIR)
         set(TAGorBINDIR "${APD_BINDIR}")
-#    else ()
-#        set(TAGorBINDIR "-")
     endif ()
-#    if (NOT APD_INCDIR)
-#        set(APD_INCDIR "-")
-#    endif ()
     string(REPLACE ";" ":" APD_COMPONENTS "${APD_COMPONENTS}")
-#    if ("${APD_COMPONENTS}" STREQUAL "")
-#        set(APD_COMPONENTS "-")
-#    endif ()
-#    unset(temp)
     string(JOIN ":" APD_ARGS ${APD_ARGS} ${APD_FIND_PACKAGE_ARGS})
-#    if("${APD_ARGS}" STREQUAL "")
-#        set(APD_ARGS "-")
-#    endif ()
     if (APD_PREREQS)
         string(REPLACE ";" ":" APD_PREREQS "${APD_PREREQS}")
-#    else ()
-#        set(APD_PREREQS "-")
     endif ()
 
-    record(CREATE output ${APD_FEATURE} ${FIXLength})
-    record(SET output "${FIXName}"
+    record(CREATE output ${APD_PKGNAME})
+    record(SET output 0
             "${APD_FEATURE}"
             "${APD_PKGNAME}"
             "${APD_NAMESPACE}"
@@ -301,11 +233,8 @@ function(addPackageData)
             "${APD_COMPONENTS}"
             "${APD_ARGS}"
             "${APD_PREREQS}"
+            QUIET
     )
-    record(DUMP output)
-    record(DUMP output VERBOSE)
-    record(DUMP output RAW)
-    message(FATAL_ERROR "Boo! Were you scared?")
 
     function(createOrAppendRecord)
 
@@ -364,8 +293,7 @@ function(addPackageData)
 
         set(car_action)
 
-        collection(GET ${car_object} EQUAL "${car_feature}" targetFeature)
-
+        collection(GET ${car_object} "${car_feature}" targetFeature)
         if (NOT targetFeature)
             array(CREATE targetFeature "${car_feature}" RECORDS)
             array(APPEND targetFeature RECORD "${car_data}")
@@ -375,7 +303,7 @@ function(addPackageData)
                 if (car_unique)
                     array(NAME "${car_data}" data_name)
                     array(FIND targetFeature "${data_name}" existing_data)
-                    if(existing_data STREQUAL "")
+                    if(NOT existing_data)
                         array(APPEND targetFeature RECORD "${car_data}")
                         set(car_action "added to")
                     else ()
@@ -391,7 +319,7 @@ function(addPackageData)
             else()
                 array(NAME "${car_data}" data_name)
                 array(FIND targetFeature EQUAL "${data_name}" existing_data)
-                if(existing_data STREQUAL "")
+                if(NOT existing_data)
                     array(APPEND targetFeature RECORD "${car_data}")
                     set(car_action "added to")
                 else ()
@@ -463,17 +391,16 @@ function(addPackageData)
             set(caf_marker "${CAF_MARKER}")
         endif ()
 
-        collection(GET ${caf_object} EQUAL "${caf_feature}" targetRecord)
-
+        collection(GET ${caf_object} "${caf_feature}" targetRecord)
         if (NOT targetRecord)
-            record(CREATE targetRecord "${caf_feature}" 1)
+            record(CREATE targetRecord "${caf_feature}")
             record(APPEND targetRecord "${caf_field}")
             set(caf_action "added to")
         else ()
             if(caf_extend)
                 if(caf_unique)
                     record(FIND targetRecord "${caf_field}" index)
-                    if (index EQUAL -1)
+                    if (NOT index)
                         record(APPEND targetRecord "${caf_field}")
                         set(caf_action "added to")
                     else ()
@@ -486,7 +413,7 @@ function(addPackageData)
                 endif ()
             else ()
                 record(FIND targetRecord "${caf_field}" index)
-                if (index EQUAL -1)
+                if (NOT index)
                     record(APPEND targetRecord "${caf_field}")
                     set(caf_action "added to")
                 else ()
@@ -506,50 +433,54 @@ function(addPackageData)
 
     endfunction()
 
-    longest(CURRENT ${__longest_feature} LEFT  PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED left_padded_feature)
-    longest(CURRENT ${__longest_feature} RIGHT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED right_padded_feature)
-    longest(CURRENT ${__longest_feature} LEFT  PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED left_padded_package)
-    longest(CURRENT ${__longest_feature} RIGHT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED right_padded_package)
+    macro (pretty)
+        longest(CURRENT ${__longest_feature} LEFT  PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED left_padded_feature)
+        longest(CURRENT ${__longest_feature} RIGHT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_FEATURE}" PADDED right_padded_feature)
+        longest(CURRENT ${__longest_feature} LEFT  PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED left_padded_package)
+        longest(CURRENT ${__longest_feature} RIGHT PAD_CHAR " " LONGEST __longest_feature TEXT "${APD_PKGNAME}" PADDED right_padded_package)
 
-    set(globalfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
-    set(systemfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
-    set(libraryfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
-    set(generalfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BOLD}OPTIONAL${NC} feature collection")
+        set(globalfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
+        set(systemfeatureText  "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
+        set(libraryfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
+        set(generalfeatureText "       Feature ${BOLD}${right_padded_feature}${NC} {} for package ${BOLD}${APD_PKGNAME}${NC} and was added to the ${BOLD}OPTIONAL${NC} feature collection")
 
-    set(globalpackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
-    set(systempackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
-    set(librarypackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
-    set(generalpackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BOLD}OPTIONAL${NC} feature collection")
+        set(globalpackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${GREEN}${BOLD}GLOBAL${NC} feature collection")
+        set(systempackageText  "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BLUE}${BOLD}SYSTEM${NC} feature collection")
+        set(librarypackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${YELLOW}${BOLD}LIBRARY${NC} feature collection")
+        set(generalpackageText "       Package ${BOLD}${right_padded_package}${NC} created and linked to feature ${BOLD}${APD_FEATURE}${NC} in the ${BOLD}OPTIONAL${NC} feature collection")
 
-    set(globalnameText     "               ${BOLD}${right_padded_feature}${NC} {} the ${GREEN}${BOLD}GLOBAL${NC} feature names")
-    set(systemnameText     "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BLUE}${BOLD}SYSTEM${NC} feature names")
-    set(librarynameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${YELLOW}${BOLD}LIBRARY${NC} feature names")
-    set(generalnameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BOLD}OPTIONAL${NC} feature names")
-
+        set(globalnameText     "               ${BOLD}${right_padded_feature}${NC} {} the ${GREEN}${BOLD}GLOBAL${NC} feature names")
+        set(systemnameText     "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BLUE}${BOLD}SYSTEM${NC} feature names")
+        set(librarynameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${YELLOW}${BOLD}LIBRARY${NC} feature names")
+        set(generalnameText    "       Feature ${BOLD}${right_padded_feature}${NC} {} the ${BOLD}OPTIONAL${NC} feature names")
+    endmacro()
+    pretty()
     set(APD_FEATPKG "${APD_FEATURE}/${APD_PKGNAME}")
 
     # Add new feature/pkg to the global FEATURES collection
-    createOrAppendRecord(   OBJECT "FEATURES"           FEATURE "${APD_FEATURE}" DATA "${output}"           EXTEND        MARKER "{}" TEXT "${globalfeatureText}")
-    createOrAppendField (   OBJECT "FEATURES"           FEATURE "PACKAGES"       FIELD ${APD_FEATPKG}       EXTEND UNIQUE MARKER "{}" TEXT "${globalpackageText}")
-    createOrAppendField (   OBJECT "FEATURES"           FEATURE "NAMES"          FIELD ${APD_FEATURE}       EXTEND UNIQUE MARKER "{}" TEXT "${globalnameText}")
+    createOrAppendRecord(   OBJECT "FEATURES"           FEATURE "${APD_FEATURE}" DATA "${output}"     QUIET EXTEND        MARKER "{}" TEXT "${globalfeatureText}")
+    createOrAppendField (   OBJECT "FEATURES"           FEATURE "PACKAGES"       FIELD ${APD_FEATPKG} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${globalpackageText}")
+    createOrAppendField (   OBJECT "FEATURES"           FEATURE "NAMES"          FIELD ${APD_FEATURE} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${globalnameText}")
     if(APD_KIND MATCHES "SYSTEM")
-        createOrAppendRecord(OBJECT "SYSTEM_FEATURES"   FEATURE "${APD_FEATURE}" DATA "${output}"           EXTEND        MARKER "{}" TEXT "${systemfeatureText}")
-        createOrAppendField (OBJECT "SYSTEM_FEATURES"   FEATURE "PACKAGES"       FIELD ${APD_FEATPKG}       EXTEND UNIQUE MARKER "{}" TEXT "${systempackageText}")
-        createOrAppendField (OBJECT "SYSTEM_FEATURES"   FEATURE "NAMES"          FIELD ${APD_FEATURE}       EXTEND UNIQUE MARKER "{}" TEXT "${systemnameText}")
+        createOrAppendRecord(OBJECT "SYSTEM_FEATURES"   FEATURE "${APD_FEATURE}" DATA "${output}"     QUIET EXTEND        MARKER "{}" TEXT "${systemfeatureText}")
+        createOrAppendField (OBJECT "SYSTEM_FEATURES"   FEATURE "PACKAGES"       FIELD ${APD_FEATPKG} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${systempackageText}")
+        createOrAppendField (OBJECT "SYSTEM_FEATURES"   FEATURE "NAMES"          FIELD ${APD_FEATURE} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${systemnameText}")
     elseif(APD_KIND MATCHES "LIBRARY")
-        createOrAppendRecord(OBJECT "LIBRARY_FEATURES"  FEATURE "${APD_FEATURE}" DATA "${output}"           EXTEND        MARKER "{}" TEXT "${libraryfeatureText}")
-        createOrAppendField (OBJECT "LIBRARY_FEATURES"  FEATURE "PACKAGES"       FIELD ${APD_FEATPKG}       EXTEND UNIQUE MARKER "{}" TEXT "${librarypackageText}")
-        createOrAppendField (OBJECT "LIBRARY_FEATURES"  FEATURE "NAMES"          FIELD ${APD_FEATURE}       EXTEND UNIQUE MARKER "{}" TEXT "${librarynameText}")
+        createOrAppendRecord(OBJECT "LIBRARY_FEATURES"  FEATURE "${APD_FEATURE}" DATA "${output}"     QUIET EXTEND        MARKER "{}" TEXT "${libraryfeatureText}")
+        createOrAppendField (OBJECT "LIBRARY_FEATURES"  FEATURE "PACKAGES"       FIELD ${APD_FEATPKG} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${librarypackageText}")
+        createOrAppendField (OBJECT "LIBRARY_FEATURES"  FEATURE "NAMES"          FIELD ${APD_FEATURE} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${librarynameText}")
     elseif(APD_KIND MATCHES "USER")
-        createOrAppendRecord(OBJECT "USER_FEATURES"     FEATURE "${APD_FEATURE}" DATA "${output}"           EXTEND        MARKER "{}" TEXT "${generalfeatureText}")
-        createOrAppendField (OBJECT "USER_FEATURES"     FEATURE "PACKAGES"       FIELD ${APD_FEATPKG}       EXTEND UNIQUE MARKER "{}" TEXT "${generalpackageText}")
-        createOrAppendField (OBJECT "USER_FEATURES"     FEATURE "NAMES"          FIELD ${APD_FEATURE}       EXTEND UNIQUE MARKER "{}" TEXT "${generalnameText}")
+        createOrAppendRecord(OBJECT "OPTIONAL_FEATURES" FEATURE "${APD_FEATURE}" DATA "${output}"     QUIET EXTEND        MARKER "{}" TEXT "${generalfeatureText}")
+        createOrAppendField (OBJECT "OPTIONAL_FEATURES" FEATURE "PACKAGES"       FIELD ${APD_FEATPKG} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${generalpackageText}")
+        createOrAppendField (OBJECT "OPTIONAL_FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${generalnameText}")
     endif()
 
-    set(FEATURES         "${FEATURES}"         PARENT_SCOPE)
-    set(SYSTEM_FEATURES  "${SYSTEM_FEATURES}"  PARENT_SCOPE)
-    set(LIBRARY_FEATURES "${LIBRARY_FEATURES}" PARENT_SCOPE)
-    set(USER_FEATURES    "${USER_FEATURES}"    PARENT_SCOPE)
+    collection(DUMP FEATURES VERBOSE)
+
+    set(FEATURES          "${FEATURES}"             PARENT_SCOPE)
+    set(SYSTEM_FEATURES   "${SYSTEM_FEATURES}"      PARENT_SCOPE)
+    set(LIBRARY_FEATURES  "${LIBRARY_FEATURES}"     PARENT_SCOPE)
+    set(OPTIONAL_FEATURES "${OPTIONAL_FEATURES}"    PARENT_SCOPE)
 
     set(__longest_feature ${__longest_feature} CACHE INTERNAL "")
     set(__longest_handler ${__longest_handler} CACHE INTERNAL "")
@@ -573,13 +504,13 @@ function(getFeaturePkgList arrayName feature receivingVarName)
                 return()
             endif ()
             array(FIND "_thisArray" ${FIXName} MATCHING "${feature}" _foundAt)
-            if (_foundAt GREATER_EQUAL 0)
+            if (_foundAt)
                 set(${receivingVarName} "${_thisArray}" PARENT_SCOPE)
                 return()
             endif ()
         endforeach ()
     endif ()
-    set("${receivingVarName}" "NOTFOUND" PARENT_SCOPE)
+    unset("${receivingVarName}" PARENT_SCOPE)
 endfunction()
 ##
 ######################################################################################
@@ -587,84 +518,63 @@ endfunction()
 function(getFeatureIndex arrayName feature receivingVarName)
     # iterate over array to find line with feature
     array(FIND "${arrayName}" ${FIXName} MATCHING "${feature}" _foundAt)
-    set(${receivingVarName} "${_foundAt}" PARENT_SCOPE)
+    if(_foundAt)
+        set(${receivingVarName} "${_foundAt}" PARENT_SCOPE)
+    else ()
+        unset(${receivingVarName} PARENT_SCOPE)
+    endif ()
 endfunction()
 ##
 ######################################################################################
 ##
 function(getFeaturePackage arrayName feature index receivingVarName)
-    array(LENGTH ${arrayName} numFeatures)
-    if (numFeatures)
-        foreach(featureIndex RANGE ${numFeatures})
-            array(GET ${arrayName} ${featureIndex} item)
-            array(LENGTH item numPackages)
-            if (numPackages)
-                array(GET item ${index} pkg)
-                record(GET pkg ${FIXName} thisFeatureName thisPackageName)
-                if (feature STREQUAL thisFeatureName)
-                    set(${receivingVarName} ${pkg} PARENT_SCOPE)
-                    return()
-                endif ()
-            endif ()
-        endforeach ()
+    _hs__get_object_type(${${arrayName}} type)
+    unset(${receivingVarName} PARENT_SCOPE)
+
+    if(type STREQUAL "COLLECTION")
+        collection(GET ${arrayName} "${feature}" arr)
+        if(NOT arr)
+            return()
+        endif ()
+        set(arrayName "arr")
     endif ()
-    set (${receivingVarName} "NOTFOUND")
-    set(${indexVarName} -2 PARENT_SCOPE)
+    array(LENGTH ${arrayName} numFeatures)
+    if (numFeatures GREATER_EQUAL ${index})
+        array(GET ${arrayName} ${index} pkg)
+        set("${receivingVarName}" "${pkg}" PARENT_SCOPE)
+        return()
+    endif ()
 endfunction()
 ##
 ######################################################################################
 ##
 function(getFeaturePackageByName arrayName feature name receivingVarName indexVarName)
-    array(LENGTH ${arrayName} numFeatures)
-    if (numFeatures)
-        foreach(featureIndex RANGE ${numFeatures})
-            array(GET ${arrayName} ${featureIndex} item)
-            array(LENGTH item numPackages)
-            if (numPackages)
-                foreach(packageIndex RANGE ${numPackages})
-                    array(GET item ${packageIndex} pkg)
-                    record(GET pkg ${FIXName} thisFeatureName thisPackageName)
-                    if (feature STREQUAL thisFeatureName AND name STREQUAL thisPackageName)
-                        set(${receivingVarName} ${pkg} PARENT_SCOPE)
-                        set(${indexVarName} ${packageIndex} PARENT_SCOPE)
-                        return()
-                    endif ()
-                endforeach ()
-            endif ()
-        endforeach ()
+    unset(${receivingVarName} PARENT_SCOPE)
+    unset(${indexVarName} PARENT_SCOPE)
+
+    _hs__get_object_type(${${arrayName}} type)
+    # Returns: RECORD | ARRAY_RECORDS | ARRAY_ARRAYS | COLLECTION | UNSET | UNKNOWN
+
+    if(type STREQUAL "COLLECTION")
+        collection(GET ${arrayName} EQUAL "${feature}/${name}" pkg)
+        if(NOT pkg)
+            return()
+        endif ()
+        set(${receivingVarName} "${pkg}" PARENT_SCOPE)
+        record(GET pkg ${FIXKind} kind)
+        if(kind STREQUAL "SYSTEM")
+            set (${indexVarName} SYSTEM  PARENT_SCOPE)
+        endif ()
+        return()
     endif ()
-    set (${receivingVarName} "NOTFOUND")
-    set(${indexVarName} -2 PARENT_SCOPE)
-endfunction()
-##
-######################################################################################
-##
-function(getPkgFeature line var)
-    unset(${var} PARENT_SCOPE)
-    set(feature "")
-    set(dc "")
-    SplitAt("${line}" "|" feature unused)
-    string(STRIP "${feature}" feature)
-    set(${var} "${feature}" PARENT_SCOPE)
+    msg(ALWAYS FATAL_ERROR "getFeaturePackageByName() arrayName is not a collection. This may be fine, but check and debug")
 endfunction()
 ##
 ########################################################################################################################
 ##
-function(popFront lineVarName frontVarName)
-    unset(${frontVarName} PARENT_SCOPE)
-    set(front "")
-    SplitAt("${${lineVarName}}" "|" front balance)
-    string(STRIP "${front}" front)
-    string(STRIP "${balance}" balance)
-    set(${frontVarName} "${front}" PARENT_SCOPE)
-    set(${lineVarName} "${lineVarName}" PARENT_SCOPE)
-endfunction()
-##
-########################################################################################################################
-##
-## parsePackage can be called with a    * A list of features like "SystemFeatureList" which is a list of features
-##                                      * A single feature, which is a list of packages
-##                                      * A single package, which is a list of attributes.
+## parsePackage can be called with a    * A  collection of FEATURE arrays,
+##                                      * An array of packages (a FEATURE)
+##                                      * A  package record
 ##
 ## If INPUT_TYPE is provided, we'll verify that
 ## If INPUT_TYPE is not provided, we'll work it out
@@ -674,7 +584,7 @@ function(parsePackage)
     set(one_value_args
 #           Keyword         Type        Direction   Description
             INPUT_TYPE  #   STRING      IN          Type of list supplied in inputListName
-                        #                           One of (SET,FEATURE,PACKAGE).
+                        #                           One of (COLLECTION, ARRAY_RECORD, RECORD).
                         #                           If omitted, an attempt to determine it will be made
             FEATURE     #   STRING      IN          Feature to select from inputList
                         #                           If INPUT_TYPE is FEATURE or PACKAGE, FEATURE is ignored
@@ -715,85 +625,41 @@ function(parsePackage)
     endif ()
 
     unset(inputListVerifyFailed)
+    _hs__get_object_type(${${inputListName}} deducedType dc)
 
-    if (NOT DEFINED A_PP_INPUT_TYPE)
-        # How we know what we have;
-        # Definitions
-        # PIPELIST      Like a CMAKE LIST, except each record separator ";" is replaced by a PIPE ("|") symbol.
-        #               The list(LENGTH...)    of a PIPELIST will be 1.
-        #               The piplist(LENGTH...) of a PIPELIST will be from ${PkgFields} to ${FeatureFields} + n * ${PkgFields}
-        # PACKAGE       A PIPELIST. array(LENGTH...) will be ${PkgFields}
-        # FEATURE       A PIPELIST that Looks like this <FEATURE_NAME><PACKAGE>[,<PACKAGE>[...]]
-        #               so a FEATURE has the length of ${FeatureFields} + n * ${PkgFields}
-        # SET           A CMake LIST of FEATURES. Each FEATURE will be one PIPELIST
+    set(A_SET     OFF)
+    set(A_FEATURE OFF)
+    set(A_PACKAGE OFF)
 
-        # See if this is a PIPELIST
-        list(LENGTH ${inputListName} listLength)
-        record(LENGTH ${inputListName} pipeLength)
-
-        if (${listLength} GREATER_EQUAL 2)
-            # Can ONLY be a set. We'll check if it is later
-            set(A_PP_INPUT_TYPE "SET")
-        elseif (${listLength} EQUAL 1 AND ${pipeLength} EQUAL ${PkgFields})
-            # Can ONLY be a PACKAGE. We'll check if it is later
-            set(A_PP_INPUT_TYPE "PACKAGE")
-        elseif (${listLength} EQUAL 1 AND ${pipeLength} GREATER_EQUAL ${FeatureFields})
-            # Can ONLY be a FEATURE. We'll check if it is later
-            set(A_PP_INPUT_TYPE "FEATURE")
-        else ()
-            set(inputListVerifyFailed "INPUT_TYPE needed - analysis failed")
-        endif ()
-    endif ()
-
-    unset(A_SET)
-    unset(A_FEATURE)
-    unset(A_PACKAGE)
-
-    if (NOT inputListVerifyFailed)
-        # Ok, we know what inputListName is SUPPOSED to be, let's verify it
-
-        if (${A_PP_INPUT_TYPE} MATCHES "PACKAGE")
-            set(A_PACKAGE ON)
-
-            record(LENGTH ${${inputListName}} len)
-            if (NOT ${len} EQUAL "${PkgFields}")
-                set(inputListVerifyFailed "Input PACKAGE length of ${len} should be ${PkgFields}")
-            endif ()
-            set(local "${${inputListName}}")
-        elseif (${A_PP_INPUT_TYPE} MATCHES "FEATURE")
-            set(A_FEATURE ON)
-
-            record(LENGTH ${inputListName} len)
-            if (NOT ${len} GREATER_EQUAL "${FeatureFields}")
-                set(inputListVerifyFailed "Input FEATURE length of ${len} should be at least ${PkgFields}")
-            else ()
-                string(REPLACE "," ";" sampleList "${${inputListName}}")
-                list(LENGTH sampleList pkgCount)
-                math(EXPR expectedFields "1 + (${pkgCount} * ${PkgFields})")
-                if (NOT ${len} EQUAL "${expectedFields}")
-                    set(inputListVerifyFailed "FEATURE length of ${len} should be ${expectedFields}\n${sampleList}")
-                endif ()
-            endif ()
-        elseif (${A_PP_INPUT_TYPE} MATCHES "SET")
+    macro (inputTypeToObjectType)
+        if (A_PP_INPUT_TYPE STREQUAL "SET" OR A_PP_INPUT_TYPE STREQUAL "COLLECTION")
+            set(inputTypeToType "COLLECTION")
             set(A_SET ON)
-            set (whichElement 0)
-            list(LENGTH ${inputListName} numElements)
-            foreach(sample IN LISTS ${inputListName})
-                math(EXPR whichElement "${whichElement} + 1")
-                string(REPLACE "," ";" sampleList "${sample}")
-                list(LENGTH sampleList pkgCount)
-                string(REPLACE ";" "&" samplePipelist "${sampleList}")
-                record(LENGTH samplePipelist len)
-                math(EXPR expectedFields "1 + (${pkgCount} * ${PkgFields})")
-                if (NOT (${len} EQUAL ${PkgFields} OR ${len} EQUAL "${expectedFields}"))
-                    list(APPEND inputListVerifyFailed "FEATURE #${whichElement} of ${numElements} in input list is invalid\n${sample}\n")
-                endif ()
-            endforeach ()
-        else ()
-            set(inputListVerifyFailed "INPUT_TYPE must be one of (SET FEATURE PACKAGE), not ${A_PP_INPUT_TYPE}")
+        elseif (A_PP_INPUT_TYPE STREQUAL "FEATURE" OR A_PP_INPUT_TYPE STREQUAL "ARRAY_RECORDS")
+            set(inputTypeToType "ARRAY_RECORDS")
+            set(A_FEATURE ON)
+        elseif (A_PP_INPUT_TYPE STREQUAL "PACKAGE" OR A_PP_INPUT_TYPE STREQUAL "RECORD")
+            set(inputTypeToType "RECORD")
+            set(A_PACKAGE ON)
+        elseif (NOT deducedType)
+            set(inputListVerifyFailed "INPUT_TYPE of \"${A_PP_INPUT_TYPE}\" unknown - needs to be SET/FEATURE/PACKAGE")
         endif ()
+    endmacro()
+
+    inputTypeToObjectType()
+
+    if (deducedType     STREQUAL "COLLECTION"     OR
+            deducedType STREQUAL "ARRAY_RECORDS" OR
+            deducedType STREQUAL "RECORD")
+        set(A_PP_INPUT_TYPE ${deducedType})
+        inputTypeToObjectType()
+    else ()
+        set(inputListVerifyFailed "Type of object stored in ${BOLD}${inputListName}${NC} cannot be used. Try a COLLECTION, ARRAY_RECORDS, or RECORD")
     endif ()
 
+    if (A_PP_INPUT_TYPE AND NOT inputListVerifyFailed AND NOT A_PP_INPUT_TYPE STREQUAL ${deducedType})
+        set(inputListVerifyFailed "Data in ${BOLD}${inputListName}${NC} (${YELLOW}${deducedType}${NC}) doesn't match type from INPUT_TYPE ${BOLD}${A_PP_INPUT_TYPE}${NC} (${YELLOW}${inputTypeToType}${NC})")
+    endif ()
     if(inputListVerifyFailed)
         msg(ALWAYS FATAL_ERROR "${RED}${BOLD}parsePackage() FAIL:${NC} ${inputListVerifyFailed}")
     endif()
@@ -807,34 +673,40 @@ function(parsePackage)
     endif ()
 
     if (DEFINED A_PP_PKG_INDEX AND A_PP_PACKAGE)
-        msg(ALWAYS WARNING "parsePackage() both PACKAGE and PKG_FEATURE supplied. Need one or the other")
+        msg(ALWAYS WARNING "parsePackage() both PKG_INDEX and PACKAGE supplied. Choosing PACKAGE")
+        set(A_PP_PKG_INDEX)
     endif ()
 
-    if(A_SET OR A_FEATURE)
-        if(A_FEATURE)
-            SplitAt("${${inputListName}}" "|" A_PP_FEATURE local)
-        endif ()
-        if(DEFINED A_PP_PKG_INDEX)
-            getFeaturePackage("${inputListName}" "${A_PP_FEATURE}" "${A_PP_PKG_INDEX}" local)
-            SplitAt("${local}" "|" localName dc)
-            set(localIndex ${A_PP_PKG_INDEX})
+    if(A_SET)
+        if(A_PP_PACKAGE)
+            collection(GET ${inputListName} EQUAL "${A_PP_FEATURE}/${A_PP_PACKAGE}" local)
+            set(localIndex "UNKNOWN")
         else ()
-            getFeaturePackageByName(inputListName "${A_PP_FEATURE}" "${A_PP_PACKAGE}" local localIndex)
-            set(localName "${A_PP_PACKAGE}")
+            collection(GET ${inputListName} "${A_PP_FEATURE}" temp)
+            if(temp)
+                array(GET temp ${A_PP_PKG_INDEX} local)
+                set(localIndex "UNKNOWN")
+            endif ()
+        endif ()
+    elseif (A_FEATURE)
+        if(A_PP_PACKAGE)
+            getFeaturePackageByName(${inputListName} "${A_PP_FEATURE}" "${A_PP_PACKAGE}" local localIndex)
+        else ()
+            getFeaturePackage(${inputListName} "${A_PP_FEATURE}" "${A_PP_PKG_INDEX}" local)
+            set(localIndex ${A_PP_PKG_INDEX})
         endif ()
     else()
         set(local ${${inputListName}})
         set(localIndex "UNKNOWN")
-        SplitAt("${local}" "|" localName dc)
     endif ()
 
-    string(REPLACE "&" ";" pkg "${local}")
-    list(LENGTH pkg length)
-
-    # Easy ones
-    list(GET pkg ${PkgNamespaceIX} localNS)
-    list(GET pkg ${PkgKindIX}      localKind)
-    list(GET pkg ${PkgMethodIX}    localMethod)
+    record(GET local 0
+            localFeature
+            localName
+            localNS
+            localKind
+            localMethod
+    )
 
     # Initialize output variables
     if(DEFINED A_PP_OUTPUT)
@@ -890,8 +762,8 @@ function(parsePackage)
     set(is_git_tag OFF)
     set(is_build_dir OFF)
 
-    if (A_PP_URL AND ${PkgUrlIX} LESS ${length})
-        list(GET pkg ${PkgUrlIX} temp)
+    if (A_PP_URL)
+        record(GET local ${FIXUrl} temp)
         if (${temp} MATCHES "^http.*")
             if (${temp} MATCHES ".*\.zip$" OR ${temp} MATCHES ".*\.tar$" OR ${temp} MATCHES ".*\.gz$")
                 set(is_zip_file ON)
@@ -911,13 +783,13 @@ function(parsePackage)
         endif ()
     endif ()
 
-    if (A_PP_GIT_TAG AND is_git_tag AND ${PkgGitTagIX} LESS ${length})
-        list(GET pkg ${PkgGitTagIX} temp)
+    if (A_PP_GIT_TAG AND is_git_tag)
+        record(GET local ${FIXGitTag} temp)
         set(${A_PP_GIT_TAG} ${temp} PARENT_SCOPE)
     endif ()
 
-    if (A_PP_SRC_DIR AND is_src_dir AND ${PkgSrcDirIX} LESS ${length})
-        list(GET pkg ${PkgSrcDirIX} temp)
+    if (A_PP_SRC_DIR AND is_src_dir)
+        record(GET local ${FIXSrcDir} temp)
         if (temp)
             string(FIND "${temp}" "[" open_bracket)
             string(FIND "${temp}" "]" close_bracket)
@@ -946,8 +818,8 @@ function(parsePackage)
         endif ()
     endif ()
 
-    if (A_PP_BUILD_DIR AND is_build_dir AND ${PkgBuildDirIX} LESS ${length})
-        list(GET pkg ${PkgBuildDirIX} temp)
+    if (A_PP_BUILD_DIR AND is_build_dir)
+        record(GET local ${FIXBuildDir} temp)
         if (temp)
             string(FIND "${temp}" "[" open_bracket)
             string(FIND "${temp}" "]" close_bracket)
@@ -980,8 +852,8 @@ function(parsePackage)
         set(${A_PP_FETCH_FLAG} OFF PARENT_SCOPE)
     endif ()
 
-    if (A_PP_INC_DIR AND ${PkgIncDirIX} LESS ${length})
-        list(GET pkg ${PkgIncDirIX} temp)
+    if (A_PP_INC_DIR)
+        record(GET local ${FIXIncDir} temp)
         string(FIND "${temp}" "[" open_bracket)
         string(FIND "${temp}" "]" close_bracket)
         if (${open_bracket} GREATER_EQUAL 0 AND ${close_bracket} GREATER_EQUAL 1)
@@ -1007,33 +879,26 @@ function(parsePackage)
     endif ()
 
     if (A_PP_COMPONENTS)
-        if (${PkgComponentsIX} LESS ${length})
-            list(GET pkg ${PkgComponentsIX} temp)
-            if (NOT "${temp}" STREQUAL "")
-                string(REGEX REPLACE " " ";" temp ${temp})
-                string(REGEX REPLACE ":" ";" temp ${temp})
-                set(${A_PP_COMPONENTS} ${temp} PARENT_SCOPE)
-            endif ()
+        record(GET local ${FIXComponents} temp)
+        if (NOT "${temp}" STREQUAL "")
+            string(REPLACE ":" ";" temp ${temp})
+            set(${A_PP_COMPONENTS} ${temp} PARENT_SCOPE)
         endif ()
     endif ()
 
     if (A_PP_ARGS)
-        if (${PkgArgsIX} LESS ${length})
-            list(GET pkg ${PkgArgsIX} temp)
-            if (NOT "${temp}" STREQUAL "")
-                string(REGEX REPLACE ":" ";" temp ${temp})
-                set(${A_PP_ARGS} ${temp} PARENT_SCOPE)
-            endif ()
+        record(GET local ${FIXArgs} temp)
+        if (NOT "${temp}" STREQUAL "")
+            string(REPLACE ":" ";" temp ${temp})
+            set(${A_PP_ARGS} ${temp} PARENT_SCOPE)
         endif ()
     endif ()
 
     if (A_PP_PREREQS)
-        if (${PkgPrereqsIX} LESS ${length})
-            list(GET pkg ${PkgPrereqsIX} temp)
-            if (NOT "${temp}" STREQUAL "")
-                string(REGEX REPLACE " " ";" temp ${temp})
-                set(${A_PP_PREREQS} ${temp} PARENT_SCOPE)
-            endif ()
+        record(GET local ${FIXPrereqs} temp)
+        if (NOT "${temp}" STREQUAL "")
+            string(REPLACE ":" ";" temp ${temp})
+            set(${A_PP_PREREQS} ${temp} PARENT_SCOPE)
         endif ()
     endif ()
 
@@ -1041,92 +906,61 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-function(combine primaryList secondaryList outputList)  # Optionally, add TRUE or FALSE to indicate if you want it sorted
+function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ namesOut_)
 
-    set(doSort ON)
-    if (NOT ${ARGN} STREQUAL "")
-        set(doSort ${ARGN})
-    endif ()
+    set(resolveThese        "${${resolveThese_}}")
+    set(featureCollection   "${${featureCollection_}}")
+    set(featuresOut         "${featuresOut_}")
+    set(namesOut            "${namesOut_}")
 
-    set(local ${list_name})
-
-    list(APPEND allItems ${primaryList} ${secondaryList})
-    list(REMOVE_DUPLICATES allItems)
-    if (doSort)
-        list(SORT allItems)
-    endif ()
-
-    set(${outputList} "${allItems}" PARENT_SCOPE)
-
-endfunction()
-##
-########################################################################################################################
-##
-function(resolveDependencies inputFeaturesList allData outputFeaturesList outputFeatureNamesList)
     # inputList is unifiedFeatureList
-    # allData   is AllPackageData
+    # featureCollection   is AllPackageData
 
-    set(resolvedFeatureNamesList)
-    set(resolvedFeaturesList)
+    set(resolvedNames)
+    array(CREATE resolvedFeatures resolvedFeatures RECORDS)
     set(packageList)
     set(visited)
-    set(longestPkgName 0)
+    set(longestPackageName 0)
     set(longestFeatureName 0)
 
     # Internal helper to walk dependencies
-    function(visit lol feature_name feat idx is_a_prereq)
-        if (NOT "${feature_name}" IN_LIST visited)
-            list(APPEND visited "${feature_name}")
+    function(visit lol feature_name package_name is_a_prereq)
+        if (NOT "${feature_name}/${package_name}" IN_LIST visited)
+            list(APPEND visited "${feature_name}/${package_name}")
             set(visited ${visited} PARENT_SCOPE)
 
-            parsePackage("feat"
-                    PKG_INDEX ${idx}
-                    INDEX idx_
+            longest(QUIET CURRENT ${longestPackageName} TEXT "${package_name}" LONGEST longestPackageName)
+            longest(QUIET CURRENT ${longestFeatureName} TEXT "${feature_name}" LONGEST longestFeatureName)
+
+            parsePackage("${lol}"
+                    FEATURE ${feature_name}
+                    PACKAGE ${package_name}
                     PREREQS pre_
-                    NAME pkgname_
+                    OUTPUT  local_
             )
-
-            string(LENGTH "${pkgname_}" this_pkglength_)
-            if (${this_pkglength_} GREATER ${longestPkgName})
-                set(longestPkgName ${this_pkglength_} PARENT_SCOPE)
-            endif ()
-
-            string(LENGTH "${feature_name}" this_featurelength_)
-            if (${this_featurelength_} GREATER ${longestFeatureName})
-                set(longestFeatureName ${this_featurelength_} PARENT_SCOPE)
-            endif ()
 
             foreach(pr_entry_ IN LISTS pre_)
                 SplitAt("${pr_entry_}" "=" pr_feat_ pr_pkgname_)
-
-                set(found_entry_in_input_ "")
-                # TODO: Line below changed from inputLiist to allData
-                foreach(e_ IN LISTS ${lol}) # inputList)
-                    record(GET e_ ${FIXName} pr_fname_)
-                    record(GET e_ ${FIXPkgName} pr_pname_)
-                    if("${pr_feat_}" MATCHES "${pr_fname_}" AND "${pr_pkgname_}" STREQUAL "${pr_pname_}")
-                        set(found_entry_in_input_ "${pr_fname_}=${pr_pname_}")
-                        getFeaturePackageByName("${lol}" "${pr_fname_}" "${pr_pname_}" prereq_pkg prereq_idx)
-                        visit("${lol}" "${pr_fname_}" "${pr_fname_}|${prereq_pkg}" "${prereq_idx}" ON)
-                        break()
-                    endif()
-                endforeach()
-            endforeach()
+                visit(${lol} "${pr_feat_}" "${pr_pkgname_}" ON)
+            endforeach ()
 
             if (${is_a_prereq})
-                list(APPEND resolvedFeatureNamesList "${feature_name}.*")
+                list(APPEND resolvedNames "${feature_name}.*")
             else ()
-                list(APPEND resolvedFeatureNamesList "${feature_name}")
+                list(APPEND resolvedNames "${feature_name}")
             endif ()
-            set(resolvedFeatureNamesList "${resolvedFeatureNamesList}" PARENT_SCOPE)
+            set(resolvedNames "${resolvedNames}" PARENT_SCOPE)
 
-            list(APPEND resolvedFeaturesList "${feat}")
-            set(resolvedFeaturesList "${resolvedFeaturesList}" PARENT_SCOPE)
+            array(APPEND resolvedFeatures RECORD "${local_}")
+            set(resolvedFeatures "${resolvedFeatures}" PARENT_SCOPE)
 
             list(APPEND packageList ${pkgname_})
-            set(packageList "${packageList}")
+            set(packageList "${packageList}" PARENT_SCOPE)
 
             set(visited ${visited} PARENT_SCOPE)
+
+            set(longestPackageName ${longestPackageName} PARENT_SCOPE)
+            set(longestFeatureName ${longestFeatureName} PARENT_SCOPE)
 
         endif()
 
@@ -1137,12 +971,13 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
         unset(fname_)
         unset(found_entry_in_input_)
         unset(idx_)
+        unset(local_)
         unset(pr_entry_)
         unset(pr_feat_)
         unset(pr_fname_)
-        unset(pr_pname_)
         unset(pr_pkg_)
         unset(pr_pkgname_)
+        unset(pr_pname_)
         unset(pr_real_pkgname_)
         unset(pre_)
         unset(this_featurelength_)
@@ -1151,25 +986,34 @@ function(resolveDependencies inputFeaturesList allData outputFeaturesList output
     endfunction()
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
-    foreach(item IN LISTS ${inputFeaturesList})
-        record(GET item ${FIXName} _feature_name)
+    array(LENGTH resolveThese numberToResolve)
+    set(index 0)
+    while(index LESS numberToResolve)
+        array(GET resolveThese ${index} item)
+        record(GET item ${FIXName} _feature_name _package_name)
         record(GET item ${FIXKind} _kind)
         if ("${_kind}" STREQUAL "LIBRARY")
-            visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
+            visit(featureCollection "${_feature_name}" "${_package_name}" OFF)
         endif()
-    endforeach()
-
+        inc(index)
+    endwhile ()
     # Pass 2: Handle everything else
-    foreach(item IN LISTS ${inputFeaturesList})
-        record(GET item ${FIXName} _feature_name)
-        visit("${allData}" "${_feature_name}" "${item}" 0 OFF)
-    endforeach()
+    set(index 0)
+    while(index LESS numberToResolve)
+        array(GET resolveThese ${index} item)
+        record(GET item ${FIXName} _feature_name _package_name)
+        record(GET item ${FIXKind} _kind)
+        if (NOT "${_kind}" STREQUAL "LIBRARY")
+            visit(featureCollection "${_feature_name}" "${_package_name}" OFF)
+        endif()
+        inc(index)
+    endwhile()
 
-    set(${outputFeaturesList}      "${resolvedFeaturesList}"        PARENT_SCOPE)
-    set(${outputFeatureNamesList}  "${resolvedFeatureNamesList}"    PARENT_SCOPE)
-    set(longestPkgName              ${longestPkgName}               PARENT_SCOPE)
-    set(longestFeatureName          ${longestFeatureName}           PARENT_SCOPE)
-    set(packages                    ${packageList}                  PARENT_SCOPE)
+    set(${featuresOut}      "${resolvedFeatures}"        PARENT_SCOPE)
+    set(${namesOut}         "${resolvedNames}"    PARENT_SCOPE)
+    set(longestPackageName       ${longestPackageName}               PARENT_SCOPE)
+    set(longestFeatureName   ${longestFeatureName}           PARENT_SCOPE)
+    set(packages             ${packageList}                  PARENT_SCOPE)
 
     unset(item)
     unset(_feature_name)
@@ -1230,9 +1074,9 @@ function(scanLibraryTargets libName packageData)
                     # Format is usually: PKGNAME|NAMESPACE|KIND|METHOD|URL|GIT_TAG|INCDIR|COMPONENTS|ARGS|PREREQS
                     # but let's be careful about how many | there are.
                     string(REPLACE "&" ";" pkg_details "${pkg_entry}")
-                    list(GET pkg_details ${PkgNameIX} pkg_name)
-                    list(GET pkg_details ${PkgNamespaceIX} ns)
-                    list(GET pkg_details ${PkgComponentsIX} components) # COMPONENTS are at index 7 (0-based)
+                    record(GET pkg_details ${FIXName} pkg_name)
+                    record(GET pkg_details ${FIXNamespace} ns)
+                    record(GET pkg_details ${FIXComponents} components) # COMPONENTS are at index 7 (0-based)
 
                     # Does the library link to this package?
                     set(MATCHED OFF)
@@ -1473,6 +1317,11 @@ function(processFeatures featureList returnVarName)
         set (_first_hint "-")
         set (_first_path "-")
         set (_first_component "-")
+        set (AA_OVERRIDE_FIND_PACKAGE)
+        set (AA_PACKAGE)
+        set (AA_NAMESPACE)
+        set (AA_FIND_PACKAGE_ARGS)
+        set (AA_COMPONENTS)
 
     endmacro()
 
@@ -1489,7 +1338,7 @@ function(processFeatures featureList returnVarName)
 
         separate_arguments(feature NATIVE_COMMAND "${feature}")
         cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
-        list (POP_FRONT AA_UNPARSED_ARGUMENTS _feature)
+        list(POP_FRONT AA_UNPARSED_ARGUMENTS _feature)
         # Sanity check
 
         if (AA_OVERRIDE_FIND_PACKAGE AND (AA_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST AA_KEYWORDS_MISSING_VALUES))
@@ -1520,7 +1369,7 @@ function(processFeatures featureList returnVarName)
             set(_args "FIND_PACKAGE_ARGS")
             if (NOT "${AA_FIND_PACKAGE_ARGS}" STREQUAL "")
                 set (featureless ${feature})
-                list (REMOVE_ITEM featureless "${_feature}" "FIND_PACKAGE_ARGS")
+                list(REMOVE_ITEM featureless "${_feature}" "FIND_PACKAGE_ARGS")
                 cmake_parse_arguments("AA1" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "COMPONENTS;PATHS;HINTS" ${featureless}) #${AA_FIND_PACKAGE_ARGS})
 
                 if (AA1_HINTS OR "HINTS" IN_LIST AA1_KEYWORDS_MISSING_VALUES)
@@ -1534,7 +1383,7 @@ function(processFeatures featureList returnVarName)
                     else ()
                         msg(ALWAYS WARNING "APP_FEATURES: FIND_PACKAGE_ARGS HINTS has no hints")
                         set (_hints)
-                        list (REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "HINTS")
+                        list(REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "HINTS")
                     endif ()
                 endif ()
 
@@ -1549,7 +1398,7 @@ function(processFeatures featureList returnVarName)
                     else ()
                         msg(ALWAYS WARNING "APP_FEATURES: FIND_PACKAGE_ARGS PATHS has no paths")
                         set (_paths)
-                        list (REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "PATHS")
+                        list(REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "PATHS")
                     endif ()
                 endif ()
 
@@ -1583,7 +1432,7 @@ function(processFeatures featureList returnVarName)
 
         #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
 
-        record(CREATE output "${_feature}"          ${FIXLength})
+        record(CREATE output "${_pkg}" ${FIXLength})
         record(SET output "${FIXName}"
                 "${_feature}"
                 "${_pkg}"
@@ -1599,8 +1448,6 @@ function(processFeatures featureList returnVarName)
         )
 
         array(APPEND revised_features RECORD "${output}")
-
     endforeach ()
-
-
+    set(${returnVarName} "${revised_features}" PARENT_SCOPE)
 endfunction()
