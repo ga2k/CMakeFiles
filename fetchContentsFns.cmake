@@ -475,8 +475,6 @@ function(addPackageData)
         createOrAppendField (OBJECT "OPTIONAL_FEATURES" FEATURE "NAMES"          FIELD ${APD_FEATURE} QUIET EXTEND UNIQUE MARKER "{}" TEXT "${generalnameText}")
     endif()
 
-    collection(DUMP FEATURES VERBOSE)
-
     set(FEATURES          "${FEATURES}"             PARENT_SCOPE)
     set(SYSTEM_FEATURES   "${SYSTEM_FEATURES}"      PARENT_SCOPE)
     set(LIBRARY_FEATURES  "${LIBRARY_FEATURES}"     PARENT_SCOPE)
