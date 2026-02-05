@@ -33,11 +33,11 @@ function(fetchContents)
     collection(SET OPTIONAL_FEATURES NAMES    "${optionalNames}")
     record(CREATE optionalPackages PACKAGES)
     collection(SET OPTIONAL_FEATURES PACKAGES "${optionalPackages}")
-
-    set(DRY_RUN ON)
-    createStandardPackageData(${DRY_RUN})
-    set(DRY_RUN OFF)
-    createStandardPackageData(${DRY_RUN})
+#
+#    set(DRY_RUN ON)
+#    createStandardPackageData(${DRY_RUN})
+#    set(DRY_RUN OFF)
+#    createStandardPackageData(${DRY_RUN})
 
     set(options HELP)
     set(oneValueArgs PREFIX)
@@ -55,8 +55,12 @@ function(fetchContents)
     endif ()
 
     log(TITLE "Before tampering " LISTS AUE_FEATURES)
-
     processFeatures("${AUE_FEATURES}" AUE_USE)
+
+    set(DRY_RUN ON)
+    createStandardPackageData(${DRY_RUN})
+    set(DRY_RUN OFF)
+    createStandardPackageData(${DRY_RUN})
 
     set(FETCHCONTENT_QUIET OFF)
 
@@ -192,6 +196,17 @@ function(fetchContents)
                 string(JOIN ":" _bits ${_regdBits})
                 record(REPLACE wip ${FIXComponents} "${_bits}")
             endif ()
+
+            # Step 4. Remove prerequisites from libraries (they are not used at link time)
+            record(GET wip ${FIXKind} kkk)
+            if(kkk STREQUAL "LIBRARY")
+                record(CONVERT wip)
+                math(EXPR adjusted "${FIXPrereqs} + 2")
+                list(REMOVE_AT wip ${adjusted})
+                list(INSERT wip ${adjusted} "")
+                record(CONVERT wip)
+            endif ()
+            # Done
 
             array(APPEND unifiedFeatureList RECORD "${wip}")
 

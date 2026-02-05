@@ -969,8 +969,8 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
     set(featuresOut         "${featuresOut_}")
     set(namesOut            "${namesOut_}")
 
-    # inputList is unifiedFeatureList
-    # featureCollection   is AllPackageData
+    array(DUMP resolveThese VERBOSE)
+    collection(DUMP featureCollection VERBOSE)
 
     set(resolvedNames)
     array(CREATE resolvedFeatures resolvedFeatures RECORDS)
