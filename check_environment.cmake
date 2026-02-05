@@ -224,6 +224,7 @@ macro(check_environment PROJECT_ROOT)
         endif()
 
         set(STAGED_PATH "${_PATH}${_SYSPATH}")
+        get_filename_component(STAGED_PATH "${STAGED_PATH}" ABSOLUTE)
 
         if (UNIX AND NOT STAGING)
             set(SUDO sudo)

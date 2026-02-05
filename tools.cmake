@@ -1342,7 +1342,7 @@ macro(generateExportHeader)
 
 endmacro()
 
-function(newestFile IN_LIST OUT_LIST)
+function(newestFile IN_LIST IGNORE_EXISTENCE OUT_LIST)
     set(working_list "")
     set(sorted_list "")
 
@@ -1350,11 +1350,10 @@ function(newestFile IN_LIST OUT_LIST)
 
     # 1. Filter only existing files
     foreach (file IN LISTS IN_LIST)
-        if (EXISTS "${file}")
+        if (EXISTS "${file}" OR IGNORE_EXISTENCE)
             list(APPEND working_list "${file}")
         endif ()
     endforeach ()
-
     log(TITLE "Working list" LISTS working_list)
 
     # 2. Selection sort by timestamp
