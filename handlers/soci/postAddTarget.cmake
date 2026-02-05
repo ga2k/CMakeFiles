@@ -10,8 +10,8 @@ function(soci_postAddTarget target)
         return()
     endif ()
 
-    record(APPEND components_handled ${target})
-    record(REMOVE_ITEM components_needed ${target})
+    list(APPEND components_handled ${target})
+    list(REMOVE_ITEM components_needed ${target})
     set(soci_components_handled ${components_handled} CACHE STRING "" FORCE)
     set(soci_components_needed  ${components_needed}  CACHE STRING "" FORCE)
 

@@ -264,11 +264,10 @@ function(fetchContents)
         list(LENGTH features numFeatures)
         while(fix LESS numFeatures)
             list(GET features ${fix} c)
-            SplitAt("${c}" "." x g)
+            SplitAt("${c}" "/" f p)
+            SplitAt("${f}" "." x g)
 
-            array(GET featureList ${fix} k)
-            record(GET k ${FIXName} f n)
-            string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${n}${NC})")
+            string(JOIN ", " l ${l} "${YELLOW}${x}${NC} (${GREEN}${p}${NC})")
             inc(fix)
         endwhile ()
 
@@ -279,13 +278,14 @@ function(fetchContents)
 
         foreach (pass_num RANGE 1)
             message("${GREEN}\n-------------------------------------------------------------------------------\n${NC}")
-            foreach (featureName IN LISTS features)
+            foreach (feature_package_combo IN LISTS features)
 
                 macro(unsetLocalVars)
                     unset(COMPONENTS_KEYWORD)
                     unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
                     unset(pkg_details)
                     unset(this_build)
+                    unset(this_feature_name)
                     unset(this_find_package_args)
                     unset(this_find_package_components)
                     unset(this_hint)
@@ -307,14 +307,15 @@ function(fetchContents)
                 unsetLocalVars()
 
                 # See if this is a prereqisuite package. If it is, we do both phases together
-                SplitAt(${featureName} "." featureName flagChar)
+                SplitAt(${feature_package_combo} "/" this_feature_name_and_possible_prereq_flag this_pkgname)
+                SplitAt(${this_feature_name_and_possible_prereq_flag} "." this_feature_name flagChar)
                 if ("${flagChar}" STREQUAL "*")
                     set(apf_IS_A_PREREQ ON)
                 endif ()
 
                 parsePackage(featureList
-                        FEATURE     ${featureName}
-                        PKG_INDEX   0
+                        FEATURE     ${this_feature_name}
+                        PACKAGE     ${this_pkgname}
                         ARGS        this_find_package_args
                         BUILD_DIR   this_build
                         COMPONENTS  this_find_package_components
@@ -339,7 +340,7 @@ function(fetchContents)
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
-                    string(LENGTH "${featureName}" this_featurenameLength)
+                    string(LENGTH "${this_feature_name}" this_featurenameLength)
                     if(this_featurenameLength LESS longestFeatureName)
                         math(EXPR paddingChars "${longestFeatureName} - ${this_featurenameLength}")
                         string(REPEAT " " ${paddingChars} fpadding )
@@ -355,7 +356,7 @@ function(fetchContents)
                         set(ppadding)
                     endif ()
 
-                    message(CHECK_START "${YELLOW}${fpadding}${featureName}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    message(CHECK_START "${YELLOW}${fpadding}${this_feature_name}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -392,7 +393,7 @@ function(fetchContents)
                                 unset(magic_enum_ALREADY_FOUND)
                                 unset(magic_enum_ALREADY_FOUND CACHE)
 #                                set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
-                                list(APPEND removeFromDependencies "${featureName}" "${this_package}")
+                                list(APPEND removeFromDependencies "${this_feature_name}" "${this_package}")
                                 set(fn "${this_pkgname}_postDeclare")
                                 if (COMMAND "${fn}")
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
@@ -400,16 +401,16 @@ function(fetchContents)
                             else()
                                 # Try to find the package first before declaring FetchContent
                                 # This allows Gfx to see what HoffSoft already fetched/built
-                                message(STATUS "Checking if ${this_pkgname} is already available via find_package...")
+                                message(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
                                 set(temporary_args ${this_find_package_args})
                                 list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL)
                                 find_package(${this_pkgname} QUIET ${temporary_args})
 
                                 if(${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                    message(STATUS "${this_pkgname} found. Skipping FetchContent.\n")
+                                    message(STATUS "${this_pkgname} ${GREEN}found.${NC} Skipping FetchContent.\n")
 # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE INTERNAL "")
                                 else()
-                                    message(STATUS "Nope! Doing it the hard way...")
+                                    message(STATUS "${MAGENTA}Nope!${NC} Doing it the hard way...")
                                     # Normalise source/URL keywords
                                     string(FIND "${this_url}" ".zip" azip)
                                     string(FIND "${this_url}" ".tar" atar)
@@ -520,7 +521,7 @@ function(fetchContents)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
 
-                    string(LENGTH "${featureName}" this_featurenameLength)
+                    string(LENGTH "${this_feature_name}" this_featurenameLength)
                     if(this_featurenameLength LESS longestFeatureName)
                         math(EXPR paddingChars "${longestFeatureName} - ${this_featurenameLength}")
                         string(REPEAT " " ${paddingChars} fpadding )
@@ -536,7 +537,7 @@ function(fetchContents)
                         set(ppadding)
                     endif ()
 
-                    message(CHECK_START "${YELLOW}${fpadding}${featureName}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
+                    message(CHECK_START "${YELLOW}${fpadding}${this_feature_name}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${CYAN}Phase ${NC}${BOLD}2${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -573,7 +574,7 @@ function(fetchContents)
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
                                 endif ()
 
-                                if (NOT HANDLED AND NOT ${featureName} STREQUAL TESTING)
+                                if (NOT HANDLED AND NOT ${this_feature_name} STREQUAL TESTING)
                                     message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
                                     FetchContent_MakeAvailable(${this_pkgname})
                                     handleTarget(${this_pkgname})
@@ -615,7 +616,7 @@ function(fetchContents)
                     endif ()
                 endif ()
 
-            endforeach () # featureName
+            endforeach () # this_feature_name
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
