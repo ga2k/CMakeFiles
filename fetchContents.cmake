@@ -248,7 +248,7 @@ function(fetchContents)
     endif ()
 
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
-    resolveDependencies(unifiedFeatureList FEATURES resolvedFeatures resolvedNames)
+    resolveDependencies(unifiedFeatureList unifiedFeatureList unifiedFeatureList resolvedNames)
 
     if (APP_DEBUG)
         array(DUMP unifiedFeatureList captur)
@@ -276,9 +276,9 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         set(fix 0)
-        list(LENGTH features numFeatures)
+        record(LENGTH features numFeatures)
         while(fix LESS numFeatures)
-            list(GET features ${fix} c)
+            record(GET features ${fix} c)
             SplitAt("${c}" "/" f p)
             SplitAt("${f}" "." x g)
 
@@ -293,8 +293,10 @@ function(fetchContents)
 
         foreach (pass_num RANGE 1)
             message("${GREEN}\n-------------------------------------------------------------------------------\n${NC}")
-            foreach (feature_package_combo IN LISTS features)
 
+            set(ix 0)
+            while(ix LESS numFeatures)
+                record(GET features ${ix} feature_package_combo)
                 macro(unsetLocalVars)
                     unset(COMPONENTS_KEYWORD)
                     unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
@@ -339,7 +341,6 @@ function(fetchContents)
                         INC_DIR     this_inc
                         KIND        this_kind
                         METHOD      this_method
-                        NAME        this_pkgname
                         NAMESPACE   this_namespace
                         OUTPUT      pkg_details
                         PREREQS     this_prereqs
@@ -375,7 +376,7 @@ function(fetchContents)
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
-                    if(${this_pkgname} IN_LIST combinedLibraryComponents)
+                    if(this_pkgname IN_LIST combinedLibraryComponents)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
                         message(CHECK_PASS "Feature already available without re-processing: skipped")
                         # Pre-download hooks (mostly for setting variables/policies)
@@ -469,12 +470,12 @@ function(fetchContents)
                         if (NOT TARGET ${this_namespace}::${this_pkgname})
                             # 1. Is the library already available? (Probe it)
                             set(temporary_args ${this_find_package_args})
-                            list(REMOVE_ITEM temporary_args REQUIRED CONFIG)
+                            list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS CONFIG)
                             find_package(${this_pkgname} QUIET ${temporary_args})
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
-                                scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
+                                scanLibraryTargets("${this_pkgname}" "${featureList}")
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                             else()
                                 # Library not found yet. We must fulfill its metadata prerequisites
@@ -517,7 +518,7 @@ function(fetchContents)
 
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
-                                    scanLibraryTargets("${this_pkgname}" "${AllPackageData}")
+                                    scanLibraryTargets("${this_pkgname}" "${FEATURES}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif()
                             endif ()
@@ -631,7 +632,9 @@ function(fetchContents)
                     endif ()
                 endif ()
 
-            endforeach () # this_feature_name
+                inc(ix)
+
+            endwhile () # this_feature_name
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")
@@ -640,7 +643,7 @@ function(fetchContents)
 
     endfunction()
 
-    processFeatures("${resolvedNames}" "${resolvedFeatures}")
+    processFeatures("${resolvedNames}" "${unifiedFeatureList}")
     propegateUpwards("Finally" ON)
 endfunction()
 
