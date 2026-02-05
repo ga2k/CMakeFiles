@@ -1,5 +1,5 @@
 ########################################################################################################################
-function(createStandardPackageData)
+function(createStandardPackageData dryRun)
 
     # 0         1          2            3      4        5                6                       7          8                                            9                        10
     # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BUILDDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
@@ -7,7 +7,7 @@ function(createStandardPackageData)
     #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
     #   [2] PKGNAME is the individual package name (eg Boost)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
-    #   [4] KIND is one of LIBRARY / SYSTEM / USER
+    #   [4] KIND is one of LIBRARY / SYSTEM / OPTIONAL
     #   [5] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
     #       If METHOD=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/cmake/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
@@ -40,78 +40,84 @@ function(createStandardPackageData)
     #   [, ...] More packages in the same feature, if any
     #
 
+    if(dryRun)
+        set(DRY_RUN DRY_RUN)
+    else ()
+        set(DRY_RUN)
+    endif ()
+
     addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-            COMPONENT "cpptrace" ARG REQUIRED)
+            COMPONENT "cpptrace" ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "nlohmann_json" NAMESPACE "nlohmann_json" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/nlohmann/json.git" GIT_TAG "v3.11.3"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/marzer/tomlplusplus.git" GIT_TAG "v3.4.0"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" NAMESPACE "SOCI" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3) # GIT_SUBMODULES "")
+            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 ${DRY_RUN})
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "sqliteOrm" NAMESPACE "sqlite_orm" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
-            ARG CONFIG)
+            ARG CONFIG ${DRY_RUN})
     #
     ##
     ####
     ##
     #
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG PREREQ DATABASE=soci)
+            ARGS REQUIRED CONFIG PREREQ DATABASE=soci ${DRY_RUN})
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG PREREQ CORE)
+            ARGS REQUIRED CONFIG PREREQ CORE ${DRY_RUN})
     #
     ##
     ####
     ##
     #
-    addPackageData(USER FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
-            ARGS REQUIRED NAMES GTest googletest)
+            ARGS REQUIRED NAMES GTest googletest ${DRY_RUN})
 
-    addPackageData(USER FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENTS system date_time regex url algorithm
-            ARGS NAMES Boost)
+            ARGS NAMES Boost ${DRY_RUN})
 
-    addPackageData(USER FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
-    addPackageData(USER FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
-            ARGS REQUIRED EXCLUDE_FROM_ALL)
+            ARGS REQUIRED EXCLUDE_FROM_ALL ${DRY_RUN})
 
-    addPackageData(USER FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
-            ARG REQUIRED)
+            ARG REQUIRED ${DRY_RUN})
 
-    set(FEATURES         "${FEATURES}"         PARENT_SCOPE)
-    set(SYSTEM_FEATURES  "${SYSTEM_FEATURES}"  PARENT_SCOPE)
-    set(LIBRARY_FEATURES "${LIBRARY_FEATURES}" PARENT_SCOPE)
-    set(USER_FEATURES    "${USER_FEATURES}"    PARENT_SCOPE)
+    set(FEATURES          "${FEATURES}"          PARENT_SCOPE)
+    set(SYSTEM_FEATURES   "${SYSTEM_FEATURES}"   PARENT_SCOPE)
+    set(LIBRARY_FEATURES  "${LIBRARY_FEATURES}"  PARENT_SCOPE)
+    set(OPTIONAL_FEATURES "${OPTIONAL_FEATURES}" PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################

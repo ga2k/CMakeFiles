@@ -34,7 +34,10 @@ function(fetchContents)
     record(CREATE optionalPackages PACKAGES)
     collection(SET OPTIONAL_FEATURES PACKAGES "${optionalPackages}")
 
-    createStandardPackageData()
+    set(DRY_RUN ON)
+    createStandardPackageData(${DRY_RUN})
+    set(DRY_RUN OFF)
+    createStandardPackageData(${DRY_RUN})
 
     set(options HELP)
     set(oneValueArgs PREFIX)
