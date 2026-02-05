@@ -242,7 +242,7 @@ endfunction()
 #
 # VAR         The NAME of the list to work on
 # FINDSTR     The text to find in each entry
-# REPLACESTR  The test to replace FINDSTR with
+# REPLACESTR  The text to replace FINDSTR with
 #
 # Optional parameters :- None
 # ##################################################################################
@@ -868,7 +868,7 @@ function(longest)
 
     if(NOT LONG_TEXT OR LONG_TEXT STREQUAL "")
         if(NOT LONG_QUIET)
-            msg(WARNING "longest(): TEST string must not empty")
+            msg(WARNING "longest(): TEXT string must not empty")
         endif ()
         set(LONG_TEXT "")
     endif ()
