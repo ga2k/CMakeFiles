@@ -1361,8 +1361,14 @@ function(newestFile IN_LIST IGNORE_EXISTENCE OUT_LIST)
         list(GET working_list 0 newest)
 
         foreach (current_file IN LISTS working_list)
+
             # If current_file is newer than our current 'newest', update 'newest'
-            if ("${current_file}" IS_NEWER_THAN "${newest}")
+            if ("${current_file}" IS_NEWER_THAN "${newest}" AND
+                    "${newest}" IS_NEWER_THAN "${current_file}")
+                set(newest "${newest}")
+            elseif ("${newest}" IS_NEWER_THAN "${current_file}")
+                set(newest "${newest}")
+            elseif ("${current_file}" IS_NEWER_THAN "${newest}")
                 set(newest "${current_file}")
             endif ()
         endforeach ()
