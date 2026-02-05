@@ -4,7 +4,7 @@ function(soci_fix target tag sourceDir)
 
     if (NOT ${target}_PATCHED)
         unset(patches)
-        record(APPEND patches
+        list(APPEND patches
                 "soci/3rdparty/fmt/include|${sourceDir}"
                 "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
 
