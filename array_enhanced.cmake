@@ -187,6 +187,34 @@ function(_hs__get_name _value _nameOut)
     endif()
 endfunction()
 
+
+function(_hs__set_name _value _name _outVar)
+    # replace name in a named object
+    # Format: {SEP}NAME{SEP}...
+
+    _hs__get_object_type("${_value}" _type _sep)
+    if(_type STREQUAL "RECORD")
+        _hs__record_to_list("${_value}" _lst)
+        list(APPEND _lst "iqjerhiuhdsfnUEFHIUYHGF")
+        list(REMOVE_AT _lst 1)
+        list(INSERT _lst 1 "${_name}")
+        list(REMOVE_ITEM _lst "iqjerhiuhdsfnUEFHIUYHGF")
+        _hs__list_to_record("${_lst}" _value)
+    elseif(_type STREQUAL "ARRAY_RECORDS" OR _type STREQUAL "ARRAY_ARRAYS")
+        _hs__array_get_kind("${_value}" _aKind _aSep)
+        _hs__array_to_list("${_value}" ${_aSep} _lst)
+        list(APPEND _lst "iqjerhiuhdsfnUEFHIUYHGF")
+        list(REMOVE_AT _lst 0)
+        list(INSERT _lst 0 "${_name}")
+        list(REMOVE_ITEM _lst "iqjerhiuhdsfnUEFHIUYHGF")
+        _hs__list_to_array("${_lst}" ${_aKind} _value)
+    elseif(_type STREQUAL "COLLECTION")
+    else()
+        return()
+    endif()
+    set("${_outVar}" "${_value}" PARENT_SCOPE)
+endfunction()
+
 function(_hs__resolve_path _containerValue _path _resultOut)
     # Resolve a path like "DATABASE/SOCI" within a container
     # Returns the matching object or empty string if not found
@@ -303,6 +331,7 @@ endfunction()
 #   record(GET <recVar> <fieldIndex> <outVarName>... [TOUPPER|TOLOWER])
 #   record(GET <recVar> NAME <outVar>)
 #   record(NAME <recVar> <outVarName>)
+#   record(RELABEL <recVar> <name>)
 #   record(POP_FRONT|POP_BACK <recVar> <outVarName>... [TOUPPER|TOLOWER])
 #   record(SET <recVar> <fieldIndex> <newValue> [FAIL|QUIET])
 #
@@ -321,22 +350,46 @@ function(record)
     # -------------------- Extended: CREATE --------------------
 
     if(_recVerbUC STREQUAL "CREATE")
-        if(${ARGC} LESS 3 OR ${ARGC} GREATER 4)
-            msg(ALWAYS FATAL_ERROR "record(CREATE): expected record(CREATE <recVar> <name> [numFields])")
+        if(${ARGC} LESS 2 OR ${ARGC} GREATER 4)
+            msg(ALWAYS FATAL_ERROR "record(CREATE): expected record(CREATE <recVar> [<name>] [numFields])")
         endif()
 
-        set(_name "${ARGV2}")
-        _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
+        set(_name)
+        unset(_n)
 
-        if(${ARGC} EQUAL 4)
-            set(_n "${ARGV3}")
-            if(NOT _n MATCHES "^[0-9]+$")
-                msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
-            endif()
-        else ()
+        set(X 2)
+        while (X LESS ${ARGC})
+            set(argv ARGV${X})
+            set(arg "${${argv}}")
+
+            if(NOT _name)
+                set(_name "${arg}")
+                if(_name MATCHES "^[_|a-z|A-Z][_|0-9|a-z|A-Z]+$")
+                    _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
+                else()
+                    set(_name)
+                    if(NOT DEFINED _n)
+                        set(_n ${arg})
+                        if(NOT _n MATCHES "^[0-9]+$")
+                            msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
+                        endif ()
+                    endif ()
+                endif ()
+            elseif(NOT DEFINED _n)
+                set(_n ${arg})
+                if(NOT _n MATCHES "^[0-9]+$")
+                    msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
+                endif ()
+            endif ()
+            inc(X)
+        endwhile ()
+
+        if(NOT DEFINED _n)
             set(_n 0)
         endif ()
-
+        if(NOT _name)
+            set(_name "${_recVar}")
+        endif ()
         if(_n EQUAL 0)
             # Empty record: just name, no fields
             set(${_recVar} "${FS}${_name}" PARENT_SCOPE)
@@ -411,6 +464,18 @@ function(record)
         if(NOT _name STREQUAL "")
             set(${ARGV2} "${_name}" PARENT_SCOPE)
         endif ()
+        return()
+
+    # -------------------- Extended: RELABEL --------------------
+    elseif(_recVerbUC STREQUAL "RELABEL")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "record(RELABEL): expected record(RELABEL <recVar> <newName>)")
+        endif()
+
+        set(_name     "${ARGV2}")
+        _hs__assert_no_ctrl_chars("record(${_recVar})" "${_name}")
+        _hs__set_name("${${_recVar}}" "${_name}" _out)
+        set("${_recVar}" "${_out}" PARENT_SCOPE)
         return()
 
     # -------------------- Extended: GET NAME --------------------
@@ -807,6 +872,7 @@ endfunction()
 # Extended signature:
 #   array(CREATE <arrayVarName> <name> RECORDS|ARRAYS)
 #   array(NAME <arrayVarName> <outVar>
+#   array(RELABEL <arrayVarName> <newName>
 #   array(GET <arrayVarName> NAME <outVar>)
 #   array(GET <arrayVarName> EQUAL <path> <outVar>)
 #   array(GET <arrayVarName> MATCHING <regex> <outVar>)
@@ -835,7 +901,7 @@ function(array)
     # -------------------- CREATE with NAME --------------------
     if(_V STREQUAL "CREATE")
         if(NOT ${ARGC} EQUAL 4)
-            msg(ALWAYS FATAL_ERROR "array(CREATE): expected array(CREATE <arrayVarName> <name> RECORDS|ARRAYS)")
+            msg(ALWAYS FATAL_ERROR "array(CREATE): expected array(CREATE <arrayVarName> <label> RECORDS|ARRAYS)")
         endif()
         
         set(_name "${ARGV2}")
@@ -868,7 +934,21 @@ function(array)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
         return()
     endif ()
-    # -------------------- GET NAME --------------------
+
+    # -------------------- Extended: RELABEL --------------------
+    if(_V STREQUAL "RELABEL")
+        if(NOT ${ARGC} EQUAL 3)
+        msg(ALWAYS FATAL_ERROR "array(RELABEL): expected array(RELABEL <recVar> <newLabel>)")
+        endif()
+
+        set(_name "${ARGV2}")
+        _hs__assert_no_ctrl_chars("array(${_V})" "${_name}")
+        _hs__set_name("${_A}" "${_name}" _out)
+        set("${ARGV1}" "${_out}" PARENT_SCOPE)
+        return()
+    endif ()
+
+# -------------------- GET NAME --------------------
     if(_V STREQUAL "GET")
         if(${ARGC} GREATER 2 AND "${ARGV2}" STREQUAL "NAME")
             if(NOT ${ARGC} EQUAL 4)
@@ -1273,6 +1353,7 @@ endfunction()
 # Signature:
 #   collection(CREATE <collectionVarName>)
 #   collection(NAME <collectionVarName> <outVarName>)
+#   collection(RELABEL <collectionVarName> <newName>)
 #   collection(SET <collectionVarName> <key> <value>)
 #   collection(GET <collectionVarName> <key> <outVarName>)
 #   collection(GET <collectionVarName> EQUAL <path> <outVarName>)
@@ -1315,6 +1396,18 @@ function(collection)
 
         _hs__get_name("${_A}" _name)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
+        return()
+    endif ()
+
+    # -------------------- RELABEL --------------------
+    if(_V STREQUAL "RELABEL")
+        if(NOT ${ARGC} EQUAL 3)
+            msg(ALWAYS FATAL_ERROR "collection(RELABEL): expected collection(RELABEL <recVar> <newName>)")
+        endif()
+
+        set(_name "${_ARGV2}")
+        _hs__assert_no_ctrl_chars("collection(${_V})" "${_name}")
+        _hs__set_name("${_A}" "${_name}")
         return()
     endif ()
 

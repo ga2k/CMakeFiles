@@ -1,6 +1,17 @@
+include_guard(GLOBAL)
+
 ## HoffSoft build framework delegator (split into global + per-project)
 include (cmake/array_enhanced.cmake)
 #include (cmake/test_enhanced.cmake)
+
+set(__registeredPackageCallbacks  "" CACHE INTERNAL "")
+
+function(registerPackageCallback fn)
+    if(NOT fn IN_LIST __registeredPackageCallbacks)
+        list(APPEND __registeredPackageCallbacks ${fn})
+        message("${BOLD}Registered${NC} AddPackage callback for ${YELLOW}${fn}${NC}")
+    endif ()
+endfunction()
 
 message (NOTICE "\n\t\tProcessing ${APP_NAME}\n")
 
@@ -25,6 +36,3 @@ if ("${APP_FEATURES}" MATCHES "GFX")
 endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)
-if (NOT MONOREPO OR DEFINED MONOREPO_PROCESSED)
-    include(${CMAKE_SOURCE_DIR}/cmake/project_setup.cmake)
-endif ()

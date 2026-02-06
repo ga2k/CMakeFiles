@@ -114,10 +114,12 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED ${DRY_RUN})
 
-    set(FEATURES          "${FEATURES}"          PARENT_SCOPE)
-    set(SYSTEM_FEATURES   "${SYSTEM_FEATURES}"   PARENT_SCOPE)
-    set(LIBRARY_FEATURES  "${LIBRARY_FEATURES}"  PARENT_SCOPE)
-    set(OPTIONAL_FEATURES "${OPTIONAL_FEATURES}" PARENT_SCOPE)
+    set(FEATURES "${FEATURES}" PARENT_SCOPE)
+    set(SYSTEM   "${SYSTEM}"   PARENT_SCOPE)
+    set(LIBRARY  "${LIBRARY}"  PARENT_SCOPE)
+    set(OPTIONAL "${OPTIONAL}" PARENT_SCOPE)
+    set(PLUGIN   "${PLUGIN}"   PARENT_SCOPE)
+    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
 
 endfunction()
 ########################################################################################################################
