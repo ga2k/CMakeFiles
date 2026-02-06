@@ -18,7 +18,7 @@ set(FIXArgs 9)
 set(FIXPrereqs 10)
 math(EXPR FIXLength "${FIXPrereqs} + 1")
 
-set(__longest_handler     "17" CACHE INTERNAL "")
+set(__longest_handler      "0" CACHE INTERNAL "")
 set(__longest_object       "0" CACHE INTERNAL "")
 set(__longest_verb         "0" CACHE INTERNAL "")
 set(__longest_preposition  "0" CACHE INTERNAL "")
@@ -110,36 +110,41 @@ function(initialiseFeatureHandlers)
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/cmake/handlers/*.cmake")
     endif ()
 
-    string(LENGTH "postMakeAvailable" longest)
 
-    foreach (handler IN LISTS handlers)
-        get_filename_component(handlerName "${handler}" NAME_WE)
-        get_filename_component(_path "${handler}" DIRECTORY)
-        get_filename_component(packageName "${_path}" NAME_WE)
+    foreach (pass RANGE 1 2)
+        foreach (handler IN LISTS handlers)
+            get_filename_component(handlerName "${handler}" NAME_WE)
+            get_filename_component(_path "${handler}" DIRECTORY)
+            get_filename_component(packageName "${_path}" NAME_WE)
 
-        string(LENGTH ${handlerName} length)
-        math(EXPR num_spaces "${longest} - ${length}")
-        string(REPEAT " " ${num_spaces} padding)
+            longest (RIGHT GAP
+                    CURRENT     ${__longest_handler}
+                    TEXT        "${handlerName}"
+                    LONGEST     __longest_handler
+                    PADDED      text)
 
-        set(msg "Adding handler ${padding}${BOLD}${handlerName}${NC} for package ${BOLD}${packageName}${NC}")
-        if (${handlerName} STREQUAL "init")
-            string(APPEND msg " and calling it ...")
-        endif ()
-        msg(ALWAYS "${msg}")
-        include("${handler}")
-        if ("${handlerName}" STREQUAL "init")
-            ############################################################################################################
-            ############################################################################################################
-            set(fn "${packageName}_init") #############################################################################
-            if (COMMAND "${fn}") ########################################################################################
-                cmake_language(CALL "${fn}") ###########################################################################
-            endif () ###################################################################################################
-            ############################################################################################################
-            ############################################################################################################
-        endif ()
+            if( pass EQUAL 2 )
+                set(msg "Adding handler ${BOLD}${text}${NC} for package ${BOLD}${packageName}${NC}")
+                if (${handlerName} STREQUAL "init")
+                    string(APPEND msg " and calling it ...")
+                endif ()
+                msg(ALWAYS "${msg}")
+                include("${handler}")
+                if ("${handlerName}" STREQUAL "init")
+                    ############################################################################################################
+                    ############################################################################################################
+                    set(fn "${packageName}_init") #############################################################################
+                    if (COMMAND "${fn}") ########################################################################################
+                        cmake_language(CALL "${fn}") ###########################################################################
+                    endif () ###################################################################################################
+                    ############################################################################################################
+                    ############################################################################################################
+                endif ()
+            endif ()
+        endforeach ()
     endforeach ()
     msg(ALWAYS "")
-
+    set(__longest_handler ${__longest_handler} CACHE INTERNAL "")
 endfunction()
 ########################################################################################################################
 ########################################################################################################################
@@ -155,7 +160,7 @@ function(addPackageData)
 
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
 
-    set(methods PROCESS FETCH_CONTENTS PROCESS IGNORE)
+    set(methods FIND_PACKAGE FETCH_CONTENTS PROCESS IGNORE)
     if (NOT APD_METHOD)
         set(APD_METHOD IGNORE)
     endif ()
@@ -334,7 +339,7 @@ function(addPackageData)
 #        string(REGEX REPLACE "\x1B\\[[0-9;]*[mK]" "" plain_text "${VERB}")
 #        string(LENGTH "${plain_text}" visual_len)
 
-        set(switches QUIET QUIET? REPLACE EXTEND UNIQUE)
+        set(switches QUIET QUITE REPLACE EXTEND UNIQUE)
         set(args TARGET FEATURE RECORD FIELD TEMPLATE)
         set(lists "")
 
@@ -516,31 +521,33 @@ function(addPackageData)
     set(APD_FEATPKG "${APD_FEATURE}/${APD_PKGNAME}")
 
     # Add new feature/pkg to the global GLOBAL collection
-    createOrAppendTo (    "GLOBAL"   FEATURE "${APD_FEATURE}" RECORD "${output}"           EXTEND        TEMPLATE "${template}")
-    createOrAppendTO (    "GLOBAL"   FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-    createOrAppendTO (    "GLOBAL"   FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-    if(APD_KIND MATCHES "SYSTEM")
-        createOrAppendTo ("SYSTEM"   FEATURE "${APD_FEATURE}" RECORD "${output}"    QUIET? EXTEND        TEMPLATE "${template}")
-        createOrAppendTO ("SYSTEM"   FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-        createOrAppendTO ("SYSTEM"   FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-    elseif(APD_KIND MATCHES "LIBRARY")
-        createOrAppendTo ("LIBRARY"  FEATURE "${APD_FEATURE}" RECORD "${output}"    QUIET? EXTEND        TEMPLATE "${template}")
-        createOrAppendTO ("LIBRARY"  FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-        createOrAppendTO ("LIBRARY"  FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
+    createOrAppendTo (        "GLOBAL" FEATURE "${APD_FEATURE}" RECORD "${output}"          EXTEND        TEMPLATE "${template}")
+    createOrAppendTO (        "GLOBAL" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    createOrAppendTO (        "GLOBAL" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    if(APD_KIND MATCHES       "SYSTEM")
+        createOrAppendTo (    "SYSTEM" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUITE EXTEND        TEMPLATE "${template}")
+        createOrAppendTO (    "SYSTEM" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTO (    "SYSTEM" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    elseif(APD_KIND MATCHES  "LIBRARY")
+        createOrAppendTo (   "LIBRARY" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUITE EXTEND        TEMPLATE "${template}")
+        createOrAppendTO (   "LIBRARY" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTO (   "LIBRARY" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
     elseif(APD_KIND MATCHES "OPTIONAL")
-        createOrAppendTo ("OPTIONAL" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUIET? EXTEND        TEMPLATE "${template}")
-        createOrAppendTO ("OPTIONAL" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
-        createOrAppendTO ("OPTIONAL" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUIET? EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTo (  "OPTIONAL" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUITE EXTEND        TEMPLATE "${template}")
+        createOrAppendTO (  "OPTIONAL" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTO (  "OPTIONAL" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    elseif(APD_KIND MATCHES   "PLUGIN")
+        createOrAppendTo (    "PLUGIN" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUITE EXTEND        TEMPLATE "${template}")
+        createOrAppendTO (    "PLUGIN" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTO (    "PLUGIN" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    elseif(APD_KIND MATCHES   "CUSTOM")
+        createOrAppendTo (    "CUSTOM" FEATURE "${APD_FEATURE}" RECORD "${output}"    QUITE EXTEND        TEMPLATE "${template}")
+        createOrAppendTO (    "CUSTOM" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
+        createOrAppendTO (    "CUSTOM" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
     endif()
 
-    set(GLOBAL   "${GLOBAL}"   PARENT_SCOPE)
-    set(SYSTEM   "${SYSTEM}"   PARENT_SCOPE)
-    set(LIBRARY  "${LIBRARY}"  PARENT_SCOPE)
-    set(OPTIONAL "${OPTIONAL}" PARENT_SCOPE)
-    set(PLUGIN   "${PLUGIN}"   PARENT_SCOPE)
-    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
+    savePackageData()
 
-    set(__longest_handler      ${__longest_handler}     CACHE INTERNAL "")
     set(__longest_object       ${__longest_object}      CACHE INTERNAL "")
     set(__longest_verb         ${__longest_verb}        CACHE INTERNAL "")
     set(__longest_preposition  ${__longest_preposition} CACHE INTERNAL "")
@@ -976,9 +983,6 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
     set(featureCollection   "${${featureCollection_}}")
     set(featuresOut         "${featuresOut_}")
     set(namesOut            "${namesOut_}")
-
-    array(DUMP resolveThese VERBOSE)
-    collection(DUMP featureCollection VERBOSE)
 
     record(CREATE resolvedNames resolvedNames)
     record(CREATE packageList packageList)
@@ -1474,7 +1478,17 @@ function(processFeatures featureList returnVarName)
             if(__temp_pkg IN_LIST __temp_plugins)
                 set(__temp_pkg "PLUGIN")
             else ()
-                msg(ALWAYS FATAL_ERROR "Why is _pkg empty?")
+                # Try to find the default package for this feature and use that
+                collection(GET GLOBAL "${_feature}" buffer)
+                if (buffer)
+                    getFeaturePackage(buffer "${_feature}" 0 pkgbuffer)
+                    if (pkgbuffer)
+                        record(GET pkgbuffer ${FIXPkgName} _pkg)
+                    endif ()
+                endif ()
+                if(NOT _pkg)
+                    msg(ALWAYS FATAL_ERROR "Why is _pkg empty?")
+                endif ()
             endif ()
         else ()
             set(__temp_pkg "${_pkg}")

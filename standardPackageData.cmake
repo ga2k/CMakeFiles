@@ -43,7 +43,7 @@ function(createStandardPackageData dryRun)
     if(dryRun)
         set(DRY_RUN DRY_RUN)
     else ()
-        set(DRY_RUN)
+        unset(DRY_RUN)
     endif ()
 
     addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
@@ -114,12 +114,7 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED ${DRY_RUN})
 
-    set(FEATURES "${FEATURES}" PARENT_SCOPE)
-    set(SYSTEM   "${SYSTEM}"   PARENT_SCOPE)
-    set(LIBRARY  "${LIBRARY}"  PARENT_SCOPE)
-    set(OPTIONAL "${OPTIONAL}" PARENT_SCOPE)
-    set(PLUGIN   "${PLUGIN}"   PARENT_SCOPE)
-    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
+    savePackageData()
 
 endfunction()
 ########################################################################################################################

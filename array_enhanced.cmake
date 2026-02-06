@@ -364,7 +364,7 @@ function(record)
 
             if(NOT _name)
                 set(_name "${arg}")
-                if(_name MATCHES "^[_|a-z|A-Z][_|0-9|a-z|A-Z]+$")
+                if(_name MATCHES "^[a-zA-Z_][a-zA-Z0-9_-]*$")
                     _hs__assert_no_ctrl_chars("record(CREATE) name" "${_name}")
                 else()
                     set(_name)
