@@ -290,7 +290,7 @@ function(fetchContents)
 
                 unsetLocalVars()
 
-                # See if this is a prereqisuite package. If it is, we do both phases together
+                # See if this is a prerequisite package. If it is, we do both phases together
                 SplitAt(${feature_package_combo} "/" this_feature_name_and_possible_prereq_flag this_pkgname)
                 SplitAt(${this_feature_name_and_possible_prereq_flag} "." this_feature_name flagChar)
                 if ("${flagChar}" STREQUAL "*")
@@ -323,23 +323,27 @@ function(fetchContents)
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
-                    string(LENGTH "${this_feature_name}" this_featurenameLength)
-                    if(this_featurenameLength LESS longestFeatureName)
-                        math(EXPR paddingChars "${longestFeatureName} - ${this_featurenameLength}")
-                        string(REPEAT " " ${paddingChars} fpadding )
-                    else ()
-                        set(fpadding)
-                    endif ()
-
-                    string(LENGTH "${this_pkgname}" this_pkgnameLength)
-                    if(this_pkgnameLength LESS longestPkgName)
-                        math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
-                        string(REPEAT "." ${paddingChars} ppadding )
-                    else ()
-                        set(ppadding)
-                    endif ()
-
-                    message(CHECK_START "${YELLOW}${fpadding}${this_feature_name}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    longest(RIGHT CURRENT ${longestFeatureName} TEXT "${this_feature_name}"  LONGEST longestFeatureName PADDED dispFeatureName)
+                    longest(LEFT  CURRENT ${longestPackageName} TEXT "${this_pkgnameLength}" LONGEST longestPackageName PADDED dispPackageName)
+                    message(CHECK_START "${YELLOW}${dispFeatureName}${NC} (${GREEN}${dispPackageName}${NC}) ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+#
+#                    longest(RIGHT CURRENT longestPackageName )
+#                    string(LENGTH "${this_feature_name}" this_featurenameLength)
+#                    if(this_featurenameLength LESS longestFeatureName)
+#                        math(EXPR paddingChars "${longestFeatureName} - ${this_featurenameLength}")
+#                        string(REPEAT " " ${paddingChars} fpadding )
+#                    else ()
+#                        set(fpadding)
+#                    endif ()
+#
+#                    string(LENGTH "${this_pkgname}" this_pkgnameLength)
+#                    if(this_pkgnameLength LESS longestPkgName)
+#                        math(EXPR paddingChars "${longestPkgName} - ${this_pkgnameLength} + 3")
+#                        string(REPEAT "." ${paddingChars} ppadding )
+#                    else ()
+#                        set(ppadding)
+#                    endif ()
+#                    message(CHECK_START "${YELLOW}${fpadding}${this_feature_name}${NC} (${GREEN}${this_pkgname}${NC}) ${ppadding} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
