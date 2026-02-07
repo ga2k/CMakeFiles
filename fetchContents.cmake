@@ -476,7 +476,7 @@ function(fetchContents)
 
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
-                                    scanLibraryTargets("${this_pkgname}" "${featureList}")
+                                    scanLibraryTargets("${this_pkgname}" "${GLOBAL}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif()
                             endif ()
