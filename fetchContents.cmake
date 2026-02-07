@@ -255,6 +255,9 @@ function(fetchContents)
         unset(combinedLibraryComponents)
         set(scannedLibraries)
 
+        math(EXPR lPName "${longestPackageName} + 2")
+        math(EXPR lFName "${longestFeatureName} + 0")
+
         foreach (pass_num RANGE 1)
             string(REPEAT "-" 70 line)
             set(phase ${pass_num})
@@ -317,10 +320,6 @@ function(fetchContents)
 
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
-
-                math(EXPR lPName "${longestPackageName} + 2")
-                math(EXPR lFName "${longestFeatureName} + 0")
-
 
                 # ==========================================================================================================
                 # PASS 0: DECLARATION & FIND_PACKAGE phase
