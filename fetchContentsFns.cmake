@@ -988,17 +988,12 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
     record(CREATE packageList packageList)
     array(CREATE resolvedFeatures resolvedFeatures RECORDS)
     set(visited)
-    set(longestPackageName 0)
-    set(longestFeatureName 0)
 
     # Internal helper to walk dependencies
     function(visit lol feature_name package_name is_a_prereq)
         if (NOT "${feature_name}/${package_name}" IN_LIST visited)
             list(APPEND visited "${feature_name}/${package_name}")
             set(visited ${visited} PARENT_SCOPE)
-
-            longest(QUIET CURRENT ${longestPackageName} TEXT "${package_name}" LONGEST longestPackageName)
-            longest(QUIET CURRENT ${longestFeatureName} TEXT "${feature_name}" LONGEST longestFeatureName)
 
             parsePackage("${lol}"
                     FEATURE ${feature_name}
@@ -1027,9 +1022,6 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
 
             set(visited ${visited} PARENT_SCOPE)
 
-            set(longestPackageName ${longestPackageName} PARENT_SCOPE)
-            set(longestFeatureName ${longestFeatureName} PARENT_SCOPE)
-
         endif()
 
         unset(dnc_)
@@ -1055,14 +1047,14 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
 
     # Pass 1: Handle LIBRARIES and their deep prerequisites first
     array(LENGTH resolveThese numberToResolve)
-    foreach(pass RANGE 1 2)
+    foreach(rdPass RANGE 1 2)
         set(index 0)
         while(index LESS numberToResolve)
             array(GET resolveThese ${index} item)
             record(GET item ${FIXName} _feature_name _package_name)
             record(GET item ${FIXKind} _kind)
-            if ((pass EQUAL 1 AND "${_kind}" STREQUAL "LIBRARY") OR
-                (pass EQUAL 2 AND NOT "${_kind}" STREQUAL "LIBRARY"))
+            if ((rdPass EQUAL 1 AND "${_kind}" STREQUAL "LIBRARY") OR
+                (rdPass EQUAL 2 AND NOT "${_kind}" STREQUAL "LIBRARY"))
                 visit(featureCollection "${_feature_name}" "${_package_name}" OFF)
             endif()
             inc(index)
@@ -1071,8 +1063,6 @@ function(resolveDependencies resolveThese_ featureCollection_ featuresOut_ names
 
     set(${featuresOut}      "${resolvedFeatures}"   PARENT_SCOPE)
     set(${namesOut}         "${resolvedNames}"      PARENT_SCOPE)
-    set(longestPackageName   ${longestPackageName}  PARENT_SCOPE)
-    set(longestFeatureName   ${longestFeatureName}  PARENT_SCOPE)
     set(packages             ${packageList}         PARENT_SCOPE)
 
     unset(item)
