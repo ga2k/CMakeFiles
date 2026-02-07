@@ -229,6 +229,10 @@ if(WIN32)
   set(_libdir "${_impdir}")
 endif()
   
+# Find dependencies that HoffSoft needs
+include(CMakeFindDependencyMacro)
+find_dependency(OpenSSL REQUIRED)
+
 # Import the exported targets first (defines @APP_VENDOR@::@APP_NAME@ and friends).
 # The cxx-modules export expects the target(s) to already exist.
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
