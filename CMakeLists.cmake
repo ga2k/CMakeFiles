@@ -38,12 +38,22 @@ if ("${APP_FEATURES}" MATCHES "PRINT")
     list(APPEND PLUGINS Print)
 endif ()
 
-if ("${APP_FEATURES}" MATCHES "CORE")
-    list(APPEND REQD_LIBS "HoffSoft")
-endif ()
+# Get rid of this and find dynamically!
+set(KNOWN_LIBS HoffSoft Gfx)
 
-if ("${APP_FEATURES}" MATCHES "GFX")
-    list(APPEND REQD_LIBS "Gfx")
-endif ()
+foreach(known_lib IN LISTS KNOWN_LIBS)
+
+    if (${known_lib} MATCHES "HoffSoft" AND "CORE" MATCHES ${APP_FEATURES} OR
+            ${known_lib} MATCHES "Gfx" AND "GFX" MATCHES ${APP_FEATURES})
+
+        file(GLOB_RECURSE _inc "${CMAKE_SOURCE_DIR}/${known_lib}.inc")
+        include("${_inc}")
+        set(fn "init${known_lib}")
+        cmake_language(CALL "${fn}")
+
+        list(APPEND REQD_LIBS "${known_lib}")
+    endif ()
+
+endforeach ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)
