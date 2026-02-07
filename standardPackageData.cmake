@@ -106,9 +106,9 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
             ARG REQUIRED ${DRY_RUN})
 
-    addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" NAMESPACE "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
-            ARGS REQUIRED EXCLUDE_FROM_ALL ${DRY_RUN})
+            ARGS REQUIRED EXCLUDE_FROM_ALL COMPONENTS SSL Crypto ${DRY_RUN})
 
     addPackageData(OPTIONAL FEATURE "WIDGETS" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"

@@ -97,6 +97,11 @@ function(_hs__get_object_type _value _typeOut)
     endif()
 endfunction()
 
+# Expose private function through this interface macro that takes the name of the object var instead of the object
+macro (getObjectType _isdiah__ObjectVarName _oktojtojn__ReceivingVarName)
+    _hs__get_object_type("${${_isdiah__ObjectVarName}}" "${_oktojtojn__ReceivingVarName}")
+endmacro()
+
 function(_hs__array_get_kind _arrayValue _kindOut _sepOut)
     # Returns:
     #   kind = RECORDS | ARRAYS | UNSET
@@ -120,6 +125,10 @@ function(_hs__array_get_kind _arrayValue _kindOut _sepOut)
         msg(ALWAYS WARNING "array: missing type marker (must start with RS or GS)")
     endif()
 endfunction()
+# Expose private function through this interface macro that takes the name of the object var instead of the object
+macro (getArrayKind _ldskfglk__ObjectVarName _ksfdjggkk__ReceivingVarName)
+    _hs__array_get_kind("${${_ldskfglk__ObjectVarName}}" "${_ksfdjggkk__ReceivingVarName}")
+endmacro()
 
 function(_hs__array_to_list _arrayValue _sep _outVar)
     # Converts array to CMake list, stripping leading marker
@@ -158,7 +167,7 @@ function(_hs__list_to_array _lst _kind _outVar)
     set(${_outVar} "${_sep}${_payload}" PARENT_SCOPE)
 endfunction()
 
-function(_hs__get_name _value _nameOut)
+function(_hs__get_object_name _value _nameOut)
     # Extract name from a named object (record or array)
     # Format: {SEP}NAME{SEP}...
     _hs__get_object_type("${_value}" _type)
@@ -186,9 +195,12 @@ function(_hs__get_name _value _nameOut)
         set(${_nameOut} "${_name}" PARENT_SCOPE)
     endif()
 endfunction()
+# Expose private function through this interface macro that takes the name of the object var instead of the object
+macro (getObjectName _ejdgjned__ObjectVarName _bcihujewiewyrg__ReceivingVarName)
+    _hs__get_object_name("${${_ejdgjned__ObjectVarName}}" "${_bcihujewiewyrg__ReceivingVarName}")
+endmacro()
 
-
-function(_hs__set_name _value _name _outVar)
+function(_hs__set_object_name _value _name _outVar)
     # replace name in a named object
     # Format: {SEP}NAME{SEP}...
 
@@ -214,6 +226,10 @@ function(_hs__set_name _value _name _outVar)
     endif()
     set("${_outVar}" "${_value}" PARENT_SCOPE)
 endfunction()
+# Expose private function through this interface macro that takes the name of the object var instead of the object
+macro (setObjectName _ejdgjned__ObjectVarName _bcihujewiewyrg__NewName _hegfvuia__ReceivingVarName)
+    _hs__set_object_name("${${_ejdgjned__ObjectVarName}}" "${_bcihujewiewyrg__NewName}" "${_hegfvuia__ReceivingVarName}")
+endmacro()
 
 function(_hs__resolve_path _containerValue _path _resultOut)
     # Resolve a path like "DATABASE/SOCI" within a container
@@ -253,7 +269,7 @@ function(_hs__resolve_path _containerValue _path _resultOut)
         set(_i 1)
         while(_i LESS _len)
             list(GET _elements ${_i} _elem)
-            _hs__get_name("${_elem}" _elemName)
+            _hs__get_object_name("${_elem}" _elemName)
             
             if("${_elemName}" STREQUAL "${_currentName}")
                 # Found matching element
@@ -460,7 +476,7 @@ function(record)
         set(${ARGV2} "" PARENT_SCOPE)
 
         set(_recValue "${${_recVar}}")
-        _hs__get_name("${_recValue}" _name)
+        _hs__get_object_name("${_recValue}" _name)
         if(NOT _name STREQUAL "")
             set(${ARGV2} "${_name}" PARENT_SCOPE)
         endif ()
@@ -474,7 +490,7 @@ function(record)
 
         set(_name     "${ARGV2}")
         _hs__assert_no_ctrl_chars("record(${_recVar})" "${_name}")
-        _hs__set_name("${${_recVar}}" "${_name}" _out)
+        _hs__set_object_name("${${_recVar}}" "${_name}" _out)
         set("${_recVar}" "${_out}" PARENT_SCOPE)
         return()
 
@@ -489,7 +505,7 @@ function(record)
             set(${ARGV3} "" PARENT_SCOPE)
 
             set(_recValue "${${_recVar}}")
-            _hs__get_name("${_recValue}" _name)
+            _hs__get_object_name("${_recValue}" _name)
             if(NOT _name STREQUAL "")
                 set(${ARGV3} "${_name}" PARENT_SCOPE)
             endif ()
@@ -765,7 +781,7 @@ function(record)
         set(_recValue "${${_recVar}}")
 
         # Get name using the proper helper
-        _hs__get_name("${_recValue}" _name)
+        _hs__get_object_name("${_recValue}" _name)
 
         # Convert to list for field access
         _hs__record_to_list("${_recValue}" _lst)
@@ -775,7 +791,7 @@ function(record)
             set(_dumpStr "record '${_recVar}' = [] (empty/uninitialized)\n")
         elseif(_len EQUAL 1)
             # Just the name, no fields (empty record after split: ["", "Name"])
-            _hs__get_name("${_recValue}" _name)
+            _hs__get_object_name("${_recValue}" _name)
             set(_dumpStr "record '${_recVar}' (name='${_name}', fields=0) = []\n")
         else()
             if(_verbose)
@@ -930,7 +946,7 @@ function(array)
         # undefine the output variable
         set(${ARGV2} "" PARENT_SCOPE)
 
-        _hs__get_name("${_A}" _name)
+        _hs__get_object_name("${_A}" _name)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
         return()
     endif ()
@@ -943,7 +959,7 @@ function(array)
 
         set(_name "${ARGV2}")
         _hs__assert_no_ctrl_chars("array(${_V})" "${_name}")
-        _hs__set_name("${_A}" "${_name}" _out)
+        _hs__set_object_name("${_A}" "${_name}" _out)
         set("${ARGV1}" "${_out}" PARENT_SCOPE)
         return()
     endif ()
@@ -958,7 +974,7 @@ function(array)
             # undefine the output variable
             set(${ARGV3} "" PARENT_SCOPE)
 
-            _hs__get_name("${_A}" _name)
+            _hs__get_object_name("${_A}" _name)
             set(${ARGV3} "${_name}" PARENT_SCOPE)
             msg(ALWAYS DEPRECATED "use array(NAME)")
             return()
@@ -991,7 +1007,7 @@ function(array)
             set(_i 1)
             while(_i LESS _len)
                 list(GET _lst ${_i} _elem)
-                _hs__get_name("${_elem}" _elemName)
+                _hs__get_object_name("${_elem}" _elemName)
                 if(_elemName MATCHES "${_regex}")
                     set(${ARGV4} "${_elem}" PARENT_SCOPE)
                     return()
@@ -1123,7 +1139,7 @@ function(array)
             set(_elemIdx 0)
             while(_i LESS _len)
                 list(GET _lst ${_i} _elem)
-                _hs__get_name("${_elem}" _elemName)
+                _hs__get_object_name("${_elem}" _elemName)
                 _hs__get_object_type("${_elem}" _elemType)
 
                 if(_verbose)
@@ -1267,7 +1283,7 @@ function(array)
             set(_i 1)
             while(_i LESS _len)
                 list(GET _lst ${_i} _elem)
-                _hs__get_name("${_elem}" _elemName)
+                _hs__get_object_name("${_elem}" _elemName)
                 if("${_elemName}" STREQUAL "${_targetName}")
                     set(_foundIdx ${_i})
                     break()
@@ -1394,7 +1410,7 @@ function(collection)
 
         set(${ARGV2} "" PARENT_SCOPE)
 
-        _hs__get_name("${_A}" _name)
+        _hs__get_object_name("${_A}" _name)
         set(${ARGV2} "${_name}" PARENT_SCOPE)
         return()
     endif ()
@@ -1407,7 +1423,7 @@ function(collection)
 
         set(_name "${_ARGV2}")
         _hs__assert_no_ctrl_chars("collection(${_V})" "${_name}")
-        _hs__set_name("${_A}" "${_name}")
+        _hs__set_object_name("${_A}" "${_name}")
         return()
     endif ()
 
