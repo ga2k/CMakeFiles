@@ -4,7 +4,8 @@ include_guard(GLOBAL)
 include (cmake/array_enhanced.cmake)
 #include (cmake/test_enhanced.cmake)
 
-set(__registeredPackageCallbacks  "" CACHE INTERNAL "")
+set(__registeredPackageCallbacks "" CACHE INTERNAL "")
+set(__alreadyLocated             "" CACHE INTERNAL "")
 
 function(registerPackageCallback fn)
     if(NOT fn IN_LIST __registeredPackageCallbacks)
