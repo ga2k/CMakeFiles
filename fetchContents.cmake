@@ -131,7 +131,7 @@ function(fetchContents)
         record(GET potentialFeature ${FIXName} _rPkg TOUPPER)
 
         if (NOT "${_uPkg}" STREQUAL "" AND NOT "${_uPkg}" STREQUAL "${_rPkg}")
-            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch")
+            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch ${_uPkg} vs ${_rPkg}")
         endif ()
 
         # Step 2. Merge Args
