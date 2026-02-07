@@ -43,15 +43,22 @@ set(KNOWN_LIBS HoffSoft Gfx)
 
 foreach(known_lib IN LISTS KNOWN_LIBS)
 
-    if (${known_lib} MATCHES "HoffSoft" AND "CORE" MATCHES ${APP_FEATURES} OR
-            ${known_lib} MATCHES "Gfx" AND "GFX" MATCHES ${APP_FEATURES})
+    if (${known_lib} MATCHES "HoffSoft" AND "CORE" IN_LIST APP_FEATURES OR
+            ${known_lib} MATCHES "Gfx" AND "GFX" IN_LIST APP_FEATURES)
 
-        file(GLOB_RECURSE _inc "${CMAKE_SOURCE_DIR}/${known_lib}.inc")
-        include("${_inc}")
-        set(fn "init${known_lib}")
-        cmake_language(CALL "${fn}")
+        file(GLOB_RECURSE _inc "${CMAKE_SOURCE_DIR}/../${known_lib}/*/${known_lib}.inc")
+        if(_inc)
+            list(GET _inc 0 _inc)
+            get_filename_component(_inc "${_inc}" ABSOLUTE)
+            include("${_inc}")
+            set(fn "init${known_lib}")
+            cmake_language(CALL "${fn}")
 
-        list(APPEND REQD_LIBS "${known_lib}")
+            list(APPEND REQD_LIBS "${known_lib}")
+            set(REQD_LIBS "     ${REQD_LIBS}" PARENT_SCOPE)
+            set(APP_FEATURES    "${APP_FEATURES}" PARENT_SCOPE)
+
+        endif ()
     endif ()
 
 endforeach ()
