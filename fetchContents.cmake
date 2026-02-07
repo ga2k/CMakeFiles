@@ -239,15 +239,23 @@ function(fetchContents)
         # Pass 1: MakeAvailable and perform post-population fixes (Build stage)
 
         set(fix 0)
+        set(prereqs)
+        set(feature_names "${features}")
         record(LENGTH features numFeatures)
         while(fix LESS numFeatures)
             record(GET features ${fix} c)
-            SplitAt("${c}" "/" f p)
-            SplitAt("${f}" "." x g)
-
-            string(JOIN ", " l ${l} "${YELLOW}${x}${NC} (${GREEN}${p}${NC})")
+            SplitAt("${c}" "/" x p)
+            SplitAt("${x}" "." f g)
+            set(jfp "${f}/${p}")
+            if(g)
+                list(APPEND prereqs "${jfp}")
+                record(REPLACE feature_names ${fix} "${jfp}")
+            endif ()
+            string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
             inc(fix)
         endwhile ()
+
+        set(features "${feature_names}")
 
         message(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
@@ -294,9 +302,8 @@ function(fetchContents)
                 unsetLocalVars()
 
                 # See if this is a prerequisite package. If it is, we do both phases together
-                SplitAt(${feature_package_combo} "/" this_feature_name_and_possible_prereq_flag this_pkgname)
-                SplitAt(${this_feature_name_and_possible_prereq_flag} "." this_feature_name flagChar)
-                if ("${flagChar}" STREQUAL "*")
+                SplitAt(${feature_package_combo} "/" this_feature_name this_pkgname)
+                if ("${feature_package_combo}" IN_LIST prereqs)
                     set(apf_IS_A_PREREQ ON)
                 endif ()
 
@@ -432,7 +439,7 @@ function(fetchContents)
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
-                                scanLibraryTargets("${this_pkgname}" "${featureList}")
+                                scanLibraryTargets("${this_pkgname}" "${features}" "${featureList}")
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                             else()
                                 # Library not found yet. We must fulfill its metadata prerequisites
@@ -476,7 +483,7 @@ function(fetchContents)
 
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
-                                    scanLibraryTargets("${this_pkgname}" "${GLOBAL}")
+                                    scanLibraryTargets("${this_pkgname}" "${features}" "${GLOBAL}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif()
                             endif ()
