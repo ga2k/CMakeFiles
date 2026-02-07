@@ -82,11 +82,11 @@ function(createStandardPackageData dryRun)
     ####
     ##
     #
-    addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG PREREQ DATABASE=soci ${DRY_RUN})
+#    addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+#            ARGS REQUIRED CONFIG PREREQ DATABASE=soci ${DRY_RUN})
 
-    addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-            ARGS REQUIRED CONFIG PREREQ CORE ${DRY_RUN})
+#    addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+#            ARGS REQUIRED CONFIG PREREQ CORE ${DRY_RUN})
     #
     ##
     ####
