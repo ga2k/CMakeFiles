@@ -318,13 +318,17 @@ function(fetchContents)
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
 
+                math(EXPR lPName "${longestPackageName} + 2")
+                math(EXPR lFName "${longestFeatureName} + 0")
+
+
                 # ==========================================================================================================
                 # PASS 0: DECLARATION & FIND_PACKAGE phase
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
-                    longest(RIGHT CURRENT ${longestFeatureName} TEXT "${this_feature_name}" LONGEST longestFeatureName PADDED dispFeatureName)
-                    longest(LEFT  CURRENT ${longestPackageName} TEXT "(${this_pkgname})"    LONGEST longestPackageName PADDED dispPackageName)
+                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
+                    longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName PADDED dispPackageName)
                     message(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
 #
 #                    longest(RIGHT CURRENT longestPackageName )
