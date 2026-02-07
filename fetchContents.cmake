@@ -324,8 +324,8 @@ function(fetchContents)
                 if (${pass_num} EQUAL 0)
 
                     longest(RIGHT CURRENT ${longestFeatureName} TEXT "${this_feature_name}" LONGEST longestFeatureName PADDED dispFeatureName)
-                    longest(LEFT  CURRENT ${longestPackageName} TEXT "${this_pkgname}"      LONGEST longestPackageName PADDED dispPackageName)
-                    message(CHECK_START "${YELLOW}${dispFeatureName}${NC} (${GREEN}${dispPackageName}${NC}) ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    longest(LEFT  CURRENT ${longestPackageName} TEXT "(${this_pkgname})"    LONGEST longestPackageName PADDED dispPackageName)
+                    message(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
 #
 #                    longest(RIGHT CURRENT longestPackageName )
 #                    string(LENGTH "${this_feature_name}" this_featurenameLength)
