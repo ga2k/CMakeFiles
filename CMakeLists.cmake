@@ -4,16 +4,16 @@ include_guard(GLOBAL)
 include (cmake/array_enhanced.cmake)
 #include (cmake/test_enhanced.cmake)
 
-record(CREATE __regPkgCB        "APD_CALLBACKS")
-set(__regPkgCB                  "${__regPkgCB}"     CACHE INTERNAL "")
+record(CREATE __regPkgCB "APD_CALLBACKS")
+set(__regPkgCB           "${__regPkgCB}"  CACHE INTERNAL "")
 
-array(CREATE __regLibs         "CALLBACKS"         RECORDS)
-set(__regLibs                  "${__regLibs}"     CACHE INTERNAL "")
+array(CREATE __regLibs   "CALLBACKS"       RECORDS)
+set(__regLibs            "${__regLibs}"    CACHE INTERNAL "")
 
-record(CREATE __regPlug         "PLUGINS"           RECORDS)
-set(__regPlug                  "${__regPlug}"       CACHE INTERNAL "")
+record(CREATE __regPlug  "PLUGINS")
+set(__regPlug            "${__regPlug}"    CACHE INTERNAL "")
 
-set(__alreadyLocated           ""                   CACHE INTERNAL "")
+set(__alreadyLocated     ""                CACHE INTERNAL "")
 
 function(registerPackageCallback fn)
     record(CONVERT __regPkgCB)
