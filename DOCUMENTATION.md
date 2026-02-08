@@ -6,10 +6,10 @@ This enhanced array system provides three powerful data structure primitives for
 
 1. **record** - Named field-based structures (like C structs or Python namedtuples)
 2. **array** - Named ordered collections of records or arrays
-3. **collection** - Named key-value maps (like Python dicts or JSON objects)
+3. **dict** - Named key-value maps (like Python dicts or JSON objects)
 
 All structures support:
-- **Named objects**: Every record, array, and collection has a mandatory name
+- **Named objects**: Every record, array, and dict has a mandatory name
 - **Path-based access**: Navigate nested structures with "path/to/item" syntax
 - **Type safety**: Records, arrays of records, and arrays of arrays are distinct types
 - **CMake compatibility**: Everything is still a string variable that can be copied and passed
@@ -27,12 +27,12 @@ record(SET my_record 2 "30")
 array(CREATE people "AllPeople" RECORDS)
 array(APPEND people RECORD ${my_record})
 
-# Create a collection
-collection(CREATE my_data)
-collection(SET my_data "people" ${people})
+# Create a dict
+dict(CREATE my_data)
+dict(SET my_data "people" ${people})
 
 # Path-based access
-collection(GET my_data EQUAL "people/PersonData" person)
+dict(GET my_data EQUAL "people/PersonData" person)
 record(GET person 0 first_name)  # Returns "John"
 ```
 
@@ -253,76 +253,76 @@ array(DUMP <arrayVar> [<outVarName>] [VERBOSE])
 ```
 Displays array contents.
 
-### collection() Operations
+### dict() Operations
 
 #### CREATE
 ```cmake
-collection(CREATE <collectionVar>)
+dict(CREATE <collectionVar>)
 ```
-Creates a new empty collection.
+Creates a new empty dict.
 
 #### SET
 ```cmake
-collection(SET <collectionVar> <key> <value>)
+dict(SET <collectionVar> <key> <value>)
 ```
-Sets a key-value pair. Value can be record, array, or another collection.
+Sets a key-value pair. Value can be record, array, or another dict.
 
 Example:
 ```cmake
-collection(SET deps "database" ${db_array})
-collection(SET deps "version" ${version_record})
-collection(SET deps "metadata" ${metadata_collection})
+dict(SET deps "database" ${db_array})
+dict(SET deps "version" ${version_record})
+dict(SET deps "metadata" ${metadata_collection})
 ```
 
 #### GET by Key
 ```cmake
-collection(GET <collectionVar> <key> <outVar>)
+dict(GET <collectionVar> <key> <outVar>)
 ```
 Retrieves value for a key.
 
 #### GET by Path
 ```cmake
-collection(GET <collectionVar> EQUAL <path> <outVar>)
+dict(GET <collectionVar> EQUAL <path> <outVar>)
 ```
 Retrieves nested value by path.
 
 Example:
 ```cmake
-collection(GET project EQUAL "deps/database/SOCI" soci_pkg)
+dict(GET project EQUAL "deps/database/SOCI" soci_pkg)
 ```
 
 #### REMOVE
 ```cmake
-collection(REMOVE <collectionVar> <key>)
+dict(REMOVE <collectionVar> <key>)
 ```
 Removes a key-value pair.
 
 #### KEYS
 ```cmake
-collection(KEYS <collectionVar> <outVar>)
+dict(KEYS <collectionVar> <outVar>)
 ```
 Returns a CMake list of all keys.
 
 Example:
 ```cmake
-collection(KEYS deps all_keys)
+dict(KEYS deps all_keys)
 foreach(key IN LISTS all_keys)
-    collection(GET deps ${key} value)
+    dict(GET deps ${key} value)
     message("${key}: ${value}")
 endforeach()
 ```
 
 #### LENGTH
 ```cmake
-collection(LENGTH <collectionVar> <outVar>)
+dict(LENGTH <collectionVar> <outVar>)
 ```
 Returns number of key-value pairs.
 
 #### DUMP
 ```cmake
-collection(DUMP <collectionVar> [<outVarName>])
+dict(DUMP <collectionVar> [<outVarName>])
 ```
-Displays collection contents.
+Displays dict contents.
 
 ## Use Cases
 
@@ -349,13 +349,13 @@ array(APPEND db_pkgs RECORD ${soci})
 array(CREATE storage_pkgs "STORAGE" RECORDS)
 array(APPEND storage_pkgs RECORD ${yaml})
 
-# Create master collection
-collection(CREATE all_features)
-collection(SET all_features "DATABASE" ${db_pkgs})
-collection(SET all_features "STORAGE" ${storage_pkgs})
+# Create master dict
+dict(CREATE all_features)
+dict(SET all_features "DATABASE" ${db_pkgs})
+dict(SET all_features "STORAGE" ${storage_pkgs})
 
 # Quick access
-collection(GET all_features EQUAL "DATABASE/SOCI" my_pkg)
+dict(GET all_features EQUAL "DATABASE/SOCI" my_pkg)
 record(GET my_pkg 0 url)
 record(GET my_pkg 1 version)
 
@@ -384,14 +384,14 @@ array(CREATE db_configs "DatabaseConfigs" RECORDS)
 array(APPEND db_configs RECORD ${prod_db})
 array(APPEND db_configs RECORD ${dev_db})
 
-collection(CREATE env_config)
-collection(SET env_config "databases" ${db_configs})
+dict(CREATE env_config)
+dict(SET env_config "databases" ${db_configs})
 
 # Select config based on environment
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    collection(GET env_config EQUAL "databases/Production" active_db)
+    dict(GET env_config EQUAL "databases/Production" active_db)
 else()
-    collection(GET env_config EQUAL "databases/Development" active_db)
+    dict(GET env_config EQUAL "databases/Development" active_db)
 endif()
 
 record(GET active_db 0 db_host)
@@ -439,7 +439,7 @@ endif()
 - Use **collections** for heterogeneous groups accessed by name
 
 ### 3. Path-Based Access
-- Prefer path-based access for deep hierarchies: `collection(GET ... EQUAL "a/b/c")`
+- Prefer path-based access for deep hierarchies: `dict(GET ... EQUAL "a/b/c")`
 - Cache frequently accessed paths in variables
 - Use FIND to locate items when you don't know the exact index
 
@@ -528,4 +528,4 @@ See `test_enhanced.cmake` for a complete working example that demonstrates:
 - Building arrays of different types
 - Organizing data with collections
 - Path-based navigation
-- Deep nesting (collection -> collection -> array -> record)
+- Deep nesting (dict -> dict -> array -> record)

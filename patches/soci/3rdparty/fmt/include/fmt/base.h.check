@@ -2575,7 +2575,7 @@ template <typename Context> class basic_format_arg {
 };
 
 /**
- * A view of a collection of formatting arguments. To avoid lifetime issues it
+ * A view of a dict of formatting arguments. To avoid lifetime issues it
  * should only be used as a parameter type in type-erased functions such as
  * `vformat`:
  *

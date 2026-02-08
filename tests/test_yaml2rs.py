@@ -89,7 +89,7 @@ class TestYaml2Rs(unittest.TestCase):
         finally:
             path.unlink(missing_ok=True)
 
-    # Test two-pass processing and table collection
+    # Test two-pass processing and table dict
     def test_collect_all_tables_basic(self):
         """Test that collect_all_tables properly gathers table definitions."""
         yaml_content1 = """

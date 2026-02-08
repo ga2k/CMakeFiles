@@ -11,18 +11,18 @@ include_guard(GLOBAL)
 #                  Format: {RS}NAME{RS}elem1{RS}elem2... OR {GS}NAME{GS}elem1{GS}elem2...
 #                  First element after marker is always the name.
 #
-#   - collection : Named key-value map where values can be records, arrays, or other collections.
+#   - dict : Named key-value map where values can be records, arrays, or other collections.
 #                  Format: {US}key1{US}value1{US}key2{US}value2...
 #                  Uses US (Unit Separator, ASCII 0x1F) as delimiter.
 #
 # Path-based access:
 #   - array(GET myArray EQUAL "DATABASE/SOCI" outVar)
-#   - collection(GET myCol "PACKAGES/DATABASE/SOCI" outVar)
+#   - dict(GET myCol "PACKAGES/DATABASE/SOCI" outVar)
 #
 # Design constraints / invariants:
 #   - "Empty field" is stored as the sentinel "-" (literal hyphen).
 #   - "Empty record" (zero fields) is forbidden (but can have all "-" fields).
-#   - Names are mandatory for all records, arrays, and collection keys.
+#   - Names are mandatory for all records, arrays, and dict keys.
 #   - Control characters (FS/GS/RS/US) must not appear inside user payload values.
 #   - Names within same container must be unique, but no global uniqueness required.
 #
@@ -32,7 +32,7 @@ set(list_sep ";")
 string(ASCII 28 FS) # File Separator  (record field delimiter)
 string(ASCII 29 GS) # Group Separator (array-of-arrays delimiter)
 string(ASCII 30 RS) # Record Separator (array-of-records delimiter)
-string(ASCII 31 US) # Unit Separator (collection key-value delimiter)
+string(ASCII 31 US) # Unit Separator (dict key-value delimiter)
 
 set(RECORD_EMPTY_FIELD_SENTINEL "-")
 
@@ -295,7 +295,7 @@ function(_hs__resolve_path _containerValue _path _resultOut)
         return()
         
     elseif(_containerType STREQUAL "COLLECTION")
-        # Search collection by key
+        # Search dict by key
         string(SUBSTRING "${_containerValue}" 1 -1 _payload)
         string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
         
@@ -1364,25 +1364,25 @@ function(array)
 endfunction()
 
 # ======================================================================================================================
-# collection() - Key-value map operations
+# dict() - Key-value map operations
 #
 # Signature:
-#   collection(CREATE <collectionVarName>)
-#   collection(NAME <collectionVarName> <outVarName>)
-#   collection(RELABEL <collectionVarName> <newName>)
-#   collection(SET <collectionVarName> <key> <value>)
-#   collection(GET <collectionVarName> <key> <outVarName>)
-#   collection(GET <collectionVarName> EQUAL <path> <outVarName>)
-#   collection(REMOVE <collectionVarName> <key>)
-#   collection(KEYS <collectionVarName> <outVarName>)
-#   collection(LENGTH <collectionVarName> <outVarName>)
-#   collection(DUMP <collectionVarName> [<outVarName>])
+#   dict(CREATE <collectionVarName>)
+#   dict(NAME <collectionVarName> <outVarName>)
+#   dict(RELABEL <collectionVarName> <newName>)
+#   dict(SET <collectionVarName> <key> <value>)
+#   dict(GET <collectionVarName> <key> <outVarName>)
+#   dict(GET <collectionVarName> EQUAL <path> <outVarName>)
+#   dict(REMOVE <collectionVarName> <key>)
+#   dict(KEYS <collectionVarName> <outVarName>)
+#   dict(LENGTH <collectionVarName> <outVarName>)
+#   dict(DUMP <collectionVarName> [<outVarName>])
 #
 # ======================================================================================================================
 
-function(collection)
+function(dict)
     if(${ARGC} LESS 2)
-        msg(ALWAYS FATAL_ERROR "collection: expected collection(<VERB> <collectionVarName> ...)")
+        msg(ALWAYS FATAL_ERROR "dict: expected dict(<VERB> <collectionVarName> ...)")
     endif()
 
     set(_V "${ARGV0}")
@@ -1394,10 +1394,10 @@ function(collection)
     # -------------------- CREATE --------------------
     if(_V STREQUAL "CREATE")
         if(NOT ${ARGC} EQUAL 2)
-            msg(ALWAYS FATAL_ERROR "collection(CREATE): expected collection(CREATE <collectionVarName>)")
+            msg(ALWAYS FATAL_ERROR "dict(CREATE): expected dict(CREATE <collectionVarName>)")
         endif()
 
-        # Empty collection is just the US marker
+        # Empty dict is just the US marker
         set(${collectionVarName} "${US}" PARENT_SCOPE)
         return()
     endif()
@@ -1405,7 +1405,7 @@ function(collection)
     # -------------------- NAME --------------------
     if(_V STREQUAL "NAME")
         if(NOT ${ARGC} EQUAL 3)
-            msg(ALWAYS FATAL_ERROR "collection(NAME): expected collection(NAME <collectionVarName> <outVarName>)")
+            msg(ALWAYS FATAL_ERROR "dict(NAME): expected dict(NAME <collectionVarName> <outVarName>)")
         endif()
 
         set(${ARGV2} "" PARENT_SCOPE)
@@ -1418,11 +1418,11 @@ function(collection)
     # -------------------- RELABEL --------------------
     if(_V STREQUAL "RELABEL")
         if(NOT ${ARGC} EQUAL 3)
-            msg(ALWAYS FATAL_ERROR "collection(RELABEL): expected collection(RELABEL <recVar> <newName>)")
+            msg(ALWAYS FATAL_ERROR "dict(RELABEL): expected dict(RELABEL <recVar> <newName>)")
         endif()
 
         set(_name "${_ARGV2}")
-        _hs__assert_no_ctrl_chars("collection(${_V})" "${_name}")
+        _hs__assert_no_ctrl_chars("dict(${_V})" "${_name}")
         _hs__set_object_name("${_A}" "${_name}")
         return()
     endif ()
@@ -1430,18 +1430,18 @@ function(collection)
     # -------------------- SET --------------------
     if(_V STREQUAL "SET")
         if(NOT ${ARGC} EQUAL 4)
-            msg(ALWAYS FATAL_ERROR "collection(SET): expected collection(SET <collectionVarName> <key> <value>)")
+            msg(ALWAYS FATAL_ERROR "dict(SET): expected dict(SET <collectionVarName> <key> <value>)")
         endif()
 
         set(_key "${ARGV2}")
         set(_value "${ARGV3}")
 
-        _hs__assert_no_ctrl_chars("collection(SET) key" "${_key}")
+        _hs__assert_no_ctrl_chars("dict(SET) key" "${_key}")
 
-        # Parse existing collection
+        # Parse existing dict
         string(SUBSTRING "${_C}" 1 -1 _payload)
         if("${_payload}" STREQUAL "")
-            # Empty collection
+            # Empty dict
             set(_kvList "")
         else()
             string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
@@ -1473,7 +1473,7 @@ function(collection)
             list(APPEND _kvList "${_key}" "${_value}")
         endif()
 
-        # Rebuild collection
+        # Rebuild dict
         if("${_kvList}" STREQUAL "")
             set(${collectionVarName} "${US}" PARENT_SCOPE)
         else()
@@ -1494,7 +1494,7 @@ function(collection)
         endif()
 
         if(NOT ${ARGC} EQUAL 4)
-            msg(ALWAYS FATAL_ERROR "collection(GET): expected collection(GET <collectionVarName> <key> <outVarName>) or collection(GET <collectionVarName> EQUAL <path> <outVarName>)")
+            msg(ALWAYS FATAL_ERROR "dict(GET): expected dict(GET <collectionVarName> <key> <outVarName>) or dict(GET <collectionVarName> EQUAL <path> <outVarName>)")
         endif()
 
         set(_key "${ARGV2}")
@@ -1532,7 +1532,7 @@ function(collection)
     # -------------------- REMOVE --------------------
     if(_V STREQUAL "REMOVE")
         if(NOT ${ARGC} EQUAL 3)
-            msg(ALWAYS FATAL_ERROR "collection(REMOVE): expected collection(REMOVE <collectionVarName> <key>)")
+            msg(ALWAYS FATAL_ERROR "dict(REMOVE): expected dict(REMOVE <collectionVarName> <key>)")
         endif()
 
         set(_key "${ARGV2}")
@@ -1572,7 +1572,7 @@ function(collection)
     # -------------------- KEYS --------------------
     if(_V STREQUAL "KEYS")
         if(NOT ${ARGC} EQUAL 3)
-            msg(ALWAYS FATAL_ERROR "collection(KEYS): expected collection(KEYS <collectionVarName> <outVarName>)")
+            msg(ALWAYS FATAL_ERROR "dict(KEYS): expected dict(KEYS <collectionVarName> <outVarName>)")
         endif()
 
         string(SUBSTRING "${_C}" 1 -1 _payload)
@@ -1600,7 +1600,7 @@ function(collection)
     # -------------------- LENGTH --------------------
     if(_V STREQUAL "LENGTH")
         if(NOT ${ARGC} EQUAL 3)
-            msg(ALWAYS FATAL_ERROR "collection(LENGTH): expected collection(LENGTH <collectionVarName> <outVarName>)")
+            msg(ALWAYS FATAL_ERROR "dict(LENGTH): expected dict(LENGTH <collectionVarName> <outVarName>)")
         endif()
 
         set(${ARGV2} "0" PARENT_SCOPE)
@@ -1622,7 +1622,7 @@ function(collection)
     # -------------------- DUMP --------------------
     if(_V STREQUAL "DUMP")
         if(ARGC LESS 2 OR ARGC GREATER 4)
-            msg(ALWAYS FATAL_ERROR "collection(DUMP): expected collection(DUMP <collectionVarName> [<outVarName>] [VERBOSE])")
+            msg(ALWAYS FATAL_ERROR "dict(DUMP): expected dict(DUMP <collectionVarName> [<outVarName>] [VERBOSE])")
         endif()
 
         set(_verbose OFF)
@@ -1645,13 +1645,13 @@ function(collection)
         string(SUBSTRING "${_C}" 1 -1 _payload)
 
         if("${_payload}" STREQUAL "")
-            set(_dumpStr "collection '${collectionVarName}' = {} (empty)\n")
+            set(_dumpStr "dict '${collectionVarName}' = {} (empty)\n")
         else()
             string(REPLACE "${US}" "${list_sep}" _kvList "${_payload}")
             list(LENGTH _kvList _kvLen)
             math(EXPR _numPairs "${_kvLen} / 2")
 
-            set(_dumpStr "collection '${collectionVarName}' (pairs=${_numPairs}) = {\n")
+            set(_dumpStr "dict '${collectionVarName}' (pairs=${_numPairs}) = {\n")
 
             set(_i 0)
             while(_i LESS _kvLen)
@@ -1680,7 +1680,7 @@ function(collection)
                         elseif(_valueType STREQUAL "COLLECTION")
                             set(_temp_col_var "_hs_temp_col_${_i}")
                             set(${_temp_col_var} "${_value}")
-                            collection(DUMP ${_temp_col_var} _value_dump VERBOSE)
+                            dict(DUMP ${_temp_col_var} _value_dump VERBOSE)
                             unset(${_temp_col_var})
                             string(REPLACE "\n" "\n    " _value_dump_indented "${_value_dump}")
                             string(APPEND _dumpStr "  \"${_key}\" => (${_valueType})\n    ${_value_dump_indented}\n")
@@ -1713,5 +1713,5 @@ function(collection)
         return()
     endif()
 
-    msg(ALWAYS FATAL_ERROR "collection: unknown verb '${_V}'")
+    msg(ALWAYS FATAL_ERROR "dict: unknown verb '${_V}'")
 endfunction()

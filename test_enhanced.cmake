@@ -148,61 +148,61 @@ message("SOCI found at index: ${soci_idx}")
 
 message("\n=== COLLECTION Examples ===")
 
-# Create a collection
-collection(CREATE feature_packages)
+# Create a dict
+dict(CREATE feature_packages)
 
-# Add arrays to collection
-collection(SET feature_packages "DATABASE" ${database_packages})
-collection(SET feature_packages "STORAGE" ${storage_packages})
+# Add arrays to dict
+dict(SET feature_packages "DATABASE" ${database_packages})
+dict(SET feature_packages "STORAGE" ${storage_packages})
 
-# Get from collection
-collection(GET feature_packages "DATABASE" db_array)
+# Get from dict
+dict(GET feature_packages "DATABASE" db_array)
 array(GET db_array NAME db_name)
-message("Retrieved from collection: ${db_name}")
+message("Retrieved from dict: ${db_name}")
 
-# Get collection keys
-collection(KEYS feature_packages all_keys)
+# Get dict keys
+dict(KEYS feature_packages all_keys)
 message("Collection keys: ${all_keys}")
 
-# Get collection length
-collection(LENGTH feature_packages num_features)
+# Get dict length
+dict(LENGTH feature_packages num_features)
 message("Number of feature categories: ${num_features}")
 
-# Dump collection
-collection(DUMP feature_packages)
+# Dump dict
+dict(DUMP feature_packages)
 
-# Path-based access through collection
-message("\n--- Path-based GET through collection ---")
-collection(GET feature_packages EQUAL "STORAGE/YAML" yaml_from_collection)
+# Path-based access through dict
+message("\n--- Path-based GET through dict ---")
+dict(GET feature_packages EQUAL "STORAGE/YAML" yaml_from_collection)
 if(NOT "${yaml_from_collection}" STREQUAL "")
     record(GET yaml_from_collection NAME yaml_name)
     record(GET yaml_from_collection 1 yaml_version)
-    message("Found via collection path: ${yaml_name} version ${yaml_version}")
+    message("Found via dict path: ${yaml_name} version ${yaml_version}")
 endif()
 
 message("\n=== NESTED COLLECTION Example ===")
 
 # Create a deeply nested structure
-collection(CREATE project_deps)
+dict(CREATE project_deps)
 
 # Create sub-collections for different dependency types
-collection(CREATE required_deps)
-collection(SET required_deps "DATABASE" ${database_packages})
-collection(SET required_deps "STORAGE" ${storage_packages})
+dict(CREATE required_deps)
+dict(SET required_deps "DATABASE" ${database_packages})
+dict(SET required_deps "STORAGE" ${storage_packages})
 
-collection(CREATE optional_deps)
+dict(CREATE optional_deps)
 array(CREATE networking_packages "NETWORKING" RECORDS)
 record(CREATE curl_pkg "CURL" 3)
 record(SET curl_pkg 0 "https://github.com/curl/curl" "curl-8_5_0" "HTTP client")
 array(APPEND networking_packages RECORD ${curl_pkg})
-collection(SET optional_deps "NETWORKING" ${networking_packages})
+dict(SET optional_deps "NETWORKING" ${networking_packages})
 
-# Add sub-collections to main collection
-collection(SET project_deps "REQUIRED" ${required_deps})
-collection(SET project_deps "OPTIONAL" ${optional_deps})
+# Add sub-collections to main dict
+dict(SET project_deps "REQUIRED" ${required_deps})
+dict(SET project_deps "OPTIONAL" ${optional_deps})
 
 # Deep path access
-collection(GET project_deps EQUAL "REQUIRED/DATABASE/SOCI" soci_deep)
+dict(GET project_deps EQUAL "REQUIRED/DATABASE/SOCI" soci_deep)
 if(NOT "${soci_deep}" STREQUAL "")
     record(GET soci_deep NAME soci_deep_name)
     record(GET soci_deep 2 soci_description)

@@ -277,7 +277,7 @@ function(addPackageData)
                             unset(JUSTIFY)
                         endif ()
 
-                        # set(cat_template "[VERB:R,8] [OBJECT:L,10] [PREPOSITION:R,4] [ITEM:L,10] in the [COLLECTION:R,17] collection")
+                        # set(cat_template "[VERB:R,8] [OBJECT:L,10] [PREPOSITION:R,4] [ITEM:L,10] in the [COLLECTION:R,17] dict")
 
                         if(current_tag STREQUAL "VERB")
                             longest(${JUSTIFY} CURRENT ${__longest_verb} PAD_CHAR " " TEXT "${cat_verb}" PADDED VERB LONGEST __longest_verb)
@@ -366,7 +366,7 @@ function(addPackageData)
         if(DEFINED CAT_TEMPLATE AND NOT CAT_TEMPLATE STREQUAL "")
             set(cat_template "${CAT_TEMPLATE}")
         else ()
-            set(cat_template "[VERB:R,8] [OBJECT:L,10] [PREPOSITION:R,4] [FEATURE:L,10] in the [COLLECTION:R,17] collection")
+            set(cat_template "[VERB:R,8] [OBJECT:L,10] [PREPOSITION:R,4] [FEATURE:L,10] in the [COLLECTION:R,17] dict")
         endif ()
         if(CAT_QUIET)
             set(cat_quiet ON)
@@ -403,7 +403,7 @@ function(addPackageData)
         set(cat_prep)
         set(cat_item)
 
-        collection(GET ${cat_target} "${cat_feature}" object)
+        dict(GET ${cat_target} "${cat_feature}" object)
 
         if (NOT object)
             if(cat_record)
@@ -418,7 +418,7 @@ function(addPackageData)
                 set(cat_object "${cat_feature}")
             endif ()
             _(ON)
-            collection(SET ${cat_target} "${cat_feature}" object)
+            dict(SET ${cat_target} "${cat_feature}" object)
         endif ()
         if (cat_record)
             if(cat_extend)
@@ -507,7 +507,7 @@ function(addPackageData)
             endif ()
         endif ()
 
-        collection(SET ${cat_target} "${cat_feature}" "${object}")
+        dict(SET ${cat_target} "${cat_feature}" "${object}")
 
         if(NOT APD_DRY_RUN)
             set(${cat_target} "${${cat_target}}" PARENT_SCOPE)
@@ -517,10 +517,10 @@ function(addPackageData)
 
     endfunction()
 
-    set(template "[VERB:R] [OBJECT:L] [PREPOSITION:R] [ITEM:L] in the [COLLECTION:R] collection")
+    set(template "[VERB:R] [OBJECT:L] [PREPOSITION:R] [ITEM:L] in the [COLLECTION:R] dict")
     set(APD_FEATPKG "${APD_FEATURE}/${APD_PKGNAME}")
 
-    # Add new feature/pkg to the global GLOBAL collection
+    # Add new feature/pkg to the global GLOBAL dict
     createOrAppendTo (        "GLOBAL" FEATURE "${APD_FEATURE}" RECORD "${output}"          EXTEND        TEMPLATE "${template}")
     createOrAppendTO (        "GLOBAL" FEATURE "PACKAGES"       FIELD  ${APD_FEATPKG} QUITE EXTEND UNIQUE TEMPLATE "${template}")
     createOrAppendTO (        "GLOBAL" FEATURE "NAMES"          FIELD  ${APD_FEATURE} QUITE EXTEND UNIQUE TEMPLATE "${template}")
@@ -601,7 +601,7 @@ function(getFeaturePackage arrayName feature index receivingVarName)
     unset(${receivingVarName} PARENT_SCOPE)
 
     if(type STREQUAL "COLLECTION")
-        collection(GET ${arrayName} "${feature}" arr)
+        dict(GET ${arrayName} "${feature}" arr)
         if(NOT arr)
             return()
         endif ()
@@ -625,7 +625,7 @@ function(getFeaturePackageByName arrayName feature name receivingVarName indexVa
     # Returns: RECORD | ARRAY_RECORDS | ARRAY_ARRAYS | COLLECTION | UNSET | UNKNOWN
 
     if(type STREQUAL "COLLECTION")
-        collection(GET ${arrayName} EQUAL "${feature}/${name}" pkg)
+        dict(GET ${arrayName} EQUAL "${feature}/${name}" pkg)
         if(NOT pkg)
             return()
         endif ()
@@ -642,7 +642,7 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-## parsePackage can be called with a    * A  collection of FEATURE arrays,
+## parsePackage can be called with a    * A  dict of FEATURE arrays,
 ##                                      * An array of packages (a FEATURE)
 ##                                      * A  package record
 ##
@@ -750,10 +750,10 @@ function(parsePackage)
 
     if(A_SET)
         if(A_PP_PACKAGE)
-            collection(GET ${inputListName} EQUAL "${A_PP_FEATURE}/${A_PP_PACKAGE}" local)
+            dict(GET ${inputListName} EQUAL "${A_PP_FEATURE}/${A_PP_PACKAGE}" local)
             set(localIndex "UNKNOWN")
         else ()
-            collection(GET ${inputListName} "${A_PP_FEATURE}" temp)
+            dict(GET ${inputListName} "${A_PP_FEATURE}" temp)
             if(temp)
                 array(GET temp ${A_PP_PKG_INDEX} local)
                 set(localIndex "UNKNOWN")
@@ -1128,7 +1128,7 @@ function(scanLibraryTargets libName packageNames packageData)
                     inc(s_at)
                     record(GET packageNames ${s_ix} featureSlashPackage)
                     if(wotPD STREQUAL "COLLECTION")
-                        collection(GET packageData EQUAL ${featureSlashPackage} feature_line)
+                        dict(GET packageData EQUAL ${featureSlashPackage} feature_line)
                     else ()
                         array(GET packageData ${s_ix} feature_line)
                     endif ()
@@ -1518,7 +1518,7 @@ function(processFeatures featureList returnVarName)
         endif ()
 
         #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
-        collection(GET GLOBAL "${_feature}" buffer)
+        dict(GET GLOBAL "${_feature}" buffer)
         if (buffer)
             getFeaturePackage(buffer "${_feature}" 0 _defaultPkg)
             if (_defaultPkg)
