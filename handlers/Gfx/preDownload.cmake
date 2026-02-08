@@ -19,7 +19,7 @@ function(gfx_preDownload pkgname url tag srcDir)
                 endif()
                 string(TOUPPER ${pkgName} pkgNameUC)
                 # Mark the feature as already satisfied for fetchContents
-                set(${pkgNameUC}_FOUND ON CACHE INTERNAL "")
+                set(${pkgNameUC}_FOUND ON CACHE  INTERNAL "" FORCE)
             endif ()
         endif ()
     endforeach ()
