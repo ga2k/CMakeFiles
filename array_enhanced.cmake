@@ -397,7 +397,7 @@ function(record)
                     msg(ALWAYS FATAL_ERROR "record(CREATE): <numFields> must be a non-negative integer, got '${_n}'")
                 endif ()
             endif ()
-            inc(X)
+            math(EXPR X "${X} + 1")
         endwhile ()
 
         if(NOT DEFINED _n)
