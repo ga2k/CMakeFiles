@@ -127,13 +127,14 @@ function(_hs_obj__dump_record_pretty _recBlob _indent _outStr)
 
     # ---------- SCHEMA ----------
     if ("${_modeVal}" STREQUAL "SCHEMA")
-        _hs_obj__rec_get_kv("${_recBlob}" "${_HS_REC_META_FIELDS}" _hf _fields)
-        if (NOT _hf OR "${_fields}" STREQUAL "")
+        _hs_obj__rec_get_kv("${_recBlob}" "${_HS_REC_META_FIELDS}" _hf _fieldsStore)
+        if (NOT _hf OR "${_fieldsStore}" STREQUAL "")
             set(${_outStr} "${_indent}<schema record missing FIELDS>\n" PARENT_SCOPE)
             return()
         endif ()
 
-        # _fields is a normal CMake list string (;) in our meta
+        # Decode stored field list (token-separated string) into a CMake list
+        string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
         set(_fieldList "${_fields}")
 
         # compute max field-name length for right alignment
@@ -627,6 +628,12 @@ set(_HS_REC_META_FIELDS "${_HS_REC_META_PREFIX}FIELDS")  # ";" list of field lab
 set(_HS_REC_META_FIXED "${_HS_REC_META_PREFIX}FIXED")   # "0" | "1"
 set(_HS_REC_META_SIZE "${_HS_REC_META_PREFIX}SIZE")    # integer length (for POSITIONAL records)
 
+# IMPORTANT:
+# We must NOT store a literal CMake list (semicolon-separated) inside a record value.
+# Doing so corrupts the record's kv decoding (because record->list conversion uses ';').
+# So we store field lists using a dedicated separator token, then decode only when iterating.
+set(_HS_REC_FIELDS_SEP "»«")
+
 function(_hs_obj__rec_to_list recValue outListVar)
     _hs__record_to_list("${recValue}" _lst)
     set(${outListVar} "${_lst}" PARENT_SCOPE)
@@ -813,8 +820,14 @@ function(_hs_obj__rec_create_blob outBlob label mode fields fixed size)
     record(CREATE _tmpRec "${label}" 0)
     set(_rec "${_tmpRec}")
 
+    # Encode fields list into a single scalar string (no ';')
+    set(_fieldsStore "")
+    if (NOT "${fields}" STREQUAL "")
+        string(JOIN "${_HS_REC_FIELDS_SEP}" _fieldsStore ${fields})
+    endif ()
+
     _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_MODE}" "${mode}" _rec)
-    _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_FIELDS}" "${fields}" _rec)
+    _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_FIELDS}" "${_fieldsStore}" _rec)
     _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_FIXED}" "${fixed}" _rec)
     _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_SIZE}" "${size}" _rec)
 
@@ -863,7 +876,13 @@ function(_hs_obj__rec_ensure_index_capacity recValue targetIndex outRecValue)
             list(APPEND _fields "${_i}")
         endforeach ()
     endif ()
-    _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_FIELDS}" "${_fields}" _rec)
+
+    # Store as a single scalar string, not a CMake list
+    set(_fieldsStore "")
+    if (NOT "${_fields}" STREQUAL "")
+        string(JOIN "${_HS_REC_FIELDS_SEP}" _fieldsStore ${_fields})
+    endif ()
+    _hs_obj__rec_set_kv("${_rec}" "${_HS_REC_META_FIELDS}" "${_fieldsStore}" _rec)
 
     set(${outRecValue} "${_rec}" PARENT_SCOPE)
 endfunction()
@@ -1826,10 +1845,13 @@ function(object)
                         math(EXPR _i "${_i} + 1")
                     endwhile ()
                 else () # SCHEMA
-                    _hs_obj__rec_get_kv("${_recVal}" "${_HS_REC_META_FIELDS}" _hf _fields)
-                    if (NOT _hf OR "${_fields}" STREQUAL "")
-                        set(_fields "")
+                    _hs_obj__rec_get_kv("${_recVal}" "${_HS_REC_META_FIELDS}" _hf _fieldsStore)
+                    if (NOT _hf OR "${_fieldsStore}" STREQUAL "")
+                        set(_fieldsStore "")
                     endif ()
+
+                    # Decode stored field list (token-separated string) into a CMake list
+                    string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
 
                     foreach (_fn IN LISTS _fields)
                         _hs_obj__rec_get_kv("${_recVal}" "${_fn}" _found _val)
@@ -1890,9 +1912,12 @@ function(object)
                         math(EXPR _i "${_i} + 1")
                     endwhile ()
                 else () # SCHEMA
-                    _hs_obj__rec_get_kv("${_recVal}" "${_HS_REC_META_FIELDS}" _hf _fields)
+                    _hs_obj__rec_get_kv("${_recVal}" "${_HS_REC_META_FIELDS}" _hf _fieldsStore)
                     if (NOT _hf OR "${_fields}" STREQUAL "")
                         set(_fields "")
+                    else ()
+                        # Decode stored field list (token-separated string) into a CMake list
+                        string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
                     endif ()
 
                     foreach (_fn IN LISTS _fields)
@@ -2583,12 +2608,14 @@ function(object)
 
             # SCHEMA: right-align field names so "=>" aligns
             if ("${_modeVal}" STREQUAL "SCHEMA")
-                _hs_obj__rec_get_kv("${_recBlob}" "${_HS_REC_META_FIELDS}" _hf _fields)
-                if (NOT _hf OR "${_fields}" STREQUAL "")
+                _hs_obj__rec_get_kv("${_recBlob}" "${_HS_REC_META_FIELDS}" _hf _fieldsStore)
+                if (NOT _hf OR "${_fieldsStore}" STREQUAL "")
                     set(${_outStr} "${_indent}<schema record missing FIELDS>\n" PARENT_SCOPE)
                     return()
                 endif ()
 
+                # Decode stored field list (token-separated string) into a CMake list
+                string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
                 set(_fieldList "${_fields}")
 
                 set(_max 0)
