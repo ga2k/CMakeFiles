@@ -471,7 +471,7 @@ function(addPackageData)
             _("${cat_verb}" "${cat_object}" "${cat_subject_preposition}" "${cat_subject}" "${cat_target_preposition}" "${cat_target}" "${cat_template}" ON)
         else ()
             object(NAME locPkgName FROM "${cat_data}")
-            object(GET h FROM ${cat_target} NAME EQUAL "${cat_feature}")
+            object(GET h FROM ${cat_target_handle} NAME EQUAL "${cat_feature}")
 
             set(weCreatedH OFF)
 
