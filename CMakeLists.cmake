@@ -1,7 +1,7 @@
 include_guard(GLOBAL)
 
 ## HoffSoft build framework delegator (split into global + per-project)
-include (cmake/array_enhanced.cmake)
+include (cmake/array.cmake)
 include (cmake/global.cmake)
 #include (cmake/test_enhanced.cmake)
 
@@ -40,15 +40,15 @@ function(registerPlugin pi)
     string(TOUPPER ${libID} LIBID)
     globalAppendUnique("HS_REG_PI_${LIBID}" "${pi}")
 endfunction()
-
-function(savePackageData)
-    set(GLOBAL   "${GLOBAL}"   PARENT_SCOPE)
-    set(SYSTEM   "${SYSTEM}"   PARENT_SCOPE)
-    set(LIBRARY  "${LIBRARY}"  PARENT_SCOPE)
-    set(OPTIONAL "${OPTIONAL}" PARENT_SCOPE)
-    set(PLUGIN   "${PLUGIN}"   PARENT_SCOPE)
-    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
-endfunction()
+#
+#function(savePackageData)
+#    set(DATA   "${DATA}"   PARENT_SCOPE)
+#    set(SYSTEM   "${SYSTEM}"   PARENT_SCOPE)
+#    set(LIBRARY  "${LIBRARY}"  PARENT_SCOPE)
+#    set(OPTIONAL "${OPTIONAL}" PARENT_SCOPE)
+#    set(PLUGIN   "${PLUGIN}"   PARENT_SCOPE)
+#    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
+#endfunction()
 
 message (NOTICE "\t\tProcessing ${APP_NAME}\n")
 

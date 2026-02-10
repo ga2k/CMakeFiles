@@ -114,8 +114,6 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED ${DRY_RUN})
 
-    savePackageData()
-
 endfunction()
 ########################################################################################################################
 ########################################################################################################################

@@ -1,7 +1,7 @@
 # Example Usage of Enhanced array.cmake with Named Objects and Collections
 # This demonstrates the new capabilities
 
-include(cmake/array_enhanced.cmake)
+include(cmake/array.cmake)
 
 # Mock msg() function for testing
 function(msg level message)
