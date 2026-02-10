@@ -41,9 +41,11 @@ endfunction()
 function(_hs_obj__assert_mutable_allowed token blob opName)
     _hs_obj__get_label_from_blob("${blob}" _lbl)
     if ("${_lbl}" STREQUAL "<unnamed>" AND NOT "${opName}" STREQUAL "RENAME")
+        _hs_obj__meta_diag("${blob}" _diag)
         msg(ALWAYS FATAL_ERROR
                 "object(${opName}): object '${token}' has label '<unnamed>'. "
-                "You MUST object(RENAME ...) it before any other mutation."
+                "You MUST object(RENAME ...) it before any other mutation.\n"
+                "  LookedAt : ${_diag}"
         )
     endif ()
 endfunction()
@@ -634,6 +636,63 @@ set(_HS_REC_META_SIZE "${_HS_REC_META_PREFIX}SIZE")    # integer length (for POS
 # So we store field lists using a dedicated separator token, then decode only when iterating.
 set(_HS_REC_FIELDS_SEP "»«")
 
+function(_hs_obj__meta_diag _blob _outStr)
+    # Produce a compact, single-string diagnostic describing what we are looking at.
+    # Safe to include in fatal errors.
+    set(${_outStr} "" PARENT_SCOPE)
+
+    _hs__get_object_type("${_blob}" _t)
+    _hs_obj__get_label_from_blob("${_blob}" _lbl)
+
+    set(_s "")
+    string(APPEND _s "kind=${_t}, label='${_lbl}'")
+
+    if (_t STREQUAL "RECORD")
+        _hs_obj__rec_get_kv("${_blob}" "${_HS_REC_META_MODE}" _hm _mode)
+        _hs_obj__rec_get_kv("${_blob}" "${_HS_REC_META_SIZE}" _hs _size)
+        _hs_obj__rec_get_kv("${_blob}" "${_HS_REC_META_FIXED}" _hf _fixed)
+        _hs_obj__rec_get_kv("${_blob}" "${_HS_REC_META_FIELDS}" _hfl _fieldsStore)
+
+        if (NOT _hm)
+            set(_mode "<missing>")
+        elseif ("${_mode}" STREQUAL "")
+            set(_mode "<empty>")
+        endif ()
+
+        if (NOT _hs)
+            set(_size "<missing>")
+        elseif ("${_size}" STREQUAL "")
+            set(_size "<empty>")
+        endif ()
+
+        if (NOT _hf)
+            set(_fixed "<missing>")
+        elseif ("${_fixed}" STREQUAL "")
+            set(_fixed "<empty>")
+        endif ()
+
+        if (NOT _hfl)
+            set(_fieldsStore "<missing>")
+        elseif ("${_fieldsStore}" STREQUAL "")
+            set(_fieldsStore "<empty>")
+        endif ()
+
+        # Decode stored fields for readability (keeps it on one line)
+        set(_fieldsDecoded "${_fieldsStore}")
+        if (NOT "${_fieldsStore}" STREQUAL "<missing>" AND NOT "${_fieldsStore}" STREQUAL "<empty>")
+            string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fieldsDecoded "${_fieldsStore}")
+        endif ()
+
+        string(APPEND _s ", meta={MODE='${_mode}', SIZE='${_size}', FIXED='${_fixed}', FIELDS_STORE='${_fieldsStore}', FIELDS='${_fieldsDecoded}'}")
+    endif ()
+
+    # Show marker sanity (helps spot accidental scalar blobs)
+    string(SUBSTRING "${_blob}" 0 1 _m0)
+    string(APPEND _s ", marker='${_m0}'")
+
+    set(${_outStr} "${_s}" PARENT_SCOPE)
+endfunction()
+
 function(_hs_obj__rec_to_list recValue outListVar)
     _hs__record_to_list("${recValue}" _lst)
     set(${outListVar} "${_lst}" PARENT_SCOPE)
@@ -851,7 +910,11 @@ function(_hs_obj__rec_ensure_index_capacity recValue targetIndex outRecValue)
     endif ()
 
     if (NOT _size MATCHES "^[0-9]+$")
-        msg(ALWAYS FATAL_ERROR "object(RECORD): corrupt SIZE meta '${_size}'")
+        _hs_obj__meta_diag("${recValue}" _diag)
+        msg(ALWAYS FATAL_ERROR
+                "object(RECORD): corrupt SIZE meta '${_size}'.\n"
+                "  LookedAt : ${_diag}"
+        )
     endif ()
 
     set(_rec "${recValue}")
@@ -1282,10 +1345,18 @@ function(object)
 
         _hs_obj__rec_get_kv("${_rec}" "${_HS_REC_META_MODE}" _hm _modeVal)
         if (NOT _hm)
-            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): RECORD missing MODE meta")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): RECORD missing MODE meta\n"
+                    "  LookedAt : ${_diag}"
+            )
         endif ()
         if (NOT "${_modeVal}" STREQUAL "POSITIONAL")
-            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): only allowed for indexed (POSITIONAL) records")
+            if (NOT _hm)
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): only allowed for indexed (POSITIONAL) records\n"
+                        "  LookedAt : ${_diag}"
+                )
+            endif ()
         endif ()
 
         _hs_obj__rec_get_kv("${_rec}" "${_HS_REC_META_SIZE}" _hs _sizeStr)
@@ -1294,12 +1365,19 @@ function(object)
         endif ()
 
         if (NOT _sizeStr MATCHES "^[0-9]+$")
-            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): corrupt SIZE meta '${_sizeStr}'")
+            if (NOT _hm)
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): corrupt SIZE meta '${_sizeStr}'\n"
+                        "  LookedAt : ${_diag}"
+                )
+            endif ()
         endif ()
 
         list(LENGTH _names _nNames)
         if (NOT _nNames EQUAL _sizeStr)
-            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): NAMES count (${_nNames}) must equal record size (${_sizeStr})")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): NAMES count (${_nNames}) must equal record size (${_sizeStr})\n"
+                    "  LookedAt : ${_diag}")
         endif ()
 
         # Rename keys
@@ -1307,13 +1385,17 @@ function(object)
         set(_out "${_rec}")
         foreach (_nm IN LISTS _names)
             if ("${_nm}" STREQUAL "" OR "${_nm}" STREQUAL "<unnamed>")
-                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): invalid field name '${_nm}'")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): invalid field name '${_nm}'\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             _hs_obj__rec_get_kv("${_out}" "${_i}" _found _val)
             if (NOT _found)
                 # Should not happen if size is consistent, but keep strict
-                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): missing positional key '${_i}'")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(FIELD_NAMES): missing positional key '${_i}'\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             _hs_obj__rec_remove_kv("${_out}" "${_i}" _out)
@@ -1452,7 +1534,9 @@ function(object)
 
         _hs_obj__rec_get_kv("${_rec}" "${_HS_REC_META_MODE}" _hm _modeVal)
         if (NOT _hm)
-            msg(ALWAYS FATAL_ERROR "object(SET): RECORD missing MODE meta")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(SET): RECORD missing MODE meta\n"
+                    "  LookedAt : ${_diag}")
         endif ()
 
         # Named set
@@ -1462,7 +1546,9 @@ function(object)
             endif ()
 
             if (NOT "${_modeVal}" STREQUAL "SCHEMA")
-                msg(ALWAYS FATAL_ERROR "object(SET NAME): only allowed for named (SCHEMA) records")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(SET NAME): only allowed for named (SCHEMA) records\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             set(_field "${ARGV4}")
@@ -1482,7 +1568,9 @@ function(object)
         # Indexed bulk set
         if ("${ARGV2}" STREQUAL "INDEX")
             if (NOT "${_modeVal}" STREQUAL "POSITIONAL")
-                msg(ALWAYS FATAL_ERROR "object(SET INDEX): INDEX is only allowed for indexed (POSITIONAL) records")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(SET INDEX): INDEX is only allowed for indexed (POSITIONAL) records\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             set(_start "${ARGV3}")
@@ -1501,7 +1589,9 @@ function(object)
             endif ()
 
             if (NOT _sizeStr MATCHES "^[0-9]+$")
-                msg(ALWAYS FATAL_ERROR "object(SET INDEX): corrupt SIZE meta '${_sizeStr}'")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(SET INDEX): corrupt SIZE meta '${_sizeStr}'\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             # how many values to write?
@@ -1514,7 +1604,9 @@ function(object)
             math(EXPR _end "${_start} + ${_count} - 1")
 
             if ("${_fixedVal}" STREQUAL "1" AND _end GREATER_EQUAL _sizeStr)
-                msg(ALWAYS FATAL_ERROR "object(SET INDEX): fixed-length record (size=${_sizeStr}) cannot be written past index ${_sizeStr}-1")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(SET INDEX): fixed-length record (size=${_sizeStr}) cannot be written past index ${_sizeStr}-1\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             # Extend if needed (non-fixed)
@@ -1576,14 +1668,18 @@ function(object)
             _hs__get_object_type("${_rec}" _t)
 
             if (NOT _t STREQUAL "RECORD")
-                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): target is not a RECORD")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): target is not a RECORD\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             _hs_obj__assert_mutable_allowed("${_tok}" "${_rec}" "APPEND")
 
             _hs_obj__rec_get_kv("${_rec}" "${_HS_REC_META_MODE}" _hm _modeVal)
             if (NOT _hm)
-                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): RECORD missing MODE meta")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): RECORD missing MODE meta\n"
+                        "  LookedAt : ${_diag}")
             endif ()
             if (NOT "${_modeVal}" STREQUAL "POSITIONAL")
                 msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): cannot APPEND to a named (SCHEMA) record")
@@ -1602,7 +1698,9 @@ function(object)
                 set(_sizeStr "0")
             endif ()
             if (NOT _sizeStr MATCHES "^[0-9]+$")
-                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): corrupt SIZE meta '${_sizeStr}'")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND FIELD): corrupt SIZE meta '${_sizeStr}'\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             # append at index = current size
@@ -1628,7 +1726,9 @@ function(object)
 
         _hs__get_object_type("${_arrBlob}" _arrType)
         if (NOT (_arrType STREQUAL "ARRAY_RECORDS" OR _arrType STREQUAL "ARRAY_ARRAYS"))
-            msg(ALWAYS FATAL_ERROR "object(APPEND): target is not an ARRAY")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(APPEND): target is not an ARRAY\n"
+                    "  LookedAt : ${_diag}")
         endif ()
 
         _hs_obj__assert_mutable_allowed("${_arrTok}" "${_arrBlob}" "APPEND")
@@ -1643,20 +1743,28 @@ function(object)
 
         _hs_obj__get_label_from_blob("${_itemBlob}" _itemLabel)
         if ("${_itemLabel}" STREQUAL "<unnamed>")
-            msg(ALWAYS FATAL_ERROR "object(APPEND): cannot insert an '<unnamed>' object into an array; object(RENAME ...) it first")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(APPEND): cannot insert an '<unnamed>' object into an array; object(RENAME ...) it first\n"
+                    "  LookedAt : ${_diag}")
         endif ()
 
         _hs__array_get_kind("${_arrBlob}" _arrKind _arrSep)
         if (_arrKind STREQUAL "RECORDS")
             if (NOT _itemType STREQUAL "RECORD")
-                msg(ALWAYS FATAL_ERROR "object(APPEND): cannot append non-RECORD into a RECORDS array")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND): cannot append non-RECORD into a RECORDS array\n"
+                        "  LookedAt : ${_diag}")
             endif ()
         elseif (_arrKind STREQUAL "ARRAYS")
             if (NOT (_itemType STREQUAL "ARRAY_RECORDS" OR _itemType STREQUAL "ARRAY_ARRAYS"))
-                msg(ALWAYS FATAL_ERROR "object(APPEND): cannot append non-ARRAY into an ARRAYS array")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND): cannot append non-ARRAY into an ARRAYS array\n"
+                        "  LookedAt : ${_diag}")
             endif ()
         else ()
-            msg(ALWAYS FATAL_ERROR "object(APPEND): corrupt/unknown array kind '${_arrKind}'")
+            _hs_obj__meta_diag("${_rec}" _diag)
+            msg(ALWAYS FATAL_ERROR "object(APPEND): corrupt/unknown array kind '${_arrKind}'\n"
+                    "  LookedAt : ${_diag}")
         endif ()
 
         _hs__array_to_list("${_arrBlob}" "${_arrSep}" _lst)
@@ -1667,7 +1775,9 @@ function(object)
             list(GET _lst ${_i} _elem)
             _hs__get_object_name("${_elem}" _elemName)
             if ("${_elemName}" STREQUAL "${_itemLabel}")
-                msg(ALWAYS FATAL_ERROR "object(APPEND): duplicate element name '${_itemLabel}' in array")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(APPEND): duplicate element name '${_itemLabel}' in array\n"
+                        "  LookedAt : ${_diag}")
             endif ()
             math(EXPR _i "${_i} + 1")
         endwhile ()
@@ -1769,7 +1879,9 @@ function(object)
 
             _hs_obj__rec_get_kv("${_recVal}" "${_HS_REC_META_MODE}" _hm _modeVal)
             if (NOT _hm)
-                msg(ALWAYS FATAL_ERROR "object(STRING): RECORD missing MODE meta")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(STRING): RECORD missing MODE meta\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             # NAME EQUAL <fieldName> (SCHEMA only)
@@ -2325,11 +2437,15 @@ function(object)
             _hs__get_object_type("${_elem}" _elemType)
 
             if (_elemType STREQUAL "UNKNOWN" OR _elemType STREQUAL "UNSET")
-                msg(ALWAYS FATAL_ERROR "object(GET ARRAY): element at index ${_ix} is scalar/invalid; arrays may contain only RECORD or ARRAY")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(GET ARRAY): element at index ${_ix} is scalar/invalid; arrays may contain only RECORD or ARRAY\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             if (NOT (_elemType STREQUAL "RECORD" OR _elemType STREQUAL "ARRAY_RECORDS" OR _elemType STREQUAL "ARRAY_ARRAYS"))
-                msg(ALWAYS FATAL_ERROR "object(GET ARRAY): arrays may contain only RECORD or ARRAY, got element kind '${_elemType}' at index ${_ix}")
+                _hs_obj__meta_diag("${_rec}" _diag)
+                msg(ALWAYS FATAL_ERROR "object(GET ARRAY): arrays may contain only RECORD or ARRAY, got element kind '${_elemType}' at index ${_ix}\n"
+                        "  LookedAt : ${_diag}")
             endif ()
 
             _hs_obj__new_handle(_childTok)

@@ -998,7 +998,7 @@ function(array)
         endif ()
 
         # Format: {SEP}NAME (just marker and name, no elements yet)
-        _hs__store(${arrayVarName} "${_marker}${_NAME}")
+        _hs__store(${arrayVarName} "${_marker}${_name}")
 
         return()
     endif ()
