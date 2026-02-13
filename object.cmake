@@ -13,6 +13,13 @@ if (NOT COMMAND globalObjSet)
     include(${CMAKE_SOURCE_DIR}/cmake/global.cmake)
 endif ()
 
+
+# IMPORTANT:
+# We must NOT store a literal CMake list (semicolon-separated) inside a record value.
+# Doing so corrupts the record's kv decoding (because record->list conversion uses ';').
+# So we store field lists using a dedicated separator token, then decode only when iterating.
+set(_HS_REC_FIELDS_SEP "&&")
+
 # -------------------------------------------------------------------------------------------------
 # Object label and mutation gating helpers
 
@@ -136,7 +143,7 @@ function(_hs_obj__dump_record_pretty _recBlob _indent _outStr)
         endif ()
 
         # Decode stored field list (token-separated string) into a CMake list
-        string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
+        string(REPLACE "${_HS_REC_FIELDS_SEP}" "${lst_sep}" _fields "${_fieldsStore}")
         set(_fieldList "${_fields}")
 
         # compute max field-name length for right alignment
@@ -178,7 +185,7 @@ endfunction()
 # Stored as a DICT blob with reserved keys:
 set(_HS_CAT_NAME_KEY "__HS_OBJ__NAME")
 set(_HS_CAT_KIND_KEY "__HS_OBJ__KIND")    # value: "CATALOG"
-set(_HS_CAT_SOURCES_KEY "__HS_CAT__SOURCES") # value: ";"-separated handle-token list
+set(_HS_CAT_SOURCES_KEY "__HS_CAT__SOURCES") # value: "_HS_REC_FIELDS_SEP"-separated handle-token list
 
 function(_hs_obj__is_catalog_blob _blob _outBool)
     set(${_outBool} OFF PARENT_SCOPE)
@@ -202,8 +209,9 @@ function(_hs_obj__catalog_get_sources _catBlob _outList)
     if ("${_s}" STREQUAL "")
         return()
     endif ()
-    # sources stored as normal CMake list string (;) already
-    set(${_outList} "${_s}" PARENT_SCOPE)
+
+    string(REPLACE "${_HS_REC_FIELDS_SEP}" "${list_sep}" _tmpList "${_s}")
+    set(${_outList} "${_tmpList}" PARENT_SCOPE)
 endfunction()
 
 function(_hs_obj__catalog_create_blob _outBlob _label _sources)
@@ -214,6 +222,9 @@ function(_hs_obj__catalog_create_blob _outBlob _label _sources)
     dict(CREATE _tmp "_")
     dict(SET _tmp "${_HS_CAT_NAME_KEY}" "${_label}")
     dict(SET _tmp "${_HS_CAT_KIND_KEY}" "CATALOG")
+
+    # Ensure list separators are converted to something safe to store
+    string(REPLACE "${list_sep}" "${_HS_REC_FIELDS_SEP}" _sources "${_sources}")
     dict(SET _tmp "${_HS_CAT_SOURCES_KEY}" "${_sources}")
 
     set(${_outBlob} "${_tmp}" PARENT_SCOPE)
@@ -634,7 +645,7 @@ set(_HS_REC_META_SIZE "${_HS_REC_META_PREFIX}SIZE")    # integer length (for POS
 # We must NOT store a literal CMake list (semicolon-separated) inside a record value.
 # Doing so corrupts the record's kv decoding (because record->list conversion uses ';').
 # So we store field lists using a dedicated separator token, then decode only when iterating.
-set(_HS_REC_FIELDS_SEP "»«")
+set(_HS_REC_FIELDS_SEP "&&")
 
 function(_hs_obj__meta_diag _blob _outStr)
     # Produce a compact, single-string diagnostic describing what we are looking at.
@@ -680,7 +691,7 @@ function(_hs_obj__meta_diag _blob _outStr)
         # Decode stored fields for readability (keeps it on one line)
         set(_fieldsDecoded "${_fieldsStore}")
         if (NOT "${_fieldsStore}" STREQUAL "<missing>" AND NOT "${_fieldsStore}" STREQUAL "<empty>")
-            string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fieldsDecoded "${_fieldsStore}")
+            string(REPLACE "${_HS_REC_FIELDS_SEP}" "${lst_sep}" _fieldsDecoded "${_fieldsStore}")
         endif ()
 
         string(APPEND _s ", meta={MODE='${_mode}', SIZE='${_size}', FIXED='${_fixed}', FIELDS_STORE='${_fieldsStore}', FIELDS='${_fieldsDecoded}'}")
@@ -1963,7 +1974,7 @@ function(object)
                     endif ()
 
                     # Decode stored field list (token-separated string) into a CMake list
-                    string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
+                    string(REPLACE "${_HS_REC_FIELDS_SEP}" "${lst_sep}" _fields "${_fieldsStore}")
 
                     foreach (_fn IN LISTS _fields)
                         _hs_obj__rec_get_kv("${_recVal}" "${_fn}" _found _val)
@@ -2029,7 +2040,7 @@ function(object)
                         set(_fields "")
                     else ()
                         # Decode stored field list (token-separated string) into a CMake list
-                        string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
+                        string(REPLACE "${_HS_REC_FIELDS_SEP}" "${lst_sep}" _fields "${_fieldsStore}")
                     endif ()
 
                     foreach (_fn IN LISTS _fields)
@@ -2179,7 +2190,7 @@ function(object)
             endif ()
 
             # NAME EQUAL <key> (treat as dict lookup in sources)
-            if (ARGC EQUAL 8 AND "${ARGV4}" STREQUAL "NAME" AND "${ARGV5}" STREQUAL "EQUAL")
+            if (ARGC EQUAL 7 AND "${ARGV4}" STREQUAL "NAME" AND "${ARGV5}" STREQUAL "EQUAL")
                 set(_key "${ARGV6}")
                 foreach (_st IN LISTS _sources)
                     _hs_obj__load_blob("${_st}" _srcBlob)
@@ -2412,7 +2423,7 @@ function(object)
 
         # --- ARRAY: INDEX <n>
         if (_k STREQUAL "ARRAY")
-            if (NOT (ARGC EQUAL 7 AND "${ARGV4}" STREQUAL "INDEX"))
+            if (NOT (ARGC EQUAL 6 AND "${ARGV4}" STREQUAL "INDEX"))
                 msg(ALWAYS FATAL_ERROR "object(GET ARRAY): expected object(GET <outHandleVar> FROM <arrayHandleVar> INDEX <n>)")
             endif ()
 
@@ -2731,7 +2742,7 @@ function(object)
                 endif ()
 
                 # Decode stored field list (token-separated string) into a CMake list
-                string(REPLACE "${_HS_REC_FIELDS_SEP}" ";" _fields "${_fieldsStore}")
+                string(REPLACE "${_HS_REC_FIELDS_SEP}" "${lst_sep}" _fields "${_fieldsStore}")
                 set(_fieldList "${_fields}")
 
                 set(_max 0)
@@ -2783,6 +2794,7 @@ function(object)
                 set(_catName "<unnamed>")
             endif ()
             dict(GET _tmp "${_HS_CAT_SOURCES_KEY}" _srcs)
+            string(REPLACE "${_HS_REC_FIELDS_SEP}" "${list_sep}" _srcs "${_srcs}")
 
             if ("${_srcs}" STREQUAL "")
                 set(_nSrc 0)

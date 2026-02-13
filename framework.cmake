@@ -7,6 +7,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/addLibrary.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/object.cmake)
+#include(${CMAKE_SOURCE_DIR}/cmake/object_sql_enhanced.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/sql_like.cmake)
 
 # The environment check validates OUTPUT_DIR etc.; call once globally
 check_environment("${CMAKE_SOURCE_DIR}")
@@ -73,10 +75,13 @@ if ("${compiler_version}" MATCHES "clang")
 endif ()
 
 include(${CMAKE_SOURCE_DIR}/cmake/platform.cmake)
-initialiseFeatureHandlers()
+#
+#foreach(DRY_RUN IN ITEMS ON OFF)
+#    initialiseFeatureHandlers(${DRY_RUN} OFF)
+#endforeach ()
 
 # Make CMake find_package prefer our install libdir
-list(APPEND CMAKE_MODULE_PATH
+list(PREPEND CMAKE_MODULE_PATH
         ${CMAKE_INSTALL_LIBDIR})
 
 # Testing helpers available globally

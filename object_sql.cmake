@@ -460,8 +460,12 @@ function(SELECT)
         if (_selectWhat STREQUAL "VALUE")
             message(FATAL_ERROR "SELECT VALUE WHERE NAME: ambiguous. Use SELECT <column> FROM ... WHERE NAME = <name>")
         endif()
-        
-        object(STRING ${_outVar} FROM ${_handleVar} NAME EQUAL "${_fieldName}")
+
+        if (_selectWhat STREQUAL "*")
+            object(GET ${_outVar} FROM ${_handleVar} NAME EQUAL "${_fieldName}")
+        else ()
+            object(STRING ${_outVar} FROM ${_handleVar} NAME EQUAL "${_fieldName}")
+        endif ()
         set(${_outVar} "${${_outVar}}" PARENT_SCOPE)
         return()
     endif()
@@ -572,7 +576,7 @@ function(INSERT)
         # Parse parenthesized list
         string(REGEX REPLACE "^\\((.*)\\)$" "\\1" _valsClean "${_firstVal}")
         string(REPLACE "," ";" _valsList "${_valsClean}")
-        
+
         # Trim whitespace
         set(_valsCleanList "")
         foreach(_val IN LISTS _valsList)
@@ -888,7 +892,7 @@ endfunction()
 # =================================================================================================
 
 # FOREACH ROW IN <handleVar> CALL <function>
-function(FOREACH)
+function(FOR_EACH)
     set(_args "${ARGN}")
     list(LENGTH _args _argc)
     

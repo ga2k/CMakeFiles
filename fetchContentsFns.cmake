@@ -3,34 +3,30 @@ include_guard(GLOBAL)
 include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/object.cmake)
-
-set(FIXName 0)
-set(FIXPkgName 1)
-set(FIXNamespace 2)
-set(FIXKind 3)
-set(FIXMethod 4)
-set(FIXUrl 5)
-set(FIXGitTag 6)
-set(FIXSrcDir 5)
-set(FIXBuildDir 6)
-set(FIXIncDir 7)
-set(FIXComponents 8)
-set(FIXArgs 9)
-set(FIXPrereqs 10)
-math(EXPR FIXLength "${FIXPrereqs} + 1")
+#include(${CMAKE_SOURCE_DIR}/cmake/object_sql_enhanced.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/sql_like.cmake)
 
 # @formatter:off
-object(CREATE hLongest KIND RECORD LABEL longest_strings LENGTH 7) #FIELDS )
-object(SET    hLongest INDEX 0
-    "0"
-    "0"
-    "0"
-    "0"
-    "0"
-    "0"
-    "0"
-)
-object(FIELD_NAMES hLongest NAMES "VERB;OBJECT;SUBJECT_PREP;SUBJECT;ITEM_PREP;ITEM;HANDLER")
+set(PkgColNames Name PkgName Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq)
+set(FIXName          0)
+set(FIXPkgName       1)
+set(FIXNamespace     2)
+set(FIXKind          3)
+set(FIXMethod        4)
+set(FIXUrl           5)
+set(FIXGitRepository 6)
+set(FIXGitTag        7)
+set(FIXSrcDir        8)
+set(FIXBuildDir      9)
+set(FIXIncDir       10)
+set(FIXComponents   11)
+set(FIXArgs         12)
+set(FIXPrereqs      13)
+math(EXPR FIXLength "${FIXPrereqs} + 1")
+
+CREATE(TABLE hLongest LABEL tLongestStrings COLUMNS "VERB;OBJECT;SUBJECT_PREP;SUBJECT;ITEM_PREP;ITEM;HANDLER")
+INSERT(INTO hLongest VALUES "0" "0" "0" "0" "0" "0" "0")
+DUMP(FROM hLongest VERBOSE)
 # @formatter:on
 
 include(FetchContent)
@@ -111,50 +107,50 @@ endfunction()
 #######################################################################################################################
 #######################################################################################################################
 #######################################################################################################################
-function(initialiseFeatureHandlers)
+function(initialiseFeatureHandlers DRY_RUN COLOUR)
     if (MONOREPO)
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*.cmake")
     else ()
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/cmake/handlers/*.cmake")
     endif ()
 
+    foreach (handler IN LISTS handlers)
+        get_filename_component(handlerName "${handler}" NAME_WE)
+        get_filename_component(_path "${handler}" DIRECTORY)
+        get_filename_component(packageName "${_path}" NAME_WE)
 
-    foreach (pass RANGE 1 2)
-        foreach (handler IN LISTS handlers)
-            get_filename_component(handlerName "${handler}" NAME_WE)
-            get_filename_component(_path "${handler}" DIRECTORY)
-            get_filename_component(packageName "${_path}" NAME_WE)
+        SELECT(VALUE FROM hLongest WHERE ROWID = 1 AND COLUMN = HANDLER INTO _longest)
+        longest(RIGHT GAP
+                CURRENT ${_longest}
+                TEXT "${handlerName}"
+                LONGEST _longest
+                PADDED text)
+        UPDATE(hLongest COLUMN "HANDLER" SET "${_longest}" WHERE ROWID = 1)
 
-            object(STRING _longest FROM hLongest NAME EQUAL HANDLER)
-            longest(RIGHT GAP
-                    CURRENT ${_longest}
-                    TEXT "${handlerName}"
-                    LONGEST _longest
-                    PADDED text)
-            object(SET hLongest NAME EQUAL HANDLER VALUE ${_longest})
-
-            if (pass EQUAL 2)
-                set(msg "Adding handler ${BOLD}${text}${NC} for package ${BOLD}${packageName}${NC}")
-                if (${handlerName} STREQUAL "init")
-                    string(APPEND msg " and calling it ...")
-                endif ()
-                msg(ALWAYS "${msg}")
-                include("${handler}")
-                if ("${handlerName}" STREQUAL "init")
-                    ############################################################################################################
-                    ############################################################################################################
-                    set(fn "${packageName}_init") #############################################################################
-                    if (COMMAND "${fn}") ########################################################################################
-                        cmake_language(CALL "${fn}") ###########################################################################
-                    endif () ###################################################################################################
-                    ############################################################################################################
-                    ############################################################################################################
-                endif ()
+        if (COLOUR)
+            set(msg "Adding handler ${BOLD}${text}${NC} for package ${BOLD}${packageName}${NC}")
+        else ()
+            set(msg "Adding handler ${text} for package ${packageName}")
+        endif ()
+        if (${handlerName} STREQUAL "init")
+            string(APPEND msg " and calling it ...")
+        endif ()
+        if (NOT DRY_RUN)
+            msg(ALWAYS "${msg}")
+            include("${handler}")
+            if ("${handlerName}" STREQUAL "init")
+                ############################################################################################################
+                ############################################################################################################
+                set(fn "${packageName}_init") #############################################################################
+                if (COMMAND "${fn}") ########################################################################################
+                    cmake_language(CALL "${fn}") ###########################################################################
+                endif () ###################################################################################################
+                ############################################################################################################
+                ############################################################################################################
             endif ()
-        endforeach ()
+        endif ()
     endforeach ()
     msg(ALWAYS "")
-    set(__longest_handler ${__longest_handler} CACHE INTERNAL "" FORCE)
 endfunction()
 ########################################################################################################################
 ########################################################################################################################
@@ -164,8 +160,8 @@ function(addPackageData)
     # During a DRY_RUN, all data is checked, and field sized for tabulated output are computed,
     # but no data is actually stored.
 
-    set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM DRY_RUN)
-    set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ)
+    set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM)
+    set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN COLOUR)
     set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS)
 
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
@@ -233,42 +229,66 @@ function(addPackageData)
         list(APPEND APD_PREREQS ${APD_PREREQ})
     endif ()
 
-    if (APD_GIT_REPOSITORY)
-        set(URLorSRCDIR "${APD_GIT_REPOSITORY}")
-    elseif (APD_SRCDIR)
-        set(URLorSRCDIR "${APD_SRCDIR}")
-    elseif (APD_URL)
-        set(URLorSRCDIR "${APD_URL}")
-    endif ()
-    if (APD_GIT_TAG)
-        set(TAGorBINDIR "${APD_GIT_TAG}")
-    elseif (APD_BINDIR)
-        set(TAGorBINDIR "${APD_BINDIR}")
-    endif ()
+    #    if (APD_GIT_REPOSITORY)
+    #        set(URLorSRCDIR "${APD_GIT_REPOSITORY}")
+    #    elseif (APD_SRCDIR)
+    #        set(URLorSRCDIR "${APD_SRCDIR}")
+    #    elseif (APD_URL)
+    #        set(URLorSRCDIR "${APD_URL}")
+    #    endif ()
+    #    if (APD_GIT_TAG)
+    #        set(TAGorBINDIR "${APD_GIT_TAG}")
+    #    elseif (APD_BINDIR)
+    #        set(TAGorBINDIR "${APD_BINDIR}")
+    #    endif ()
     string(REPLACE ";" "&" APD_COMPONENTS "${APD_COMPONENTS}")
     string(JOIN "&" APD_ARGS ${APD_ARGS} ${APD_FIND_PACKAGE_ARGS})
     if (APD_PREREQS)
         string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
     endif ()
 
-    object(CREATE hOutput KIND RECORD LABEL ${APD_PKGNAME})
-    object(SET hOutput INDEX 0
-            "${APD_FEATURE}"
-            "${APD_PKGNAME}"
-            "${APD_NAMESPACE}"
-            "${APD_KIND}"
-            "${APD_METHOD}"
-            "${URLorSRCDIR}"
-            "${TAGorBINDIR}"
-            "${APD_INCDIR}"
-            "${APD_COMPONENTS}"
-            "${APD_ARGS}"
-            "${APD_PREREQS}"
-    )
-
+    if (NOT APD_DRY_RUN)
+        CREATE(TABLE hOutput LABEL ${APD_PKGNAME} COLUMNS "${PkgColNames}")
+        INSERT(INTO hOutput VALUES
+                "${APD_FEATURE}"
+                "${APD_PKGNAME}"
+                "${APD_NAMESPACE}"
+                "${APD_KIND}"
+                "${APD_METHOD}"
+                "${APD_URL}"
+                "${APD_GIT_REPOSITORY}"
+                "${APD_GIT_TAG}"
+                "${APD_SRCDIR}"
+                "${APD_BINDIR}"
+                "${APD_INCDIR}"
+                "${APD_COMPONENTS}"
+                "${APD_ARGS}"
+                "${APD_PREREQS}"
+        )
+    endif ()
     function(createOrAppendTo)
 
         function(_ VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE)
+            macro(_doLine _var_)
+                #                if ("${${_var_}}" STREQUAL "")
+                #                    set(arg " ")
+                #                else ()
+                set(arg "${${_var_}}")
+                #                endif ()
+                if (current_tag STREQUAL "OBJECT" OR current_tag STREQUAL "SUBJECT")
+                    set(PAD_CHAR ".")
+                    set(GAP "GAP")
+                    set(MIN_LENGTH 3)
+                else ()
+                    set(PAD_CHAR " ")
+                    set(GAP "")
+                    set(MIN_LENGTH 1)
+                endif ()
+                SELECT(VALUE FROM hLongest WHERE ROWID = 1 AND COLUMN ${current_tag} INTO _longest)
+                longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
+                UPDATE(hLongest COLUMN ${current_tag} SET "${_longest}" WHERE ROWID = 1)
+            endmacro()
+
             if (NOT cat_quiet)
 
                 set(outstr "${TEMPLATE}")
@@ -276,11 +296,15 @@ function(addPackageData)
                 string(REGEX MATCHALL "\\[[_A-Z]+:[^]]+\\]" placeholders "${TEMPLATE}")
 
                 foreach (item ${placeholders})
-                    if (item MATCHES "\\[([_A-Z]+):([RL])\\]")
+                    if (item MATCHES "\\[([_A-Z]+):([LCR])\\]")
                         set(current_tag ${CMAKE_MATCH_1}) # e.g. VERB
                         set(current_align ${CMAKE_MATCH_2}) # e.g. R
 
-                        if (current_align STREQUAL "R")
+                        if (current_align STREQUAL "L")
+                            set(JUSTIFY "LEFT")
+                        elseif (current_align STREQUAL "C")
+                            set(JUSTIFY "CENTRE")
+                        elseif (current_align STREQUAL "R")
                             set(JUSTIFY "RIGHT")
                         else ()
                             unset(JUSTIFY)
@@ -290,76 +314,46 @@ function(addPackageData)
                         # set(TEMPLATE "[VERB:R] [OBJECT:L] [SUBJECT_PREP:R] [SUBJECT:L] [ITEM_PREP:R] [TARGET:R]")
 
                         if (current_tag STREQUAL "VERB")
-                            if (VERB STREQUAL "")
-                                set(arg " ")
-                            else ()
-                                set(arg "${VERB}")
+                            _doLine("VERB")
+                            if (APD_COLOUR)
+                                if (VERB MATCHES "created")
+                                    set(VERB "${GREEN}${VERB}${NC}")
+                                elseif (VERB STREQUAL "added")
+                                    set(VERB "${VERB}${NC}")
+                                elseif (VERB STREQUAL "replaced")
+                                    set(VERB "${RED}${VERB}${NC}")
+                                elseif (VERB STREQUAL "extended")
+                                    set(VERB "${YELLOW}${VERB}${NC}")
+                                elseif (VERB STREQUAL "skipped")
+                                    set(VERB "${BLUE}${VERB}${NC}")
+                                endif ()
                             endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
-                            #                            if (VERB MATCHES "created")
-                            #                                set(VERB "${GREEN}${VERB}${NC}")
-                            #                            elseif (VERB STREQUAL "added")
-                            #                                set(VERB "${VERB}${NC}")
-                            #                            elseif (VERB STREQUAL "replaced")
-                            #                                set(VERB "${RED}${VERB}${NC}")
-                            #                            elseif (VERB STREQUAL "extended")
-                            #                                set(VERB "${YELLOW}${VERB}${NC}")
-                            #                            elseif (VERB STREQUAL "skipped")
-                            #                                set(VERB "${BLUE}${VERB}${NC}")
-                            #                            endif ()
                         elseif (current_tag STREQUAL "OBJECT")
-                            if (OBJECT STREQUAL "")
-                                set(arg " ")
-                            else ()
-                                set(arg "${OBJECT}")
+                            _doLine(OBJECT)
+                            if (APD_COLOUR)
+                                set(OBJECT "${BOLD}${OBJECT}${NC}")
                             endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
-                            #                            set(OBJECT "${BOLD}${OBJECT}${NC}")
                         elseif (current_tag STREQUAL "SUBJECT_PREP")
-                            if (SUBJECT_PREP STREQUAL "")
-                                set(arg " ")
-                            else ()
-                                set(arg "${SUBJECT_PREP}")
-                            endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
+                            _doLine(SUBJECT_PREP)
                         elseif (current_tag STREQUAL "SUBJECT")
-                            if (SUBJECT STREQUAL "")
-                                set(arg " ")
-                            else ()
-                                set(arg "${SUBJECT}")
+                            _doLine(SUBJECT)
+                            if (APD_COLOUR)
+                                set(SUBJECT "${YELLOW}${SUBJECT}${NC}")
                             endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
-                            #                            set(SUBJECT "${YELLOW}${SUBJECT}${NC}")
                         elseif (current_tag STREQUAL "ITEM_PREP")
-                            if (ITEM_PREP STREQUAL "")
-                                set(arg " ")
-                            else ()
-                                set(arg "${ITEM_PREP}")
-                            endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
+                            _doLine(ITEM_PREP)
                         elseif (current_tag STREQUAL "ITEM")
                             if (ITEM STREQUAL "")
                                 set(arg " ")
                             else ()
                                 set(arg "${ITEM}")
                             endif ()
-                            object(STRING _longest FROM hLongest NAME EQUAL ${current_tag})
-                            longest(${JUSTIFY} CURRENT ${_longest} PAD_CHAR " " TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                            object(SET hLongest NAME EQUAL ${current_tag} VALUE ${_longest})
-                            # set(ITEM "${BLUE}${ITEM}${NC}")
+                            _doLine("ITEM")
+                            if (APD_COLOUR)
+                                set(ITEM "${BLUE}${ITEM}${NC}")
+                            endif ()
                         endif ()
                     endif ()
-                    #                    object(DUMP hLongest VERBOSE)
                 endforeach ()
                 # @formatter:off
                 string(REGEX REPLACE "\\[VERB:[^]]*\\]"         "${VERB} "           outstr "${outstr}")
@@ -408,8 +402,8 @@ function(addPackageData)
         elseif (NOT cat_target_handle AND NOT cat_subject_handle)
             msg(ALWAYS FATAL_ERROR "Need one or both of TARGET or SUBJECT. Note:- SUBJECT does not need the SUBJECT keyword.")
         endif ()
-        object(NAME cat_target FROM ${cat_target_handle})
-        object(NAME cat_subject FROM ${cat_subject_handle})
+        LABEL(OF ${cat_target_handle} INTO cat_target)
+        LABEL(OF ${cat_subject_handle} INTO cat_subject)
 
         if (DEFINED CAT_TEMPLATE AND NOT CAT_TEMPLATE STREQUAL "")
             set(cat_template "${CAT_TEMPLATE}")
@@ -456,11 +450,7 @@ function(addPackageData)
         set(out_template "${cat_template}")
 
         if (cat_field)
-            object(STRING fieldValue FROM ${cat_subject_handle} VALUE EQUAL "${cat_data}")
-            if ("${fieldValue}" STREQUAL "NOTFOUND")
-                set(fieldValue)
-            endif ()
-
+            SELECT(VALUE FROM ${cat_subject_handle} WHERE COLUMN "Name" = "${cat_data}" INTO fieldValue)
             if ((fieldValue AND cat_unique) OR (fieldValue AND NOT cat_unique AND NOT cat_extend))
                 set(out_verb "skipped")
                 set(out_object ${cat_data})
@@ -468,10 +458,14 @@ function(addPackageData)
                 set(out_subject ${cat_subject})
                 set(out_item_prep "in")
                 set(out_item ${cat_target})
-                set(out_template "${cat_template} : ${GREEN}(exists)${NC}")
+                if (APD_COLOUR)
+                    set(out_template "${cat_template} : ${GREEN}(exists)${NC}")
+                else ()
+                    set(out_template "${cat_template} : (exists)")
+                endif ()
             elseif ((fieldValue AND NOT cat_unique AND cat_extend) OR NOT fieldValue)
                 if (NOT APD_DRY_RUN)
-                    object(APPEND ${cat_subject_handle} FIELD "${cat_data}")
+                    INSERT(INTO ${cat_subject_handle} VALUES "${cat_data}")
                 endif ()
                 set(out_verb "added")
                 set(out_object "${cat_data}")
@@ -486,22 +480,27 @@ function(addPackageData)
                 set(out_subject ${cat_subject})
                 set(out_item_prep "in")
                 set(out_item ${cat_target})
-                set(out_template "${cat_template} : ${RED}(couldn't work out what was needed!)${NC}")
+                if (APD_COLOUR)
+                    set(out_template "${cat_template} : ${RED}(couldn't work out what was needed!)${NC}")
+                else ()
+                    set(out_template "${cat_template} : (couldn't work out what was needed!)")
+                endif ()
             endif ()
 
             _("${out_verb}" "${out_object}" "${out_subject_prep}" "${out_subject}" "${out_item_prep}" "${out_item}" "${out_template}")
         else ()
-            object(NAME locPkgName FROM "${cat_data}")
-            object(GET h FROM ${cat_target_handle} NAME EQUAL "${cat_feature}")
+            if (NOT APD_DRY_RUN)
+                LABEL(OF ${cat_data} INTO locPkgName)
+                SELECT(HANDLE FROM ${cat_target_handle} WHERE KEY = ${cat_feature} INTO h)
+            endif ()
             set(weCreatedH OFF)
 
             if (NOT h)
                 set(weCreatedH ON)
 
                 if (NOT APD_DRY_RUN)
-                    object(CREATE h KIND ARRAY LABEL "${cat_feature}" TYPE RECORDS)
+                    CREATE(TABLE h LABEL ${cat_feature} COLUMNS "${PkgColNames}")
                 endif ()
-                #                    object(DUMP h VERBOSE)
                 set(out_verb "created")
                 set(out_object "${cat_feature}")
                 set(out_item_prep "in")
@@ -514,13 +513,14 @@ function(addPackageData)
                 set(out_item_prep)
                 set(out_item)
             endif ()
+            set(locHandle)
             if (NOT APD_DRY_RUN)
-                object(GET locHandle FROM h PATH EQUAL ${locPkgName})
+                SELECT(* FROM h WHERE COLUMN Name = ${cat_feature} AND COLUMN PkgName = ${locPkgName} INTO locHandle)
             endif ()
             if (locHandle)
-                #                object(DUMP locHandle VERBOSE)
                 if (NOT APD_DRY_RUN)
-                    object(REMOVE RECORD FROM h WHERE NAME EQUAL ${locPkgName} REPLACE WITH "${cat_data}" STATUS result)
+                    DELETE(FROM h WHERE COLUMN Name = ${cat_feature} AND COLUMN PkgName = ${locPkgName})
+                    INSERT(INTO h ROW ${cat_data})
                 endif ()
                 set(out_verb "replaced")
                 set(out_object ${cat_feature})
@@ -531,12 +531,11 @@ function(addPackageData)
                 # Do nothing
             else ()
                 if (NOT APD_DRY_RUN)
+                    INSERT(INTO h ROW ${cat_data})
                     if (weCreatedH)
-                        object(APPEND h RECORD "${cat_data}")
-                        object(SET ${cat_target_handle} NAME EQUAL ${cat_feature} HANDLE h)
-                        object(DUMP ${cat_target_handle} VERBOSE)
+                        INSERT(INTO ${cat_target_handle} KEY ${cat_feature} HANDLE h)
                     else ()
-                        object(REMOVE RECORD FROM ${cat_target_handle} WHERE NAME EQUAL ${locPkgName} REPLACE WITH "${h}" STATUS result)
+                        UPDATE(${cat_target_handle} KEY ${cat_feature} HANDLE h)
                     endif ()
                 endif ()
                 if (weCreatedH)
@@ -565,7 +564,7 @@ function(addPackageData)
         #        endif ()
     endfunction()
 
-    set(template "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:L][ITEM:R]")
+    set(template "[VERB:R][OBJECT:R][SUBJECT_PREP:C][SUBJECT:L][ITEM_PREP:C][ITEM:L]")
     set(APD_FEATPKG "${APD_FEATURE}/${APD_PKGNAME}")
 
     if (APD_KIND MATCHES "SYSTEM")
@@ -581,41 +580,30 @@ function(addPackageData)
     endif ()
 
     # @formatter:off
-    createOrAppendTo(h${APD_KIND}                               FEATURE "${APD_FEATURE}" RECORD hOutput         QUITE EXTEND        TEMPLATE "${template}")
-    createOrAppendTo(h${root}Packages   TARGET h${APD_KIND}     FEATURE "${APD_FEATURE}" FIELD ${APD_FEATPKG}   QUITE EXTEND UNIQUE TEMPLATE "${template}")
-    createOrAppendTo(h${root}Names      TARGET h${APD_KIND}     FEATURE "${APD_FEATURE}" FIELD ${APD_FEATURE}   QUITE EXTEND UNIQUE TEMPLATE "${template}")
-    # @formatter:on
-
-    # @formatter:off
-    set(__longest_verb                  ${__longest_verb}                CACHE INTERNAL "")
-    set(__longest_object                ${__longest_object}              CACHE INTERNAL "")
-    set(__longest_subject_prep   ${__longest_subject_prep} CACHE INTERNAL "")
-    set(__longest_subject               ${__longest_subject}             CACHE INTERNAL "")
-    set(__longest_item_prep      ${__longest_item_prep}    CACHE INTERNAL "")
-    set(__longest_item                  ${__longest_item}                CACHE INTERNAL "")
+    createOrAppendTo(h${root}                           FEATURE "${APD_FEATURE}" RECORD hOutput         QUITE EXTEND        TEMPLATE "${template}")
+    createOrAppendTo(h${root}Packages   TARGET h${root} FEATURE "${APD_FEATURE}" FIELD ${APD_FEATPKG}   QUITE EXTEND UNIQUE TEMPLATE "${template}")
+    createOrAppendTo(h${root}Names      TARGET h${root} FEATURE "${APD_FEATURE}" FIELD ${APD_FEATURE}   QUITE EXTEND UNIQUE TEMPLATE "${template}")
     # @formatter:on
 
 endfunction()
 ##
 ######################################################################################
 ##
-function(getFeaturePkgList arrayName feature receivingVarName)
+function(getFeaturePkgList hInput feature receivingVarName)
     # iterate over array to find line with feature
-    unset("${receivingVarName}" PARENT_SCOPE)
-    array(LENGTH "${arrayName}" numFeatures)
+    object(LENGTH numFeatures FROM "${hInput}")
     if (numFeatures GREATER 0)
         foreach (currIndex RANGE ${numFeatures})
-            array(GET "${arrayName}" ${currIndex} _thisArray)
-
-            array(KIND "_thisArray" _thisArrayKind)
+            object(GET _thisArray FROM "${hInput}" INDEX ${currIndex})
+            object(KIND _thisArray _thisArrayKind)
             if (_thisArrayKind STREQUAL "ARRAYS")
-                getFeaturePkgList("_thisArray" "${feature}" "${receivingVarName}")
+                getFeaturePkgList(_thisArray "${feature}" "${receivingVarName}")
                 set("${receivingVarName}" "${receivingVarName}" PARENT_SCOPE)
                 return()
             endif ()
-            array(FIND "_thisArray" ${FIXName} MATCHING "${feature}" _foundAt)
+            object(GET _foundAt FROM "_thisArray" MATCHING "${feature}")
             if (_foundAt)
-                set(${receivingVarName} "${_thisArray}" PARENT_SCOPE)
+                set(${receivingVarName} thisArray PARENT_SCOPE)
                 return()
             endif ()
         endforeach ()
@@ -625,59 +613,64 @@ endfunction()
 ##
 ######################################################################################
 ##
-function(getFeatureIndex arrayName feature receivingVarName)
+function(getFeatureIndex hSource feature receivingVarName)
     # iterate over array to find line with feature
-    array(FIND "${arrayName}" ${FIXName} MATCHING "${feature}" _foundAt)
-    if (_foundAt)
-        set(${receivingVarName} "${_foundAt}" PARENT_SCOPE)
-    else ()
-        unset(${receivingVarName} PARENT_SCOPE)
-    endif ()
+    #    object(ITER_HANDLES found FROM ${hSource} CHILDREN)
+    set(foundAt)
+    set(index 0)
+    function(fn hRec)
+        object(STRING feat FROM ${hRec} INDEX ${FIXFeature})
+        object(STRING name FROM ${hRec} INDEX ${FIXPkgName})
+        if ("${feat}" STREQUAL "${feature}" OR "${name}" STREQUAL "${feature}")
+            set(foundAt ${index})
+        else ()
+            inc(index)
+        endif ()
+    endfunction()
+    foreachobject(FROM hSource CHILDREN CALL fn)
+    set(${receivingVarName} "${foundAt}" PARENT_SCOPE)
 endfunction()
 ##
 ######################################################################################
 ##
-function(getFeaturePackage arrayName feature index receivingVarName)
-    getObjectType(${arrayName} type)
+function(getFeaturePackage hSource feature index receivingVarName)
+    getObjectType(${hSource} type)
     unset(${receivingVarName} PARENT_SCOPE)
 
-    if (type STREQUAL "DICT")
-        dict(GET ${arrayName} "${feature}" arr)
-        if (NOT arr)
+    if (type STREQUAL "DICT" OR type STREQUAL "CATALOG")
+        object(GET hFeature FROM ${hSource} NAME EQUAL "${feature}")
+        #        dict(GET ${hSource} "${feature}" arr)
+        if (NOT hFeature)
             return()
         endif ()
-        set(arrayName "arr")
+        set(hSource "hFeature")
     endif ()
-    array(LENGTH ${arrayName} numFeatures)
+    object(LENGTH numFeatures FROM ${hSource})
     if (numFeatures GREATER_EQUAL ${index})
-        array(GET ${arrayName} ${index} pkg)
-        set("${receivingVarName}" "${pkg}" PARENT_SCOPE)
+        object(GET hPkg FROM ${hSource} INDEX ${index})
+        set("${receivingVarName}" "${hPkg}" PARENT_SCOPE)
         return()
     endif ()
 endfunction()
 ##
 ######################################################################################
 ##
-function(getFeaturePackageByName arrayName feature name receivingVarName indexVarName)
+function(getFeaturePackageByName hSource feature name receivingVarName)
     unset(${receivingVarName} PARENT_SCOPE)
-    unset(${indexVarName} PARENT_SCOPE)
 
-    getObjectType(${arrayName} type)
+    getObjectType(${hSource} type)
     # Returns: RECORD | ARRAY_RECORDS | ARRAY_ARRAYS | DICT | UNSET | UNKNOWN
 
-    if (type STREQUAL "DICT")
-        dict(GET ${arrayName} EQUAL "${feature}/${name}" pkg)
-        if (NOT pkg)
+    if (type STREQUAL "DICT" OR type STREQUAL "CATALOG")
+        object(GET hPkg FROM ${hSource} NAME EQUAL "${feature}/${name}")
+        #        dict(GET ${hSource} EQUAL "${feature}/${name}" pkg)
+        if (NOT hPkg)
             return()
         endif ()
-        set(${receivingVarName} "${pkg}" PARENT_SCOPE)
-        record(GET pkg ${FIXKind} kind)
-        if (kind STREQUAL "SYSTEM")
-            set(${indexVarName} SYSTEM PARENT_SCOPE)
-        endif ()
+        set(${receivingVarName} "${hPkg}" PARENT_SCOPE)
         return()
     endif ()
-    array(GET ${arrayName} EQUAL ${name} pkg)
+    object(GET hPkg FROM ${hSource} EQUAL ${name})
     set("${receivingVarName}" "${pkg}" PARENT_SCOPE)
 endfunction()
 ##
@@ -1342,7 +1335,7 @@ endmacro()
 ##
 ########################################################################################################################
 ##
-function(processFeatures featureList returnVarName)
+function(preProcessFeatures featureList hDataSource outVar)
 
     function(replacePositionalParameters tokenString outputVar addAllRegardless)
 
@@ -1425,7 +1418,7 @@ function(processFeatures featureList returnVarName)
         set(_ns)
         set(_kind)
         set(_method)
-        set(_url)
+        set(_repo_url)
         set(_tag)
         set(_incdir)
         set(_components)
@@ -1495,8 +1488,8 @@ function(processFeatures featureList returnVarName)
         set(${retVar} ${_retargs} PARENT_SCOPE)
     endfunction()
 
-    array(CREATE revised_features revised_features RECORDS)
-
+    #    object(CREATE hRevisedFeatures KIND ARRAY TYPE RECORDS LABEL revised_features)
+    CREATE(COLLECTION hRevisedFeatures AS tRevisedFeatures OF RECORDS)
     set(_switches OVERRIDE_FIND_PACKAGE)
     set(_single_args PACKAGE NAMESPACE)
     set(_multi_args FIND_PACKAGE_ARGS ARGS COMPONENTS)
@@ -1558,17 +1551,40 @@ function(processFeatures featureList returnVarName)
             string(JOIN "&" _args "${retVar}")
         endif ()
 
-        #    FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BINDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
-        dict(GET DATA "${_feature}" buffer)
-        if (buffer)
-            getFeaturePackage(buffer "${_feature}" 0 _defaultPkg)
-            if (_defaultPkg)
-                record(GET _defaultPkg ${FIXPkgName} _defaultPkgName)
+        # Add all the missing fields (the user's input list is just the basics,usually)
+        set(hPackage)
+        SELECT(* FROM ${hDataSource} WHERE NAME = ${_feature} INTO hCompleteFeature)
+        #        object(GET hCompleteFeature FROM ${hDataSource} NAME EQUAL ${_feature})
+        if (hCompleteFeature)
+            if (AA_PACKAGE)
+                SELECT(* FROM hCompleteFeature WHERE NAME = ${_pkg} INTO hPackage)
+                #                object(GET hPackage FROM hCompleteFeature NAME "${_pkg}")
+                if (hPackage)
+                    SELECT(VALUE FROM hPackage WHERE INDEX = 1 INTO reqdPkgName)
+                    #                    object(STRING reqdPkgName FROM hPackage INDEX 1)
+                endif ()
+            else ()
+                SELECT(* FROM hCompleteFeature WHERE INDEX = 0 INTO hPackage)
+                SELECT(VALUE FROM hPackage WHERE INDEX = 1 INTO defPkgName)
+                #                object(GET hPackage FROM hCompleteFeature INDEX 0)
+                #                object(STRING defPkgName FROM hPackage INDEX 1)
+            endif ()
+            if (NOT defPkgName)
+                SELECT(* FROM hCompleteFeature INDEX = 0 INTO tPkg)
+                SELECT(VALUE FROM tPkg INDEX = 1 INTO defPkgName)
+                #                object(GET tPkg FROM hCompleteFeature INDEX 0)
+                #                object(STRING defPkgName FROM tPkg INDEX 1)
             endif ()
         endif ()
-        if (NOT _pkg)
-            set(_pkg "${_defaultPkgName}")
+
+        if (NOT hPackage)
+            if (AA_NAME)
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature/Package \"${feature}/${_pkjg}\" does not exist")
+            else ()
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature \"${feature}\" does not exist")
+            endif ()
         endif ()
+
         string(TOUPPER "${_feature}" __temp_pkg)
         string(TOUPPER "${PLUGINS}" __temp_plugins)
         if (__temp_pkg IN_LIST __temp_plugins)
@@ -1577,28 +1593,33 @@ function(processFeatures featureList returnVarName)
             set(__temp_pkg "${_pkg}")
         endif ()
 
-        if (_kind STREQUAL "SYSTEM" AND _pkg STREQUAL "${_defaultPkgName}")
+        object(STRING _kind FROM hPackage INDEX ${FIXKind})
+        if (_kind STREQUAL "SYSTEM" AND _pkg STREQUAL "${defPkgName}")
             # Don'd add this
             continue()
         endif ()
 
-        record(CREATE output ${__temp_pkg} ${FIXLength})
-        record(SET output "${FIXName}"
-                "${_feature}"
-                "${__temp_pkg}"
-                "${_ns}"
-                "${_kind}"
-                "${_method}"
-                "${_url}"
-                "${_tag}"
-                "${_incdir}"
-                "${_components}"
-                "${_args}"
-                "${_prerequisites}"
+        CREATE()
+        object(CREATE hOutput KIND RECORD LABEL ${_feature})
+        object(SET hOutput INDEX 0
+                "${_feature}"       # Name          0
+                "${__temp_pkg}"     # PkgName       1
+                "${_ns}"            # Namespace     2
+                "${_kind}"          # Kind          3
+                "${_method}"        # Method        4
+                ""                  # Url           5
+                "${_repo_url}"      # GitRepository 6
+                "${_tag}"           # GitTag        7
+                ""                  # SrcDir        8
+                ""                  # BuildDir      9
+                "${_incdir}"        # IncDir       10
+                "${_components}"    # Components   11
+                "${_args}"          # Args         12
+                "${_prerequisites}" # Prereqs      13
         )
         unset(__temp_pkg)
 
-        array(APPEND revised_features RECORD "${output}")
+        object(APPEND hRevisedFeatures RECORD hOutput)
     endforeach ()
-    set(${returnVarName} "${revised_features}" PARENT_SCOPE)
+    set(${outVar} "${hRevisedFeatures}" PARENT_SCOPE)
 endfunction()
