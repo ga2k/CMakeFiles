@@ -242,17 +242,85 @@ macro(check_environment PROJECT_ROOT)
 
         list(REMOVE_DUPLICATES debugFlags)
 
-        string(ASCII 27 ESC)
-        set(RED     "${ESC}[31m")
-        set(GREEN   "${ESC}[32m")
-        set(YELLOW  "${ESC}[33m")
-        set(BLUE    "${ESC}[34m")
-        set(MAGENTA "${ESC}[35m")
-        set(CYAN    "${ESC}[36m")
-        set(WHITE   "${ESC}[37m")
-        set(DEFAULT "${ESC}[38m")
-        set(BOLD    "${ESC}[1m" )
-        set(NC      "${ESC}[0m" )
+        function(hs_should_use_ansi out_var)
+            # Manual overrides first (these are very handy in CI/IDEs).
+            option(HS_FORCE_COLOR "Force ANSI colors in CMake output" OFF)
+            option(HS_NO_COLOR    "Disable ANSI colors in CMake output" OFF)
+
+            if(HS_NO_COLOR OR DEFINED ENV{NO_COLOR})
+                set(${out_var} OFF PARENT_SCOPE)
+                return()
+            endif()
+            if(HS_FORCE_COLOR)
+                set(${out_var} ON PARENT_SCOPE)
+                return()
+            endif()
+
+            # Conservative defaults.
+            set(_use ON)
+
+            # If TERM is empty or dumb, don't color (common when not a real terminal).
+            if(DEFINED ENV{TERM})
+                if("$ENV{TERM}" STREQUAL "" OR "$ENV{TERM}" STREQUAL "dumb")
+                    set(_use OFF)
+                endif()
+            endif()
+
+            if(_use)
+                if(CMAKE_HOST_WIN32)
+                    # True means output is redirected -> disable ANSI
+                    execute_process(
+                            COMMAND powershell -NoProfile -NonInteractive -Command "[Console]::IsOutputRedirected"
+                            OUTPUT_VARIABLE _redir
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            ERROR_QUIET
+                    )
+                    if(_redir STREQUAL "True")
+                        set(_use OFF)
+                    endif()
+                else()
+                    # Unix: success means stdout is a TTY -> keep ANSI
+                    execute_process(
+                            COMMAND sh -c "test -t 1"
+                            RESULT_VARIABLE _is_tty
+                            OUTPUT_QUIET ERROR_QUIET
+                    )
+                    if(NOT _is_tty EQUAL 0)
+                        set(_use OFF)
+                    endif()
+                endif()
+            endif()
+
+            set(${out_var} ${_use} PARENT_SCOPE)
+        endfunction()
+
+        # Example usage:
+        hs_should_use_ansi(COLOUR)
+
+        if(COLOUR)
+            string(ASCII 27 ESC)
+            set(RED     "${ESC}[31m")
+            set(GREEN   "${ESC}[32m")
+            set(YELLOW  "${ESC}[33m")
+            set(BLUE    "${ESC}[34m")
+            set(MAGENTA "${ESC}[35m")
+            set(CYAN    "${ESC}[36m")
+            set(WHITE   "${ESC}[37m")
+            set(DEFAULT "${ESC}[38m")
+            set(BOLD    "${ESC}[1m" )
+            set(NC      "${ESC}[0m" )
+        else()
+            set(RED     "")
+            set(GREEN   "")
+            set(YELLOW  "")
+            set(BLUE    "")
+            set(MAGENTA "")
+            set(CYAN    "")
+            set(WHITE   "")
+            set(DEFAULT "")
+            set(BOLD    "")
+            set(NC      "")
+        endif()
 
         # @formatter:off
         # set(APP_VENDOR_LC       ${APP_VENDOR_LC}        PARENT_SCOPE)

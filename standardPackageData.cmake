@@ -1,5 +1,5 @@
 ########################################################################################################################
-function(createStandardPackageData dryRun useColour)
+function(createStandardPackageData dryRun)
 
     # 0         1          2            3      4        5                6                       7          8                                            9                        10
     # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BUILDDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
@@ -42,45 +42,45 @@ function(createStandardPackageData dryRun useColour)
 
     addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-            COMPONENT "cpptrace" ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            COMPONENT "cpptrace" ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "nlohmann_json" NAMESPACE "nlohmann_json" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/nlohmann/json.git" GIT_TAG "v3.11.3"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "tomlplusplus" NAMESPACE "tomlplusplus" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/marzer/tomlplusplus.git" GIT_TAG "v3.4.0"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" NAMESPACE "SOCI" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "sqliteOrm" NAMESPACE "sqlite_orm" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
-            ARG CONFIG DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG CONFIG DRY_RUN ${dryRun})
     #
     ##
     ####
     ##
     #
 #    addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-#            ARGS REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dryRun} COLOUR ${useColour})
+#            ARGS REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dryRun})
 
 #    addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
-#            ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dryRun} COLOUR ${useColour})
+#            ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dryRun})
     #
     ##
     ####
@@ -89,20 +89,20 @@ function(createStandardPackageData dryRun useColour)
     addPackageData(OPTIONAL FEATURE "TESTING" PKGNAME "gtest" NAMESPACE "GTest" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
-            ARGS REQUIRED NAMES GTest googletest DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARGS REQUIRED NAMES GTest googletest DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENTS system date_time regex url algorithm
-            ARGS NAMES Boost DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARGS NAMES Boost DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" NAMESPACE "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
-            ARGS REQUIRED EXCLUDE_FROM_ALL COMPONENTS SSL Crypto DRY_RUN ${dryRun} COLOUR ${useColour})
+            ARGS REQUIRED EXCLUDE_FROM_ALL COMPONENTS SSL Crypto DRY_RUN ${dryRun})
 
     if(0)
     endif ()
