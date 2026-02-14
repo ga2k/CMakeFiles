@@ -70,25 +70,7 @@ function(fetchContents)
     createStandardPackageData(OFF)
     runPackageCallbacks(OFF)
 
-#    DUMP(FROM hSystem           VERBOSE DEEP)
-##    DUMP(FROM hSystemFeatures   VERBOSE DEEP)
-##    DUMP(FROM hSystemPackages   VERBOSE DEEP)
-#    DUMP(FROM hOptional         VERBOSE DEEP)
-##    DUMP(FROM hOptionalFeatures VERBOSE DEEP)
-##    DUMP(FROM hOptionalPackages VERBOSE DEEP)
-#    DUMP(FROM hLibrary          VERBOSE DEEP)
-##    DUMP(FROM hLibraryFeatures  VERBOSE DEEP)
-##    DUMP(FROM hLibraryPackages  VERBOSE DEEP)
-#    DUMP(FROM hCustom           VERBOSE DEEP)
-##    DUMP(FROM hCustomFeatures   VERBOSE DEEP)
-##    DUMP(FROM hCustomPackages   VERBOSE DEEP)
-#    DUMP(FROM hPlugin           VERBOSE DEEP)
-##    DUMP(FROM hPluginFeatures   VERBOSE DEEP)
-##    DUMP(FROM hPluginPackages   VERBOSE DEEP)
-
     CREATE(VIEW hGlobal LABEL BigData FROM hSystem hLibrary hOptional hPlugin hCustom)
-
-    DUMP(FROM hGlobal VERBOSE DEEP)
 
     preProcessFeatures("${AUE_FEATURES}" hGlobal hUser)
     set(FETCHCONTENT_QUIET OFF)
@@ -219,7 +201,6 @@ function(fetchContents)
         endif ()
 
         INSERT(INTO hUnifiedFeatures VALUES ${wip})
-        DUMP(FROM hUnifiedFeatures VERBOSE DEEP)
     endwhile ()
     unset(featureName)
 
@@ -233,9 +214,6 @@ function(fetchContents)
 
 
     SELECT(* FROM hGlobal WHERE KEY = "key_SystemFeatures" INTO hsf)
-    if(NOT hsf)
-        DUMP(FROM hGlobal VERBOSE DEEP)
-    endif ()
     SELECT(COUNT FROM hsf INTO numFeatureNames)
 
     set(featureIndex 0)

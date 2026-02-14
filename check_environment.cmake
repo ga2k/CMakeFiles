@@ -296,7 +296,7 @@ macro(check_environment PROJECT_ROOT)
 
         # Example usage:
         hs_should_use_ansi(COLOUR)
-
+set(COLOUR ON)
         if(COLOUR)
             string(ASCII 27 ESC)
             set(RED     "${ESC}[31m")
