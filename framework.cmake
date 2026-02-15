@@ -5,9 +5,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/fetchContents.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/addLibrary.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/array.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/object.cmake)
-#include(${CMAKE_SOURCE_DIR}/cmake/object_sql_enhanced.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
 
 # The environment check validates OUTPUT_DIR etc.; call once globally

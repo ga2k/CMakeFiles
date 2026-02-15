@@ -1,9 +1,7 @@
 include_guard(GLOBAL)
 
 ## HoffSoft build framework delegator (split into global + per-project)
-include (cmake/array.cmake)
 include (cmake/global.cmake)
-#include (cmake/test_enhanced.cmake)
 
 function(registerPackageCallback fn)
     if(NOT COMMAND "${fn}")
