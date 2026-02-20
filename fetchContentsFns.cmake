@@ -77,7 +77,7 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
             if (current_tag STREQUAL "VERB")
 #                _doLine("VERB")
                 SplitAt("${VERB}" " " action thing)
-                if (VERB MATCHES "created")
+                if (VERB MATCHES "added")
                     set(VERB "${BOLD}${YELLOW}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "created")
                     set(VERB "${BOLD}${WHITE}\naction=${action}\n${NC} \nthing=${thing}\n")
