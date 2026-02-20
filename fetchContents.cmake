@@ -255,9 +255,10 @@ function(fetchContents)
 
         unset(combinedLibraryComponents)
         set(scannedLibraries)
+        math(EXPR phaseLinePad "${usableCols} - 8")
 
         foreach (pass_num RANGE 1)
-            string(REPEAT "─" ${usableCols} line)
+            string(REPEAT "─" ${phaseLinePad} line)
             set(phase ${pass_num})
             inc(phase)
             message("\n ${GREEN}Phase ${phase} ${line}${NC}\n")
