@@ -92,7 +92,7 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
                 set(OBJECT "${BOLD}${OBJECT}${NC}")
             elseif (current_tag STREQUAL "SUBJECT_PREP")
                 _doLine(SUBJECT_PREP)
-                SplitAt("${SUBJECT_PREP}" "_" action thing)
+                SplitAt("${SUBJECT_PREP}" " " action thing)
                 set(SUBJECT_PREP "${NC}${action}${BOLD}${MAGENTA}${thing}${NC}")
             elseif (current_tag STREQUAL "SUBJECT")
                 _doLine(SUBJECT)
