@@ -46,7 +46,7 @@ function(fetchContents)
         return()
     endif ()
     if (AUE_UNPARSED_ARGUMENTS)
-        message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
+        msg(ALWAYS FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
     CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
@@ -261,7 +261,7 @@ function(fetchContents)
             string(REPEAT "─" ${phaseLinePad} line)
             set(phase ${pass_num})
             inc(phase)
-            message("${GREEN}Phase ${phase} ${line}${NC}\n")
+            msg("${GREEN}Phase ${phase} ${line}${NC}\n")
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
@@ -332,13 +332,13 @@ function(fetchContents)
 
                     longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
                     longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
-                    message(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
-                    message(" ")
+                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    msg(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if (this_pkgname IN_LIST combinedLibraryComponents)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
-                        message(CHECK_PASS "Feature already available without re-processing: skipped")
+                        msg(CHECK_PASS "Feature already available without re-processing: skipped")
                         continue()
                     endif ()
                     if ("${this_method}" STREQUAL "PROCESS")
@@ -359,7 +359,7 @@ function(fetchContents)
 
                             # Check if a previously loaded LIBRARY already claimed this package
                             if (${this_pkgname}_ALREADY_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                message(STATUS "${this_pkgname} already supplied by a library target. Skipping FetchContent.")
+                                msg(STATUS "${this_pkgname} already supplied by a library target. Skipping FetchContent.")
                                 unset(magic_enum_ALREADY_FOUND CACHE)
                                 unset(magic_enum_ALREADY_FOUND)
                                 unset(magic_enum_ALREADY_FOUND CACHE)
@@ -372,16 +372,16 @@ function(fetchContents)
                             else ()
                                 # Try to find the package first before declaring FetchContent
                                 # This allows Gfx to see what HoffSoft already fetched/built
-                                message(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
+                                msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
                                 set(temporary_args ${this_find_package_args})
                                 list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
                                 find_package(${this_pkgname} QUIET ${temporary_args})
 
                                 if (${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                    message(STATUS "${this_pkgname} ${GREEN}found.${NC} Skipping FetchContent.\n")
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} Skipping FetchContent.\n")
                                     # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
                                 else ()
-                                    message(STATUS "${MAGENTA}Nope!${NC} Doing it the hard way...")
+                                    msg(STATUS "${MAGENTA}Nope!${NC} Doing it the hard way...")
                                     # Normalise source/URL keywords
                                     string(FIND "${this_url}" ".zip" azip)
                                     string(FIND "${this_url}" ".tar" atar)
@@ -405,7 +405,7 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
-                                    message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
 
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
@@ -449,13 +449,13 @@ function(fetchContents)
                                         record(APPEND needed_prereqFeatureNames "${p}")
                                     endforeach ()
 
-                                    message(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
+                                    msg(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
                                     processFeatures("${needed_prereqFeatureNames}" "${needed_prereqs}")
                                 endif ()
                             endif ()
                             #                            endif ()
                             # 2. Now attempt the real find_package
-                            message(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+                            msg(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
                             find_package(${this_pkgname} ${this_find_package_args})
 
                             set(HANDLED OFF)
@@ -482,8 +482,8 @@ function(fetchContents)
                     endif ()
 
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
-                    message(" ")
-                    message(CHECK_PASS "${GREEN}Finished${NC}")
+                    msg(" ")
+                    msg(CHECK_PASS "${GREEN}Finished${NC}")
 
                 endif ()
 
@@ -495,15 +495,15 @@ function(fetchContents)
 
                     longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
                     longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
-                    message(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BLUE}Phase ${NC}${BOLD}2${NC}")
-                    message(" ")
+                    msg(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BLUE}Phase ${NC}${BOLD}2${NC}")
+                    msg(" ")
 
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if (${this_package}_PASS_TWO_COMPLETED)
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
-                        message(" ")
-                        message(CHECK_PASS "(already been done)")
+                        msg(" ")
+                        msg(CHECK_PASS "(already been done)")
                     else ()
                         if (apf_IS_A_PREREQ)
                             set(${this_package}_PASS_TWO_COMPLETED ON)
@@ -511,7 +511,7 @@ function(fetchContents)
 
                         if (this_pkgname IN_LIST combinedLibraryComponents)
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
-                            message(CHECK_PASS "Feature already available without re-processing: skipped")
+                            msg(CHECK_PASS "Feature already available without re-processing: skipped")
                             continue()
                         endif ()
 
@@ -540,13 +540,13 @@ function(fetchContents)
                                 endif ()
 
                                 if (NOT HANDLED AND NOT ${this_feature_name} STREQUAL TESTING)
-                                    message(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
+                                    msg(STATUS "\nFetchContent_MakeAvailable(${this_pkgname})")
                                     FetchContent_MakeAvailable(${this_pkgname})
                                     handleTarget(${this_pkgname})
                                 endif ()
                             else ()
-                                message(" ")
-                                message(STATUS "${this_pkgname} already found, skipping population.")
+                                msg(" ")
+                                msg(STATUS "${this_pkgname} already found, skipping population.")
                                 #                                handleTarget(${this_pkgname})
                             endif ()
 
@@ -560,8 +560,7 @@ function(fetchContents)
                                 list(APPEND _IncludePathsList "${this_src}/include")
                             endif ()
                         else ()
-                            message(" ")
-                            message("No Phase 2 step")
+                            msg("No Phase 2 step")
                         endif ()
 
                         # Final patching/fixing phase
@@ -575,8 +574,8 @@ function(fetchContents)
                         endif ()
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
-                        message(" ")
-                        message(CHECK_PASS "${GREEN}Finished${NC}")
+                        msg(" ")
+                        msg(CHECK_PASS "${GREEN}Finished${NC}")
 
                     endif ()
                 endif ()
@@ -590,7 +589,7 @@ function(fetchContents)
 
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        message(CHECK_PASS "${GREEN}OK${NC}\n")
+        msg(CHECK_PASS "${GREEN}OK${NC}\n")
 
         propegateUpwards("Interim" OFF)
 
