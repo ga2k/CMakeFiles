@@ -297,6 +297,16 @@ macro(check_environment PROJECT_ROOT)
 #        # Example usage:
 #        hs_should_use_ansi(COLOUR)
 #        set(COLOUR OFF) #ON)
+        execute_process(
+                COMMAND sh -c "tput cols </dev/tty"
+                OUTPUT_VARIABLE _term_cols
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+        )
+        if(NOT _term_cols MATCHES "^[0-9]+$")
+            set(_term_cols 80)
+        endif()
+
         if(COLOUR)
             string(ASCII 27 ESC)
             set(RED     "${ESC}[31m")
