@@ -278,6 +278,7 @@ function(fetchContents)
                     unset(this_feature_name)
                     unset(this_find_package_args)
                     unset(this_find_package_components)
+                    unset(this_git_repo)
                     unset(this_hint)
                     unset(this_inc)
                     unset(this_kind)
@@ -309,6 +310,7 @@ function(fetchContents)
                         BUILD_DIR this_build
                         COMPONENTS this_find_package_components
                         FETCH_FLAG this_fetch
+                        GIT_REPO this_git_repo
                         GIT_TAG this_tag
                         INC_DIR this_inc
                         KIND this_kind
@@ -349,7 +351,7 @@ function(fetchContents)
                     # Pre-download hooks (mostly for setting variables/policies)
                     set(fn "${this_pkgname}_preDownload")
                     if (COMMAND "${fn}")
-                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_url}" "${this_tag}" "${this_src}")
+                        cmake_language(CALL "${fn}" "${this_pkgname}" "${this_git_repo}" "${this_tag}" "${this_src}")
                     endif ()
 
                     if ("${this_method}" STREQUAL "FETCH_CONTENTS")
@@ -403,10 +405,10 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
-                                    message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_url} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    message(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
 
                                     FetchContent_Declare(${this_pkgname}
-                                            ${SOURCE_KEYWORD} ${this_url}
+                                            ${SOURCE_KEYWORD} ${this_git_repo}
                                             SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
                                             ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                             ${COMPONENTS_KEYWORD} ${this_find_package_components}
