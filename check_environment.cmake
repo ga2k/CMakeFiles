@@ -244,29 +244,29 @@ macro(check_environment PROJECT_ROOT)
 
         function(hs_should_use_ansi out_var)
             # Manual overrides first (these are very handy in CI/IDEs).
-            option(HS_FORCE_COLOR "Force ANSI colors in CMake output" OFF)
-            option(HS_NO_COLOR    "Disable ANSI colors in CMake output" OFF)
-
-            if(HS_NO_COLOR OR DEFINED ENV{NO_COLOR})
-                set(${out_var} OFF PARENT_SCOPE)
-                return()
-            endif()
-            if(HS_FORCE_COLOR)
-                set(${out_var} ON PARENT_SCOPE)
-                return()
-            endif()
-
-            # Conservative defaults.
-            set(_use ON)
-
-            # If TERM is empty or dumb, don't color (common when not a real terminal).
-            if(DEFINED ENV{TERM})
-                if("$ENV{TERM}" STREQUAL "" OR "$ENV{TERM}" STREQUAL "dumb")
-                    set(_use OFF)
-                endif()
-            endif()
-
-            if(_use)
+#            option(HS_FORCE_COLOR "Force ANSI colors in CMake output" OFF)
+#            option(HS_NO_COLOR    "Disable ANSI colors in CMake output" OFF)
+#
+#            if(HS_NO_COLOR OR DEFINED ENV{NO_COLOR})
+#                set(${out_var} OFF PARENT_SCOPE)
+#                return()
+#            endif()
+#            if(HS_FORCE_COLOR)
+#                set(${out_var} ON PARENT_SCOPE)
+#                return()
+#            endif()
+#
+#            # Conservative defaults.
+#            set(_use ON)
+#
+#            # If TERM is empty or dumb, don't color (common when not a real terminal).
+#            if(DEFINED ENV{TERM})
+#                if("$ENV{TERM}" STREQUAL "" OR "$ENV{TERM}" STREQUAL "dumb")
+#                    set(_use OFF)
+#                endif()
+#            endif()
+#
+#            if(_use)
                 if(CMAKE_HOST_WIN32)
                     # True means output is redirected -> disable ANSI
                     execute_process(
@@ -279,7 +279,6 @@ macro(check_environment PROJECT_ROOT)
                         set(_use OFF)
                     endif()
                 else()
-
                     execute_process(
                             COMMAND sh -c "test -t 2"
                             RESULT_VARIABLE _is_tty
@@ -290,7 +289,7 @@ macro(check_environment PROJECT_ROOT)
                     endif()
 
                 endif()
-            endif()
+#            endif()
 
             set(${out_var} ${_use} PARENT_SCOPE)
         endfunction()
