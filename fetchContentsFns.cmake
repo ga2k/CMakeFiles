@@ -117,7 +117,6 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(_path "${handler}" DIRECTORY)
         get_filename_component(packageName "${_path}" NAME_WE)
 
-        DUMP(FROM tbl_LongestStrings VERBOSE)
         SELECT(HANDLER AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
         longest(RIGHT GAP
                 CURRENT ${_longest}
@@ -1329,7 +1328,6 @@ function(preProcessFeatures featureList hDataSource outVar)
             string(JOIN "&" _args "${retVar}")
         endif ()
 
-        DUMP(FROM ${hDataSource} VERBOSE)
         if (wantDefault)
             SELECT(FeatureName AS AA_FEATURE PackageName AS AA_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${AA_FEATURE}" AND "IsDefault" = 1)
         else ()

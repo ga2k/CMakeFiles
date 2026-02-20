@@ -87,11 +87,9 @@ function(fetchContents)
 
         # Integrity check
         if (NOT _uFeatureName STREQUAL "${_sFeatureName}")
-            DUMP(FROM hFeature)
             msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Feature name mismatch \"${_uFeatureName}\" vs \"${_sFeatureName}\"")
         endif ()
         if (NOT _uPackageName STREQUAL "${_sPackageName}")
-            DUMP(FROM hFeature)
             msg(ALWAYS FATAL_ERROR "Internal error: FC02 - Package name mismatch \"${_uPackageName}\" vs \"${_sPackageName}\"")
         endif ()
 
@@ -172,10 +170,6 @@ function(fetchContents)
         SELECT(ROW AS hsf_SysPkg FROM systemPackagesOnly WHERE ROWID = ${_rowID})
         list(GET hsf_SysPkg ${FIXName}    sys_Feature)
         list(GET hsf_SysPkg ${FIXPkgName} sys_Package)
-
-        DUMP(FROM userPackages VERBOSE)
-        DUMP(FROM systemPackagesOnly VERBOSE)
-        DUMP(FROM initialFeatures VERBOSE)
 
         SELECT(COUNT AS numUserPackages FROM userPackages)
 
@@ -280,7 +274,6 @@ function(fetchContents)
             set(phase ${pass_num})
             inc(phase)
             message("\n ${GREEN}Phase ${phase} ${line}${NC}\n")
-DUMP(FROM ${feature_names} VERBOSE)
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
