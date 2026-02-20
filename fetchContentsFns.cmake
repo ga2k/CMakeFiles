@@ -29,6 +29,92 @@ CREATE(TABLE tbl_LongestStrings
 INSERT(INTO tbl_LongestStrings VALUES (0 0 0 0 0 0 0))
 include(FetchContent)
 
+function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RUN)
+    macro(_doLine _var_)
+        set(arg "${${_var_}}")
+        if (current_tag STREQUAL "OBJECT" OR current_tag STREQUAL "SUBJECT")
+        endif ()
+        SELECT(${current_tag} AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
+        if (current_tag STREQUAL "VERB" OR current_tag STREQUAL "SUBJECT_PREP")
+            list(LENGTH arg knowns)
+            if (knowns GREATER 1)
+                # This is a list of known verbs
+                foreach (one IN LISTS arg)
+                    longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${one}" PADDED ${current_tag} LONGEST _longest)
+                endforeach ()
+                list(GET arg 0 arg)
+            endif ()
+        endif ()
+        longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
+        UPDATE(tbl_LongestStrings SET ${current_tag} = "${_longest}" WHERE ROWID = 1)
+    endmacro()
+
+    set(outstr "${TEMPLATE}")
+
+    string(REGEX MATCHALL "\\[[_A-Z]+:[^]]+\\]" placeholders "${TEMPLATE}")
+
+    foreach (item ${placeholders})
+        if (item MATCHES "\\[([_A-Z]+):([LCR])\\]")
+            set(current_tag ${CMAKE_MATCH_1}) # e.g. VERB
+            set(current_align ${CMAKE_MATCH_2}) # e.g. R
+
+            if (current_align STREQUAL "L")
+                set(JUSTIFY "LEFT")
+            elseif (current_align STREQUAL "C")
+                set(JUSTIFY "CENTRE")
+            elseif (current_align STREQUAL "R")
+                set(JUSTIFY "RIGHT")
+            else ()
+                unset(JUSTIFY)
+            endif ()
+
+            # Reminder:
+            # set(TEMPLATE "[VERB:R] [OBJECT:L] [SUBJECT_PREP:R] [SUBJECT:L] [ITEM_PREP:R] [TARGET:R]")
+
+            if (current_tag STREQUAL "VERB")
+                _doLine("VERB")
+                if (VERB MATCHES "created")
+                    set(VERB "${GREEN}${VERB}${NC}")
+                elseif (VERB STREQUAL "added")
+                    set(VERB "${VERB}${NC}")
+                elseif (VERB STREQUAL "replaced")
+                    set(VERB "${RED}${VERB}${NC}")
+                elseif (VERB STREQUAL "extended")
+                    set(VERB "${YELLOW}${VERB}${NC}")
+                elseif (VERB STREQUAL "skipped")
+                    set(VERB "${BLUE}${VERB}${NC}")
+                endif ()
+            elseif (current_tag STREQUAL "OBJECT")
+                _doLine(OBJECT)
+                set(OBJECT "${BOLD}${OBJECT}${NC}")
+            elseif (current_tag STREQUAL "SUBJECT_PREP")
+                _doLine(SUBJECT_PREP)
+            elseif (current_tag STREQUAL "SUBJECT")
+                _doLine(SUBJECT)
+                set(SUBJECT "${YELLOW}${SUBJECT}${NC}")
+            elseif (current_tag STREQUAL "ITEM_PREP")
+                _doLine(ITEM_PREP)
+            elseif (current_tag STREQUAL "ITEM")
+                _doLine(ITEM)
+                set(ITEM "${BLUE}${ITEM}${NC}")
+            endif ()
+        endif ()
+    endforeach ()
+    # @formatter:off
+    string(REGEX REPLACE "\\[VERB:[^]]*\\]"         "${VERB} "           outstr "${outstr}")
+    string(REGEX REPLACE "\\[OBJECT:[^]]*\\]"       "${OBJECT} "         outstr "${outstr}")
+    string(REGEX REPLACE "\\[SUBJECT_PREP:[^]]*\\]" "${SUBJECT_PREP} "   outstr "${outstr}")
+    string(REGEX REPLACE "\\[SUBJECT:[^]]*\\]"      "${SUBJECT} "        outstr "${outstr}")
+    string(REGEX REPLACE "\\[ITEM_PREP:[^]]*\\]"    "${ITEM_PREP} "      outstr "${outstr}")
+    string(REGEX REPLACE "\\[ITEM:[^]]*\\]"         "${ITEM} "           outstr "${outstr}")
+    # @formatter:on
+
+    if (NOT DRY_RUN)
+        msg("${outstr}")
+    endif ()
+
+endfunction()
+
 function(addTargetProperties target pkgname addToLists)
 
     unset(at_LibrariesList)
@@ -117,21 +203,14 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(_path "${handler}" DIRECTORY)
         get_filename_component(packageName "${_path}" NAME_WE)
 
-        SELECT(HANDLER AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
-        longest(RIGHT GAP
-                CURRENT ${_longest}
-                TEXT "${handlerName}"
-                LONGEST _longest
-                PADDED text)
-        UPDATE(tbl_LongestStrings SET "HANDLER" = ${_longest} WHERE ROWID = 1)
-#        UPDATE(tbl_LongestStrings COLUMN "HANDLER" SET "${_longest}" WHERE ROWID = 1)
-
-        set(msg "Adding handler ${BOLD}${text}${NC} for package ${BOLD}${packageName}${NC}")
+        textOut("added" "handler ${handlerName}" "for" "package ${packageName}" "" ""
+                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
         if (${handlerName} STREQUAL "init")
-            string(APPEND msg " and calling it ...")
+            textOut("calling" "handler ${handlerName}" "for" "package ${packageName}" "" ""
+                    "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
         endif ()
-        if (NOT DRY_RUN)
-            msg(ALWAYS "${msg}")
+
+        if(NOT DRY_RUN)
             include("${handler}")
             if ("${handlerName}" STREQUAL "init")
                 ############################################################################################################
@@ -231,8 +310,8 @@ function(addPackageData)
 
     if (NOT APD_DRY_RUN)
         DROP(TABLE newRecord QUIET UNRESOLVED)
-        CREATE(TABLE newRecord COLUMNS ( ${PkgColNames}) )
-        INSERT(INTO  newRecord VALUES (
+        CREATE(TABLE newRecord COLUMNS (${PkgColNames}))
+        INSERT(INTO newRecord VALUES (
                 "${APD_FEATURE}"
                 "${APD_PKGNAME}"
                 OFF
@@ -247,99 +326,11 @@ function(addPackageData)
                 "${APD_INCDIR}"
                 "${APD_COMPONENTS}"
                 "${APD_ARGS}"
-                "${APD_PREREQS}" )
+                "${APD_PREREQS}")
         )
     endif ()
     function(insertFeature)
 
-        function(_ VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE)
-            macro(_doLine _var_)
-                set(arg "${${_var_}}")
-                if (current_tag STREQUAL "OBJECT" OR current_tag STREQUAL "SUBJECT")
-                endif ()
-                SELECT(${current_tag} AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
-                if (current_tag STREQUAL "VERB" OR current_tag STREQUAL "SUBJECT_PREP")
-                    list(LENGTH arg knowns)
-                    if (knowns GREATER 1)
-                        # This is a list of known verbs
-                        foreach (one IN LISTS arg)
-                            longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${one}" PADDED ${current_tag} LONGEST _longest)
-                        endforeach ()
-                        list(GET arg 0 arg)
-                    endif ()
-                endif ()
-                longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${arg}" PADDED ${current_tag} LONGEST _longest)
-                UPDATE(tbl_LongestStrings SET ${current_tag} = "${_longest}" WHERE ROWID = 1)
-            endmacro()
-
-            if (NOT cat_quiet)
-
-                set(outstr "${TEMPLATE}")
-
-                string(REGEX MATCHALL "\\[[_A-Z]+:[^]]+\\]" placeholders "${TEMPLATE}")
-
-                foreach (item ${placeholders})
-                    if (item MATCHES "\\[([_A-Z]+):([LCR])\\]")
-                        set(current_tag ${CMAKE_MATCH_1}) # e.g. VERB
-                        set(current_align ${CMAKE_MATCH_2}) # e.g. R
-
-                        if (current_align STREQUAL "L")
-                            set(JUSTIFY "LEFT")
-                        elseif (current_align STREQUAL "C")
-                            set(JUSTIFY "CENTRE")
-                        elseif (current_align STREQUAL "R")
-                            set(JUSTIFY "RIGHT")
-                        else ()
-                            unset(JUSTIFY)
-                        endif ()
-
-                        # Reminder:
-                        # set(TEMPLATE "[VERB:R] [OBJECT:L] [SUBJECT_PREP:R] [SUBJECT:L] [ITEM_PREP:R] [TARGET:R]")
-
-                        if (current_tag STREQUAL "VERB")
-                            _doLine("VERB")
-                            if (VERB MATCHES "created")
-                                set(VERB "${GREEN}${VERB}${NC}")
-                            elseif (VERB STREQUAL "added")
-                                set(VERB "${VERB}${NC}")
-                            elseif (VERB STREQUAL "replaced")
-                                set(VERB "${RED}${VERB}${NC}")
-                            elseif (VERB STREQUAL "extended")
-                                set(VERB "${YELLOW}${VERB}${NC}")
-                            elseif (VERB STREQUAL "skipped")
-                                set(VERB "${BLUE}${VERB}${NC}")
-                            endif ()
-                        elseif (current_tag STREQUAL "OBJECT")
-                            _doLine(OBJECT)
-                            set(OBJECT "${BOLD}${OBJECT}${NC}")
-                        elseif (current_tag STREQUAL "SUBJECT_PREP")
-                            _doLine(SUBJECT_PREP)
-                        elseif (current_tag STREQUAL "SUBJECT")
-                            _doLine(SUBJECT)
-                            set(SUBJECT "${YELLOW}${SUBJECT}${NC}")
-                        elseif (current_tag STREQUAL "ITEM_PREP")
-                            _doLine(ITEM_PREP)
-                        elseif (current_tag STREQUAL "ITEM")
-                            _doLine(ITEM)
-                            set(ITEM "${BLUE}${ITEM}${NC}")
-                        endif ()
-                    endif ()
-                endforeach ()
-                # @formatter:off
-                string(REGEX REPLACE "\\[VERB:[^]]*\\]"         "${VERB} "           outstr "${outstr}")
-                string(REGEX REPLACE "\\[OBJECT:[^]]*\\]"       "${OBJECT} "         outstr "${outstr}")
-                string(REGEX REPLACE "\\[SUBJECT_PREP:[^]]*\\]" "${SUBJECT_PREP} "   outstr "${outstr}")
-                string(REGEX REPLACE "\\[SUBJECT:[^]]*\\]"      "${SUBJECT} "        outstr "${outstr}")
-                string(REGEX REPLACE "\\[ITEM_PREP:[^]]*\\]"    "${ITEM_PREP} "      outstr "${outstr}")
-                string(REGEX REPLACE "\\[ITEM:[^]]*\\]"         "${ITEM} "           outstr "${outstr}")
-                # @formatter:on
-
-                if (NOT APD_DRY_RUN)
-                    msg("${outstr}")
-                endif ()
-            endif ()
-
-        endfunction()
 
         set(switches QUIET QUITE)
         set(args TARGET LIBRARY FEATURE PACKAGE RECORD TEMPLATE)
@@ -388,7 +379,7 @@ function(addPackageData)
         if (_FeatureExists)
             globalObjGet("${CAT_FEATURE}_${CAT_PACKAGE}" _PackageExists)
             if (_PackageExists)
-                set(out_verb "skipped ${CAT_LIBRARY}")
+                set(out_verb "skipped")
                 set(out_object "package \"${CAT_PACKAGE}\"")
                 set(out_subject_prep "in")
                 set(out_subject "feature \"${CAT_FEATURE}\"")
@@ -397,7 +388,7 @@ function(addPackageData)
                 set(out_template "${cat_template} : ${GREEN}already added${NC}")
                 set(insertRow OFF)
             else ()
-                set(out_verb "added ${CAT_LIBRARY}")
+                set(out_verb "added")
                 set(out_object "package \"${CAT_PACKAGE}\"")
                 set(out_subject_prep "to")
                 set(out_subject "feature \"${CAT_FEATURE}\"")
@@ -407,7 +398,7 @@ function(addPackageData)
                 set(isDefault 0)
             endif ()
         else ()
-            set(out_verb "created ${CAT_LIBRARY}")
+            set(out_verb "created")
             set(out_object "feature \"${CAT_FEATURE}\"")
             set(out_subject_prep "with")
             set(out_subject "package \"${CAT_PACKAGE}\"")
@@ -431,7 +422,11 @@ function(addPackageData)
             endif ()
         endif ()
 
-        _("${out_verb}" "${out_object}" "${out_subject_prep}" "${out_subject}" "${out_item_prep}" "${out_item}" "${out_template}")
+        textOut("${out_verb}"
+                "${out_object}"
+                "${out_subject_prep}"   "${out_subject}"
+                "${out_item_prep}"      "${out_item}"
+                "${out_template}"        ${APD_DRY_RUN})
 
     endfunction()
 
@@ -510,7 +505,7 @@ function(parsePackage)
 
     macro(deduceType QUIET)
         SELECT(COUNT AS __rows FROM ${inputListName})
-        if(__rows GREATER 1)
+        if (__rows GREATER 1)
             # Looking like a table... There is more than one row. Let's check some more
             set(aDeducedType "TABLE")
             set(aTable ON)
@@ -577,37 +572,37 @@ function(parsePackage)
 
     if (inputListVerifyFailed)
         list(PREPEND inputListVerifyFailed "${RED}${BOLD}parsePackage() FAIL:${NC}")
-        string (JOIN "\n\n" __error_string ${inputListVerifyFailed})
+        string(JOIN "\n\n" __error_string ${inputListVerifyFailed})
 
         msg(ALWAYS FATAL_ERROR "${inputListVerifyFailed}")
     endif ()
 
-    if(aTable)
-        SELECT( ROW     AS local
-                FROM    ${features}
-                WHERE   FeatureName = ${A_PP_FEATURE}
-                AND     PackageName = ${A_PP_PACKAGE}
+    if (aTable)
+        SELECT(ROW AS local
+                FROM ${features}
+                WHERE FeatureName = ${A_PP_FEATURE}
+                AND PackageName = ${A_PP_PACKAGE}
         )
     else ()
         set(local ${${inputListName}})
     endif ()
 
-    list(GET local ${FIXName}          localFeatureName )
-    list(GET local ${FIXPkgName}       localPackageName )
-    list(GET local ${FIXIsDefault}     localIsDefault   )
-    list(GET local ${FIXNamespace}     localNS          )
-    list(GET local ${FIXKind}          localKind        )
-    list(GET local ${FIXMethod}        localMethod      )
-    list(GET local ${FIXUrl}           localURL         )
-    list(GET local ${FIXGitRepository} localGitRepo     )
-    list(GET local ${FIXGitTag}        localGitTag      )
-    list(GET local ${FIXSrcDir}        localSrcDir      )
-    list(GET local ${FIXBuildDir}      localBuildDir    )
-    list(GET local ${FIXIncDir}        localIncDir      )
-    list(GET local ${FIXComponents}    localComponents  )
-    list(GET local ${FIXArgs}          localArgs        )
-    list(GET local ${FIXPrereqs}       localPrereqs     )
-    set(                               localFetchFlag   )
+    list(GET local ${FIXName} localFeatureName)
+    list(GET local ${FIXPkgName} localPackageName)
+    list(GET local ${FIXIsDefault} localIsDefault)
+    list(GET local ${FIXNamespace} localNS)
+    list(GET local ${FIXKind} localKind)
+    list(GET local ${FIXMethod} localMethod)
+    list(GET local ${FIXUrl} localURL)
+    list(GET local ${FIXGitRepository} localGitRepo)
+    list(GET local ${FIXGitTag} localGitTag)
+    list(GET local ${FIXSrcDir} localSrcDir)
+    list(GET local ${FIXBuildDir} localBuildDir)
+    list(GET local ${FIXIncDir} localIncDir)
+    list(GET local ${FIXComponents} localComponents)
+    list(GET local ${FIXArgs} localArgs)
+    list(GET local ${FIXPrereqs} localPrereqs)
+    set(localFetchFlag)
     # Initialize output variables
     # @formatter:off
     if (DEFINED A_PP_OUTPUT)
@@ -685,8 +680,8 @@ function(parsePackage)
             set(is_zip_file OFF)
         endif ()
         set(is_url ON)
-        set(${A_PP_URL}         "${localURL}"   PARENT_SCOPE)
-        set(${A_PP_FETCH_FLAG}  "${is_fetched}" PARENT_SCOPE)
+        set(${A_PP_URL} "${localURL}" PARENT_SCOPE)
+        set(${A_PP_FETCH_FLAG} "${is_fetched}" PARENT_SCOPE)
     endif ()
 
     if (A_PP_GIT_REPO)
@@ -699,8 +694,8 @@ function(parsePackage)
         set(is_git_tag ON)
         set(is_build_dir OFF)
 
-        set(${A_PP_GIT_REPO}   "${localGitRepo}" PARENT_SCOPE)
-        set(${A_PP_FETCH_FLAG} "${is_fetched}"   PARENT_SCOPE)
+        set(${A_PP_GIT_REPO} "${localGitRepo}" PARENT_SCOPE)
+        set(${A_PP_FETCH_FLAG} "${is_fetched}" PARENT_SCOPE)
     endif ()
 
     if (A_PP_GIT_TAG AND is_git_tag)
@@ -820,9 +815,9 @@ function(resolveDependencies featureDict resolveThese resolvedFeaturesTbl resolv
     # Internal helper to walk dependencies
     function(visit lol feat_ is_a_prereq)
 
-        list(GET feat_ ${FIXName}    feature_name_)
+        list(GET feat_ ${FIXName} feature_name_)
         list(GET feat_ ${FIXPkgName} package_name_)
-        list(GET feat_ ${FIXKind}    kind_)
+        list(GET feat_ ${FIXKind} kind_)
         list(GET feat_ ${FIXPrereqs} pre_)
 
         if (NOT "${feature_name_}/${package_name_}" IN_LIST visited)
@@ -831,7 +826,7 @@ function(resolveDependencies featureDict resolveThese resolvedFeaturesTbl resolv
 
             foreach (pr_entry_ IN LISTS pre_)
                 SplitAt("${pr_entry_}" "=" pr_feat_ pr_pkgname_)
-                if(pr_pkgname_)
+                if (pr_pkgname_)
                     SELECT(ROW AS local_ FROM ${lol} WHERE FeatureName = "${pr_feat_}" AND PackageName = "${pr_pkgname_}")
                 else ()
                     SELECT(ROW AS local_ FROM ${lol} WHERE FeatureName = "${pr_feat_}" AND IsDefault = 1)
@@ -874,7 +869,7 @@ endfunction()
 ##
 ########################################################################################################################
 ##
-function(scanLibraryTargets packageData libName packageNames )
+function(scanLibraryTargets packageData libName packageNames)
 
     set(${libName}_COMPONENTS)
     set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
