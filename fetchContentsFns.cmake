@@ -73,14 +73,16 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
             SELECT(${current_tag} AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
             longest(${JUSTIFY} CURRENT ${_longest} TEXT "${${current_tag}}" PADDED ${current_tag} LONGEST _longest)
             UPDATE(tbl_LongestStrings SET ${current_tag} = "${_longest}" WHERE ROWID = 1)
+
+            string(STRIP "${${current_tag}}" ${current_tag})
+
             if (current_tag STREQUAL "VERB")
-                string(STRIP "${VERB}" VERB)
 #                _doLine("VERB")
                 SplitAt("${VERB}" " " action thing)
                 if (VERB MATCHES "created")
                     set(VERB "${BOLD}${YELLOW}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "added.*")
-                    set(VERB "${BOLD}${WHITE}\naction=${action}\n${NC} \nthing=${thing}\n")
+                    set(VERB "${BOLD}${WHITE}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "replaced")
                     set(VERB "${BOLD}${RED}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "extended")
