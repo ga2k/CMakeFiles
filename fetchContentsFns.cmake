@@ -77,7 +77,7 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
                 if (VERB MATCHES "created")
                     set(VERB "${BOLD}${YELLOW}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "added")
-                    set(VERB "${BOLD}${WHITE}${action}${NC} ${thing}")
+                    set(VERB "${BOLD}${WHITE}{action}${NC} ${thing}")
                 elseif (VERB MATCHES "replaced")
                     set(VERB "${BOLD}${RED}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "extended")
