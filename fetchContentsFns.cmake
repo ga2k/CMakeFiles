@@ -80,8 +80,7 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
                 if (VERB MATCHES "created")
                     set(VERB "${BOLD}${YELLOW}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "added")
-                    set(VERB "${BOLD}${WHITE}${action}${NC} ${thing}")
-#                    set(VERB "${BOLD}${WHITE}${thing}${NC}")
+                    set(VERB "${BOLD}${YELLOW}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "replaced")
                     set(VERB "${BOLD}${RED}${action}${NC} ${thing}")
                 elseif (VERB MATCHES "extended")
@@ -118,9 +117,9 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
     string(REGEX REPLACE "\\[ITEM:[^]]*\\]"         "${ITEM} "           outstr "${outstr}")
     # @formatter:on
 
-    if (NOT DRY_RUN)
-        msg("${outstr}")
-    endif ()
+if (NOT DRY_RUN)
+    msg("${outstr}")
+endif ()
 
 endfunction()
 
@@ -218,7 +217,7 @@ function(initialiseFeatureHandlers DRY_RUN)
             textOut("calling handler" "${handlerName}" "for package" "${packageName}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
         endif ()
-        if(NOT DRY_RUN)
+        if (NOT DRY_RUN)
             include("${handler}")
             if ("${handlerName}" STREQUAL "init")
                 ############################################################################################################
@@ -435,9 +434,9 @@ function(addPackageData)
 
         textOut("${out_verb}"
                 "${out_object}"
-                "${out_subject_prep}"   "${out_subject}"
-                "${out_item_prep}"      "${out_item}"
-                "${out_template}"        ${APD_DRY_RUN})
+                "${out_subject_prep}" "${out_subject}"
+                "${out_item_prep}" "${out_item}"
+                "${out_template}" ${APD_DRY_RUN})
 
     endfunction()
 
