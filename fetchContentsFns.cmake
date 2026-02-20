@@ -84,11 +84,11 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
                 elseif (VERB STREQUAL "skipped")
                     set(VERB "${BLUE}${VERB}${NC}")
                 elseif (VERB STREQUAL "calling")
-                    set(VERB "${GREEN}${VERB}${NC}")
+                    set(VERB "${BOLD}${GREEN}${VERB}${NC}")
                 endif ()
             elseif (current_tag STREQUAL "OBJECT")
                 _doLine(OBJECT)
-                set(OBJECT "${BOLD}${OBJECT}${NC}")
+                set(OBJECT "${OBJECT}")
             elseif (current_tag STREQUAL "SUBJECT_PREP")
                 _doLine(SUBJECT_PREP)
             elseif (current_tag STREQUAL "SUBJECT")
@@ -205,14 +205,20 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(_path "${handler}" DIRECTORY)
         get_filename_component(packageName "${_path}" NAME_WE)
 
-        textOut("added" "handler ${handlerName}" "for" "package ${packageName}" "" ""
-                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
-        if (${handlerName} STREQUAL "init")
-            textOut("calling" "handler ${handlerName}" "for" "package ${packageName}" "" ""
+        if(DRY_RUN)
+            textOut("added" "handler ${handlerName}" "for" "package ${packageName}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
-        endif ()
-
-        if(NOT DRY_RUN)
+            if (${handlerName} STREQUAL "init")
+                textOut("calling" "handler ${handlerName}" "for" "package ${packageName}" "" ""
+                        "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+            endif ()
+        else ()
+            textOut("added" "handler ${BOLD}${handlerName}${NC}" "for" "package ${BOLD}${packageName}" "" ""
+                    "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+            if (${handlerName} STREQUAL "init")
+                textOut("calling" "handler ${BOLD}${handlerName}${NC}" "for" "package ${BOLD}${packageName}" "" ""
+                        "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+            endif ()
             include("${handler}")
             if ("${handlerName}" STREQUAL "init")
                 ############################################################################################################
