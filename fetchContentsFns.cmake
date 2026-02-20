@@ -206,14 +206,14 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(packageName "${_path}" NAME_WE)
 
         if(DRY_RUN)
-            textOut("added" "handler ${BOLD}${handlerName}${NC}" "for" "package ${packageName}" "" ""
+            textOut("added" "handler ${handlerName}" "for" "package ${packageName}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             if (${handlerName} STREQUAL "init")
                 textOut("calling" "handler ${handlerName}" "for" "package ${packageName}" "" ""
                         "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             endif ()
         else ()
-            set(han "${BOLD}${handlerName}${NC}")
+            set(han "${handlerName}")
             textOut("added" "handler ${han}" "for" "package ${BOLD}${packageName}${NC}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             if (${handlerName} STREQUAL "init")
