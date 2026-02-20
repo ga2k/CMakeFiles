@@ -580,9 +580,10 @@ function(fetchContents)
 
                 inc(ix)
 
+            msg("\n${divider}\n")
+                
             endwhile () # this_feature_name
 
-            msg("\n${divider}\n")
 
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
