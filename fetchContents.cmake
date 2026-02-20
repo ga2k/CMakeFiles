@@ -4,72 +4,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
 
-set(SystemFeatureData)
-set(UserFeatureData)
+macro(_initializeVars)
 
-########################################################################################################################
-function(fetchContents)
-
-    # @formatter:off
-
-    CREATE (MAP hSystem      AS  "tbl_SystemData"                                )
-    CREATE (TABLE hSystemFeatures   AS  "tbl_SystemFeatures"   COLUMNS "Name;DfltPkg"   )
-    CREATE (TABLE hSystemPackages   AS  "tbl_SystemPackages"   COLUMNS "Name"           )
-    INSERT (INTO hSystem            KEY "key_SystemFeatures"   HANDLE hSystemFeatures   )
-    INSERT (INTO hSystem            KEY "key_SystemPackages"   HANDLE hSystemPackages   )
-    CREATE (MAP hOptional    AS  "tbl_OptionalData"                              )
-    CREATE (TABLE hOptionalFeatures AS  "tbl_OptionalFeatures" COLUMNS "Name;DfltPkg"   )
-    CREATE (TABLE hOptionalPackages AS  "tbl_OptionalPackages" COLUMNS "Name"           )
-    INSERT (INTO hOptional          KEY "key_OptionalFeatures" HANDLE hOptionalFeatures )
-    INSERT (INTO hOptional          KEY "key_OptionalPackages" HANDLE hOptionalPackages )
-    CREATE (MAP hLibrary     AS  "tbl_LibraryData"                               )
-    CREATE (TABLE hLibraryFeatures  AS  "tbl_LibraryFeatures"  COLUMNS "Name;DfltPkg"   )
-    CREATE (TABLE hLibraryPackages  AS  "tbl_LibraryPackages"  COLUMNS "Name"           )
-    INSERT (INTO hLibrary           KEY "key_LibraryFeatures"  HANDLE hLibraryFeatures  )
-    INSERT (INTO hLibrary           KEY "key_LibraryPackages"  HANDLE hLibraryPackages  )
-    CREATE (MAP hCustom      AS  "tbl_CustomData"                                )
-    CREATE (TABLE hCustomFeatures   AS  "tbl_CustomFeatures"   COLUMNS "Name;DfltPkg"   )
-    CREATE (TABLE hCustomPackages   AS  "tbl_CustomPackages"   COLUMNS "Name"           )
-    INSERT (INTO hCustom            KEY "key_CustomFeatures"   HANDLE  hCustomFeatures  )
-    INSERT (INTO hCustom            KEY "key_CustomPackages"   HANDLE  hCustomPackages  )
-    CREATE (MAP hPlugin      AS  "tbl_PluginData"                                )
-    CREATE (TABLE hPluginFeatures   AS  "tbl_PluginFeatures"   COLUMNS "Name;DfltPkg"   )
-    CREATE (TABLE hPluginPackages   AS  "tbl_PluginPackages"   COLUMNS "Name"           )
-    INSERT (INTO hPlugin            KEY "key_PluginFeatures"   HANDLE hPluginFeatures   )
-    INSERT (INTO hPlugin            KEY "key_PluginPackages"   HANDLE hPluginPackages   )
-
-    # @formatter:on
-
-    set(options HELP)
-    set(oneValueArgs PREFIX)
-    set(multiValueArgs FEATURES)
-
-    cmake_parse_arguments(AUE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGV})
-
-    if (AUE_HELP)
-        fetchContentsHelp()
-        return()
-    endif ()
-    if (AUE_UNPARSED_ARGUMENTS)
-        message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
-    endif ()
-
-    #    foreach(DRY_RUN IN ITEMS ON OFF)
-    #        initialiseFeatureHandlers(${DRY_RUN} OFF)
-    #        createStandardPackageData(${DRY_RUN} OFF)
-    #        runPackageCallbacks(${DRY_RUN} OFF)
-    #    endforeach ()
-    initialiseFeatureHandlers(ON)
-    createStandardPackageData(ON)
-    runPackageCallbacks(ON)
-
-    initialiseFeatureHandlers(OFF)
-    createStandardPackageData(OFF)
-    runPackageCallbacks(OFF)
-
-    CREATE(VIEW BigData FROM hSystem hLibrary hOptional hPlugin hCustom INTO hGlobal)
-
-    preProcessFeatures("${AUE_FEATURES}" hGlobal hUser)
     set(FETCHCONTENT_QUIET OFF)
 
     set(_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList})
@@ -89,76 +25,99 @@ function(fetchContents)
     set(_wxLibraryPaths ${${AUE_PREFIX}_wxLibraryPaths})
     set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
 
-    list(APPEND PseudoFeatures APPEARANCE PRINT LOGGER)
-    list(APPEND NoLibPackages googletest)
+    list(APPEND pseudoFeatures APPEARANCE PRINT LOGGER)
+    list(APPEND noLibPackages googletest)
 
-    CREATE(TABLE tbl_UnifiedFeatures COLUMNS "${PkgColNames}" INTO hUnifiedFeatures)
+endmacro()
 
-    # We don't search for pseudo packages
-    SELECT(COUNT FROM hUser INTO numPackages)
+########################################################################################################################
+function(fetchContents)
+
+    _initializeVars()
+
+    set(options HELP)
+    set(oneValueArgs PREFIX)
+    set(multiValueArgs FEATURES)
+
+    cmake_parse_arguments(AUE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGV})
+
+    if (AUE_HELP)
+        fetchContentsHelp()
+        return()
+    endif ()
+    if (AUE_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
+    endif ()
+
+    CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
+    CREATE(TABLE initialFeatures COLUMNS ( ${PkgColNames} ))
+    CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
+    CREATE(TABLE resolvedNames   COLUMNS (     FslashP    ))
+
+    foreach(DRY_RUN IN ITEMS ON OFF)
+        initialiseFeatureHandlers(${DRY_RUN})
+        createStandardPackageData(${DRY_RUN})
+        runPackageCallbacks(${DRY_RUN})
+    endforeach ()
+
+    preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
+
+    SELECT(COUNT AS numPackages FROM userPackages)
+
     set(aix 0)
     while (aix LESS numPackages)
-        set(pkgIndex ${aix})
         inc(aix)
+        set(pkgIndex ${aix})
 
-        SELECT(ROW FROM hUser WHERE ROWID = ${pkgIndex} into _uFeature)
+        DROP(HANDLE _uPackage)
+        DROP(HANDLE _sPackage)
 
-        # Where we manipulate the feature to be a union of the _uFeature requirements (if any)
-        # and system requirements (if any)
+        # Get user's selected package
+        SELECT(ROW AS _uPackage FROM userPackages WHERE ROWID = ${pkgIndex})
 
-        list(GET _uFeature ${FIXName}    _uFeatureName)
-        list(GET _uFeature ${FIXPkgName} _uPackageName)
+        list(GET _uPackage ${FIXName}    _uFeatureName)
+        list(GET _uPackage ${FIXPkgName} _uPackageName)
 
-        if ("${_uFeatureName}" IN_LIST PseudoFeatures)
+        # Get corresponding system package
+        SELECT(ROW AS _sPackage FROM allFeatures WHERE "FeatureName" = "${_uFeatureName}" AND "PackageName" = "${_uPackageName}")
+
+        list(GET _sPackage ${FIXName}    _sFeatureName)
+        list(GET _sPackage ${FIXPkgName} _sPackageName)
+        list(GET _sPackage ${FIXKind}    _sKind)
+
+        # Integrity check
+        if (NOT _uFeatureName STREQUAL "${_sFeatureName}")
+            DUMP(FROM hFeature)
+            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Feature name mismatch \"${_uFeatureName}\" vs \"${_sFeatureName}\"")
+        endif ()
+        if (NOT _uPackageName STREQUAL "${_sPackageName}")
+            DUMP(FROM hFeature)
+            msg(ALWAYS FATAL_ERROR "Internal error: FC02 - Package name mismatch \"${_uPackageName}\" vs \"${_sPackageName}\"")
+        endif ()
+
+        if (_sKind STREQUAL "PLUGIN")
             # We don't search for plugins this way, but still advise downstream users it is needed/available
-            list(APPEND _DefinesList USING_${_uFeatureName})
+            list(APPEND _DefinesList USING_${_uPackageName})
             continue()
         endif ()
 
-        SELECT(* FROM hGlobal WHERE KEY = "${_uFeatureName}" INTO hFeature)
+        # Where we manipulate the feature to be a union of the _uPackage requirements (if any)
+        # and system requirements (if any)
 
-        if(_uPackageName)
-#            SELECT(* FROM hFeature WHERE COLUMN "FeatureName" = "${_uFeatureName}" AND COLUMN "PackageName" = "${_uPackageName}" INTO pkg)
-            SELECT(ROW FROM hFeature WHERE COLUMN "FeatureName" = "${_uFeatureName}" AND COLUMN "PackageName" = "${_uPackageName}" INTO _sFeature)
-        else ()
-            SELECT(*     FROM hGlobal  WHERE KEY = "tbl_SystemFeatures" INTO hSysFeat)
-            SELECT(VALUE FROM hSysFeat WHERE COLUMN "Name" = "${_uFeatureName}" AND COLUMN = "DflPkg" INTO dfltPkg)
-            SELECT(ROW   FROM hFeature WHERE COLUMN "FeatureName" = "${uFeatureName}" AND COLUMN "PackageName" = "${dfltPkg}" INTO _sFeature)
-        endif ()
-#        SELECT(* FROM hGlobal WHERE KEY = "${__uFeatureName}" INTO currCat)
-
-        # If the user has not specified a package name, it means they want the default package.
-#        SELECT(ROW FROM currCat
-#                WHERE COLUMN "FeatureName" = "${_uFeatureName}"
-#                AND   COLUMN "PackageName" = "${_uPackageName}"
-#                INTO _sFeature)
-#
-        list(GET _sFeature ${FIXName}    _sFeatureName)
-        list(GET _sFeature ${FIXPkgName} _sPackageName)
-
-        # If we are here, we have the users feature and options in ${_uFeature}
-        # and the corresponding registered  feature and options in ${_sFeature}
+        # If we are here, we have the users    feature and options in ${_uPackage}
+        # and we have the corresponding system feature and options in ${_sPackage}
         # The merged feature will be in ${wip}
 
-        set(wip "${_sFeature}")
+        set(wip "${_sPackage}")
         unset(_uPkg)
         unset(_sPkg)
         unset(_uBits)
         unset(_sBits)
         unset(_bits)
 
-        # Step 1. Sanity check the set pkgname
-        string(TOUPPER "${_uPackageName}" _uPkg)
-        string(TOUPPER "${_sPackageName}" _sPkg)
-
-        if (NOT _uPkg STREQUAL "" AND NOT _uPkg STREQUAL _sPkg)
-            DUMP(FROM hFeature)
-            msg(ALWAYS FATAL_ERROR "Internal error: FC01 - Package name mismatch \"${_uPkg}\" vs \"${_sPkg}\"")
-        endif ()
-
-        # Step 2. Merge Args
-        list(GET _uFeature ${FIXArgs} _uBits)
-        list(GET _sFeature ${FIXArgs} _sBits)
+        # Step 1. Merge Args
+        list(GET _uPackage ${FIXArgs} _uBits)
+        list(GET _sPackage ${FIXArgs} _sBits)
         if (NOT "${_uBits}" STREQUAL "${_sBits}")
             string(REPLACE "&" ";" _uBits "${_uBits}")
             string(REPLACE "&" ";" _sBits "${_sBits}")
@@ -177,9 +136,9 @@ function(fetchContents)
             list(INSERT    wip ${FIXArgs} "${_bits}")
         endif ()
 
-        # Step 3. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
-        list(GET _uFeature ${FIXComponents} _uBits)
-        list(GET _sFeature ${FIXComponents} _sBits)
+        # Step 2. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
+        list(GET _uPackage ${FIXComponents} _uBits)
+        list(GET _sPackage ${FIXComponents} _sBits)
         if (NOT "${_uBits}" STREQUAL "${_sBits}")
             string(REPLACE "&" ";" _uBits "${_uBits}")
             string(REPLACE "&" ";" _sBits "${_sBits}")
@@ -190,65 +149,79 @@ function(fetchContents)
             list(INSERT    wip ${FIXComponents} "${_bits}")
         endif ()
 
-        # Step 4. Remove prerequisites from libraries (they are not used at link time)
+        # Step 3. Remove prerequisites from libraries (they are not used at link time)
         list(GET wip ${FIXKind} kkk)
         if (kkk STREQUAL "LIBRARY")
             list(REMOVE_ITEM wip ${FIXPrereqs})
             list(INSERT      wip ${FIXPrereqs} "[[EMPTY_SENTINEL]]")
         endif ()
 
-        INSERT(INTO hUnifiedFeatures VALUES ${wip})
+        _hs_sql_fields_to_storage(wip whip)
+        INSERT(INTO initialFeatures VALUES (${whip}))
+
     endwhile ()
     unset(featureName)
 
-
-
-
-
     # ensure the caller is using the system libraries
 
-
-
-
-    SELECT(* FROM hGlobal WHERE KEY = "key_SystemFeatures" INTO hsf)
-    SELECT(COUNT FROM hsf INTO numFeatureNames)
-
-    set(featureIndex 0)
-    while (featureIndex LESS numFeatureNames)
+    ####################################################################################################################
+    function(_addPackages _rowID)
         set(haveIt OFF)
+        msg("RowID=${_rowID}")
 
-        SELECT(VALUE FROM hsf WHERE ROWID = ${featureIndex} AND COLUMN = "Name" INTO hsf_Feature)
-        SELECT(VALUE FROM hsf WHERE ROWID = ${featureIndex} AND COLUMN = "DfltPkg" INTO hsf_Package)
-        SELECT(* FROM hGlobal WHERE KEY = "${hsf_Feature}" INTO hsf_featureData)
-        SELECT(ROW FROM hsf_featureData WHERE COLUMN "FeatureName" = "${hsf_Feature}" AND COLUMN "PackageName" = "${hsf_Package}" INTO hsf_Pkg)
+        SELECT(ROW AS hsf_SysPkg FROM systemPackagesOnly WHERE ROWID = ${_rowID})
+        list(GET hsf_SysPkg ${FIXName}    sys_Feature)
+        list(GET hsf_SysPkg ${FIXPkgName} sys_Package)
 
-        # Is this exact package already in the user's list?
+        DUMP(FROM userPackages VERBOSE)
+        DUMP(FROM systemPackagesOnly VERBOSE)
+        DUMP(FROM initialFeatures VERBOSE)
 
-        SELECT(VALUE FROM hUnifiedFeatures WHERE COLUMN = "FeatureName" AND COLUMN "FeatureName" = "${hsf_Feature}" AND COLUMN "PackageName" = "${hsf_Package}" INTO it_exists)
-        if(it_exists)
-            # Don't add it
-        else ()
-            INSERT(INTO hUnifiedFeatures VALUES ${hsf_Pkg})
-        endif ()
+        SELECT(COUNT AS numUserPackages FROM userPackages)
 
-        math(EXPR featureIndex "${featureIndex} + 1")
-    endwhile ()
-    ##
-    ##########
-    ##
+        set(featureIndex 0)
+        while (featureIndex LESS numUserPackages)
+            math(EXPR featureIndex "${featureIndex} + 1")
+            set(thisIndex ${featureIndex})
+            set(haveIt OFF)
+
+            SELECT(ROW AS hsf_UsrPkg FROM userPackages WHERE ROWID = ${thisIndex})
+            if(hsf_UsrPkg)
+                list(GET hsf_UsrPkg ${FIXName}    usr_Feature)
+                list(GET hsf_UsrPkg ${FIXPkgName} usr_Package)
+
+                # Is this exact package already in the user's list?
+
+                if (usr_Feature STREQUAL ${sys_Feature} AND usr_Package STREQUAL ${sys_Package})
+                    set(haveIt ON)
+                endif ()
+            endif ()
+
+            if(NOT haveIt)
+                _hs_sql_fields_to_storage(hsf_SysPkg _encodedPkg)
+                INSERT(INTO initialFeatures VALUES (${_encodedPkg}))
+            endif ()
+        endwhile ()
+    endfunction()
+    ####################################################################################################################
+    SELECT(* AS systemPackagesOnly FROM allFeatures WHERE "Kind" = "SYSTEM" AND "IsDefault" = 1)
+    SQL_FOREACH(ROW IN systemPackagesOnly CALL _addPackages)
+
     msg(" ")
 
     if (APP_DEBUG)
-        DUMP(FROM hUnifiedFeatures VERBOSE INTO captur)
+        set(captur)
+        DUMP(FROM initialFeatures VERBOSE INTO captur)
         set(captur "After tampering\n${captur}")
         msg("${captur}")
     endif ()
 
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
-    resolveDependencies(hUnifiedFeatures resolvedNames)
+    resolveDependencies(allFeatures initialFeatures unifiedFeatures resolvedNames)
 
     if (APP_DEBUG)
-        DUMP(FROM hUnifiedFeatures VERBOSE INTO captur)
+        set(captur)
+        DUMP(FROM unifiedFeatures VERBOSE INTO captur)
         set(captur "After resolution\n${captur}")
         msg("${captur}")
     endif ()
@@ -262,7 +235,7 @@ function(fetchContents)
     ## Nested function. How fancy
     ##
 
-    function(processFeatures features featureList)
+    function(processFeatures features feature_names)
 
         unset(removeFromDependencies)
 
@@ -276,26 +249,27 @@ function(fetchContents)
         set(lFName 0)
         set(lPName 0)
         set(prereqs)
-        set(feature_names "${features}")
-        record(LENGTH features numFeatures)
+        SELECT(COUNT AS numFeatures FROM ${feature_names} )
+
         while (fix LESS numFeatures)
-            record(GET features ${fix} c)
+            inc(fix)
+            set(row_id ${fix})
+
+            SELECT(ROW AS c FROM ${feature_names} WHERE ROWID = ${row_id})
             SplitAt("${c}" "/" x p)
             SplitAt("${x}" "." f g)
             set(jfp "${f}/${p}")
-            longest(QUIET CURRENT ${lFName} TEXT "${f}" LONGEST lFName)
+            longest(QUIET CURRENT ${lFName} TEXT  "${f}"  LONGEST lFName)
             longest(QUIET CURRENT ${lPName} TEXT "(${p})" LONGEST lPName)
+
             if (g)
                 list(APPEND prereqs "${jfp}")
-                record(REPLACE feature_names ${fix} "${jfp}")
+                UPDATE(${feature_names} SET FslashP = "${f}/${p}" WHERE ROWID = ${row_id})
             endif ()
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
-            inc(fix)
         endwhile ()
 
-        set(features "${feature_names}")
-
-        message(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
+        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(combinedLibraryComponents)
@@ -306,13 +280,15 @@ function(fetchContents)
             set(phase ${pass_num})
             inc(phase)
             message("\n ${GREEN}Phase ${phase} ${line}${NC}\n")
+DUMP(FROM ${feature_names} VERBOSE)
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
-                set(ix ${ixloupe})
                 inc(ixloupe)
+                set(ix ${ixloupe})
 
-                record(GET features ${ix} feature_package_combo)
+                SELECT(FslashP AS pair FROM ${feature_names} WHERE ROWID = ${ix})
+
                 macro(unsetLocalVars)
                     unset(COMPONENTS_KEYWORD)
                     unset(OVERRIDE_FIND_PACKAGE_KEYWORD)
@@ -340,12 +316,12 @@ function(fetchContents)
                 unsetLocalVars()
 
                 # See if this is a prerequisite package. If it is, we do both phases together
-                SplitAt(${feature_package_combo} "/" this_feature_name this_pkgname)
-                if ("${feature_package_combo}" IN_LIST prereqs)
+                SplitAt(${pair} "/" this_feature_name this_pkgname)
+                if ("${pair}" IN_LIST prereqs)
                     set(apf_IS_A_PREREQ ON)
                 endif ()
 
-                parsePackage(featureList
+                parsePackage(features
                         FEATURE ${this_feature_name}
                         PACKAGE ${this_pkgname}
                         ARGS this_find_package_args
@@ -371,8 +347,8 @@ function(fetchContents)
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
 
-                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
-                    longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
+                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
+                    longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
                     message(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
@@ -471,7 +447,7 @@ function(fetchContents)
 
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
-                                scanLibraryTargets("${this_pkgname}" "${features}" "${featureList}")
+                                scanLibraryTargets("${features}" "${this_pkgname}" "${feature_names}")
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                             else ()
                                 # Library not found yet. We must fulfill its metadata prerequisites
@@ -515,7 +491,7 @@ function(fetchContents)
 
                                 # Now that the library is found, scan it for transitives
                                 if ("${this_kind}" STREQUAL "LIBRARY")
-                                    scanLibraryTargets("${this_pkgname}" "${features}" "${DATA}")
+                                    scanLibraryTargets("${DATA}" "${this_pkgname}" "${feature_names}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif ()
                             endif ()
@@ -633,7 +609,7 @@ function(fetchContents)
 
     endfunction()
 
-    processFeatures("${resolvedNames}" "${unifiedFeatureList}")
+    processFeatures(unifiedFeatures resolvedNames )
     propegateUpwards("Finally" ON)
 endfunction()
 
