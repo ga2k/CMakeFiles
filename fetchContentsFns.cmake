@@ -213,10 +213,10 @@ function(initialiseFeatureHandlers DRY_RUN)
                         "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             endif ()
         else ()
-            textOut("added" "handler ${BOLD}${handlerName}${NC}" "for" "package ${BOLD}${packageName}${NC}" "" ""
+            textOut("added" "handler ${handlerName}" "for" "package ${BOLD}${packageName}${NC}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             if (${handlerName} STREQUAL "init")
-                textOut("calling" "handler ${BOLD}${handlerName}${NC}" "for" "package ${BOLD}${packageName}${NC}" "" ""
+                textOut("calling" "handler ${handlerName}" "for" "package ${BOLD}${packageName}${NC}" "" ""
                         "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
             endif ()
             include("${handler}")
