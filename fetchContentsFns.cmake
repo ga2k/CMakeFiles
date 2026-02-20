@@ -205,14 +205,13 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(_path "${handler}" DIRECTORY)
         get_filename_component(packageName "${_path}" NAME_WE)
 
-        if(DRY_RUN)
-            textOut("added handler" "${handlerName}" "for" "package ${packageName}" "" ""
+        textOut("added handler" "${handlerName}" "for" "package ${packageName}" "" ""
+                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+        if (${handlerName} STREQUAL "init")
+            textOut("calling handler" "${handlerName}" "for" "package ${packageName}" "" ""
                     "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
-            if (${handlerName} STREQUAL "init")
-                textOut("calling handler" "${handlerName}" "for" "package ${packageName}" "" ""
-                        "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
-            endif ()
-        else ()
+        endif ()
+        if(NOT DRY_RUN)
             include("${handler}")
             if ("${handlerName}" STREQUAL "init")
                 ############################################################################################################
