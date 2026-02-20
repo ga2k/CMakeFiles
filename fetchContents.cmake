@@ -246,7 +246,7 @@ function(fetchContents)
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
         endwhile ()
 
-        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
+        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}\n")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(combinedLibraryComponents)
