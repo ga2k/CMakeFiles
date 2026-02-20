@@ -261,7 +261,7 @@ function(fetchContents)
             string(REPEAT "─" ${phaseLinePad} line)
             set(phase ${pass_num})
             inc(phase)
-            message("${GREEN}Phase ${phase} ${line}${NC}")
+            message("${GREEN}Phase ${phase} ${line}${NC}\n")
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
