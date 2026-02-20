@@ -78,7 +78,9 @@ function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RU
 
             if (current_tag STREQUAL "VERB")
                 #                if(VERB MATCHES "^([^ ]+)created([^ ]+)$")
-                if(VERB MATCHES "^(.*)(created|added|replaced|extended|skipped|calling)(.*)$")
+                if(VERB MATCHES "^(.*)(created|added|replaced|extended|skipped|calling)([^ ]+)(.*)$")
+                    message("{CMAKE_MATCH_1}=${CMAKE_MATCH_1},{CMAKE_MATCH_2}=${CMAKE_MATCH_2},{CMAKE_MATCH_3}=${CMAKE_MATCH_3},{CMAKE_MATCH_4}=${CMAKE_MATCH_4}")
+                    set(pad "${CMAKE_MATCH_1}")
                     set(action "${CMAKE_MATCH_2}")
                     string(STRIP "${action}" action)
                     set(thing "${CMAKE_MATCH_3}")
