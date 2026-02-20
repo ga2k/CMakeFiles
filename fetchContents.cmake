@@ -215,7 +215,7 @@ function(fetchContents)
     function(processFeatures features feature_names)
 
         unset(removeFromDependencies)
-
+        msg("CONSOLE IS $ENV{WIDTH} characters wide")
         cmake_parse_arguments("apf" "IS_A_PREREQ" "" "" ${ARGN})
 
         # Two-Pass Strategy:
