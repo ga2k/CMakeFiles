@@ -216,6 +216,7 @@ function(fetchContents)
 
         unset(removeFromDependencies)
         msg("CONSOLE IS ${_term_cols} characters wide")
+        math(EXPR usableCols "${_term_cols} - 20")
         cmake_parse_arguments("apf" "IS_A_PREREQ" "" "" ${ARGN})
 
         # Two-Pass Strategy:
@@ -246,6 +247,9 @@ function(fetchContents)
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
         endwhile ()
 
+        string(REPEAT "─" ${usableCols} divider)
+        set(divider "${BOLD}${WHITE}${divider}${NC}")
+
         msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}\n")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -253,7 +257,7 @@ function(fetchContents)
         set(scannedLibraries)
 
         foreach (pass_num RANGE 1)
-            string(REPEAT "-" 70 line)
+            string(REPEAT "─" ${usableCols} line)
             set(phase ${pass_num})
             inc(phase)
             message("\n ${GREEN}Phase ${phase} ${line}${NC}\n")
@@ -325,7 +329,7 @@ function(fetchContents)
 
                     longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
                     longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
-                    message(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    message(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     message(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -577,6 +581,9 @@ function(fetchContents)
                 inc(ix)
 
             endwhile () # this_feature_name
+
+            msg("\n${divider}\n")
+
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(CHECK_PASS "${GREEN}OK${NC}\n")

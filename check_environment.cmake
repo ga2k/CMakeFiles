@@ -304,7 +304,7 @@ macro(check_environment PROJECT_ROOT)
                 ERROR_QUIET
         )
         if(NOT _term_cols MATCHES "^[0-9]+$")
-            set(_term_cols 80)
+            set(_term_cols 120)
         endif()
 
         if(COLOUR)
