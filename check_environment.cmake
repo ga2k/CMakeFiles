@@ -279,15 +279,16 @@ macro(check_environment PROJECT_ROOT)
                         set(_use OFF)
                     endif()
                 else()
-                    # Unix: success means stdout is a TTY -> keep ANSI
+
                     execute_process(
-                            COMMAND sh -c "test -t 1"
+                            COMMAND sh -c "test -t 2"
                             RESULT_VARIABLE _is_tty
                             OUTPUT_QUIET ERROR_QUIET
                     )
                     if(NOT _is_tty EQUAL 0)
                         set(_use OFF)
                     endif()
+
                 endif()
             endif()
 

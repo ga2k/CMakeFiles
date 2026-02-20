@@ -165,7 +165,6 @@ function(fetchContents)
     ####################################################################################################################
     function(_addPackages _rowID)
         set(haveIt OFF)
-        msg("RowID=${_rowID}")
 
         SELECT(ROW AS hsf_SysPkg FROM systemPackagesOnly WHERE ROWID = ${_rowID})
         list(GET hsf_SysPkg ${FIXName}    sys_Feature)
@@ -201,24 +200,8 @@ function(fetchContents)
     SELECT(* AS systemPackagesOnly FROM allFeatures WHERE "Kind" = "SYSTEM" AND "IsDefault" = 1)
     SQL_FOREACH(ROW IN systemPackagesOnly CALL _addPackages)
 
-    msg(" ")
-
-    if (APP_DEBUG)
-        set(captur)
-        DUMP(FROM initialFeatures VERBOSE INTO captur)
-        set(captur "After tampering\n${captur}")
-        msg("${captur}")
-    endif ()
-
     # Re-order unifiedFeatureList based on prerequisites (Topological Sort)
     resolveDependencies(allFeatures initialFeatures unifiedFeatures resolvedNames)
-
-    if (APP_DEBUG)
-        set(captur)
-        DUMP(FROM unifiedFeatures VERBOSE INTO captur)
-        set(captur "After resolution\n${captur}")
-        msg("${captur}")
-    endif ()
 
     ####################################################################################################################
     ####################################################################################################################
