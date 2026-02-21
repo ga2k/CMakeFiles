@@ -6,38 +6,38 @@ $DESTDIR
         |- $CMAKE_INSTALL_LIBDIR
         |   |- cmake
         |   |    |- cxx
-        |   |    |   |- HoffSoft
-        |   |    |          |- HoffSoft
+        |   |    |   |- Core
+        |   |    |          |- Core
         |   |    |          |   |- (all the source files)
-        |   |    |          |   |- cxx-modules-HoffSoftTarget.cmake
-        |   |    |          |   |- cxx-modules-HoffSoftTarget-Debug.cmake
-        |   |    |          |   |- cxx-modules-HoffSoftTarget-Release.cmake
+        |   |    |          |   |- cxx-modules-CoreTarget.cmake
+        |   |    |          |   |- cxx-modules-CoreTarget-Debug.cmake
+        |   |    |          |   |- cxx-modules-CoreTarget-Release.cmake
         |   |    |          |- Gfx
         |   |    |              |- (all the source files)
         |   |    |              |- cxx-modules-GfxTarget.cmake
         |   |    |              |- cxx-modules-GfxTarget-Debug.cmake
         |   |    |              |- cxx-modules-GfxTarget-Release.cmake
         |   |    |- bmi
-        |   |    |   |- HoffSoft
-        |   |    |          |- HoffSoft
+        |   |    |   |- Core
+        |   |    |          |- Core
         |   |    |          |   |- (all the bmi files)
         |   |    |          |- Gfx
         |   |    |              |- (all the bmi files)
-        |   |    |- HoffSoft
-        |   |           |- HoffSoftConfig.cmake
-        |   |           |- HoffSoftConfigVersion.cmake
-        |   |           |- HoffSoftTarget.cmake
-        |   |           |- HoffSoftTarget-debug.cmake
-        |   |           |- HoffSoftTarget-release.cmake
+        |   |    |- Core
+        |   |           |- CoreConfig.cmake
+        |   |           |- CoreConfigVersion.cmake
+        |   |           |- CoreTarget.cmake
+        |   |           |- CoreTarget-debug.cmake
+        |   |           |- CoreTarget-release.cmake
         |   |           |- GfxConfig.cmake
         |   |           |- GfxConfigVersion.cmake
         |   |           |- GfxTarget.cmake
         |   |           |- GfxTarget-debug.cmake
         |   |           |- GfxTarget-release.cmake
-        |   |- hoffsoft_hoffsoft.lib
-        |   |- hoffsoft_gfx.lib
-        |   |- HoffSoft
-        |           |- HoffSoft
+        |   |- core_core.lib
+        |   |- core_gfx.lib
+        |   |- Core
+        |           |- Core
         |           |   |- plugins
         |           |       |- (all the plugins)
         |           |- Gfx
@@ -48,12 +48,12 @@ $DESTDIR
         |                   |- (all the plugins)
         |
         |- $CMAKE_INSTALL_INCDIR
-        |   |- HoffSoft
+        |   |- Core
         |   |- Gfx
         |   |- MyCare
         |
         |- $CMAKE_INSTALL_BINDIR
-        |   |- HoffSoft
+        |   |- Core
         |   |   |- (all the dlls and exes)
         |   |- Gfx
         |   |   |- (all the dlls and exes)
@@ -61,8 +61,8 @@ $DESTDIR
         |       |- (all the dlls and exes)
         |
         |- $CMAKE_INSTALL_DATADIR
-            |- HoffSoft
-                |- HoffSoft
+            |- Core
+                |- Core
                 |   |- Resources
                 |   |   |- (all the global resources)
                 |   |- doc

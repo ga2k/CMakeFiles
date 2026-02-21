@@ -1,7 +1,7 @@
 # cmake/generate_app_config.cmake
 
-if (HoffSoft_PLUGIN_DIR)
-    set(PLUGIN_PATH "${HoffSoft_PLUGIN_DIR}")
+if (Core_PLUGIN_DIR)
+    set(PLUGIN_PATH "${Core_PLUGIN_DIR}")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
@@ -28,15 +28,15 @@ else ()
     set(FEATURES_YAML_LIST "[]")
 endif ()
 
-set(HOFFSOFT_LIBS_YAML_LIST "")
+set(CORE_LIBS_YAML_LIST "")
 if (REQD_LIBS)
     list(REMOVE_DUPLICATES REQD_LIBS)
     # Convert semicolon-separated list to individual items
-    string(REPLACE ";" "\n" HOFFSOFT_LIBS_ITEMS "${REQD_LIBS}")
-    string(REPLACE "\n" "\n    - " HOFFSOFT_LIBS_YAML_LIST "${HOFFSOFT_LIBS_ITEMS}")
-    set(HOFFSOFT_LIBS_YAML_LIST "\n    - ${HOFFSOFT_LIBS_YAML_LIST}\n")
+    string(REPLACE ";" "\n" CORE_LIBS_ITEMS "${REQD_LIBS}")
+    string(REPLACE "\n" "\n    - " CORE_LIBS_YAML_LIST "${CORE_LIBS_ITEMS}")
+    set(CORE_LIBS_YAML_LIST "\n    - ${CORE_LIBS_YAML_LIST}\n")
 else ()
-    set(HOFFSOFT_LIBS_YAML_LIST "[]")
+    set(CORE_LIBS_YAML_LIST "[]")
 endif ()
 
 set(CREATES_PLUGINS_YAML_LIST "")

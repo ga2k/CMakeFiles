@@ -99,7 +99,7 @@ foreach(_t IN LISTS HS_DependenciesList)
         set(_t "${_aliased}")
     endif()
 
-    # Never try to install imported targets (e.g. HoffSoft::yaml-cpp)
+    # Never try to install imported targets (e.g. Core::yaml-cpp)
     get_target_property(_imported ${_t} IMPORTED)
     if(_imported)
         message(STATUS "Install(${APP_NAME}): skipping IMPORTED target '${_t}'")
@@ -317,7 +317,7 @@ if (APP_LOCAL_RESOURCES)
         install(DIRECTORY "${LOCAL_RES_SRC}/"
                 DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
     else()
-        # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/HoffSoft/${APP_NAME}/Resources
+        # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/Core/${APP_NAME}/Resources
         install(DIRECTORY "${LOCAL_RES_SRC}/"
                 DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
     endif()

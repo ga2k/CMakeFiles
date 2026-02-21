@@ -372,7 +372,7 @@ function(fetchContents)
                                 endif ()
                             else ()
                                 # Try to find the package first before declaring FetchContent
-                                # This allows Gfx to see what HoffSoft already fetched/built
+                                # This allows Gfx to see what Core already fetched/built
                                 msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
                                 set(temporary_args ${this_find_package_args})
                                 list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)

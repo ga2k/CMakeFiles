@@ -1,6 +1,6 @@
 set(soci_components_handled CACHE STRING "" FORCE)
 set(soci_components_needed soci_core soci_sqlite3 CACHE STRING "" FORCE)
-#set(soci_components_needed HoffSoft::soci_core HoffSoft::soci_sqlite3 CACHE STRING "" FORCE)
+#set(soci_components_needed Core::soci_core Core::soci_sqlite3 CACHE STRING "" FORCE)
 
 function(soci_postAddTarget target)
     set(components_handled $CACHE{soci_components_handled})

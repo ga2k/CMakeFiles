@@ -241,14 +241,14 @@ function(addLibrary)
 
     # Link Core
     if (CORE IN_LIST arg_USES)
-        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::HoffSoft)
-        add_dependencies(${arg_NAME}                    HoffSoft::HoffSoft)
+        target_link_libraries(${arg_NAME}       PRIVATE Core::Core)
+        add_dependencies(${arg_NAME}                    Core::Core)
     endif ()
 
     # Link Gfx
     if (GFX IN_LIST arg_USES)
-        target_link_libraries(${arg_NAME}       PRIVATE HoffSoft::Gfx)
-        add_dependencies(${arg_NAME}                    HoffSoft::Gfx)
+        target_link_libraries(${arg_NAME}       PRIVATE Core::Gfx)
+        add_dependencies(${arg_NAME}                    Core::Gfx)
     endif ()
 
     # Link wxWidgets directly (no Widgets wrapper library)
