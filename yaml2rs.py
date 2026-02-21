@@ -490,8 +490,8 @@ class CppModuleGenerator:
 // Generated from {yaml_file.name} (nested joins: depth {self.max_join_depth})
 //
 
-#include "HoffSoft/CoreData.h"
-#include "HoffSoft/HoffSoft.h"
+#include "Core/CoreData.h"
+#include "Core/Core.h"
 
 #include <soci/soci.h>
 #include <string>

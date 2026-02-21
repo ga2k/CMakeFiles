@@ -943,7 +943,7 @@ function(scanLibraryTargets packageData libName packageNames)
                 # 2. Extract raw name for matching
                 set(raw_import_name "${clean_lib}")
                 if ("${clean_lib}" MATCHES "::")
-                    # Handle HoffSoft::name or Namespace::name
+                    # Handle Core::name or Namespace::name
                     string(REGEX REPLACE ".*::" "" raw_import_name "${clean_lib}")
                 endif ()
 
@@ -1072,7 +1072,7 @@ macro(handleTarget _pkgname)
         list(APPEND _DefinesList USING_${this_feature})
 
         # 1. Check for the specific target cached by scanLibraryTargets
-        # This is the "Magic" that links you to HoffSoft::magic_enum instead of fetching a new one
+        # This is the "Magic" that links you to Core::magic_enum instead of fetching a new one
         if (${_pkgname}_PROVIDED_TARGET AND TARGET ${${_pkgname}_PROVIDED_TARGET})
             set(_actualTarget ${${_pkgname}_PROVIDED_TARGET})
             msg("  Linking ${_pkgname} to existing target: ${_actualTarget}")
@@ -1105,8 +1105,8 @@ macro(handleTarget _pkgname)
             elseif (TARGET ${_pkgname})
                 addTargetProperties(${_pkgname} ${_pkgname} ON)
                 set(_anyTargetFound ON)
-            elseif (TARGET HoffSoft::${_pkgname})
-                addTargetProperties(HoffSoft::${_pkgname} ${_pkgname} ON)
+            elseif (TARGET Core::${_pkgname})
+                addTargetProperties(Core::${_pkgname} ${_pkgname} ON)
                 set(_anyTargetFound ON)
             endif ()
         endif ()

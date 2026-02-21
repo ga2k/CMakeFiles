@@ -4,7 +4,7 @@
 include(CMakeFindDependencyMacro)
 
 # Provide a wxWidgets shim for consumers.
-# GfxTarget.cmake exports HoffSoft::wxWidgets that links to wx::wxmono, but consumers may not have
+# GfxTarget.cmake exports Core::wxWidgets that links to wx::wxmono, but consumers may not have
 # wxWidgets' own CMake package (and thus no wx::wxmono target). We stage the real binaries, so we
 # create an imported target that points at them *when they exist*.
 #
@@ -139,7 +139,7 @@ if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
       set(_foundInc ON)
       break()
     else()
-      # Fail if we go higher than the parent of HoffSoft or hit root
+      # Fail if we go higher than the parent of Core or hit root
       if("${_justDir}" STREQUAL "${_stopDir}")
         message(FATAL_ERROR "Could not find 'include' directory within development tree limits.")
       endif()
@@ -229,7 +229,7 @@ if(WIN32)
   set(_libdir "${_impdir}")
 endif()
   
-# Find dependencies that HoffSoft needs
+# Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
 find_dependency(OpenSSL REQUIRED)
 
