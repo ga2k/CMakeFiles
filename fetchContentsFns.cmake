@@ -364,7 +364,7 @@ function(addPackageData)
 
 
         set(switches QUIET QUITE)
-        set(args TARGET LIBRARY FEATURE PACKAGE RECORD TEMPLATE)
+        set(args TARGET KIND FEATURE PACKAGE RECORD TEMPLATE)
 
         cmake_parse_arguments("CAT" "${switches}" "${args}" "${lists}" ${ARGN})
 
@@ -384,8 +384,8 @@ function(addPackageData)
             msg(ALWAYS FATAL_ERROR "no RECORD in call to insertFeature()")
         endif ()
 
-        if (NOT CAT_LIBRARY OR "${CAT_LIBRARY}" STREQUAL "")
-            msg(ALWAYS FATAL_ERROR "no LIBRARY in call to insertFeature()")
+        if (NOT CAT_KIND OR "${CAT_KIND}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no KIND in call to insertFeature()")
         endif ()
 
         set(out_verb)
@@ -467,7 +467,7 @@ function(addPackageData)
     insertFeature(TARGET "allFeatures"
             FEATURE "${APD_FEATURE}"
             PACKAGE "${APD_PKGNAME}"
-            LIBRARY "${APD_KIND}"
+            KIND    "${APD_KIND}"
             RECORD newRecord
             TEMPLATE "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]"
     )
