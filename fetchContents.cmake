@@ -70,9 +70,6 @@ function(fetchContents)
         inc(aix)
         set(pkgIndex ${aix})
 
-        DROP(HANDLE _uPackage)
-        DROP(HANDLE _sPackage)
-
         # Get user's selected package
         SELECT(ROW AS _uPackage FROM userPackages WHERE ROWID = ${pkgIndex})
 
