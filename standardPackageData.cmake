@@ -73,12 +73,13 @@ function(createStandardPackageData dryRun)
             ARG CONFIG DRY_RUN ${dryRun})
 
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "HoffSoft" NAMESPACE "HoffSoft" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://$ENV{LIBTOKEN}@github.com/ga2k/HoffSoft.git" GIT_TAG "master"
-            ARGS REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dryRun})
-
+            GIT_REPOSITORY "https://github.com/ga2k/HoffSoft.git" GIT_TAG "master"
+            ARGS REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dryRun}
+            TOKEN $ENV{LIBTOKEN}
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://$ENV{LIBTOKEN}@github.com/ga2k/Gfx.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/ga2k/Gfx.git" GIT_TAG "master"
             ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dryRun})
+            TOKEN $ENV{LIBTOKEN}
     #
     ##
     ####
