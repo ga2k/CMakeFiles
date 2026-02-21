@@ -60,7 +60,7 @@ function(fetchContents)
         runPackageCallbacks(${DRY_RUN})
     endforeach ()
     msg()
-    
+
     preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
 
     SELECT(COUNT AS numPackages FROM userPackages)
