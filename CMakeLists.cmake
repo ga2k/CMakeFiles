@@ -1,6 +1,6 @@
 include_guard(GLOBAL)
 
-## HoffSoft build framework delegator (split into global + per-project)
+## Core build framework delegator (split into global + per-project)
 include (cmake/global.cmake)
 
 function(registerPackageCallback fn)
