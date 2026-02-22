@@ -40,12 +40,12 @@ endif ()
 # @formatting:on
 
 ## App configuration (app.yaml) generation paths
-set(APP_YAML_TEMPLATE_PATH "${CMAKE_SOURCE_DIR}/cmake/templates/app.yaml.in")
-include(${CMAKE_SOURCE_DIR}/cmake/generate_app_config.cmake)
+set(APP_YAML_TEMPLATE_PATH "${cmake_root}/templates/app.yaml.in")
+include(${cmake_root}/generate_app_config.cmake)
 install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Code generators (optional)
-include(${CMAKE_SOURCE_DIR}/cmake/generator.cmake)
+include(${cmake_root}/generator.cmake)
 
 if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 
@@ -288,12 +288,12 @@ write_basic_package_version_file(
 )
 
 configure_package_config_file(
-        ${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in
+        ${cmake_root}/templates/Config.cmake.in
         "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
-add_custom_target(${APP_NAME}Config SOURCES "${CMAKE_SOURCE_DIR}/cmake/templates/Config.cmake.in")
+add_custom_target(${APP_NAME}Config SOURCES "${cmake_root}/templates/Config.cmake.in")
 add_dependencies(${APP_NAME} ${APP_NAME}Config)
 
 install(FILES
@@ -335,7 +335,7 @@ endif()
 
 if (WIN32)
     install(CODE "
-        include(\"${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_copy_files.cmake\")
+        include(\"${cmake_root}/cmake_copy_files.cmake\")
         copy_files_to_target_dir(
             TARGET_DIR
                 \"\${OUTPUT_DIR}/bin\"

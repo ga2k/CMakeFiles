@@ -1,11 +1,11 @@
 include_guard(GLOBAL)
 
 # Shared feature/platform setup and environment checks
-include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/fetchContents.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/addLibrary.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
+include(${cmake_root}/tools.cmake)
+include(${cmake_root}/fetchContents.cmake)
+include(${cmake_root}/addLibrary.cmake)
+include(${cmake_root}/check_environment.cmake)
+include(${cmake_root}/sqlish.cmake)
 
 # The environment check validates OUTPUT_DIR etc.; call once globally
 check_environment("${CMAKE_SOURCE_DIR}")
@@ -71,7 +71,7 @@ if ("${compiler_version}" MATCHES "clang")
     list(APPEND extra_CompileOptions "-fno-implicit-modules;-fno-implicit-module-maps")
 endif ()
 
-include(${CMAKE_SOURCE_DIR}/cmake/platform.cmake)
+include(${cmake_root}/platform.cmake)
 #
 #foreach(DRY_RUN IN ITEMS ON OFF)
 #    initialiseFeatureHandlers(${DRY_RUN} OFF)

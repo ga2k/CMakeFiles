@@ -1,7 +1,7 @@
 include_guard(GLOBAL)
 
 ## Core build framework delegator (split into global + per-project)
-include (cmake/global.cmake)
+include (${cmake_root}/global.cmake)
 
 function(registerPackageCallback fn)
     if(NOT COMMAND "${fn}")
@@ -52,4 +52,4 @@ endfunction()
 
 message (NOTICE "\t\tProcessing ${APP_NAME}\n")
 
-include(${CMAKE_SOURCE_DIR}/cmake/framework.cmake)
+include(${cmake_root}/framework.cmake)

@@ -1,8 +1,8 @@
 include_guard(GLOBAL)
 
-include(${CMAKE_SOURCE_DIR}/cmake/tools.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/global.cmake)
+include(${cmake_root}/tools.cmake)
+include(${cmake_root}/sqlish.cmake)
+include(${cmake_root}/global.cmake)
 
 # @formatter:off
 set(PkgColNames FeatureName PackageName IsDefault Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq Flags)
@@ -230,7 +230,7 @@ function(initialiseFeatureHandlers DRY_RUN)
     if (MONOREPO)
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*.cmake")
     else ()
-        file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/cmake/handlers/*.cmake")
+        file(GLOB_RECURSE handlers "${cmake_root}/handlers/*.cmake")
     endif ()
 
     foreach (handler IN LISTS handlers)

@@ -9,7 +9,7 @@ function(createStandardPackageData dryRun)
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
     #   [4] KIND is one of LIBRARY / SYSTEM / OPTIONAL
     #   [5] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
-    #       If METHOD=PROCESS, when their turn comes, only ${CMAKE_SOURCE_DIR}/cmake/handlers/<pkgname>/process.cmake
+    #       If METHOD=PROCESS, when their turn comes, only ${cmake_root}/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
     #
     #   [6] One or the other of

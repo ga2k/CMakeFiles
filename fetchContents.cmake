@@ -1,8 +1,8 @@
 include(FetchContent)
 
-include(${CMAKE_SOURCE_DIR}/cmake/fetchContentsFns.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/standardPackageData.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
+include(${cmake_root}/fetchContentsFns.cmake)
+include(${cmake_root}/standardPackageData.cmake)
+include(${cmake_root}/sqlish.cmake)
 
 macro(_initializeVars)
 
@@ -585,7 +585,7 @@ function(fetchContents)
                         set(fn "${this_pkgname}_fix")
                         if (COMMAND "${fn}")
                             cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
-                        elseif (NOT ${this_pkgname}_PATCHED AND EXISTS "${CMAKE_SOURCE_DIR}/cmake/patches/${this_pkgname}")
+                        elseif (NOT ${this_pkgname}_PATCHED AND EXISTS "${cmake_root}/patches/${this_pkgname}")
                             unset(patches)
                             list(APPEND patches "${this_pkgname}|${EXTERNALS_DIR}/${this_pkgname}")
                             replaceFile("${this_pkgname}" ${patches})
