@@ -223,7 +223,7 @@ function(fetchContents)
 
         unset(removeFromDependencies)
         msg("CONSOLE IS ${_term_cols} characters wide")
-        math(EXPR usableCols "${_term_cols} - 8")
+        math(EXPR usableCols "${_term_cols} - 16")
         cmake_parse_arguments("apf" "IS_A_PREREQ;EARLY_MAKEAVAILABLE" "" "" ${ARGN})
 
         # Two-Pass Strategy:
