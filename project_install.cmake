@@ -194,6 +194,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include")
             DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
 endif()
 
+# Copy the ixx files. Why, when it has the BMI files, I do not know. I'm not a very good guesser. Just ask my
+# wife. She said "Guess what's on TV tonight?" I answered "I don't know... Dust?"
+#
+# Worst. Birthday. Night. EVER
 if(EXISTS "${CMAKE_SOURCE_DIR}/src")
     set(_hs_dev_cxx_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}")
     file(MAKE_DIRECTORY "${_hs_dev_cxx_dir}")
@@ -202,6 +206,12 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src")
             FILES_MATCHING
                 PATTERN "*.ixx")
     unset(_hs_dev_cxx_dir)
+endif()
+
+# Now for the library finder (if there really IS such a thing...)
+if(APP_TYPE MATCHES Library AND EXISTS "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake")
+    file(COPY "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake"
+         DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}")
 endif()
 
 # Install the headers from the 3rd party libraries
