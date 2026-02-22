@@ -72,10 +72,6 @@ if ("${compiler_version}" MATCHES "clang")
 endif ()
 
 include(${cmake_root}/platform.cmake)
-#
-#foreach(DRY_RUN IN ITEMS ON OFF)
-#    initialiseFeatureHandlers(${DRY_RUN} OFF)
-#endforeach ()
 
 # Make CMake find_package prefer our install libdir
 list(PREPEND CMAKE_MODULE_PATH
@@ -83,3 +79,59 @@ list(PREPEND CMAKE_MODULE_PATH
 
 # Testing helpers available globally
 include(GoogleTest)
+
+function(fittest)
+
+    set(flags ADD_ALWAYS)
+    set(options PACKAGE FILENAME OUTPUT SOURCE_DIR STAGED_DIR SYSTEM_DIR)
+    set(lists "")
+
+    cmake_parse_arguments("AA" "${flags}" "${options}" "${lists}" ${ARGN})
+
+    set(candidates)
+    set(conditionals)
+
+    set(actualSourceFile "${SOURCE_DIR}/${AA_FILENAME}")
+    set(actualStagedFile "${STAGED_DIR}/${AA_FILENAME}")
+    set(actualSystemFile "${SYSTEM_DIR}/${AA_FILENAME}")
+
+    foreach (f IN ITEMS "actualStagedFile" "actualSourceFile" "actualSystemFile")
+        set(file "${f}")
+        if (EXISTS "${file}" OR AA_ADD_ALWAYS)
+            if (EXISTS "${file}")
+                msg("  Found ${file}")
+                set(${f}Found ON)
+                list(PREPEND candidates "${file}")
+            else ()
+                msg("Missing ${file} but still added it to list")
+                set(${f}Found OFF)
+                list(APPEND conditionals "${file}")
+            endif ()
+        else ()
+            msg("Missing ${file}")
+            set(${f}Found OFF)
+        endif ()
+    endforeach ()
+    msg()
+
+    # Staged and Source files are the same?
+    if (actualSourceFileFound AND actualStagedFileFound
+            AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
+            AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
+
+        msg("Source and Staged are the same. We'll use Staged.")
+        list(REMOVE_ITEM candidates "${actualStagedFileFound}")
+        list(INSERT candidates 0 "${actualStagedFileFound}")
+    endif ()
+
+    list(APPEND candidates "${conditionals}")
+
+    set(listOfFolders)
+    foreach (candidate IN LISTS candidates)
+        get_filename_component(candidate "${candidate}" PATH)
+        list(APPEND listOfFolders "${candidate}")
+    endforeach ()
+
+    set(${outList} ${listOfFolders} PARENT_SCOPE)
+
+endfunction()

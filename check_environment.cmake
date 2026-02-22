@@ -198,9 +198,9 @@ macro(check_environment PROJECT_ROOT)
 
             # Release install - use APPDATA
             if(DEFINED ENV{APPDATA})
-                set(SYSTEM_PATH "$ENV{APPDATA}/Core")
+                set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
             else()
-                set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/Core")
+                set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/${APP_VENDOR}")
             endif()
 
             string(REPLACE "\\" "/" _PATH "${_PATH}")

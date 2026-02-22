@@ -1175,55 +1175,81 @@ function(preProcessFeatures featureList hDataSource outVar)
             if (MONOREPO AND MONOBUILD)
                 set(SOURCE_PATH "${OUTPUT_DIR}")
             else ()
-                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
+                string(REGEX REPLACE "${APP_NAME}/" "${pkg}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
+            set(actualSourcePath "${SOURCE_PATH}")
+            set(actualStagedPath "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
+            set(actualSystemPath "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
-            set(pkgName "${pkgName}Config.cmake")
+            fittest(PACKAGE         "${pkgName}"
+                    FILENAME        "${pkgName}Config.cmake"
+                    ADD_REGARDLESS  "${addAllRegardless})"
 
-            set(candidates)
-            set(conditionals)
+                    OUTPUT          listOfFolders
 
-            set(actualSourceFile "${SOURCE_PATH}/${pkgName}")
-            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-
-            foreach (path IN ITEMS "actualSystemFile" "actualSourceFile" "actualStagedFile")
-                if (EXISTS "${${path}}" OR addAllRegardless)
-                    if (EXISTS "${${path}}")
-                        msg(NOTICE "  Found ${${path}}")
-                        set(${path}Found ON)
-                        list(PREPEND candidates "${${path}}")
-                    else ()
-                        msg(NOTICE "Missing ${${path}} but still added it to list")
-                        set(${path}Found OFF)
-                        list(APPEND conditionals "${${path}}")
-                    endif ()
-                else ()
-                    msg(NOTICE "Missing ${${path}}")
-                    set(${path}Found OFF)
-                endif ()
-            endforeach ()
-            msg()
-
-            # Staged and Source files are the same?
-            if (actualSourceFileFound AND actualStagedFileFound
-                    AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
-                    AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
-
-                msg(NOTICE "Source and Staged are the same. We'll use Staged.")
-                list(REMOVE_ITEM candidates "${actualStagedFileFound}")
-                list(INSERT candidates 0 "${actualStagedFileFound}")
-            endif ()
-
-            list(APPEND candidates "${conditionals}")
-
-            set(listOfFolders)
-            foreach (candidate IN LISTS candidates)
-                get_filename_component(candidate "${candidate}" PATH)
-                list(APPEND listOfFolders "${candidate}")
-            endforeach ()
-
+                    SOURCE_DIR      "${actualSourcePath}"
+                    STAGED_DIR      "${actualStagedPath}"
+                    SYSTEM_DIR      "${actualSystemPath}"
+            )
+            #
+#            if (MONOREPO AND MONOBUILD)
+#                set(SOURCE_PATH "${OUTPUT_DIR}")
+#            else ()
+#                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
+#            endif ()
+#
+#            set(pkgName "${pkgName}Config.cmake")
+#
+#            set(candidates)
+#            set(conditionals)
+#
+#            set(actualSourceFile "${SOURCE_PATH}/${pkgName}")
+#            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
+#
+#            foreach (path IN ITEMS "actualSystemFile" "actualSourceFile" "actualStagedFile")
+#                if (EXISTS "${${path}}" OR addAllRegardless)
+#                    if (EXISTS "${${path}}")
+#                        msg(NOTICE "  Found ${${path}}")
+#                        set(${path}Found ON)
+#                        list(PREPEND candidates "${${path}}")
+#                    else ()
+#                        msg(NOTICE "Missing ${${path}} but still added it to list")
+#                        set(${path}Found OFF)
+#                        list(APPEND conditionals "${${path}}")
+#                    endif ()
+#                else ()
+#                    msg(NOTICE "Missing ${${path}}")
+#                    set(${path}Found OFF)
+#                endif ()
+#            endforeach ()
+#            msg()
+#
+#            # Staged and Source files are the same?
+#            if (actualSourceFileFound AND actualStagedFileFound
+#                    AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
+#                    AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
+#
+#                msg(NOTICE "Source and Staged are the same. We'll use Staged.")
+#                list(REMOVE_ITEM candidates "${actualStagedFileFound}")
+#                list(INSERT candidates 0 "${actualStagedFileFound}")
+#            endif ()
+#
+#            list(APPEND candidates "${conditionals}")
+#
+#            set(listOfFolders)
+#            foreach (candidate IN LISTS candidates)
+#                get_filename_component(candidate "${candidate}" PATH)
+#                list(APPEND listOfFolders "${candidate}")
+#            endforeach ()
+#
             list(APPEND hints "${listOfFolders}")
+
+
+
+
+
+
 
         endforeach ()
 
