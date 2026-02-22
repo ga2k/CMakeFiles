@@ -453,7 +453,7 @@ function(addPackageData)
         else ()
             set(out_verb "created feature")
             set(out_object "${CAT_FEATURE}")
-            set(out_subject_prep "with package")
+            set(out_subject_prep "for package")
             set(out_subject "${CAT_PACKAGE}")
             set(out_item_prep "in")
 

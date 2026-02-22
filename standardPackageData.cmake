@@ -72,8 +72,8 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
             ARG CONFIG DRY_RUN ${dryRun})
 
-    addPackageData(LIBRARY FEATURE "CORE" PKGNAME "FindCore" NAMESPACE "HoffSoft" METHOD "PROCESS")
-    addPackageData(LIBRARY FEATURE "GFX"  PKGNAME "FindGfx"  NAMESPACE "HoffSoft" METHOD "PROCESS")
+    addPackageData(LIBRARY FEATURE "CORE" PKGNAME "FindCore" NAMESPACE "HoffSoft" METHOD "PROCESS" DRY_RUN ${dryRun})
+    addPackageData(LIBRARY FEATURE "GFX"  PKGNAME "FindGfx"  NAMESPACE "HoffSoft" METHOD "PROCESS" DRY_RUN ${dryRun})
 
     #
     ##
