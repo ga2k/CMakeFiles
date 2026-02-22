@@ -5,7 +5,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/sqlish.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/global.cmake)
 
 # @formatter:off
-set(PkgColNames FeatureName PackageName IsDefault Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq)
+set(PkgColNames FeatureName PackageName IsDefault Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq Flags)
 set(FIXName          0)
 set(FIXPkgName       1)
 set(FIXIsDefault     2)
@@ -21,7 +21,10 @@ set(FIXIncDir       11)
 set(FIXComponents   12)
 set(FIXArgs         13)
 set(FIXPrereqs      14)
-math(EXPR FIXLength "${FIXPrereqs} + 1")
+set(FIXFlags        15)
+math(EXPR FIXLength "${FIXFlags} + 1")
+
+set(APD_ALLOWABLE_FLAGS "F_EARLY_MAKEAVAILABLE")
 
 CREATE(TABLE tbl_LongestStrings
     COLUMNS (VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM HANDLER)
@@ -266,7 +269,7 @@ function(addPackageData)
 
     set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM)
     set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN)
-    set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS)
+    set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS FLAGS)
 
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
 
@@ -333,11 +336,23 @@ function(addPackageData)
         list(APPEND APD_PREREQS ${APD_PREREQ})
     endif ()
 
-    string(REPLACE ";" "&" APD_COMPONENTS "${APD_COMPONENTS}")
-    string(JOIN "&" APD_ARGS ${APD_ARGS} ${APD_FIND_PACKAGE_ARGS})
-    if (APD_PREREQS)
-        string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
-    endif ()
+    foreach(flag IN LISTS APD_FLAGS)
+        if (NOT flag IN_LIST APD_ALLOWABLE_FLAGS)
+            msg(ALWAYS WARNING "addPackageData(${flag}): Unknown FLAG value \"${flag}\" removed from ${APD_FEATURE}/${APD_PKGNAME}")
+        else ()
+            string(JOIN "&" flags "${flags}" "${flag}")
+        endif ()
+    endforeach ()
+    set(APD_FLAGS "${flags}")
+
+    string(REPLACE  ";" "&"         APD_COMPONENTS "${APD_COMPONENTS}")
+    string(JOIN     "&" APD_ARGS  ${APD_ARGS}       ${APD_FIND_PACKAGE_ARGS})
+    string(REPLACE  ";" "&"         APD_PREREQS    "${APD_PREREQS}")
+
+    #
+#    if (APD_PREREQS)
+#        string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
+#    endif ()
 
     if (NOT APD_DRY_RUN)
         DROP(TABLE newRecord QUIET UNRESOLVED)
@@ -357,8 +372,11 @@ function(addPackageData)
                 "${APD_INCDIR}"
                 "${APD_COMPONENTS}"
                 "${APD_ARGS}"
-                "${APD_PREREQS}")
+                "${APD_PREREQS}"
+                "${APD_FLAGS}"
         )
+        )
+
     endif ()
     function(insertFeature)
 

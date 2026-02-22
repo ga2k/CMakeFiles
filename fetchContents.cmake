@@ -224,7 +224,7 @@ function(fetchContents)
         unset(removeFromDependencies)
         msg("CONSOLE IS ${_term_cols} characters wide")
         math(EXPR usableCols "${_term_cols} - 8")
-        cmake_parse_arguments("apf" "IS_A_PREREQ" "" "" ${ARGN})
+        cmake_parse_arguments("apf" "IS_A_PREREQ;EARLY_MAKEAVAILABLE" "" "" ${ARGN})
 
         # Two-Pass Strategy:
         # Pass 0: Declare all FetchContents, handle PROCESS and FIND_PACKAGE (Metadata stage)
@@ -285,6 +285,7 @@ function(fetchContents)
                     unset(this_feature_name)
                     unset(this_find_package_args)
                     unset(this_find_package_components)
+                    unset(this_flags)
                     unset(this_git_repo)
                     unset(this_hint)
                     unset(this_inc)
@@ -311,26 +312,36 @@ function(fetchContents)
                 endif ()
 
                 parsePackage(features
-                        FEATURE ${this_feature_name}
-                        PACKAGE ${this_pkgname}
-                        ARGS this_find_package_args
-                        BUILD_DIR this_build
-                        COMPONENTS this_find_package_components
-                        FETCH_FLAG this_fetch
-                        GIT_REPO this_git_repo
-                        GIT_TAG this_tag
-                        INC_DIR this_inc
-                        KIND this_kind
-                        METHOD this_method
-                        NAMESPACE this_namespace
-                        OUTPUT pkg_details
-                        PREREQS this_prereqs
-                        SRC_DIR this_src
-                        URL this_url
+                        # @formatter:off
+                        FEATURE     ${this_feature_name}
+                        PACKAGE     ${this_pkgname}
+                        ARGS        this_find_package_args
+                        BUILD_DIR   this_build
+                        COMPONENTS  this_find_package_components
+                        FETCH_FLAG  this_fetch
+                        FLAGS       this_flags
+                        GIT_REPO    this_git_repo
+                        GIT_TAG     this_tag
+                        INC_DIR     this_inc
+                        KIND        this_kind
+                        METHOD      this_method
+                        NAMESPACE   this_namespace
+                        OUTPUT      pkg_details
+                        PREREQS     this_prereqs
+                        SRC_DIR     this_src
+                        URL         this_url
+                        # @formatter:on
                 )
 
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
+
+                foreach(flag IN LISTS this_flags)
+                    if(flag STREQUAL "F_EARLY_MAKEAVAILABLE")
+                        set(apf_EARLY_MAKEAVAILABLE ON)
+                        break()
+                    endif ()
+                endforeach ()
 
                 # ==========================================================================================================
                 # PASS 0: DECLARATION & FIND_PACKAGE phase
@@ -498,7 +509,7 @@ function(fetchContents)
                 # PASS 1: POPULATION & FIX phase
                 # ==========================================================================================================
 
-                if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ)
+                if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ OR apf_EARLY_MAKEAVAILABLE)
 
                     longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
                     longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
