@@ -54,6 +54,8 @@ function(fetchContents)
     CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
     CREATE(TABLE resolvedNames   COLUMNS (     FslashP    ))
 
+    msg()
+    
     foreach(DRY_RUN IN ITEMS ON OFF)
         initialiseFeatureHandlers(${DRY_RUN})
         createStandardPackageData(${DRY_RUN})
