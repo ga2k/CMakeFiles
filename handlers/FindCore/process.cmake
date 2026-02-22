@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 function(FindCore_process incs libs defs)
 
     fittest(PACKAGE     "Core"
@@ -5,9 +7,9 @@ function(FindCore_process incs libs defs)
 
             OUTPUT      candidates
 
-            SOURCE_DIR  "${CMAKE_SOURCE_DIR}/../Core"
-            STAGED_DIR  "${STAGED_PATH}"
-            SYSTEM_DIR  "${SYSTEM_PATH}"
+            SOURCE_DIR  "${CMAKE_SOURCE_DIR}/../Core/"
+            STAGED_DIR  "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}"
+            SYSTEM_DIR  "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}"
     )
 
     list(LENGTH candidates numCandidates)
