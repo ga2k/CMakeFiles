@@ -39,8 +39,9 @@ function(getLibraryInfo libID obj)
 endfunction()
 
 function(registerPlugin pi)
-    string(TOUPPER ${libID} LIBID)
+    string(TOUPPER ${pi} LIBID)
     globalObjAppendUnique("HS_REG_PI_${LIBID}" "${pi}")
+    msg("Plugin registration for \"${pi}\" ${GREEN}successful${NC}")
 endfunction()
 #
 #function(savePackageData)
