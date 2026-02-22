@@ -21,7 +21,7 @@ function(FindCore_process incs libs defs)
         list(GET candidates 0 config_file)
     endif ()
 
-    registerLibrary(CORE HoffSoft Core "${config_file}")
+    registerLibrary(CORE HoffSoft Core "${config_file}/Core.cmake")
     initCore()
 
 endfunction()
