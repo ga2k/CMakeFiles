@@ -91,9 +91,9 @@ function(fittest)
     set(candidates)
     set(conditionals)
 
-    set(actualSourceFile "${AA_SOURCE_DIR}/${AA_FILENAME}")
-    set(actualStagedFile "${AA_STAGED_DIR}/${AA_FILENAME}")
-    set(actualSystemFile "${AA_SYSTEM_DIR}/${AA_FILENAME}")
+    get_filename_component(actualSourceFile "${AA_SOURCE_DIR}/${AA_FILENAME}" ABSOLUTE)
+    get_filename_component(actualStagedFile "${AA_STAGED_DIR}/${AA_FILENAME}" ABSOLUTE)
+    get_filename_component(actualSystemFile "${AA_SYSTEM_DIR}/${AA_FILENAME}" ABSOLUTE)
 
     foreach (f IN ITEMS "actualStagedFile" "actualSourceFile" "actualSystemFile")
         set(file "${${f}}")
