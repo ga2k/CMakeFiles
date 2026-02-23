@@ -135,3 +135,48 @@ function(fittest)
     set(${AA_OUTPUT} ${listOfFolders} PARENT_SCOPE)
 
 endfunction()
+
+
+function(commonInit pkg)
+
+    string(TOUPPER "${pkg}" _PKG)
+    set(findex -1)
+    set(foundFind -1)
+    set(foundUse -1)
+
+    foreach (feet IN LISTS APP_FEATURES)
+        math(EXPR findex "${findex} + 1")
+
+        separate_arguments(_feet NATIVE_COMMAND "${feet}")
+        cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
+        if (AAZ_UNPARSED_ARGUMENTS)
+            list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
+            if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
+                set(foundFind ${findex})
+            elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
+                set(foundUse ${findex})
+            endif ()
+        endif ()
+    endforeach ()
+
+    if (foundFind GREATER foundUse)
+        list(REMOVE_AT APP_FEATURES ${foundFind})
+        list(REMOVE_AT APP_FEATURES ${foundUse})
+    elseif(foundFind LESS foundUse)
+        list(REMOVE_AT APP_FEATURES ${foundUse})
+        list(REMOVE_AT APP_FEATURES ${foundFind})
+    else ()
+        # They can only be the same if they are both -1, and in that case we do nothing
+    endif ()
+
+    if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
+        list(PREPEND APP_FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+    endif ()
+
+    set(fn "add${pkg}Features")
+    cmake_language(CALL registerPackageCallback "${fn}")
+
+
+    set(HANDLED ON)
+
+endfunction()
