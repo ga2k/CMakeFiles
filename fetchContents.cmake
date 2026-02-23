@@ -63,7 +63,11 @@ function(fetchContents)
     endforeach ()
     msg()
 
+    DUMP(FROM allFeatures VERBOSE DEEP)
     preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
+    DUMP(FROM userPackages VERBOSE)
+
+    set(AUE_FEATURES)
 
     SELECT(COUNT AS numPackages FROM userPackages)
 
@@ -107,6 +111,8 @@ function(fetchContents)
         # The merged feature will be in ${wip}
 
         set(wip "${_sPackage}")
+        _hs_sql_fields_to_storage(wip wip)
+
         unset(_uPkg)
         unset(_sPkg)
         unset(_uBits)
@@ -117,7 +123,6 @@ function(fetchContents)
         list(GET _uPackage ${FIXArgs} _uBits)
         list(GET _sPackage ${FIXArgs} _sBits)
 
-        _hs_sql_fields_to_storage(wip wip)
 
         if (NOT "${_uBits}" STREQUAL "${_sBits}")
             string(REPLACE "&" ";" _uBits "${_uBits}")
@@ -127,11 +132,11 @@ function(fetchContents)
             elseif (REQUIRED IN_LIST _uBits AND OPTIONAL IN_LIST _rBits)
                 list(REMOVE_ITEM _sBits OPTIONAL)
             endif ()
-            list(APPEND _sBits ${_sBits})
+            list(APPEND _sBits ${_uBits})
             list(REMOVE_DUPLICATES _sBits)
             string(JOIN "&" _bits ${_sBits})
-            string(REPLACE "&&" "&" _bits "${_bits}")
-            string(REPLACE "&-" "&" _bits "${_bits}")
+#            string(REPLACE "&&" "&" _bits "${_bits}")
+#            string(REPLACE "&-" "&" _bits "${_bits}")
 
 
             if(NOT _bits)

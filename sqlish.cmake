@@ -1277,179 +1277,9 @@ endfunction()
 # ======================================================================================================================
 # Special vars set on return:   SELECT_RESULT_SET       (if no AS) Whatever the result of the SELECT was
 #                               SELECT_RESULT_KIND      The type (SCALAR/LIST/MAP/TABLE) of SELECT_RESULT_SET
-#
+#                               SELECT_OK               TRUE if sizeof(resultset) > 0, otherwise FALSE
 # ======================================================================================================================
 function(SELECT)
-
-    if (1)
-        #
-        #    set(SELECT_MATCHES "COUNT|HANDLE|ROW|ROWID|COLUMN|NAME|KEY|${_TOK_STAR}")
-        #    string(REPLACE "|" ";" SELECT_MODES ${SELECT_MATCHES})
-        #    set(SELECT_NOUN_MATCHES "ROW|COLUMN|ROWID|INDEX|NAME|KEY")
-        #    string(REPLACE "|" ";" SELECT_NOUNS ${SELECT_NOUN_MATCHES})
-        #
-        #    # ── Rejoin CMake's pre-tokenised arg list into a single string ────────
-        #    string(JOIN " " _sel_args ${ARGN})
-        #    string(STRIP "${_sel_args}" _sel_args)
-        #    string(SUBSTRING "${_sel_args}" 0 1 SS)
-        #    if (SS STREQUAL "*")
-        #        string(REPLACE "*" ${_TOK_STAR} _sel_args "${_sel_args}")
-        #    endif ()
-        #    string(REGEX REPLACE "[ \t\r\n]+" " " _sel_args "${_sel_args}")
-        #    string(STRIP "${_sel_args}" _sel_args)
-        #
-        #    # ── Pull INTO <var> off the tail (optional) ──────────────────────────
-        #    set(SELECT_INTO "")
-        #    if (_sel_args MATCHES "^(.*) INTO ([^ ]+)$")
-        #        string(STRIP "${CMAKE_MATCH_1}" _sel_args)
-        #        set(SELECT_INTO "${CMAKE_MATCH_2}")
-        #    else ()
-        #        message(WARNING "SELECT: no INTO clause, result discarded")
-        #    endif ()
-        #
-        #    # ── Split on WHERE (optional) ────────────────────────────────────────
-        #    set(_sel_where "")
-        #    if (_sel_args MATCHES "^(.*) WHERE (.+)$")
-        #        string(STRIP "${CMAKE_MATCH_1}" _sel_args)
-        #        set(_sel_where "${CMAKE_MATCH_2}")
-        #    endif ()
-        #
-        #    # ── <mode+cols> FROM <name> ───────────────────────────────────────────
-        #    if (NOT _sel_args MATCHES "^(.*) FROM ([^ ]+)$")
-        #        msg(ALWAYS FATAL_ERROR "SELECT: syntax error near '${_sel_args}'")
-        #    endif ()
-        #    set(_arg "${CMAKE_MATCH_2}")
-        #    string(STRIP "${CMAKE_MATCH_1}" _sel_mode_cols)
-        #
-        #    if (DEFINED "${_arg}")
-        #        set(_h_try "${${_arg}}")
-        #    else ()
-        #        set(_h_try "${_arg}")
-        #    endif ()
-        #    set(_h)
-        #    get_property(_exists GLOBAL PROPERTY "${_h_try}_TYPE" SET)
-        #    if (_exists)
-        #        set(_h "${_h_try}")
-        #    else ()
-        #        get_property(_h_label GLOBAL PROPERTY "HS_LABEL_TO_HNDL_${_h_try}")
-        #        if (_h_label)
-        #            set(_h "${_h_label}")
-        #        endif ()
-        #    endif ()
-        #    if (NOT _h)
-        #        msg(ALWAYS FATAL_ERROR "SELECT: No handle or object named '${_arg}'")
-        #    endif ()
-        #
-        #    if (SELECT_HANDLE)
-        #        set(${SELECT_INTO} "${_h}" PARENT_SCOPE)
-        #        return()
-        #    endif ()
-        #
-        #    get_property(_type GLOBAL PROPERTY "${_h}_TYPE")
-        #
-        #    # Split mode+cols on spaces into a token list
-        #    string(REPLACE " " ";" _sel_tokens "${_sel_mode_cols}")
-        #
-        #    # Grab first token and check if it's a bare reserved word
-        #    list(GET _sel_tokens 0 _first_token)
-        #    list(REMOVE_AT _sel_tokens 0)
-        #
-        #    set(_first_is_rw FALSE)
-        #    if (_first_token MATCHES "^(${SELECT_MATCHES})$")
-        #        set(_first_is_rw ON)
-        #        if (CMAKE_MATCH_1 STREQUAL ${_TOK_STAR})
-        #            set(SELECT_STAR ON)
-        #            set(SELECT_MODE "*")
-        #        else ()
-        #            set(SELECT_${CMAKE_MATCH_1} ON)
-        #            set(SELECT_MODE "${CMAKE_MATCH_1}")
-        #        endif ()
-        #    endif ()
-        #
-        #    if (_first_is_rw)
-        #        # ── Bare reserved word → it is the mode, nothing should follow ───
-        #        if (NOT "${_sel_tokens}" STREQUAL "")
-        #            # Translate sentinels back for readable error
-        #            set(_extra_display "")
-        #            foreach (_xt IN LISTS _sel_tokens)
-        #                rw_display("${_xt}" _xtd)
-        #                list(APPEND _extra_display "${_xtd}")
-        #            endforeach ()
-        #            string(JOIN ";" _extra_str ${_extra_display})
-        #            msg(ALWAYS FATAL_ERROR "SELECT: EXTRA TOKENS {${_extra_str}} FOLLOW <mode> ${_sel_mode}")
-        #        endif ()
-        #        set(_sel_cols "")
-        #
-        #    else ()  # ── Not a bare RW → implicit VALUE mode, all tokens are columns ──
-        #
-        #        list(INSERT _sel_tokens 0 "${_first_token}")
-        #        set(SELECT_VALUES "")
-        #        set(SELECT_VALUE ON)
-        #        set(_tok_is_rw FALSE)
-        #        foreach (_tok IN LISTS _sel_tokens)
-        #            # Bare reserved word used as field name → error
-        #            if (_tok MATCHES "^(${SELECT_MATCHES})$")
-        #                set(_tok_is_rw TRUE)
-        #            endif ()
-        #
-        #            if (_tok_is_rw)
-        #                rw_display("${_tok}" _tok_display)
-        #                msg(ALWAYS FATAL_ERROR "SELECT: RESERVED WORD {${_tok_display}} USED AS FIELD NAME")
-        #            else ()
-        #                # Strip apostrophes and add to column list
-        #                string(REGEX REPLACE "'" "" _col "${_tok}")
-        #                list(APPEND SELECT_VALUES "${_col}")
-        #            endif ()
-        #        endforeach ()
-        #    endif ()
-        #
-        #    ##
-        #    ## "You're about to see some serious s#!t" Doc Brown, Back to the Future (c) 1984 Fox
-        #    ##
-        #
-        #    # ── Parse WHERE clause ───────────────────────────────────────────────
-        #    set(_whereCols "")
-        #    set(_whereOps "")
-        #    set(_whereVals "")
-        #    if (NOT "${_sel_where}" STREQUAL "")
-        #        parse_where("${_sel_where}")
-        #    endif ()
-        #
-        #    # Set the flag if one of those noun was selected
-        #    set(_whix 0)
-        #    list(LENGTH _whereCols _whlen)
-        #    while (_whix LESS _whlen)
-        #        list(GET _whereCols ${_whix} _where)
-        #        list(GET _whereOps  ${_whix} _op)
-        #        list(GET _whereVals ${_whix} _val)
-        #
-        #        if (_where MATCHES "^(${SELECT_NOUN_MATCHES})$")
-        #            set(_saved_cmake_match1 "${CMAKE_MATCH_1}")
-        ##            if (NOT _where MATCHES "^(NAME|KEY)$")
-        #                set(_op)
-        ##            endif ()
-        #            set(SELECT_WHERE_${_saved_cmake_match1} ${_op} ${_val})
-        #            list(REMOVE_AT _whereCols ${_whix})
-        #            list(REMOVE_AT _whereOps ${_whix})
-        #            list(REMOVE_AT _whereVals ${_whix})
-        #
-        #            # Restart
-        #            set(_whix 0)
-        #            list(LENGTH _whereCols _whlen)
-        #            continue()
-        #        endif ()
-        #
-        #        inc(_whix)
-        #    endwhile ()
-        #
-        #    if (SELECT_HANDLE)
-        #        if (_h)
-        #            set(${SELECT_INTO} "${_h}" PARENT_SCOPE)
-        #            return()
-        #        endif ()
-        #    endif ()
-        ########################################################################################################################
-    endif ()
 
     function(_parent_scope __col __val)
         string(REGEX REPLACE "'" "" _var "${__col}")
@@ -1570,6 +1400,7 @@ function(SELECT)
 #    endif ()
 
     ####################################################################################################################
+    set(SELECT_OK OFF PARENT_SCOPE)
 
     if (_type STREQUAL "MAP")
 
@@ -1590,7 +1421,7 @@ function(SELECT)
 
         set(SELECT_RESULT_SET ${_final} PARENT_SCOPE)
         set(SELECT_RESULT_KIND "MAP" PARENT_SCOPE)
-
+        set(SELECT_OK ON PARENT_SCOPE)
         return()
     endif ()
 
@@ -1622,10 +1453,12 @@ function(SELECT)
             set(${SELECT_AS} "${_last}" PARENT_SCOPE)
             set(SELECT_RESULT_SET "${_last}" PARENT_SCOPE)
             set(SELECT_RESULT_KIND "SCALAR" PARENT_SCOPE)
+            set(SELECT_OK ON PARENT_SCOPE)
         else ()
             set(${SELECT_AS} "${_res}" PARENT_SCOPE)
             set(SELECT_RESULT_SET "${_res}" PARENT_SCOPE)
             set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
+            set(SELECT_OK ON PARENT_SCOPE)
         endif ()
 
 
@@ -1688,7 +1521,7 @@ function(SELECT)
         else ()
             set(SELECT_RESULT_SET "${_hMapRes}" PARENT_SCOPE)
         endif ()
-
+        set(SELECT_OK ON PARENT_SCOPE)
         set(SELECT_RESULT_KIND "HANDLE" PARENT_SCOPE)
 
         return()
@@ -1709,8 +1542,8 @@ function(SELECT)
         else ()
             set(SELECT_RESULT_SET "${_rowList}" PARENT_SCOPE)
         endif ()
-
         set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
+        set(SELECT_OK ON PARENT_SCOPE)
 
         return()
     endif ()
@@ -1747,6 +1580,7 @@ function(SELECT)
             endif ()
 
             set(SELECT_RESULT_KIND "${_mode}" PARENT_SCOPE)
+            set(SELECT_OK ON PARENT_SCOPE)
 
             return()
         endif ()
@@ -1864,6 +1698,7 @@ function(SELECT)
             set(SELECT_RESULT_SET ${_count} PARENT_SCOPE)
         endif ()
         set(SELECT_RESULT_KIND "COUNT" PARENT_SCOPE)
+        set(SELECT_OK ON PARENT_SCOPE)
 
         return()
     endif ()
@@ -1898,6 +1733,7 @@ function(SELECT)
         else ()
             set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
         endif ()
+        set(SELECT_OK ON PARENT_SCOPE)
 
         return()
 
@@ -1924,462 +1760,31 @@ function(SELECT)
 
         set(SELECT_RESULT_SET "_rowList" PARENT_SCOPE)
         set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
+        set(SELECT_OK ON PARENT_SCOPE)
 
         return()
     endif ()
 
     # --- D. Default: Return a result set (New Table Handle) ---
     CREATE(TABLE "result_set" COLUMNS "${_allCols}" INTO _tmpRes)
-    foreach (_mID IN LISTS _matches)
-        set(_rowValues "")
-        foreach (_col IN LISTS _allCols)
-            get_property(_val GLOBAL PROPERTY "${_h}_R${_mID}_${_col}")
-            list(APPEND _rowValues "${_val}")
-        endforeach ()
-        INSERT(INTO _tmpRes VALUES (${_rowValues}))
-    endforeach ()
+    if(_matches)
+        set(SELECT_OK ON PARENT_SCOPE)
 
-    _parent_scope("'${SELECT_AS}'" "${_tmpRes}")
-#    set(SELECT_RESULT_SET "${_tmpRes}" PARENT_SCOPE)
-    set(SELECT_RESULT_KIND "HANDLE" PARENT_SCOPE)
-#
-#    set(${SELECT_AS} "${_tmpRes}" PARENT_SCOPE)
-
-endfunction()
-
-function(SELECT-O-MATIC)
-    #    set(options "VALUE;HANDLE;COUNT;ROW")
-    #    set(args "FROM;INTO;ROWID;INDEX;COLUMN;NAME;KEY;LIKE;VALUES")
-    #    set(lists "")
-    set(optional_equals "ROW;ROWID;INDEX;COLUMN;NAME;KEY")
-    set(options "VALUE;HANDLE;COUNT")
-    set(args "FROM;INTO;LIKE")
-    set(lists "VALUES")
-    # Check for * in arguments and replace with a placeholder to avoid expansion
-    set(_processed_argv "${ARGV1};${ARGV2}")
-    set(_i 3)
-    while (_i LESS ${ARGC})
-        set(_arg "${ARGV${_i}}")
-        if (_arg STREQUAL "*")
-            list(APPEND _processed_argv "${_TOK_STAR}")
-            set(SELECT_STAR TRUE)
-            inc(_i)
-            continue()
-        elseif (_arg MATCHES "^(ROW|ROWID|INDEX|COLUMN|NAME|KEY)$")
-            list(APPEND _processed_argv "${_arg}")
-            set(_kw ${_arg})
-            inc(_i)
-            if ("${ARGV${_i}}" STREQUAL "=")
-                inc(_i)
-            endif ()
-            set(SELECT_${_kw} "${ARGV${_i}}")
-            list(APPEND _processed_argv "${ARGV${_i}}")
-        else ()
-            list(APPEND _processed_argv "${_arg}")
-        endif ()
-        inc(_i)
-    endwhile ()
-
-    cmake_parse_arguments(SELECT "${options}" "${args}" "${lists}" ${_processed_argv})
-
-    if (SELECT_INTO)
-        set(_intoVar "${SELECT_INTO}")
-    else ()
-        list(GET ARGV -1 _intoVar)
-    endif ()
-
-    if (SELECT_FROM)
-        _hs_sql_resolve_handle("${SELECT_FROM}" _h)
-    else ()
-        # Try to find 'FROM <handle>' in ARGV
-        list(FIND ARGV "FROM" _fromIdx)
-        if (NOT _fromIdx EQUAL -1)
-            math(EXPR _hIdx "${_fromIdx} + 1")
-            list(GET ARGV ${_hIdx} _fromHandleVar)
-            _hs_sql_resolve_handle("${_fromHandleVar}" _h)
-        else ()
-            # Fallback for when FROM keyword is missing but handle is provided positionally
-            # We need to find something that LOOKS like a handle or a label
-            foreach (_arg IN LISTS ARGV)
-                if (NOT _arg MATCHES "^(SELECT|VALUE|HANDLE|COUNT|ROW|COLUMN|INTO|ROWID|INDEX|NAME|KEY|LIKE|VALUES)$")
-                    if (DEFINED "${_arg}")
-                        set(_h_try "${${_arg}}")
-                    else ()
-                        set(_h_try "${_arg}")
-                    endif ()
-                    get_property(_exists GLOBAL PROPERTY "${_h_try}_TYPE" SET)
-                    if (_exists)
-                        set(_h "${_h_try}")
-                        break()
-                    endif ()
-                    get_property(_h_label GLOBAL PROPERTY "HS_LABEL_TO_HNDL_${_h_try}")
-                    if (_h_label)
-                        set(_h "${_h_label}")
-                        break()
-                    endif ()
-                endif ()
+        foreach (_mID IN LISTS _matches)
+            set(_rowValues "")
+            foreach (_col IN LISTS _allCols)
+                get_property(_val GLOBAL PROPERTY "${_h}_R${_mID}_${_col}")
+                list(APPEND _rowValues "${_val}")
             endforeach ()
-        endif ()
-    endif ()
-
-    get_property(_type GLOBAL PROPERTY "${_h}_TYPE")
-
-    if (SELECT_HANDLE)
-        if (_h)
-            set(${_intoVar} "${_h}" PARENT_SCOPE)
-            return()
-        endif ()
-    endif ()
-
-    if (_type STREQUAL "MAP")
-        if (SELECT_NAME)
-            set(_targetKey "${SELECT_NAME}")
-        elseif (SELECT_KEY)
-            set(_targetKey "${SELECT_KEY}")
-        else ()
-            set(_targetKey "")
-            # Try to find key in unparsed arguments
-            foreach (_arg IN LISTS SELECT_UNPARSED_ARGUMENTS)
-                if (NOT _arg STREQUAL "${_intoVar}" AND NOT _arg STREQUAL "${SELECT_FROM}" AND NOT _arg STREQUAL "${_h}")
-                    set(_targetKey "${_arg}")
-                    break()
-                endif ()
-            endforeach ()
-
-            if (NOT _targetKey)
-                set(_i 1)
-                while (_i LESS ARGC)
-                    if ("${ARGV${_i}}" MATCHES "^(NAME|KEY)$")
-                        math(EXPR _i "${_i} + 1")
-                        if ("${ARGV${_i}}" STREQUAL "=")
-                            math(EXPR _i "${_i} + 1")
-                        endif ()
-                        set(_targetKey "${ARGV${_i}}")
-                    endif ()
-                    math(EXPR _i "${_i} + 1")
-                endwhile ()
-            endif ()
-        endif ()
-        get_property(_raw GLOBAL PROPERTY "${_h}_K_${_targetKey}")
-        _hs_sql_field_to_user(_raw _final)
-        set(${_intoVar} "${_final}" PARENT_SCOPE)
-        return()
-    endif ()
-
-    if (_type STREQUAL "VIEW")
-        get_property(_encMems GLOBAL PROPERTY "${_h}_MEMBERS")
-        _hs_sql_record_to_list(_encMems _members)
-        set(_res "")
-        set(_last "")
-
-        set(_args ${ARGV})
-        # Attempt to remove INTO and its value if they were at the end
-        list(GET _args -2 _penultimate)
-        if (_penultimate STREQUAL "INTO")
-            list(REMOVE_AT _args -1 -2)
-        else ()
-            list(REMOVE_AT _args -1)
-        endif ()
-        # Remove the handle if it was positional (usually ARGV1)
-        if (NOT SELECT_FROM)
-            list(REMOVE_AT _args 1)
-        endif ()
-
-        foreach (_m IN LISTS _members)
-            set(_mVar "_v_${_m}")
-            set(${_mVar} "${_m}")
-            SELECT(${_args} FROM _m INTO _sub)
-            if (_sub)
-                list(APPEND _res "${_sub}")
-                set(_last "${_sub}")
-            endif ()
-        endforeach ()
-        list(LENGTH _res _matches)
-        if (_matches EQUAL 1)
-            set(${_intoVar} "${_last}" PARENT_SCOPE)
-        else ()
-            set(${_intoVar} "${_res}" PARENT_SCOPE)
-        endif ()
-        return()
-    endif ()
-
-    # TABLE Logic
-    set(_whereCols "")
-    set(_whereOps "")
-    set(_whereVals "")
-    set(_tRow "")
-    set(_tCol "")
-
-    get_property(_encIDs GLOBAL PROPERTY "${_h}_ROWIDS")
-    _hs_sql_record_to_list(_encIDs _ids)
-
-    if (SELECT_ROWID)
-        set(_tRow "${SELECT_ROWID}")
-    elseif (SELECT_INDEX)
-        set(_tRow "${SELECT_INDEX}")
-    endif ()
-
-    if (SELECT_COLUMN)
-        set(_tCol "${SELECT_COLUMN}")
-    endif ()
-
-    # Fallback to manual parsing for WHERE clauses if not covered by basic keywords
-    set(_i 1)
-    while (_i LESS ARGC)
-        set(_curr "${ARGV${_i}}")
-        if ("${_curr}" MATCHES "^(ROWID|INDEX)$")
-            math(EXPR _i "${_i} + 1")
-            if ("${ARGV${_i}}" STREQUAL "=")
-                math(EXPR _i "${_i} + 1")
-            endif ()
-            set(_tRow "${ARGV${_i}}")
-        elseif ("${_curr}" STREQUAL "ROW")
-            math(EXPR _i "${_i} + 1")
-            if ("${ARGV${_i}}" STREQUAL "=")
-                math(EXPR _i "${_i} + 1")
-            endif ()
-            set(_rowName "${ARGV${_i}}")
-            get_property(_rid GLOBAL PROPERTY "${_h}_ROWNAME_TO_ID_${_rowName}")
-            if (_rid)
-                set(_tRow "${_rid}")
-            else ()
-                set(_tRow "${_rowName}")
-            endif ()
-        elseif ("${_curr}" STREQUAL "COLUMN")
-            math(EXPR _i "${_i} + 1")
-            if ("${ARGV${_i}}" STREQUAL "=")
-                math(EXPR _i "${_i} + 1")
-                set(_tCol "${ARGV${_i}}")
-            else ()
-                set(_cName "${ARGV${_i}}")
-                math(EXPR _i "${_i} + 1")
-                if ("${ARGV${_i}}" MATCHES "^(=|LIKE)$")
-                    list(APPEND _whereCols "${_cName}")
-                    list(APPEND _whereOps "${ARGV${_i}}")
-                    math(EXPR _i "${_i} + 1")
-                    list(APPEND _whereVals "${ARGV${_i}}")
-                else ()
-                    set(_tCol "${_cName}")
-                    math(EXPR _i "${_i} - 1")
-                endif ()
-            endif ()
-        elseif ("${_curr}" STREQUAL "WHERE")
-            # Skip WHERE, the next part should be ROW = or COL =
-            # If it's COLUMN =, the loop will handle it.
-            # If it's something else like Name = Alice, we need to handle it.
-            math(EXPR _nextIdx "${_i} + 1")
-            list(GET ARGV ${_nextIdx} _next)
-            if (NOT "${_next}" MATCHES "^(ROW|COLUMN)$")
-                # This is likely a column filter like Name = Alice
-                list(APPEND _whereCols "${_next}")
-                math(EXPR _i "${_i} + 1") # Point to Name
-                math(EXPR _i "${_i} + 1") # Point to =
-                list(GET ARGV ${_i} _op)
-                list(APPEND _whereOps "${_op}")
-                math(EXPR _i "${_i} + 1") # Point to Alice
-                list(GET ARGV ${_i} _val)
-                list(APPEND _whereVals "${_val}")
-            endif ()
-        endif ()
-        math(EXPR _i "${_i} + 1")
-    endwhile ()
-
-    if (SELECT_VALUES)
-        # Handle multiple values (columns) for a single row
-        # ARGV parsing for multiple columns after VALUES is tricky with manual loop.
-        # But if we have SELECT_VALUES, it might just be the first one if we used set(args ... VALUES)
-        # Actually cmake_parse_arguments only takes one value for an argument in 'args'.
-        # Let's use 'lists' for VALUES.
-    endif ()
-
-    if (SELECT_STAR AND _tRow)
-        CREATE(MAP "Row MAP ${_h}" INTO _hMap)
-        # Handle created in current scope, resolve it for use
-        _hs_sql_resolve_handle(_hMap _hMapRes)
-        get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-        _hs_sql_record_to_list(_encCols _allCols)
-        foreach (_c IN LISTS _allCols)
-            get_property(_raw GLOBAL PROPERTY "${_h}_R${_tRow}_${_c}")
-            _hs_sql_field_to_user(_raw _val)
-            # Use MAP-specific insert logic
-            _hs_sql_field_to_storage(_val _encVal)
-            set_property(GLOBAL PROPERTY "${_hMapRes}_K_${_c}" "${_encVal}")
-            set_property(GLOBAL PROPERTY "${_hMapRes}_K_${_c}_ISHANDLE" FALSE)
-            set_property(GLOBAL APPEND PROPERTY "${_hMapRes}_KEYS" "${_c}")
-        endforeach ()
-        set(${_intoVar} "${_hMapRes}" PARENT_SCOPE)
-        return()
-    endif ()
-
-    if (SELECT_ROW AND _tRow AND NOT SELECT_VALUE AND NOT SELECT_HANDLE AND NOT SELECT_STAR)
-        get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-        _hs_sql_record_to_list(_encCols _allCols)
-        set(_rowList "")
-        foreach (_c IN LISTS _allCols)
-            get_property(_raw GLOBAL PROPERTY "${_h}_R${_tRow}_${_c}")
-            _hs_sql_field_to_user(_raw _val)
-            list(APPEND _rowList "${_val}")
-        endforeach ()
-        set(${_intoVar} "${_rowList}" PARENT_SCOPE)
-        return()
-    endif ()
-
-    if ((SELECT_VALUE OR SELECT_HANDLE OR SELECT_ROW) AND _tRow)
-        # Try to find column name from unparsed args if _tCol is empty
-        if (NOT _tCol AND NOT SELECT_ROW)
-            # Get all column names to check against unparsed args
-            get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-            _hs_sql_record_to_list(_encCols _allCols)
-
-            foreach (_arg IN LISTS SELECT_UNPARSED_ARGUMENTS)
-                if (NOT _arg STREQUAL "${_intoVar}" AND NOT _arg STREQUAL "${SELECT_FROM}" AND NOT _arg STREQUAL "${_h}" AND NOT _arg STREQUAL "${_TOK_STAR}" AND NOT _arg STREQUAL "WHERE" AND NOT _arg STREQUAL "=")
-                    # Check if it's a valid column name
-                    list(FIND _allCols "${_arg}" _isCol)
-                    if (NOT _isCol EQUAL -1)
-                        set(_tCol "${_arg}")
-                        break()
-                    endif ()
-                endif ()
-            endforeach ()
-        endif ()
-
-        if (SELECT_ROW AND NOT SELECT_VALUE AND NOT SELECT_HANDLE)
-            # Already handled above, but just in case
-        elseif (_tCol)
-            get_property(_raw GLOBAL PROPERTY "${_h}_R${_tRow}_${_tCol}")
-            _hs_sql_field_to_user(_raw _final)
-            set(${_intoVar} "${_final}" PARENT_SCOPE)
-            return()
-        endif ()
-    endif ()
-
-
-    # B. Restored Multi-row Filtering Logic (SELECT * / SELECT COUNT)
-    get_property(_encIDs GLOBAL PROPERTY "${_h}_ROWIDS")
-    _hs_sql_record_to_list(_encIDs _ids)
-    get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-    _hs_sql_record_to_list(_encCols _allCols)
-
-    set(_matches "")
-    set(_matched_column_name "")
-
-    foreach (_rid IN LISTS _ids)
-        set(_rowPass TRUE)
-        list(LENGTH _whereCols _filterCount)
-        if (_filterCount GREATER 0)
-            math(EXPR _maxF "${_filterCount} - 1")
-            foreach (_fIdx RANGE ${_maxF})
-                list(GET _whereCols ${_fIdx} _fCol)
-                list(GET _whereOps ${_fIdx} _fOp)
-                list(GET _whereVals ${_fIdx} _fVal)
-                get_property(_val GLOBAL PROPERTY "${_h}_R${_rid}_${_fCol}")
-                _hs_sql_field_to_user(_val _actualVal)
-
-                if (_fOp STREQUAL "=")
-                    if (NOT "${_actualVal}" STREQUAL "${_fVal}")
-                        set(_rowPass FALSE)
-                        break()
-                    endif ()
-                elseif (_fOp STREQUAL "LIKE")
-                    string(REPLACE "*" ".*" _regex "${_fVal}")
-                    if (NOT "${_actualVal}" MATCHES "^${_regex}$")
-                        set(_rowPass FALSE)
-                        break()
-                    endif ()
-                endif ()
-            endforeach ()
-        endif ()
-
-        if (_rowPass)
-            list(APPEND _matches "${_rid}")
-            if (_fCol)
-                list(APPEND _matched_column_name "${_fCol}")
-            elseif (_tCol)
-                list(APPEND _matched_column_name "${_tCol}")
-            endif ()
-        endif ()
-    endforeach ()
-    # --- C. Shape the Output ---
-    if (SELECT_COUNT)
-        list(LENGTH _matches _count)
-        set(${_intoVar} "${_count}" PARENT_SCOPE)
-        return()
-    endif ()
-
-    # If the user specifically asked for a VALUE (scalar string)
-    if (SELECT_VALUE OR SELECT_HANDLE)
-        list(LENGTH _matches _matchCount)
-        if (_matchCount GREATER 0)
-            # Return the value from the first matching row
-            list(GET _matches 0 _firstID)
-
-            if (NOT _tCol)
-                # Try to find column name from unparsed args
-                get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-                _hs_sql_record_to_list(_encCols _allCols)
-                # msg(STATUS "DEBUG: SELECT matching column from unparsed. _allCols='${_allCols}' unparsed='${SELECT_UNPARSED_ARGUMENTS}'")
-
-                foreach (_arg IN LISTS SELECT_UNPARSED_ARGUMENTS)
-                    if (NOT _arg STREQUAL "${_intoVar}" AND NOT _arg STREQUAL "${SELECT_FROM}" AND NOT _arg STREQUAL "${_h}" AND NOT _arg STREQUAL "${_TOK_STAR}" AND NOT _arg STREQUAL "WHERE" AND NOT _arg STREQUAL "=")
-                        # Check if it's a valid column name
-                        list(FIND _allCols "${_arg}" _isCol)
-                        if (NOT _isCol EQUAL -1)
-                            set(_tCol "${_arg}")
-                            break()
-                        endif ()
-                    endif ()
-                endforeach ()
-            endif ()
-
-            if (_tCol)
-                get_property(_val GLOBAL PROPERTY "${_h}_R${_firstID}_${_tCol}")
-                _hs_sql_field_to_user(_val _final_result)
-                set(${_intoVar} "${_final_result}" PARENT_SCOPE)
-            else ()
-                # If no column specified, maybe return first column?
-                # Or just empty.
-                set(${_intoVar} "" PARENT_SCOPE)
-            endif ()
-        else ()
-            # No rows matched: return empty string
-            set(${_intoVar} "" PARENT_SCOPE)
-        endif ()
-        return()
-    endif ()
-
-    # --- Inside SELECT function ---
-    if (SELECT_ROW)
-        if (NOT _targetRow)
-            # If no ROWID specified, default to the first match
-            list(GET _matches 0 _targetRow)
-        endif ()
-
-        set(_rowList "")
-        get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
-        _hs_sql_record_to_list(_encCols _allCols)
-
-        foreach (_col IN LISTS _allCols)
-            get_property(_v GLOBAL PROPERTY "${_h}_R${_targetRow}_${_col}")
-            _hs_sql_field_to_user(_v _v)
-            list(APPEND _rowList "${_v}")
+            INSERT(INTO _tmpRes VALUES (${_rowValues}))
         endforeach ()
 
-        set(${_intoVar} "${_rowList}" PARENT_SCOPE)
-        return()
+        _parent_scope("'${SELECT_AS}'" "${_tmpRes}")
+    #    set(SELECT_RESULT_SET "${_tmpRes}" PARENT_SCOPE)
+        set(SELECT_RESULT_KIND "HANDLE" PARENT_SCOPE)
+    #
+    #    set(${SELECT_AS} "${_tmpRes}" PARENT_SCOPE)
     endif ()
-
-    # --- D. Default: Return a result set (New Table Handle) ---
-    CREATE(TABLE "result_set" COLUMNS "${_allCols}" INTO _tmpRes)
-    foreach (_mID IN LISTS _matches)
-        set(_rowValues "")
-        foreach (_col IN LISTS _allCols)
-            get_property(_val GLOBAL PROPERTY "${_h}_R${_mID}_${_col}")
-            list(APPEND _rowValues "${_val}")
-        endforeach ()
-        INSERT(INTO _tmpRes VALUES ${_rowValues})
-    endforeach ()
-
-    set(${_intoVar} "${_tmpRes}" PARENT_SCOPE)
 endfunction()
 
 # --------------------------------------------------------------------------------------------------

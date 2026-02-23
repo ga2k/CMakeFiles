@@ -247,14 +247,15 @@ function(initialiseFeatureHandlers DRY_RUN)
         if (NOT DRY_RUN)
             include("${handler}")
             if ("${handlerName}" STREQUAL "init")
-                ############################################################################################################
-                ############################################################################################################
-                set(fn "${packageName}_init") #############################################################################
-                if (COMMAND "${fn}") ########################################################################################
-                    cmake_language(CALL "${fn}") ###########################################################################
-                endif () ###################################################################################################
-                ############################################################################################################
-                ############################################################################################################
+                ########################################################################################################
+                ########################################################################################################
+                set(fn "${packageName}_init") ##########################################################################
+                if (COMMAND "${fn}") ###################################################################################
+                    cmake_language(CALL "${fn}") #######################################################################
+                    set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE) ###################################################
+                endif () ###############################################################################################
+                ########################################################################################################
+                ########################################################################################################
             endif ()
         endif ()
     endforeach ()
@@ -268,16 +269,13 @@ function(addPackageData)
     # but no data is actually stored.
 
     set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM)
-    set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN)
+    set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR
+             GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN DEFAULT)
     set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS FLAGS)
 
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
 
     set(methods FIND_PACKAGE FETCH_CONTENTS PROCESS IGNORE)
-    if (NOT APD_METHOD)
-        set(APD_METHOD IGNORE)
-    endif ()
-
     if (NOT APD_METHOD IN_LIST methods)
         msg(ALWAYS FATAL_ERROR "addPackageData: One of METHOD ${BOLD}${methods}${NC} required for ${APD_FEATURE}")
     endif ()
@@ -347,6 +345,13 @@ function(addPackageData)
     endforeach ()
     set(APD_FLAGS "${flags}")
 
+    set(APD_NEED_DEFAULT OFF)
+
+    if("${APD_DEFAULT}" STREQUAL "")
+        set(APD_DEFAULT O)
+        set(APD_NEED_DEFAULT ON)
+    endif ()
+
     string(REPLACE  ";" "&"         APD_COMPONENTS "${APD_COMPONENTS}")
     string(JOIN     "&" APD_ARGS  ${APD_ARGS}       ${APD_FIND_PACKAGE_ARGS})
     string(REPLACE  ";" "&"         APD_PREREQS    "${APD_PREREQS}")
@@ -362,7 +367,7 @@ function(addPackageData)
         INSERT(INTO newRecord VALUES (
                 "${APD_FEATURE}"
                 "${APD_PKGNAME}"
-                OFF
+                "${APD_DEFAULT}"
                 "${APD_NAMESPACE}"
                 "${APD_KIND}"
                 "${APD_METHOD}"
@@ -413,7 +418,7 @@ function(addPackageData)
         set(out_subject_prep)
         set(out_subject)
         set(out_item_prep)
-        set(out_item "${CAT_TARGET}")
+        set(out_item "${CAT_KIND}")
         set(out_template "${CAT_TEMPLATE}")
 
         if (NOT APD_DRY_RUN)
@@ -444,7 +449,7 @@ function(addPackageData)
                 set(out_object "${CAT_PACKAGE}")
                 set(out_subject_prep "to feature")
                 set(out_subject "${CAT_FEATURE}")
-                set(out_item_prep "in")
+                set(out_item_prep "in collection")
 
                 globalObjSet("_HS_APD_${CAT_FEATURE}_${CAT_PACKAGE}" ON)
                 set(insertRow ON)
@@ -455,7 +460,7 @@ function(addPackageData)
             set(out_object "${CAT_FEATURE}")
             set(out_subject_prep "for package")
             set(out_subject "${CAT_PACKAGE}")
-            set(out_item_prep "in")
+            set(out_item_prep "in collection")
 
             globalObjSet("_HS_APD_${CAT_FEATURE}" ON)
             globalObjSet("_HS_APD_${CAT_FEATURE}_${CAT_PACKAGE}" ON)
@@ -469,8 +474,10 @@ function(addPackageData)
         else ()
             if (insertRow)
                 SELECT(ROW AS newData FROM ${CAT_RECORD} WHERE ROWID = 1)
-                list(REMOVE_AT newData ${FIXIsDefault})
-                list(INSERT newData ${FIXIsDefault} "${isDefault}")
+                if(APD_NEED_DEFAULT)
+                    list(REMOVE_AT newData ${FIXIsDefault})
+                    list(INSERT newData ${FIXIsDefault} "${isDefault}")
+                endif ()
                 _hs_sql_fields_to_storage(newData _1)
                 INSERT(INTO ${CAT_TARGET} VALUES (${_1}))
             endif ()
@@ -488,7 +495,7 @@ function(addPackageData)
             FEATURE "${APD_FEATURE}"
             PACKAGE "${APD_PKGNAME}"
             KIND    "${APD_KIND}"
-            RECORD newRecord
+            RECORD     newRecord
             TEMPLATE "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]"
     )
 
@@ -1175,7 +1182,7 @@ function(preProcessFeatures featureList hDataSource outVar)
             if (MONOREPO AND MONOBUILD)
                 set(SOURCE_PATH "${OUTPUT_DIR}")
             else ()
-                string(REGEX REPLACE "${APP_NAME}/" "${pkg}/" SOURCE_PATH "${OUTPUT_DIR}")
+                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
             set(actualSourcePath "${SOURCE_PATH}")
             set(actualStagedPath "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
@@ -1284,11 +1291,11 @@ function(preProcessFeatures featureList hDataSource outVar)
         set(_first_hint)
         set(_first_path)
         set(_first_component)
-        set(AA_OVERRIDE_FIND_PACKAGE)
-        set(AA_PACKAGE)
-        set(AA_NAMESPACE)
-        set(AA_FIND_PACKAGE_ARGS)
-        set(AA_COMPONENTS)
+        set(PPF_OVERRIDE_FIND_PACKAGE)
+        set(PPF_PACKAGE)
+        set(PPF_NAMESPACE)
+        set(PPF_FIND_PACKAGE_ARGS)
+        set(PPF_COMPONENTS)
 
     endmacro()
     function(subProcess subArgs retVar)
@@ -1347,7 +1354,7 @@ function(preProcessFeatures featureList hDataSource outVar)
     set(_switches OVERRIDE_FIND_PACKAGE)
     set(_single_args PACKAGE NAMESPACE)
     set(_multi_args FIND_PACKAGE_ARGS ARGS COMPONENTS)
-    set(_prefix AA)
+    set(_prefix PPF)
 
     foreach (feature IN LISTS featureList)
 
@@ -1355,80 +1362,80 @@ function(preProcessFeatures featureList hDataSource outVar)
 
         separate_arguments(feature NATIVE_COMMAND "${feature}")
         cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
-        list(POP_FRONT AA_UNPARSED_ARGUMENTS AA_FEATURE)
+        list(POP_FRONT PPF_UNPARSED_ARGUMENTS PPF_FEATURE)
 
         # Sanity checks
 
-        if (NOT AA_FEATURE)
+        if (NOT PPF_FEATURE)
             msg(ALWAYS FATAL_ERROR "APP_FEATURES: No FEATURE name")
         endif ()
 
-        if (NOT DEFINED AA_PACKAGE OR NOT AA_PACKAGE STREQUAL "")
-            set(AA_PACKAGE)
+        if (NOT DEFINED PPF_PACKAGE OR NOT PPF_PACKAGE STREQUAL "")
+            set(PPF_PACKAGE)
             set(wantDefault ON)
-        elseif ("PACKAGE" IN_LIST AA_KEYWORDS_MISSING_VALUES)
+        elseif ("PACKAGE" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
             msg(ALWAYS FATAL_ERROR "APP_FEATURES: PACKAGE keyword given with no package name")
-            set(AA_PACKAGE)
+            set(PPF_PACKAGE)
             set(wantDefault ON)
         else ()
             set(wantDefault OFF)
         endif ()
 
-        if (AA_OVERRIDE_FIND_PACKAGE AND (AA_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST AA_KEYWORDS_MISSING_VALUES))
+        if (PPF_OVERRIDE_FIND_PACKAGE AND (PPF_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES))
             msg(ALWAYS FATAL_ERROR "APP_FEATURES: Cannot combine OVERRIDE_FIND_PACKAGE with FIND_PACKAGE_ARGS")
         endif ()
 
-        if (AA_NAMESPACE OR "NAMESPACE" IN_LIST AA_KEYWORDS_MISSING_VALUES)
-            if (NOT "${AA_NAMESPACE}" STREQUAL "")
-                set(_ns "${AA_NAMESPACE}")
+        if (PPF_NAMESPACE OR "NAMESPACE" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            if (NOT "${PPF_NAMESPACE}" STREQUAL "")
+                set(_ns "${PPF_NAMESPACE}")
             else ()
                 msg(ALWAYS WARNING "APP_FEATURES: NAMESPACE keyword given with no package name")
-                list(REMOVE_ITEM AA_UNPARSED_ARGUMENTS "NAMESPACE")
+                list(REMOVE_ITEM PPF_UNPARSED_ARGUMENTS "NAMESPACE")
             endif ()
         endif ()
 
-        if (AA_OVERRIDE_FIND_PACKAGE)
+        if (PPF_OVERRIDE_FIND_PACKAGE)
             set(_args "OVERRIDE_FIND_PACKAGE")
-        elseif (AA_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST AA_KEYWORDS_MISSING_VALUES)
+        elseif (PPF_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
             set(_args "FIND_PACKAGE_ARGS")
-            if (NOT "${AA_FIND_PACKAGE_ARGS}" STREQUAL "")
-                subProcess("${AA_FIND_PACKAGE_ARGS}" retVar)
+            if (NOT "${PPF_FIND_PACKAGE_ARGS}" STREQUAL "")
+                subProcess("${PPF_FIND_PACKAGE_ARGS}" retVar)
                 string(JOIN "&" _args "${retVar}")
             endif ()
         endif ()
 
-        if (AA_COMPONENTS OR "COMPONENTS" IN_LIST AA_KEYWORDS_MISSING_VALUES)
-            if (NOT "${AA_COMPONENTS}" STREQUAL "")
-                string(JOIN "&" _components ${AA_COMPONENTS})
+        if (PPF_COMPONENTS OR "COMPONENTS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            if (NOT "${PPF_COMPONENTS}" STREQUAL "")
+                string(JOIN "&" _components ${PPF_COMPONENTS})
             else ()
                 msg(ALWAYS WARNING "APP_FEATURES: COMPONENTS keyword given with no components")
             endif ()
         endif ()
 
-        if (AA_ARGS OR "ARGS" IN_LIST AA_KEYWORDS_MISSING_VALUES)
-            subProcess("${AA_ARGS}" retVar)
+        if (PPF_ARGS OR "ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            subProcess("${PPF_ARGS}" retVar)
             string(JOIN "&" _args "${retVar}")
         endif ()
 
         if (wantDefault)
-            SELECT(FeatureName AS AA_FEATURE PackageName AS AA_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${AA_FEATURE}" AND "IsDefault" = 1)
+            SELECT(FeatureName AS PPF_FEATURE PackageName AS PPF_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${PPF_FEATURE}" AND IsDefault = 1)
         else ()
-            SELECT(FeatureName AS AA_FEATURE PackageName AS _AA_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${AA_FEATURE}" AND "PackageName" = "${AA_PACKAGE}")
-            set(AA_PACKAGE "${_AA_PACKAGE}")
+            SELECT(FeatureName AS PPF_FEATURE PackageName AS _PPF_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${PPF_FEATURE}" AND "PackageName" = "${PPF_PACKAGE}")
+            set(PPF_PACKAGE "${_PPF_PACKAGE}")
         endif ()
 
         if (IsDefault STREQUAL "")
-            if (AA_PACKAGE)
-                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature/Package \"${AA_FEATURE}/${AA_PACKAGE}\" does not exist")
+            if (PPF_PACKAGE)
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature/Package \"${PPF_FEATURE}/${PPF_PACKAGE}\" does not exist")
             else ()
-                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature \"${AA_FEATURE}\" does not exist")
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature \"${PPF_FEATURE}\" does not exist")
             endif ()
         endif ()
 
         #        _hs_sql_field_to_storage()
         INSERT(INTO hRevisedFeatures VALUES (
-                "${AA_FEATURE}"
-                "${AA_PACKAGE}"
+                "${PPF_FEATURE}"
+                "${PPF_PACKAGE}"
                 "${IsDefault}"
                 "${_ns}"
                 "${_kind}"

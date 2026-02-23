@@ -7,7 +7,7 @@ function(addGfxFeatures dry_run)
     addPackageData(OPTIONAL FEATURE "WIDGETS"     PKGNAME "wxWidgets"     METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED DRY_RUN ${dry_run})
-    addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft"
+    addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft" DEFAULT 1
             ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dry_run})
     # @formatter:on
 
@@ -25,4 +25,5 @@ endfunction()
 
 function(FindGfx_init)
     commonInit(Gfx)
+    set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE)
 endfunction()
