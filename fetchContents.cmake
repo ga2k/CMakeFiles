@@ -63,11 +63,7 @@ function(fetchContents)
     endforeach ()
     msg()
 
-    DUMP(FROM allFeatures VERBOSE DEEP)
     preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
-    DUMP(FROM userPackages VERBOSE)
-
-    set(AUE_FEATURES)
 
     SELECT(COUNT AS numPackages FROM userPackages)
 
