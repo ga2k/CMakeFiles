@@ -176,7 +176,6 @@ function(commonInit pkg)
     set(fn "add${pkg}Features")
     cmake_language(CALL registerPackageCallback "${fn}")
 
-
     set(HANDLED ON)
 
 endfunction()
