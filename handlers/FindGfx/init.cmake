@@ -1,15 +1,22 @@
 function(FindGfx_init)
-    initGfx()
+    foreach (feet IN LISTS APP_FEATURES)
+        cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${feet})
+        if (AAZ_UNPARSED_ARGUMENTS)
+            list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
+            if (AAZ_FEATURE STREQUAL GFX)
+                initGfx()
+                return()
+            endif ()
+        endif ()
+    endforeach ()
     set(HANDLED ON)
 endfunction()
 
 macro(initGfx)
-
     list(REMOVE_ITEM APP_FEATURES "GFX")
     if (NOT APP_NAME STREQUAL "Gfx")
         list(PREPEND APP_FEATURES "GFX PACKAGE Gfx ARGS PATHS {Gfx}")
     endif ()
-
     set(fn "addGfxFeatures")
     cmake_language(CALL registerPackageCallback "${fn}")
 

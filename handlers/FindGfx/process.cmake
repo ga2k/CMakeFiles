@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 function(FindGfx_process incs libs defs)
 
     fittest(PACKAGE     "Gfx"
