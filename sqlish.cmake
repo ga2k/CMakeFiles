@@ -279,7 +279,6 @@ function(_sql_peel_as in_str out_str out_into out_fields)
     # Reconstruct the string for the next stage: raw fields + FROM tail
     list(JOIN _fields " " _fields_str)
     list(JOIN _remaining " " _tail_str)
-    #    set(_reconstructed "${_fields_str} ${_tail_str}")
     set(_reconstructed "${_tail_str}")
     string(STRIP "${_reconstructed}" _reconstructed)
 
@@ -536,9 +535,156 @@ macro(_hs_sql_check_readonly hndl)
     endif ()
 endmacro()
 
-function(_parse_expression expr output)
 
-    if (NOT expr)
+
+function(_list_from_bracketed_list input output hardened)
+
+    set(inter_3)
+    string(STRIP "${input}" inter_0)
+
+    foreach(thing IN LISTS inter_0)
+        string(REGEX REPLACE "[\"|\(|\)]" "" inter_1 "${thing}" )
+        if(NOT inter_1 STREQUAL "")
+            set(inter_2 "\"${inter_1}\"")
+            if(inter_3)
+                string(JOIN " " inter_3 "${inter_3}" "${inter_2}")
+            else ()
+                set(inter_3 "${inter_2}")
+            endif ()
+        endif ()
+    endforeach ()
+    foreach(inter_4 IN LISTS inter_3)
+        string(REGEX REPLACE "^\"" "" inter_5 "${inter_4}")
+        string(REGEX REPLACE "\"$" "" inter_6 "${inter_5}")
+        string(REGEX REPLACE "\"" ""  inter_7 "${inter_6}")
+        string(REGEX REPLACE "  " " " inter_8 "${inter_7}")
+        string(REGEX REPLACE " "  ";" inter_9 "${inter_8}")
+    endforeach ()
+    set(${output} "${inter_9}" PARENT_SCOPE)
+endfunction()
+
+
+
+
+function(_parse_expression input output)
+
+    if (NOT input)
+        return()
+    endif ()
+
+    # Track whether THIS call is the top-level entry point
+    if (ARGC GREATER_EQUAL 3)
+        set(_depth ${ARGV2})
+        set(_top_level OFF)
+    else ()
+        set(_depth 0)
+        set(_top_level ON)
+        set(_PARSE_PAREN_ACCUMULATOR "" CACHE INTERNAL "")
+    endif ()
+
+    set(_balance 0)
+    set(_sibling 0)
+    unset(_expr)
+    unset(_subexprs)   # Will be a list of sibling subexpressions, each serialized with _TOK_LIST_SEP
+
+    separate_arguments(_fixed NATIVE_COMMAND "${input}")
+
+    unset(_z)
+    foreach (_x IN LISTS _fixed)
+        foreach (_y IN LISTS _x)
+            list(APPEND _z ${_y})
+        endforeach ()
+    endforeach ()
+    set(input ${_z})
+
+    set(_writing_into_subexpr OFF)
+    unset(_current_subexpr)
+
+    foreach (_token IN LISTS input)
+        if (_token STREQUAL "(")
+            if (_balance EQUAL 0)
+                # Starting a new sibling subexpression
+                set(_subexpr_marker "[[SUBEXPR_${_depth}_${_sibling}]]")
+                list(APPEND _expr "${_subexpr_marker}")
+                set(_writing_into_subexpr ON)
+                unset(_current_subexpr)
+                math(EXPR _balance "${_balance} + 1")
+                continue()
+            endif ()
+            math(EXPR _balance "${_balance} + 1")
+        elseif (_token STREQUAL ")")
+            math(EXPR _balance "${_balance} - 1")
+            if (_balance EQUAL 0)
+                # Finished this sibling - serialize and store it
+                _hs_sql_list_to_record(_current_subexpr _serialized)
+                list(APPEND _subexprs "${_serialized}")
+                math(EXPR _sibling "${_sibling} + 1")
+                set(_writing_into_subexpr OFF)
+                unset(_current_subexpr)
+                continue()
+            endif ()
+        endif ()
+        if (_writing_into_subexpr)
+            list(APPEND _current_subexpr ${_token})
+        else ()
+            list(APPEND _expr ${_token})
+        endif ()
+    endforeach ()
+
+    if (_balance)
+        msg(ALWAYS FATAL_ERROR "Unbalanced parenthesis in statement \"${input}\"")
+    endif ()
+
+    # Edge case: entire input was a single bracketed expression with nothing outside
+    if (NOT _expr AND _subexprs)
+        list(GET _subexprs 0 _only)
+        # _hs_sql_record_to_list or equivalent to deserialize back
+        set(_expr "${_only}")
+        unset(_subexprs)
+    endif ()
+
+    # Serialize outer expression and store as accumulator entry: DEPTH;SIBLING_COUNT;EXPR
+    _hs_sql_list_to_record(_expr _Xexpr)
+    set(_current "$CACHE{_PARSE_PAREN_ACCUMULATOR}")
+    list(APPEND _current "${_depth};${_sibling};${_Xexpr}")
+    set(_PARSE_PAREN_ACCUMULATOR "${_current}" CACHE INTERNAL "")
+
+    # Recurse into each sibling subexpression in order
+    if (_subexprs)
+        math(EXPR _next_depth "${_depth} + 1")
+        set(_sib_index 0)
+        foreach (_serialized_subexpr IN LISTS _subexprs)
+            # Deserialize back to a normal string for the recursive call
+            _hs_sql_record_to_list("${_serialized_subexpr}" _subexpr_str)
+            _parse_expression("${_subexpr_str}" ${output} ${_next_depth})
+            math(EXPR _sib_index "${_sib_index} + 1")
+        endforeach ()
+    endif ()
+
+    # Only the top-level call writes result back to caller
+    if (_top_level)
+        set("${output}" "$CACHE{_PARSE_PAREN_ACCUMULATOR}" PARENT_SCOPE)
+        unset(_PARSE_PAREN_ACCUMULATOR CACHE)
+    endif ()
+
+endfunction()
+
+#
+# A few notes:
+#
+# The accumulator tuple format is `DEPTH;SIBLING_COUNT;EXPR` where `SIBLING_COUNT` is the number of siblings found at that level — this gives the evaluator enough information to know how many `[[SUBEXPR_depth_N]]` markers to expect when processing that entry.
+#
+# For `FUNC(A) AND FUNC(B)` at depth 0 you'd get accumulator entries like:
+# ```
+# 1;0;A          ← depth 1, sibling 0
+# 1;0;B          ← depth 1, sibling 1
+# 0;2;FUNC([[SUBEXPR_1_0]]) AND FUNC([[SUBEXPR_1_1]])   ← depth 0, 2 siblings found
+#
+
+
+function(_parse_expressio input output)
+
+    if (NOT input)
         return()
     endif ()
 
@@ -558,7 +704,7 @@ function(_parse_expression expr output)
     unset(_expr)
     unset(_subexpr)
 
-    separate_arguments(_fixed NATIVE_COMMAND "${expr}")
+    separate_arguments(_fixed NATIVE_COMMAND "${input}")
 
     unset(_z)
     foreach (_x IN LISTS _fixed)
@@ -566,10 +712,11 @@ function(_parse_expression expr output)
             list(APPEND _z ${_y})
         endforeach ()
     endforeach ()
-    set(expr ${_z})
+    set(input ${_z})
 
-    set(_writing_into_subexpr)
-    foreach (_token IN LISTS expr)
+    set(_writing_into_subexpr OFF)
+
+    foreach (_token IN LISTS input)
         if (_token STREQUAL "(")
             if (_balance EQUAL 0)
                 list(APPEND _expr "${_subexpr_marker}")
@@ -593,7 +740,7 @@ function(_parse_expression expr output)
     endforeach ()
 
     if (_balance)
-        msg(ALWAYS FATAL_ERROR "Unbalanced parenthesis in statement \"${expr}\"")
+        msg(ALWAYS FATAL_ERROR "Unbalanced parenthesis in statement \"${input}\"")
     endif ()
 
     if (NOT _expr OR _expr STREQUAL "${_subexpr_marker}")     # Just a list or a bracketed list. Return the list
@@ -693,9 +840,8 @@ function(CREATE)
         _hs_sql_fields_to_storage(_label _encLabel)
         set_property(GLOBAL PROPERTY "${_resolvedHndl}_LABEL" "${_encLabel}")
 
-        _parse_expression("${CREATE_COLUMNS}" result)
-        list(POP_BACK result _1)
-        #        separate_arguments(_2 NATIVE_COMMAND "${_1}")
+        _list_from_bracketed_list("${CREATE_COLUMNS}" _1 OFF)
+
         set_property(GLOBAL PROPERTY "${_resolvedHndl}_COLUMNS" "${_1}")
         set_property(GLOBAL PROPERTY "${_resolvedHndl}_ROW_COUNT" 0)
         set_property(GLOBAL PROPERTY "${_resolvedHndl}_NEXT_ROWID" 1)
@@ -1015,21 +1161,18 @@ function(INSERT)
     set(_keywords "COUNT|HANDLE|ROW|ROWID|COLUMN|NAME|KEY|${_TOK_STAR}")
 
     if ("${ARGN}" STREQUAL "")
-        set(_argn ${_TOK_EMPTY_LIST})
+        set(_00 ${_TOK_EMPTY_LIST})
     else ()
 
-        string(REGEX REPLACE "^;" "${_TOK_EMPTY_FIELD};" _1 "${ARGN}")
-        string(REGEX REPLACE ";$" ";${_TOK_EMPTY_FIELD}" _2 "${_1}")
-        string(REGEX REPLACE ";;" ";${_TOK_EMPTY_FIELD};" _3 "${_2}")
-        string(REGEX REPLACE ";;" ";${_TOK_EMPTY_FIELD};" _4 "${_3}")
-
+        string(REGEX REPLACE "^;"    "${_TOK_EMPTY_FIELD};" _1 "${ARGN}")
+        string(REGEX REPLACE ";$"   ";${_TOK_EMPTY_FIELD}"  _2 "${_1}")
+        string(REGEX REPLACE ";;"   ";${_TOK_EMPTY_FIELD};" _3 "${_2}")
+        string(REGEX REPLACE ";;"   ";${_TOK_EMPTY_FIELD};" _4 "${_3}")
+        set(_00 "${_4}")
     endif ()
 
-
-    #    set(_args ${ARGV})
-    #    _hs_sql_fields_to_storage(_0 _1)
     # ── Normalise args ───────────────────────────────────────────────────
-    _sql_rejoin_args(_ins_args ${_4})
+    _sql_rejoin_args(_ins_args ${_00})
 
     # ── Parse INTO <table> ... ───────────────────────────────────────────
     if (NOT _ins_args MATCHES "^INTO ([^ ]+) (.+)$")
@@ -1047,30 +1190,25 @@ function(INSERT)
 
     get_property(_type GLOBAL PROPERTY "${_h}_TYPE")
 
+    # ── Check for named row ROW = <rowName> VALUES (...) ────────
+    set(_row_name "")
+    if (_rest MATCHES "^ROW = ([^ ]+) (.*)$")
+        set(_row_name "${CMAKE_MATCH_1}")
+        set(_rest     "${CMAKE_MATCH_2}")
+    endif ()
+
     # ── Check for explicit column list: (col1 col2) VALUES (...) ────────
     set(_explicit_cols "")
     if (_rest MATCHES "^\\(([^)]+)\\) VALUES \\((.+)\\)$")
         # Mode B: explicit columns
-        string(STRIP "${CMAKE_MATCH_1}" _cols_str)
-        string(STRIP "${CMAKE_MATCH_2}" _vals_str)
-
-        # Parse column list
-        string(REPLACE " " ";" _explicit_cols "${_cols_str}")
-        # Strip quotes from column names
-        string(REPLACE "\"" "" _explicit_cols "${_explicit_cols}")
-
+        _list_from_bracketed_list("${CMAKE_MATCH_1}" _explicit_cols OFF)
+        _list_from_bracketed_list("${CMAKE_MATCH_2}" _vals          OFF)
     elseif (_rest MATCHES "^VALUES \\((.+)\\)$")
         # Mode A: positional
-        string(STRIP "${CMAKE_MATCH_1}" _vals_str)
-
+        _list_from_bracketed_list("${CMAKE_MATCH_1}" _vals          OFF)
     else ()
         msg(ALWAYS FATAL_ERROR "INSERT: Expected 'VALUES (...)' or '(cols...) VALUES (...)' but got '${_rest}'")
     endif ()
-
-    # Parse values
-    string(REPLACE " " ";" _vals "${_vals_str}")
-    # Strip quotes from values
-    string(REPLACE "\"" "" _vals "${_vals}")
 
     # ── Handle MAP type ──────────────────────────────────────────────────
     if (_type STREQUAL "MAP")
@@ -1135,6 +1273,10 @@ function(INSERT)
 
     # Add row ID to list
     set_property(GLOBAL APPEND PROPERTY "${_h}_ROWIDS" "${_new_id}")
+
+    if(_row_name)
+        set_property(GLOBAL PROPERTY "${_h}_ROWNAME_TO_ID_${_row_name}" ${_new_id})
+    endif ()
 
     # Set values for specified columns
     math(EXPR _max_idx "${_num_cols} - 1")
@@ -1550,7 +1692,7 @@ function(SELECT)
 
     if ((SELECT_VALUE OR SELECT_HANDLE OR SELECT_ROW) AND _tRow)
         # Try to find column name from unparsed args if _tCol is empty
-        if (NOT _tCol AND NOT SELECT_WHERE_ROW)
+        if (NOT _tCol AND NOT SELECT_WHERE_ROW AND NOT SELECT_WHERE_ROWID)
             # Get all column names to check against unparsed args
             get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
             _hs_sql_record_to_list(_encCols _allCols)
@@ -1599,6 +1741,14 @@ function(SELECT)
 
     foreach (_rid IN LISTS _ids)
         set(_rowPass ON)
+        if(NOT "${_tRow}" STREQUAL "" AND NOT ${SELECT_WHERE_ROWID} STREQUAL "" AND NOT "${_rid}" STREQUAL "${_tRow}")
+            set(_rowPass OFF)
+            continue()
+        endif ()
+        if(NOT "${_tRow}" STREQUAL "" AND NOT ${SELECT_WHERE_ROW} STREQUAL "" AND NOT "${_rid}" STREQUAL "${_tRow}")
+            set(_rowPass OFF)
+            continue()
+        endif ()
         if (_filterCount GREATER 0)
             foreach (_fIdx RANGE ${_maxF})
                 list(GET _whereCols ${_fIdx} _fCol)

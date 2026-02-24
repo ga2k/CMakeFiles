@@ -27,128 +27,10 @@ math(EXPR FIXLength "${FIXFlags} + 1")
 set(APD_ALLOWABLE_FLAGS "F_EARLY_MAKEAVAILABLE")
 
 CREATE(TABLE tbl_LongestStrings
-    COLUMNS (VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM HANDLER)
+    COLUMNS (longest)
 )
-INSERT(INTO tbl_LongestStrings VALUES (0 0 0 0 0 0 0))
+#INSERT(INTO tbl_LongestStrings VALUES (0 0 0 0 0 0 0))
 include(FetchContent)
-
-function(textOut VERB OBJECT SUBJECT_PREP SUBJECT ITEM_PREP ITEM TEMPLATE DRY_RUN)
-#    macro(_doLine _var_)
-##        set(arg "${${_var_}}")
-##        if (current_tag STREQUAL "OBJECT" OR current_tag STREQUAL "SUBJECT")
-##        endif ()
-#        SELECT(${current_tag} AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
-##        if (current_tag STREQUAL "VERB" OR current_tag STREQUAL "SUBJECT_PREP")
-##            list(LENGTH arg knowns)
-##            if (knowns GREATER 1)
-##                # This is a list of known verbs
-##                foreach (one IN LISTS arg)
-##                    longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${one}" PADDED ${current_tag} LONGEST _longest)
-##                endforeach ()
-##                list(GET arg 0 arg)
-##            endif ()
-##        endif ()
-#        longest(${GAP} MIN_LENGTH ${MIN_LENGTH} ${JUSTIFY} CURRENT ${_longest} PAD_CHAR "${PAD_CHAR}" TEXT "${${_var_}}" PADDED ${current_tag} LONGEST _longest)
-#        UPDATE(tbl_LongestStrings SET ${current_tag} = "${_longest}" WHERE ROWID = 1)
-#    endmacro()
-
-    set(outstr "${TEMPLATE}")
-
-    string(REGEX MATCHALL "\\[[_A-Z]+:[^]]+\\]" placeholders "${TEMPLATE}")
-
-    foreach (item ${placeholders})
-        if (item MATCHES "\\[([_A-Z]+):([LCR])\\]")
-            set(current_tag ${CMAKE_MATCH_1}) # e.g. VERB
-            set(current_align ${CMAKE_MATCH_2}) # e.g. R
-
-            if (current_align STREQUAL "L")
-                set(JUSTIFY "LEFT")
-            elseif (current_align STREQUAL "C")
-                set(JUSTIFY "CENTRE")
-            elseif (current_align STREQUAL "R")
-                set(JUSTIFY "RIGHT")
-            else ()
-                unset(JUSTIFY)
-            endif ()
-
-            # Reminder:
-            # set(TEMPLATE "[VERB:R] [OBJECT:L] [SUBJECT_PREP:R] [SUBJECT:L] [ITEM_PREP:R] [TARGET:R]")
-            SELECT(${current_tag} AS _longest FROM tbl_LongestStrings WHERE ROWID = 1)
-            longest(${JUSTIFY} CURRENT ${_longest} TEXT "${${current_tag}}" PADDED ${current_tag} LONGEST _longest)
-            UPDATE(tbl_LongestStrings SET ${current_tag} = "${_longest}" WHERE ROWID = 1)
-
-#            string(STRIP "${${current_tag}}" ${current_tag})
-
-            if (current_tag STREQUAL "VERB")
-                if("${${current_tag}}" MATCHES "^([ \t]*)([^ \t]+)([ \t]+)([^ \t]+)([ \t]*)$")
-                    set(leading_ws   "${CMAKE_MATCH_1}")
-                    set(word1        "${CMAKE_MATCH_2}")
-                    set(inter_ws     "${CMAKE_MATCH_3}")
-                    set(word2        "${CMAKE_MATCH_4}")
-                    set(trailing_ws  "${CMAKE_MATCH_5}")
-                endif ()
-                if (word1 MATCHES "created")
-                    set(word1 "${YELLOW}${word1}${NC}")
-                elseif (word1 MATCHES "added")
-                    set(word1 "${WHITE}${word1}${NC}")
-                elseif (word1 MATCHES "replaced")
-                    set(word1 "${RED}${word1}${NC}")
-                elseif (word1 MATCHES "extended")
-                    set(word1 "${CYAN}${word1}${NC}")
-                elseif (word1 MATCHES "skipped")
-                    set(word1 "${BLUE}${word1}${NC}")
-                elseif (word1 MATCHES "calling")
-                    set(word1 "${GREEN}${word1}${NC}")
-                endif ()
-
-                if (word2 MATCHES "package")
-                    set(word2 "${CYAN}${word2}${NC}")
-                elseif (word2 MATCHES "feature")
-                    set(word2 "${BLUE}${word2}${NC}")
-                endif ()
-                set(${current_tag} "${leading_ws}${word1}${inter_ws}${word2}${trailing_ws}")
-            elseif (current_tag STREQUAL "OBJECT")
-#                _doLine(OBJECT)
-                set(OBJECT "${BOLD}${OBJECT}${NC}")
-            elseif (current_tag STREQUAL "SUBJECT_PREP")
-                if("${${current_tag}}" MATCHES "^([ \t]*)([^ \t]+)([ \t]+)([^ \t]+)([ \t]*)$")
-                    set(leading_ws   "${CMAKE_MATCH_1}")
-                    set(word1        "${CMAKE_MATCH_2}")
-                    set(inter_ws     "${CMAKE_MATCH_3}")
-                    set(word2        "${CMAKE_MATCH_4}")
-                    set(trailing_ws  "${CMAKE_MATCH_5}")
-                endif ()
-                if (word2 MATCHES "package")
-                    set(word2 "${CYAN}${word2}${NC}")
-                elseif (word2 MATCHES "feature")
-                    set(word2 "${BLUE}${word2}${NC}")
-                endif ()
-                set(${current_tag} "${leading_ws}${MAGENTA}${word1}${NC}${inter_ws}${word2}${trailing_ws}")
-            elseif (current_tag STREQUAL "SUBJECT")
-#                _doLine(SUBJECT)
-                set(SUBJECT "${BOLD}${YELLOW}${SUBJECT}${NC}")
-            elseif (current_tag STREQUAL "ITEM_PREP")
-#                _doLine(ITEM_PREP)
-            elseif (current_tag STREQUAL "ITEM")
-#                _doLine(ITEM)
-                set(ITEM "${BLUE}${ITEM}${NC}")
-            endif ()
-        endif ()
-    endforeach ()
-    # @formatter:off
-    string(REGEX REPLACE "\\[VERB:[^]]*\\]"         "${VERB} "           outstr "${outstr}")
-    string(REGEX REPLACE "\\[OBJECT:[^]]*\\]"       "${OBJECT} "         outstr "${outstr}")
-    string(REGEX REPLACE "\\[SUBJECT_PREP:[^]]*\\]" "${SUBJECT_PREP} "   outstr "${outstr}")
-    string(REGEX REPLACE "\\[SUBJECT:[^]]*\\]"      "${SUBJECT} "        outstr "${outstr}")
-    string(REGEX REPLACE "\\[ITEM_PREP:[^]]*\\]"    "${ITEM_PREP} "      outstr "${outstr}")
-    string(REGEX REPLACE "\\[ITEM:[^]]*\\]"         "${ITEM} "           outstr "${outstr}")
-    # @formatter:on
-
-if (NOT DRY_RUN)
-    msg("${outstr}")
-endif ()
-
-endfunction()
 
 function(addTargetProperties target pkgname addToLists)
 
@@ -206,8 +88,8 @@ function(addTargetProperties target pkgname addToLists)
 
     ####################################################################################################################
     ####################################################################################################################
-    set(fn "${pkgname}_postAddTarget") ################################################################################
-    if (COMMAND "${fn}") ################################################################################################
+    set(fn "${pkgname}_postAddTarget") #################################################################################
+    if (COMMAND "${fn}") ###############################################################################################
         cmake_language(CALL "${fn}" "${target}") #######################################################################
     endif () ###########################################################################################################
     ####################################################################################################################
@@ -223,9 +105,9 @@ function(addTargetProperties target pkgname addToLists)
 
 endfunction()
 
-#######################################################################################################################
-#######################################################################################################################
-#######################################################################################################################
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
 function(initialiseFeatureHandlers DRY_RUN)
     if (MONOREPO)
         file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*.cmake")
@@ -238,11 +120,12 @@ function(initialiseFeatureHandlers DRY_RUN)
         get_filename_component(_path "${handler}" DIRECTORY)
         get_filename_component(packageName "${_path}" NAME_WE)
 
-        textOut("added handler" "${handlerName}" "for package" "${packageName}" "" ""
-                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+        columnarTextOut("default" "added handler" "${handlerName}" "for package" "${packageName}" "" ""
+                "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
+#                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
         if (${handlerName} STREQUAL "init")
-            textOut("calling handler" "${handlerName}" "for package" "${packageName}" "" ""
-                    "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
+            columnarTextOut("default" "calling handler" "${handlerName}" "for package" "${packageName}" "" ""
+                    "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
         endif ()
         if (NOT DRY_RUN)
             include("${handler}")
@@ -270,7 +153,7 @@ function(addPackageData)
 
     set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM)
     set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR
-             GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN DEFAULT)
+            GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN DEFAULT)
     set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS FLAGS)
 
     cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
@@ -334,7 +217,7 @@ function(addPackageData)
         list(APPEND APD_PREREQS ${APD_PREREQ})
     endif ()
 
-    foreach(flag IN LISTS APD_FLAGS)
+    foreach (flag IN LISTS APD_FLAGS)
         if (NOT flag IN_LIST APD_ALLOWABLE_FLAGS)
             msg(ALWAYS WARNING "addPackageData(${flag}): Unknown FLAG value \"${flag}\" removed from ${APD_FEATURE}/${APD_PKGNAME}")
         elseif (flags)
@@ -347,19 +230,19 @@ function(addPackageData)
 
     set(APD_NEED_DEFAULT OFF)
 
-    if("${APD_DEFAULT}" STREQUAL "")
+    if ("${APD_DEFAULT}" STREQUAL "")
         set(APD_DEFAULT O)
         set(APD_NEED_DEFAULT ON)
     endif ()
 
-    string(REPLACE  ";" "&"         APD_COMPONENTS "${APD_COMPONENTS}")
-    string(JOIN     "&" APD_ARGS  ${APD_ARGS}       ${APD_FIND_PACKAGE_ARGS})
-    string(REPLACE  ";" "&"         APD_PREREQS    "${APD_PREREQS}")
+    string(REPLACE ";" "&" APD_COMPONENTS "${APD_COMPONENTS}")
+    string(JOIN "&" APD_ARGS ${APD_ARGS} ${APD_FIND_PACKAGE_ARGS})
+    string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
 
     #
-#    if (APD_PREREQS)
-#        string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
-#    endif ()
+    #    if (APD_PREREQS)
+    #        string(REPLACE ";" "&" APD_PREREQS "${APD_PREREQS}")
+    #    endif ()
 
     if (NOT APD_DRY_RUN)
         DROP(TABLE newRecord QUIET UNRESOLVED)
@@ -474,7 +357,7 @@ function(addPackageData)
         else ()
             if (insertRow)
                 SELECT(ROW AS newData FROM ${CAT_RECORD} WHERE ROWID = 1)
-                if(APD_NEED_DEFAULT)
+                if (APD_NEED_DEFAULT)
                     list(REMOVE_AT newData ${FIXIsDefault})
                     list(INSERT newData ${FIXIsDefault} "${isDefault}")
                 endif ()
@@ -483,7 +366,8 @@ function(addPackageData)
             endif ()
         endif ()
 
-        textOut("${out_verb}"
+        columnarTextOut("default"
+                "${out_verb}"
                 "${out_object}"
                 "${out_subject_prep}" "${out_subject}"
                 "${out_item_prep}" "${out_item}"
@@ -494,9 +378,10 @@ function(addPackageData)
     insertFeature(TARGET "allFeatures"
             FEATURE "${APD_FEATURE}"
             PACKAGE "${APD_PKGNAME}"
-            KIND    "${APD_KIND}"
-            RECORD     newRecord
-            TEMPLATE "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]"
+            KIND "${APD_KIND}"
+            RECORD newRecord
+            TEMPLATE "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]"
+#            TEMPLATE "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]"
     )
 
 endfunction()
@@ -985,11 +870,11 @@ function(scanLibraryTargets packageData libName packageNames)
                     inc(s_loop_counter)
                     set(s_ix ${s_loop_counter})
                     SELECT(FeatureName AS feat_name PackageName AS pkg_name FROM packageNames WHERE ROWID = ${s_ix})
-                    if(NOT SELECT_OK)
+                    if (NOT SELECT_OK)
                         msg(ALWAYS FATAL_ERROR "PANIC!")
                     endif ()
-                    SELECT(ROW FROM packageData WHERE FeatureName = ${feat_name} AND PackageName = ${pkg_name})
-                    if(NOT SELECT_OK)
+                    SELECT(ROW AS feature_line FROM packageData WHERE FeatureName = ${feat_name} AND PackageName = ${pkg_name})
+                    if (NOT SELECT_OK)
                         msg(ALWAYS FATAL_ERROR "PANIC!")
                     endif ()
                     list(GET feature_line ${FIXNamespace} ns)
@@ -1187,75 +1072,17 @@ function(preProcessFeatures featureList hDataSource outVar)
             set(actualStagedPath "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
             set(actualSystemPath "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
-            fittest(PACKAGE         "${pkgName}"
-                    FILENAME        "${pkgName}Config.cmake"
-                    ADD_REGARDLESS  "${addAllRegardless})"
+            fittest(PACKAGE "${pkgName}"
+                    FILENAME "${pkgName}Config.cmake"
+                    ADD_REGARDLESS "${addAllRegardless})"
 
-                    OUTPUT          listOfFolders
+                    OUTPUT listOfFolders
 
-                    SOURCE_DIR      "${actualSourcePath}"
-                    STAGED_DIR      "${actualStagedPath}"
-                    SYSTEM_DIR      "${actualSystemPath}"
+                    SOURCE_DIR "${actualSourcePath}"
+                    STAGED_DIR "${actualStagedPath}"
+                    SYSTEM_DIR "${actualSystemPath}"
             )
-            #
-#            if (MONOREPO AND MONOBUILD)
-#                set(SOURCE_PATH "${OUTPUT_DIR}")
-#            else ()
-#                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
-#            endif ()
-#
-#            set(pkgName "${pkgName}Config.cmake")
-#
-#            set(candidates)
-#            set(conditionals)
-#
-#            set(actualSourceFile "${SOURCE_PATH}/${pkgName}")
-#            set(actualStagedFile "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-#            set(actualSystemFile "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake/${pkgName}")
-#
-#            foreach (path IN ITEMS "actualSystemFile" "actualSourceFile" "actualStagedFile")
-#                if (EXISTS "${${path}}" OR addAllRegardless)
-#                    if (EXISTS "${${path}}")
-#                        msg(NOTICE "  Found ${${path}}")
-#                        set(${path}Found ON)
-#                        list(PREPEND candidates "${${path}}")
-#                    else ()
-#                        msg(NOTICE "Missing ${${path}} but still added it to list")
-#                        set(${path}Found OFF)
-#                        list(APPEND conditionals "${${path}}")
-#                    endif ()
-#                else ()
-#                    msg(NOTICE "Missing ${${path}}")
-#                    set(${path}Found OFF)
-#                endif ()
-#            endforeach ()
-#            msg()
-#
-#            # Staged and Source files are the same?
-#            if (actualSourceFileFound AND actualStagedFileFound
-#                    AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
-#                    AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
-#
-#                msg(NOTICE "Source and Staged are the same. We'll use Staged.")
-#                list(REMOVE_ITEM candidates "${actualStagedFileFound}")
-#                list(INSERT candidates 0 "${actualStagedFileFound}")
-#            endif ()
-#
-#            list(APPEND candidates "${conditionals}")
-#
-#            set(listOfFolders)
-#            foreach (candidate IN LISTS candidates)
-#                get_filename_component(candidate "${candidate}" PATH)
-#                list(APPEND listOfFolders "${candidate}")
-#            endforeach ()
-#
             list(APPEND hints "${listOfFolders}")
-
-
-
-
-
-
 
         endforeach ()
 

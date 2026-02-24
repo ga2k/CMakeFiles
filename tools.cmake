@@ -933,7 +933,7 @@ function(longest)
 
     string(LENGTH "${LONG_TEXT}" this_length)
 
-    if (${this_length} GREATER ${LONG_CURRENT})
+    if (this_length GREATER LONG_CURRENT)
         set(new_longest ${this_length})
     else ()
         set(new_longest ${LONG_CURRENT})

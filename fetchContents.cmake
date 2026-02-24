@@ -64,7 +64,7 @@ function(fetchContents)
     msg()
 
     preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
-
+DUMP(FROM userPackages VERBOSE)
     SELECT(COUNT AS numPackages FROM userPackages)
 
     set(aix 0)
@@ -243,21 +243,10 @@ function(fetchContents)
             inc(fix)
             set(row_id ${fix})
 
-            DUMP(FROM ${feature_names} VERBOSE)
-
-            SELECT(FeatureName AS feat_name PackageName AS pkg_name HasPrereqs AS has_prereqs FROM ${feature_names} WHERE ROWID = ${row_id})
-
-            SELECT(ROW AS c FROM ${feature_names} WHERE ROWID = ${row_id})
-            SplitAt("${c}" "/" x p)
-            SplitAt("${x}" "." f g)
-            set(jfp "${f}/${p}")
+            SELECT(FeatureName AS f PackageName AS p FROM resolvedNames WHERE ROWID = ${row_id})
             longest(QUIET CURRENT ${lFName} TEXT  "${f}"  LONGEST lFName)
             longest(QUIET CURRENT ${lPName} TEXT "(${p})" LONGEST lPName)
 
-            if (g)
-                list(APPEND prereqs "${jfp}")
-                UPDATE(${feature_names} SET FslashP = "${f}/${p}" WHERE ROWID = ${row_id})
-            endif ()
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
         endwhile ()
 
@@ -281,8 +270,6 @@ function(fetchContents)
             while (ixloupe LESS numFeatures)
                 inc(ixloupe)
                 set(ix ${ixloupe})
-
-                SELECT(FslashP AS pair FROM ${feature_names} WHERE ROWID = ${ix})
 
                 macro(unsetLocalVars)
                     unset(COMPONENTS_KEYWORD)
@@ -312,9 +299,8 @@ function(fetchContents)
 
                 unsetLocalVars()
 
-                # See if this is a prerequisite package. If it is, we do both phases together
-                SplitAt(${pair} "/" this_feature_name this_pkgname)
-                if ("${pair}" IN_LIST prereqs)
+                SELECT(FeatureName AS this_feature_name PackageName AS this_pkgname HasPrereqs AS prereqs FROM resolvedNames WHERE ROWID = ${ix})
+                if (prereqs EQUAL 1)
                     set(apf_IS_A_PREREQ ON)
                 endif ()
 
@@ -498,7 +484,7 @@ function(fetchContents)
                                 endif ()
 
                                 # Now that the library is found, scan it for transitives
-                                if ("${this_kind}" STREQUAL "LIBRARY")
+                                if ("${this_kind}" STREQUAL "LIBRARY" AND NOT combinedLibraryComponents)
                                     scanLibraryTargets("${DATA}" "${this_pkgname}" "${feature_names}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif ()
