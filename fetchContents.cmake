@@ -52,7 +52,7 @@ function(fetchContents)
     CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
     CREATE(TABLE initialFeatures COLUMNS ( ${PkgColNames} ))
     CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE resolvedNames   COLUMNS (     FslashP    ))
+    CREATE(TABLE resolvedNames   COLUMNS ( FslashP FeatureName PackageName HasPrereqs ))
 
     msg()
 
@@ -242,6 +242,10 @@ function(fetchContents)
         while (fix LESS numFeatures)
             inc(fix)
             set(row_id ${fix})
+
+            DUMP(FROM ${feature_names} VERBOSE)
+
+            SELECT(FeatureName AS feat_name PackageName AS pkg_name HasPrereqs AS has_prereqs FROM ${feature_names} WHERE ROWID = ${row_id})
 
             SELECT(ROW AS c FROM ${feature_names} WHERE ROWID = ${row_id})
             SplitAt("${c}" "/" x p)
