@@ -241,14 +241,14 @@ function(addLibrary)
 
     # Link Core
     if (CORE IN_LIST arg_USES)
-        target_link_libraries(${arg_NAME}       PRIVATE Core::Core)
-        add_dependencies(${arg_NAME}                    Core::Core)
+        target_link_libraries(${arg_NAME}       PRIVATE ${APP_VENDOR}::Core)
+        add_dependencies(${arg_NAME}                    ${APP_VENDOR}::Core)
     endif ()
 
     # Link Gfx
     if (GFX IN_LIST arg_USES)
-        target_link_libraries(${arg_NAME}       PRIVATE Core::Gfx)
-        add_dependencies(${arg_NAME}                    Core::Gfx)
+        target_link_libraries(${arg_NAME}       PRIVATE ${APP_VENDOR}::Gfx)
+        add_dependencies(${arg_NAME}                    ${APP_VENDOR}::Gfx)
     endif ()
 
     # Link wxWidgets directly (no Widgets wrapper library)
