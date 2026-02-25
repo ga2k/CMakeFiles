@@ -64,9 +64,8 @@ function(fetchContents)
     msg()
 
     preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
-DUMP(FROM userPackages VERBOSE)
     SELECT(COUNT AS numPackages FROM userPackages)
-
+DUMP(FROM tbl_LongestStrings VERBOSE)
     set(aix 0)
     while (aix LESS numPackages)
         inc(aix)

@@ -1275,7 +1275,8 @@ function(INSERT)
     set_property(GLOBAL APPEND PROPERTY "${_h}_ROWIDS" "${_new_id}")
 
     if(_row_name)
-        set_property(GLOBAL PROPERTY "${_h}_ROWNAME_TO_ID_${_row_name}" ${_new_id})
+        set_property(GLOBAL APPEND PROPERTY "${_h}_ROWNAMES"    "${_row_name}")
+        set_property(GLOBAL        PROPERTY "${_h}_ROWNAME_TO_ID_${_row_name}" ${_new_id})
     endif ()
 
     # Set values for specified columns
@@ -1420,6 +1421,7 @@ endfunction()
 # Special vars set on return:   SELECT_RESULT_SET       (if no AS) Whatever the result of the SELECT was
 #                               SELECT_RESULT_KIND      The type (SCALAR/LIST/MAP/TABLE) of SELECT_RESULT_SET
 #                               SELECT_OK               TRUE if sizeof(resultset) > 0, otherwise FALSE
+#                               SELECT_ERROR            Error description or "" if no error
 # ======================================================================================================================
 function(SELECT)
 
@@ -1479,31 +1481,10 @@ function(SELECT)
     if (SELECT_HANDLE)
 
         _parent_scope("'${SELECT_HANDLE}'" "${_h}")
+        set(SELECT_ERROR PARENT_SCOPE)
         return()
 
     endif ()
-    #
-    #    # ── Peel FIELDS and verify for existence and validity ─────────────────────────────────────────────────────────────
-    #    _sql_peel_fields("${_sel_mode_cols}" ${_h} "${_sel_modes}" _fields)
-    #    list(LENGTH _fields _sizeof_fields)
-    #    if (_sizeof_fields GREATER 0)
-    #        list(GET _fields 0 _error_signal)
-    #        if (_error_signal STREQUAL "!")
-    #            string(REPLACE ";" " " _src "${ARGV}")
-    #            string(REPLACE ";" "\n" _text "${_fields}")
-    #            msg(ALWAYS FATAL_ERROR "SELECT(${_src}) : ERROR${_text}\n")
-    #        endif ()
-    #    endif ()
-    #    if (NOT _fields STREQUAL "")
-    #
-    #        set(SELECT_VALUE ON)
-    #        set(SELECT_VALUES "${_fields}")
-    #
-    #    else ()
-    #
-    #        set(SELECT_${_mode} ON)
-    #
-    #    endif ()
 
     # ── Parse WHERE, then extract nouns ───────────────────────────────────────────────────────────────────────────────
     set(_whereCols "")
@@ -1531,15 +1512,6 @@ function(SELECT)
             msg(ALWAYS FATAL_ERROR "SELECT(${_src}) : ERROR${_text}\n")
         endif ()
     endif ()
-#    if (NOT _fields STREQUAL "")
-#
-#        set(SELECT_VALUE ON)
-#
-#    else ()
-#
-#        set(SELECT_${_mode} ON)
-#
-#    endif ()
 
     ####################################################################################################################
     set(SELECT_OK OFF PARENT_SCOPE)
@@ -1564,6 +1536,7 @@ function(SELECT)
         set(SELECT_RESULT_SET ${_final} PARENT_SCOPE)
         set(SELECT_RESULT_KIND "MAP" PARENT_SCOPE)
         set(SELECT_OK ON PARENT_SCOPE)
+        set(SELECT_ERROR PARENT_SCOPE)
         return()
     endif ()
 
@@ -1603,6 +1576,7 @@ function(SELECT)
             set(SELECT_OK ON PARENT_SCOPE)
         endif ()
 
+        set(SELECT_ERROR PARENT_SCOPE)
 
         return()
     endif ()
@@ -1612,8 +1586,10 @@ function(SELECT)
     set(_tRow)
     set(_tCol)
 
-    get_property(_encIDs GLOBAL PROPERTY "${_h}_ROWIDS")
+    get_property(_encIDs   GLOBAL PROPERTY "${_h}_ROWIDS")
     _hs_sql_record_to_list(_encIDs _ids)
+    get_property(_encNames GLOBAL PROPERTY "${_h}_ROWNAMES")
+    _hs_sql_record_to_list(_encNames _names)
 
     if (SELECT_ROWID OR SELECT_WHERE_ROWID)
         set(_tRow "${SELECT_WHERE_ROWID}")
@@ -1630,7 +1606,8 @@ function(SELECT)
         if (_rid)
             set(_tRow "${_rid}")
         else ()
-            set(_tRow "${SELECT_WHERE_ROW}")
+            set(SELECT_ERROR "ROWNAME \"${SELECT_WHERE_ROW}\" not found" PARENT_SCOPE)
+            return()
         endif ()
     endif ()
 
@@ -1665,7 +1642,7 @@ function(SELECT)
         endif ()
         set(SELECT_OK ON PARENT_SCOPE)
         set(SELECT_RESULT_KIND "HANDLE" PARENT_SCOPE)
-
+        set(SELECT_ERROR PARENT_SCOPE)
         return()
     endif ()
 
@@ -1686,6 +1663,7 @@ function(SELECT)
         endif ()
         set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
         set(SELECT_OK ON PARENT_SCOPE)
+        set(SELECT_ERROR PARENT_SCOPE)
 
         return()
     endif ()
@@ -1723,6 +1701,7 @@ function(SELECT)
 
             set(SELECT_RESULT_KIND "${_mode}" PARENT_SCOPE)
             set(SELECT_OK ON PARENT_SCOPE)
+            set(SELECT_ERROR PARENT_SCOPE)
 
             return()
         endif ()
@@ -1849,6 +1828,7 @@ function(SELECT)
         endif ()
         set(SELECT_RESULT_KIND "COUNT" PARENT_SCOPE)
         set(SELECT_OK ON PARENT_SCOPE)
+        set(SELECT_ERROR PARENT_SCOPE)
 
         return()
     endif ()
@@ -1861,6 +1841,7 @@ function(SELECT)
                 _parent_scope("${_tCol}" "")
             endforeach ()
             set(SELECT_RESULT_KIND "SCALAR" PARENT_SCOPE)
+            set(SELECT_ERROR PARENT_SCOPE)
             return()
         endif ()
 
@@ -1884,6 +1865,7 @@ function(SELECT)
             set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
         endif ()
         set(SELECT_OK ON PARENT_SCOPE)
+        set(SELECT_ERROR PARENT_SCOPE)
 
         return()
 
@@ -1911,6 +1893,7 @@ function(SELECT)
         set(SELECT_RESULT_SET "_rowList" PARENT_SCOPE)
         set(SELECT_RESULT_KIND "LIST" PARENT_SCOPE)
         set(SELECT_OK ON PARENT_SCOPE)
+        set(SELECT_ERROR PARENT_SCOPE)
 
         return()
     endif ()
@@ -2396,6 +2379,8 @@ function(DUMP)
         get_property(_encCols GLOBAL PROPERTY "${_h}_COLUMNS")
         _hs_sql_record_to_list(_encCols _cols)
         get_property(_ids GLOBAL PROPERTY "${_h}_ROWIDS")
+        get_property(_encNames GLOBAL PROPERTY "${_h}_ROWNAMES")
+        _hs_sql_record_to_list(_encNames _names)
 
         if (NOT _verbose)
             string(APPEND _out "${_offset_padding}    COLS: ${_cols}\n")
@@ -2408,6 +2393,13 @@ function(DUMP)
                 set(_w_${_c} ${_len})
             endforeach ()
             set(_w_ROW 3) # Minimum width for "Row" header
+
+            foreach(_rname IN LISTS _names)
+                string(LENGTH "${_rname}" _rnLen)
+                if (_rnLen GREATER _w_ROW)
+                    set(_w_ROW ${_rnLen})
+                endif ()
+            endforeach ()
 
             foreach (_rid IN LISTS _ids)
                 foreach (_c IN LISTS _cols)
@@ -2434,7 +2426,11 @@ function(DUMP)
 
             # --- PASS 2: LAYOUT ---
             # Build Header Row
-            set(_header "    | Row |")
+            set(_header "    |")
+
+            _hs_pad_string("Row" ${_w_ROW} _padded)
+            string(APPEND _header " ${_padded} |")
+
             foreach (_c IN LISTS _cols)
                 _hs_pad_string("${_c}" ${_w_${_c}} _padded)
                 string(APPEND _header " ${_padded} |")
@@ -2462,12 +2458,19 @@ function(DUMP)
                 # Print each sub-line for the current row
                 math(EXPR _maxLineIdx "${_rowLines} - 1")
                 foreach (_li RANGE ${_maxLineIdx})
-                    if (_li EQUAL 0)
-                        _hs_pad_string("${_rid}" 3 _pRid)
-                        set(_lineStr "    | ${_pRid} |")
+
+                    if(_names)
+                        list(GET _names ${_li} _ridentifier)
                     else ()
-                        set(_lineStr "    |     |")
+                        set(_ridentifier "${_li}")
                     endif ()
+
+                    if (_li EQUAL 0)
+                        _hs_pad_string("${_ridentifier}" ${_w_ROW} _ridentifier)
+                    else ()
+                        _hs_pad_string("" ${_w_ROW} _pRid)
+                    endif ()
+                    set(_lineStr "    | ${_ridentifier} |")
 
                     foreach (_c IN LISTS _cols)
                         get_property(_encVal GLOBAL PROPERTY "${_h}_R${_rid}_${_c}")
