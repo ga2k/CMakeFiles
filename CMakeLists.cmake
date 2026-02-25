@@ -3,12 +3,12 @@ include_guard(GLOBAL)
 ## Core build framework delegator (split into global + per-project)
 include (${cmake_root}/global.cmake)
 
-function(registerPackageCallback fn)
+function(registerPackageCallback fn dry_run)
     if(NOT COMMAND "${fn}")
         message(FATAL_ERROR "registerPackageCallback(): '${fn}' is not a command")
     endif()
-    msg("Package callback registration for \"${fn}\" ${GREEN}successful${NC}")
-
+    columnarTextOut("default" "package" "callback" "registered" "for" "handler" "${fn}"
+            "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
     globalObjAppendUnique("HS_REG_PKG_CALLBACKS" "${fn}")
 endfunction()
 
@@ -38,9 +38,10 @@ function(getLibraryInfo libID obj)
     set(${obj} ${local_object} PARENT_SCOPE)
 endfunction()
 
-function(registerPlugin pi)
+function(registerPlugin pi dry_run)
     globalObjAppendUnique(HS_REG_PI_LIST "${pi}")
-    msg("Plugin registration for \"${pi}\" ${GREEN}successful${NC}")
+    columnarTextOut("default" "plugin library" "${pi}" "registered" "" "" ""
+            "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
 endfunction()
 #
 #function(savePackageData)

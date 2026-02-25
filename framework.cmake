@@ -80,51 +80,52 @@ list(PREPEND CMAKE_MODULE_PATH
 # Testing helpers available globally
 include(GoogleTest)
 
-function(commonInit pkg)
+function(commonInit pkg discovery_phase)
 
     string(TOUPPER "${pkg}" _PKG)
     set(findex -1)
     set(foundFind -1)
     set(foundUse -1)
 
-    foreach (feet IN LISTS AUE_FEATURES)
-        math(EXPR findex "${findex} + 1")
+    if(discovery_phase)
+        foreach (feet IN LISTS AUE_FEATURES)
+            math(EXPR findex "${findex} + 1")
 
-        separate_arguments(_feet NATIVE_COMMAND "${feet}")
-        cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
-        if (AAZ_UNPARSED_ARGUMENTS)
-            list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
-            if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
-                set(foundFind ${findex})
-            elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
-                set(foundUse ${findex})
+            separate_arguments(_feet NATIVE_COMMAND "${feet}")
+            cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
+            if (AAZ_UNPARSED_ARGUMENTS)
+                list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
+                if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
+                    set(foundFind ${findex})
+                elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
+                    set(foundUse ${findex})
+                endif ()
             endif ()
-        endif ()
-    endforeach ()
+        endforeach ()
 
-    if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
-        list(REMOVE_AT AUE_FEATURES ${foundFind})
-        if (foundUse GREATER_EQUAL 0)
-            list(REMOVE_AT AUE_FEATURES ${foundUse})
-        endif ()
-    elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
-        list(REMOVE_AT AUE_FEATURES ${foundUse})
-        if(foundFind GREATER_EQUAL 0)
+        if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
             list(REMOVE_AT AUE_FEATURES ${foundFind})
+            if (foundUse GREATER_EQUAL 0)
+                list(REMOVE_AT AUE_FEATURES ${foundUse})
+            endif ()
+        elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
+            list(REMOVE_AT AUE_FEATURES ${foundUse})
+            if(foundFind GREATER_EQUAL 0)
+                list(REMOVE_AT AUE_FEATURES ${foundFind})
+            endif ()
+        else ()
+            # They can only be the same if they are both -1, and in that case we do nothing
         endif ()
-    else ()
-        # They can only be the same if they are both -1, and in that case we do nothing
+
+        if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
+            list(PREPEND AUE_FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+        endif ()
+
+        set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE)
+
+        set(fn "add${pkg}Features")
+        cmake_language(CALL registerPackageCallback "${fn}" ${discovery_phase})
     endif ()
-
-    if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
-        list(PREPEND AUE_FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
-    endif ()
-
-    set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE)
-
-    set(fn "add${pkg}Features")
-    cmake_language(CALL registerPackageCallback "${fn}")
-
     set(HANDLED ON)
 
 endfunction()

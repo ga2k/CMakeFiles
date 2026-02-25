@@ -1,4 +1,6 @@
-function(cpptrace_init)
+include_guard(GLOBAL)
+function(cpptrace_init DRY_RUN)
+
     # Prefer atos on macOS for symbolization, addr2line elsewhere
     if(APPLE)
         set (CPPTRACE_GET_SYMBOLS_WITH_ADDR2LINE ON CACHE BOOL "")
