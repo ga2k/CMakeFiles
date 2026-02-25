@@ -1,4 +1,4 @@
-include("${CMAKE_SOURCE_DIR}/cmake/tools.cmake")
+include("${cmake_root}/tools.cmake")
 
 function(soci_fix target tag sourceDir)
 

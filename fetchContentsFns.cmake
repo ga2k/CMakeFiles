@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 include(${cmake_root}/tools.cmake)
 include(${cmake_root}/sqlish.cmake)
-include(${cmake_root}/global.cmake)
+include (${cmake_root}/global.cmake)
 
 # @formatter:off
 set(PkgColNames FeatureName PackageName IsDefault Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq Flags)
@@ -1196,7 +1196,7 @@ function(preProcessFeatures featureList hDataSource outVar)
             msg(ALWAYS FATAL_ERROR "APP_FEATURES: No FEATURE name")
         endif ()
 
-        if (NOT DEFINED PPF_PACKAGE OR NOT PPF_PACKAGE STREQUAL "")
+        if (NOT DEFINED PPF_PACKAGE OR PPF_PACKAGE STREQUAL "")
             set(PPF_PACKAGE)
             set(wantDefault ON)
         elseif ("PACKAGE" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
