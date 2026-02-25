@@ -1824,7 +1824,7 @@ function(columnarTextOut ID FIELD0 FIELD1 FIELD2 FIELD3 FIELD4 FIELD5 TEMPLATE D
     # @formatter:on
 
     if (NOT DRY_RUN)
-        msg("${outstr}")
+        msg("\t\t${outstr}")
     endif ()
 
 endfunction()
