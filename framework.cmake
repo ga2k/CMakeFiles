@@ -68,7 +68,11 @@ endif ()
 
 # Extra compile flags for clang module handling
 if ("${compiler_version}" MATCHES "clang")
-    list(APPEND extra_CompileOptions "-fno-implicit-modules;-fno-implicit-module-maps")
+    list(APPEND extra_CompileOptions
+            -fno-implicit-modules
+            -fno-implicit-module-maps
+            -Wno-unused-command-line-argument
+    )
 endif ()
 
 include(${cmake_root}/platform.cmake)

@@ -221,7 +221,7 @@ function(addLibrary)
         )
         unset(_rpath_origin)
     endif()
-    
+
     # Explicitly add the compile feature to help the exporter
     target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
 
