@@ -212,6 +212,16 @@ function(addLibrary)
             SUFFIX                      "${LIB_SUF}"
     )
 
+    if(UNIX AND NOT APPLE)
+        set(_rpath_origin "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+        set_target_properties(${arg_NAME} PROPERTIES
+                BUILD_RPATH              "${_rpath_origin}"
+                INSTALL_RPATH            "${_rpath_origin}"
+                INSTALL_RPATH_USE_LINK_PATH TRUE
+        )
+        unset(_rpath_origin)
+    endif()
+    
     # Explicitly add the compile feature to help the exporter
     target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
 
