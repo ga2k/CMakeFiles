@@ -1,0 +1,169 @@
+# ... existing code ...
+include(CMakeFindDependencyMacro)
+
+# Provide a wxWidgets shim for consumers.
+# GfxTarget.cmake exports Core::wxWidgets that links to wx::wxmono, but consumers may not have
+# wxWidgets' own CMake package (and thus no wx::wxmono target). We stage the real binaries, so we
+# create an imported target that points at them *when they exist*.
+#
+# IMPORTANT: In superbuild flows, find_package(Gfx) may happen before staging has copied wx binaries
+# into the prefix. In that case, we must NOT fail at configure time.
+if(WIN32)
+    set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
+    set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
+
+    if(EXISTS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h")
+        if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+            message(STATUS "Copying setup.h from ${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx")
+            message(STATUS "                  to ${_wx_lib_dir}/vc_x64_dll/mswud/wx")
+            message(" ")
+        endif()
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory  "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
+                COMMAND "${CMAKE_COMMAND}" -E copy            "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
+                "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
+                RESULT_VARIABLE         resultVariable
+                OUTPUT_VARIABLE         outputVariable
+                ERROR_VARIABLE          errorVariable
+        )
+
+        if (${resultVariable} GREATER 0)
+            message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
+        endif()
+    else()
+        message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
+    endif()
+
+    # Find the CMake-style generated setup.h:
+    #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
+    file(GLOB _wx_setup_h_candidates "${_wx_lib_dir}/wx/include/*/wx/setup.h")
+    list(REMOVE_DUPLICATES _wx_setup_h_candidates)
+
+    set(_wx_setup_include_dir "")
+    list(LENGTH _wx_setup_h_candidates _wx_setup_h_count)
+    if(_wx_setup_h_count GREATER 0)
+        list(SORT _wx_setup_h_candidates)
+        list(GET _wx_setup_h_candidates 0 _wx_setup_h)
+        get_filename_component(_wx_setup_include_dir "${_wx_setup_h}" DIRECTORY) # .../wx
+        get_filename_component(_wx_setup_include_dir "${_wx_setup_include_dir}" DIRECTORY) # .../<cfg>
+    endif()
+
+    # Create shim only if missing.
+    if(NOT TARGET wx::wxmono)
+        file(GLOB _wx_dll_candidates
+                "${_wx_bin_dir}/wxmsw*u*.dll"
+                "${_wx_bin_dir}/wxmsw*.dll"
+        )
+        list(REMOVE_DUPLICATES _wx_dll_candidates)
+
+        file(GLOB _wx_implib_candidates
+                "${_wx_lib_dir}/wx_mswu-*.lib"
+                "${_wx_lib_dir}/wxmswu*.lib"
+        )
+        list(REMOVE_DUPLICATES _wx_implib_candidates)
+
+        list(LENGTH _wx_dll_candidates _wx_dll_count)
+        list(LENGTH _wx_implib_candidates _wx_implib_count)
+
+        if(_wx_dll_count EQUAL 1 AND _wx_implib_count EQUAL 1)
+            list(GET _wx_dll_candidates 0 _wx_mono_dll)
+            list(GET _wx_implib_candidates 0 _wx_mono_implib)
+
+            add_library(wx::wxmono SHARED IMPORTED)
+            set_target_properties(wx::wxmono PROPERTIES
+                    IMPORTED_LOCATION "${_wx_mono_dll}"
+                    IMPORTED_IMPLIB   "${_wx_mono_implib}"
+            )
+        else()
+            if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+                message(STATUS
+                        "Gfx package: wx::wxmono shim not created (yet).\n"
+                        "bin: ${_wx_bin_dir}\n"
+                        "dll candidates: ${_wx_dll_candidates}\n"
+                        "lib: ${_wx_lib_dir}\n"
+                        "implib candidates: ${_wx_implib_candidates}")
+            endif()
+        endif()
+    endif()
+
+    # Patch include order even if wx::wxmono already existed.
+    if(TARGET wx::wxmono AND _wx_setup_include_dir)
+        get_target_property(_old_incs wx::wxmono INTERFACE_INCLUDE_DIRECTORIES)
+        if(NOT _old_incs)
+            set(_old_incs "")
+        endif()
+
+        # Put the CMake-generated setup.h include dir FIRST.
+        set_target_properties(wx::wxmono PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${_wx_setup_include_dir};${PACKAGE_PREFIX_DIR}/include;${_old_incs}"
+        )
+
+        unset(_old_incs)
+    endif()
+
+    unset(_wx_bin_dir)
+    unset(_wx_lib_dir)
+    unset(_wx_setup_h_candidates)
+    unset(_wx_setup_h_count)
+    unset(_wx_setup_h)
+    unset(_wx_setup_include_dir)
+endif()
+
+# --------------------------------------------------------------------------------------
+# Non-Windows shim:
+#   - If wxWidgets' own package is present, prefer its canonical monolithic target (wx::wxwidgets)
+#     and provide wx::wxmono as a compatibility alias/wrapper.
+#   - Otherwise, create an IMPORTED SHARED target that points at the staged libwx_*.so.
+# --------------------------------------------------------------------------------------
+if(UNIX AND NOT APPLE)
+    set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
+
+    # If the consumer already has wxWidgets' exported targets, just alias/wrap them.
+    if(TARGET wx::wxwidgets AND NOT TARGET wx::wxmono)
+        add_library(wx::wxmono INTERFACE IMPORTED)
+        set_target_properties(wx::wxmono PROPERTIES
+                INTERFACE_LINK_LIBRARIES "wx::wxwidgets"
+        )
+    endif()
+
+    # If still missing, create an imported SHARED target from the staged .so.
+    if(NOT TARGET wx::wxmono)
+        file(GLOB _wx_so_candidates
+                "${_wx_lib_dir}/libwx_qtu-*.so"
+                "${_wx_lib_dir}/libwx_qtu-*.so.*"
+                "${_wx_lib_dir}/libwx_gtk*-*.so"
+                "${_wx_lib_dir}/libwx_gtk*-*.so.*"
+        )
+        list(REMOVE_DUPLICATES _wx_so_candidates)
+
+        if(_wx_so_candidates)
+            # Prefer the non-symlink (usually ends with just .so); otherwise take the first.
+            list(SORT _wx_so_candidates)
+            set(_wx_mono_so "")
+            foreach(_c IN LISTS _wx_so_candidates)
+                if(_c MATCHES "\\.so$")
+                    set(_wx_mono_so "${_c}")
+                    break()
+                endif()
+            endforeach()
+            if(NOT _wx_mono_so)
+                list(GET _wx_so_candidates 0 _wx_mono_so)
+            endif()
+
+            add_library(wx::wxmono SHARED IMPORTED)
+            set_target_properties(wx::wxmono PROPERTIES
+                    IMPORTED_LOCATION "${_wx_mono_so}"
+            )
+        else()
+            if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+                message(STATUS
+                        "Gfx package: wx::wxmono shim not created (yet) on Linux.\n"
+                        "lib dir: ${_wx_lib_dir}\n"
+                        "looked for: libwx_qtu-* and libwx_gtk*-*")
+            endif()
+        endif()
+    endif()
+
+    unset(_wx_so_candidates)
+    unset(_wx_mono_so)
+    unset(_wx_lib_dir)
+endif()
