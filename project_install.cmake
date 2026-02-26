@@ -189,9 +189,9 @@ endif()
 # Also stage the public headers and module interface units needed by the export FILE_SETs.
 # The generated ${APP_NAME}Target.cmake references these paths under the output prefix.
 if(EXISTS "${CMAKE_SOURCE_DIR}/include")
-    file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+    file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}")
     file(COPY "${CMAKE_SOURCE_DIR}/include/"
-            DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+            DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}")
 endif()
 
 # Copy the ixx files. Why, when it has the BMI files, I do not know. I'm not a very good guesser. Just ask my
@@ -223,7 +223,7 @@ foreach(pkg IN LISTS _hs_install_targets)
     # Look in the source directory where FetchContent downloaded them
     if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
         install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
-                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
                 COMPONENT Development)
     endif ()
     if (EXISTS "${${pkglc}_INCLUDE_DIR}")
@@ -240,7 +240,7 @@ foreach(pkg IN LISTS _hs_install_targets)
 
     if(include_dir)
         install(DIRECTORY "${include_dir}/"
-                   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+                   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
                    COMPONENT Development)
     endif()
 
@@ -281,8 +281,8 @@ if (APP_CREATES_PLUGINS)
             ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
             CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
             FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
-            FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}
-            INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}
+            FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+            INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
     )
 endif ()
 # @formatting:on
