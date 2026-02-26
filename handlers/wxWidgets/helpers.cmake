@@ -30,15 +30,18 @@ function(wxWidgets_export_variables pkgname)
     message(NOTICE "wxWidgets: exporting variables for project")
 
     set(_wx_is_monolithic OFF)
-    if (TARGET wx::wxmono OR TARGET wx::mono)
+    if (TARGET wx::wxwidgets OR TARGET wx::wxmono OR TARGET wx::mono)
         set(_wx_is_monolithic ON)
     endif()
 
     if(_wx_is_monolithic)
         set(wxBUILD_MONOLITHIC ON)
         set(components mono)
-        # Prefer your shim name if that is what you export everywhere:
-        if (TARGET wx::wxmono)
+
+        # Prefer canonical wxWidgets monolithic target name if available
+        if (TARGET wx::wxwidgets)
+            set(_wx_main_target wx::wxwidgets)
+        elseif (TARGET wx::wxmono)
             set(_wx_main_target wx::wxmono)
         else()
             set(_wx_main_target wx::mono)
