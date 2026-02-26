@@ -72,6 +72,7 @@ if ("${compiler_version}" MATCHES "clang")
             -fno-implicit-modules
             -fno-implicit-module-maps
             -Wno-unused-command-line-argument
+            -Wno-enum-compare-switch
     )
 endif ()
 
