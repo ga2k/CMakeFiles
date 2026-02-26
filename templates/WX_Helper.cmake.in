@@ -8,45 +8,56 @@ include(CMakeFindDependencyMacro)
 #
 # IMPORTANT: In superbuild flows, find_package(Gfx) may happen before staging has copied wx binaries
 # into the prefix. In that case, we must NOT fail at configure time.
-if (WIN32)
-    set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
-    set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
-    if (EXISTS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h")
+set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
+set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
+set(_wx_inc_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+
+file(GLOB_RECURSE SETUP_H LIST_DIRECTORIES false "${_wx_lib_dir}/wx/include/*/wx/setup.h")
+list(LENGTH SETUP_H howMany)
+if (howMany GREATER 1)
+    list(GET SETUP_H 0 SETUP_H)
+endif ()
+get_filename_component(WX_DIR "${SETUP_H}" DIRECTORY)
+
+if (EXISTS "${SETUP_H}")
+    if (WIN32)
         if (NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-            message(STATUS "Copying setup.h from ${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx")
-            message(STATUS "                  to ${_wx_lib_dir}/vc_x64_dll/mswud/wx")
+            message(STATUS "Copying setup.h from ${WX_DIR}")
+            message(STATUS "                  to ${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
             message(" ")
         endif ()
-        execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
-                COMMAND "${CMAKE_COMMAND}" -E copy "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h"
-                "${_wx_lib_dir}/vc_x64_dll/mswud/wx"
-                RESULT_VARIABLE resultVariable
-                OUTPUT_VARIABLE outputVariable
-                ERROR_VARIABLE errorVariable
-        )
+        file(MAKE_DIRECTORY "${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
+        file(COPY "${SETUP_H}" "${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
 
-        if (${resultVariable} GREATER 0)
-            message(WARNING "Couldn't copy file: Error Code ${errorVariable}")
+        # Find the CMake-style generated setup.h:
+        #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
+        file(GLOB _wx_setup_h_candidates "${_wx_lib_dir}/wx/include/*/wx/setup.h")
+        list(REMOVE_DUPLICATES _wx_setup_h_candidates)
+
+        set(_wx_setup_include_dir "")
+        list(LENGTH _wx_setup_h_candidates _wx_setup_h_count)
+        if (_wx_setup_h_count GREATER 0)
+            list(SORT _wx_setup_h_candidates)
+            list(GET _wx_setup_h_candidates 0 _wx_setup_h)
+            get_filename_component(_wx_setup_include_dir "${_wx_setup_h}" DIRECTORY) # .../wx
+            get_filename_component(_wx_setup_include_dir "${_wx_setup_include_dir}" DIRECTORY) # .../<cfg>
         endif ()
     else ()
-        message(STATUS "${_wx_lib_dir}/wx/include/msw-unicode-3.3/wx/setup.h doesn't exist yet")
+        if (NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+            message(STATUS "Copying setup.h from ${WX_DIR}")
+            message(STATUS "                  to ${_wx_inc_dir}/wx")
+            message(" ")
+        endif ()
+        file(MAKE_DIRECTORY "${_wx_inc_dir}/wx")
+        file(COPY "${SETUP_H}" "${_wx_inc_dir}/wx")
+
     endif ()
+else ()
+    message(STATUS "${SETUP_H} doesn't exist yet")
+endif ()
 
-    # Find the CMake-style generated setup.h:
-    #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
-    file(GLOB _wx_setup_h_candidates "${_wx_lib_dir}/wx/include/*/wx/setup.h")
-    list(REMOVE_DUPLICATES _wx_setup_h_candidates)
-
-    set(_wx_setup_include_dir "")
-    list(LENGTH _wx_setup_h_candidates _wx_setup_h_count)
-    if (_wx_setup_h_count GREATER 0)
-        list(SORT _wx_setup_h_candidates)
-        list(GET _wx_setup_h_candidates 0 _wx_setup_h)
-        get_filename_component(_wx_setup_include_dir "${_wx_setup_h}" DIRECTORY) # .../wx
-        get_filename_component(_wx_setup_include_dir "${_wx_setup_include_dir}" DIRECTORY) # .../<cfg>
-    endif ()
-
+if (WIN32)
     # Create shim only if missing.
     if (NOT TARGET wx::wxmono)
         file(GLOB _wx_dll_candidates
@@ -115,7 +126,6 @@ endif ()
 #   - Otherwise, create an IMPORTED SHARED target that points at the staged libwx_*.so.
 # --------------------------------------------------------------------------------------
 if (UNIX AND NOT APPLE)
-    set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
     # wxWidgets Qt port needs Qt headers/libs for consumers too.
     # Export that dependency here so the include dirs (QApplication, QPalette, ...) propagate.
