@@ -28,7 +28,7 @@ if (EXISTS "${SETUP_H}")
             message(" ")
         endif ()
         file(MAKE_DIRECTORY "${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
-        file(COPY "${SETUP_H}" "${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
+        file(COPY "${SETUP_H}" DESTINATION "${_wx_lib_dir}/wx/vc_x64_dll/mswud/wx")
 
         # Find the CMake-style generated setup.h:
         #   <prefix>/lib/wx/include/<cfg>/wx/setup.h
@@ -50,7 +50,7 @@ if (EXISTS "${SETUP_H}")
             message(" ")
         endif ()
         file(MAKE_DIRECTORY "${_wx_inc_dir}/wx")
-        file(COPY "${SETUP_H}" "${_wx_inc_dir}/wx")
+        file(COPY "${SETUP_H}" DESTINATION "${_wx_inc_dir}/wx")
 
     endif ()
 else ()
