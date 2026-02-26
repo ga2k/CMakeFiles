@@ -443,13 +443,15 @@ function(fetchContents)
                         if (NOT TARGET ${this_namespace}::${this_pkgname})
                             # 1. Is the library already available? (Probe it)
                             set(temporary_args ${this_find_package_args})
-                            list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS CONFIG)
-                            find_package(${this_pkgname} QUIET ${temporary_args})
+                            list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS)
+                            find_package(${this_pkgname} ${temporary_args})
 
+                            set(scanned${this_pkgname} OFF)
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
                                 scanLibraryTargets("${features}" "${this_pkgname}" "${feature_names}")
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
+                                set(scanned${this_pkgname} ON)
                             else ()
                                 # Library not found yet. We must fulfill its metadata prerequisites
                                 # so that we can eventually load it.
@@ -491,7 +493,8 @@ function(fetchContents)
                                 endif ()
 
                                 # Now that the library is found, scan it for transitives
-                                if ("${this_kind}" STREQUAL "LIBRARY" AND NOT combinedLibraryComponents)
+                                set(scannedvar "scanned${this_pkgname}")
+                                if (this_kind STREQUAL "LIBRARY" AND NOT scannedvar) # AND NOT combinedLibraryComponents)
                                     scanLibraryTargets("${DATA}" "${this_pkgname}" "${feature_names}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif ()

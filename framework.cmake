@@ -87,8 +87,8 @@ function(commonInit pkg discovery_phase)
     set(foundFind -1)
     set(foundUse -1)
 
+    globalObjGet(GLOBAL_FEATURES _FEATURES)
     if(discovery_phase)
-        globalObjGet(GLOBAL_FEATURES _FEATURES)
 
         foreach (feet IN LISTS _FEATURES)
             math(EXPR findex "${findex} + 1")
@@ -120,7 +120,8 @@ function(commonInit pkg discovery_phase)
         endif ()
 
         if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
-            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+            list(INSERT _FEATURES ${foundFind} "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+#            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
         endif ()
 
         globalObjSet(GLOBAL_FEATURES "${_FEATURES}")

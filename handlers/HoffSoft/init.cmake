@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 function (HoffSoft_init dry_run)
     FindCore_init(${dry_run})
-    FindGfx_init($dry_run})
+    FindGfx_init(${dry_run})
 endfunction()
 
 ########################################################################################################################
