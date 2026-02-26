@@ -83,8 +83,8 @@ else ()
   message(FATAL_ERROR "Illegal installation")
 endif ()
 
-if (wxWidgets IN_LIST @APP_FEATURES)
-  include("${PACKAGE_PREFIX_DIR}/wxWidget.cmake")
+if (WIDGETS IN_LIST ${APP_FEATURES})
+  include("${PACKAGE_PREFIX_DIR}/WX_Helper.cmake")
 endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
