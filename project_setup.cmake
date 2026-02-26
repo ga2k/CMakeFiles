@@ -57,7 +57,7 @@ endif ()
 
 # Define set: magic_enum override and general include paths
 list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
-#string(REGEX REPLACE ";" "&" PI "${PLUGINS}")
+#string(REGEX REPLACE ";" "${_TOK_LIST_SEP}" PI "${PLUGINS}")
 #list(REMOVE_ITEM extra_Definitions "PLUGINS")
 #if (NOT "${PI}" STREQUAL "")
 #    list(APPEND extra_Definitions "PLUGINS=${PI}")
