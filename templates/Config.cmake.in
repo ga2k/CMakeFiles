@@ -83,7 +83,7 @@ else ()
   message(FATAL_ERROR "Illegal installation")
 endif ()
 
-if (WIDGETS IN_LIST ${APP_FEATURES})
+if (WIDGETS IN_LIST APP_FEATURES)
   include("${PACKAGE_PREFIX_DIR}/WX_Helper.cmake")
 endif()
 
