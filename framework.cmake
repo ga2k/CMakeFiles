@@ -75,6 +75,10 @@ if ("${compiler_version}" MATCHES "clang")
     add_compile_options(
             -Wno-unused-command-line-argument
             -Wno-enum-compare-switch
+            -Wno-deprecated-declarations
+            -Wno-unused-lambda-capture
+            -Wno-deprecated-enum-enum-conversion
+
     )
 endif ()
 
