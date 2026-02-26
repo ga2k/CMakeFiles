@@ -49,6 +49,8 @@ function(fetchContents)
         msg(ALWAYS FATAL_ERROR "Unrecognised arguments passed to fetchContents() : ${AUE_UNPARSED_ARGUMENTS}")
     endif ()
 
+    globalObjSet(GLOBAL_FEATURES "${AUE_FEATURES}")
+
     CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
     CREATE(TABLE initialFeatures COLUMNS ( ${PkgColNames} ))
     CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
@@ -69,7 +71,8 @@ function(fetchContents)
     createStandardPackageData(OFF)
     runPackageCallbacks(OFF)
 
-    preProcessFeatures("${AUE_FEATURES}" allFeatures userPackages)
+    globalObjGet(GLOBAL_FEATURES _FEATURES)
+    preProcessFeatures("${_FEATURES}" allFeatures userPackages)
     SELECT(COUNT AS numPackages FROM userPackages)
     set(aix 0)
     while (aix LESS numPackages)

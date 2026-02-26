@@ -7,5 +7,4 @@ endfunction()
 
 function(FindCore_init dry_run)
     commonInit (Core ${dry_run})
-    set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE)
 endfunction()

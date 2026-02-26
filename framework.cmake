@@ -88,7 +88,9 @@ function(commonInit pkg discovery_phase)
     set(foundUse -1)
 
     if(discovery_phase)
-        foreach (feet IN LISTS AUE_FEATURES)
+        globalObjGet(GLOBAL_FEATURES _FEATURES)
+
+        foreach (feet IN LISTS _FEATURES)
             math(EXPR findex "${findex} + 1")
 
             separate_arguments(_feet NATIVE_COMMAND "${feet}")
@@ -104,24 +106,24 @@ function(commonInit pkg discovery_phase)
         endforeach ()
 
         if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
-            list(REMOVE_AT AUE_FEATURES ${foundFind})
+            list(REMOVE_AT _FEATURES ${foundFind})
             if (foundUse GREATER_EQUAL 0)
-                list(REMOVE_AT AUE_FEATURES ${foundUse})
+                list(REMOVE_AT _FEATURES ${foundUse})
             endif ()
         elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
-            list(REMOVE_AT AUE_FEATURES ${foundUse})
+            list(REMOVE_AT _FEATURES ${foundUse})
             if(foundFind GREATER_EQUAL 0)
-                list(REMOVE_AT AUE_FEATURES ${foundFind})
+                list(REMOVE_AT _FEATURES ${foundFind})
             endif ()
         else ()
             # They can only be the same if they are both -1, and in that case we do nothing
         endif ()
 
         if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
-            list(PREPEND AUE_FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
         endif ()
 
-        set(AUE_FEATURES "${AUE_FEATURES}" PARENT_SCOPE)
+        globalObjSet(GLOBAL_FEATURES "${_FEATURES}")
 
         set(fn "add${pkg}Features")
         cmake_language(CALL registerPackageCallback "${fn}" ${discovery_phase})
