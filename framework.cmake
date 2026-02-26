@@ -71,6 +71,8 @@ if ("${compiler_version}" MATCHES "clang")
     list(APPEND extra_CompileOptions
             -fno-implicit-modules
             -fno-implicit-module-maps
+    )
+    add_compile_definitions(
             -Wno-unused-command-line-argument
             -Wno-enum-compare-switch
     )
