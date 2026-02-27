@@ -276,9 +276,9 @@ endforeach()
 if (APP_CREATES_PLUGINS)
     install(TARGETS                          ${APP_CREATES_PLUGINS}
             EXPORT                           ${APP_NAME}PluginTarget
-            LIBRARY DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            LIBRARY DESTINATION              ${CMAKE_INSTALL_LIBDIR} # /${APP_VENDOR}/${APP_NAME}/plugins
+            RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR} # /${APP_VENDOR}/${APP_NAME}/plugins
+            ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR} # /${APP_VENDOR}/${APP_NAME}/plugins
             CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
             FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
             FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
