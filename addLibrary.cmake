@@ -214,7 +214,7 @@ function(addLibrary)
             VERSION                     "${arg_VERSION}"
     )
 
-    if (APP_TYPE STREQUAL Executable)
+    if (NOT APP_TYPE STREQUAL Executable)
         set_target_properties(${arg_NAME} PROPERTIES NO_SONAME ON)
     endif ()
 
