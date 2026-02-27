@@ -1,7 +1,7 @@
 # cmake/generate_app_config.cmake
 
-if (Core_PLUGIN_DIR)
-    set(PLUGIN_PATH "${Core_PLUGIN_DIR}")
+if (${APP_VENDOR}_PLUGIN_DIR)
+    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_DIR}")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
