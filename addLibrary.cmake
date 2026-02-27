@@ -210,9 +210,14 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
-            SOVERSION                   ${arg_VERSION}
+            SOVERSION                   "${SO_VERSION}"
+            VERSION                     "${arg_VERSION}"
     )
 
+    if (APP_TYPE STREQUAL Executable)
+        set_target_properties(${arg_NAME} PROPERTIES NO_SONAME ON)
+    endif ()
+    
     # Runtime search path so binaries can find staged/installed shared libs next to the prefix.
     # For Linux we want: <prefix>/bin/<app> to find <prefix>/lib64/*.so via $ORIGIN/../lib64
     if(UNIX AND NOT APPLE)

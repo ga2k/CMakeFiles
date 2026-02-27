@@ -1,5 +1,7 @@
 include_guard(GLOBAL)
 
+SplitAt("${APP_VERSION}" "." SO_VERSION dc)
+
 # Shared feature/platform setup and environment checks
 include(${cmake_root}/tools.cmake)
 include(${cmake_root}/fetchContents.cmake)
