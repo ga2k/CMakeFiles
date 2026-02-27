@@ -77,6 +77,20 @@ function(wxWidgets_export_variables pkgname)
         list(APPEND components stc)
     endif()
 
+    # RPATH policy for staged/relocatable builds:
+    # Make wx shared libraries find their own companion libs (e.g. libwxwebp*.so) in the same directory.
+    if(UNIX AND NOT APPLE)
+        set(CMAKE_SKIP_RPATH OFF CACHE BOOL "" FORCE)
+        set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF CACHE BOOL "" FORCE)
+        set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF CACHE BOOL "" FORCE)
+
+        # For installed wx *.so: search relative to the library itself.
+        set(CMAKE_INSTALL_RPATH "\$ORIGIN" CACHE STRING "" FORCE)
+
+        # Optional: for build-tree runs of wx libs/tests within the wx build itself.
+        set(CMAKE_BUILD_RPATH "\$ORIGIN" CACHE STRING "" FORCE)
+    endif()
+
     set(local_libraries)
     foreach(comp IN LISTS components)
         if (TARGET wx::${comp})
