@@ -210,7 +210,7 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
-            VERSION                     ${arg_VERSION}
+            SOVERSION                   ${arg_VERSION}
     )
 
     # Runtime search path so binaries can find staged/installed shared libs next to the prefix.
