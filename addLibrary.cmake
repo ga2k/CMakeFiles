@@ -210,6 +210,7 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
+            VERSION                     ${arg_VERSION}
     )
 
     # Runtime search path so binaries can find staged/installed shared libs next to the prefix.
@@ -226,14 +227,6 @@ function(addLibrary)
 
     # Explicitly add the compile feature to help the exporter
     target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
-
-    # Only set version properties for libraries, not executables
-    if(NOT arg_EXECUTABLE)
-        set_target_properties(${arg_NAME} PROPERTIES
-                SOVERSION                   ${arg_VERSION}
-                VERSION                     ${arg_VERSION}
-        )
-    endif()
 
     # Compile and link options
     string(TOUPPER ${arg_NAME} arg_NAME_UC)
