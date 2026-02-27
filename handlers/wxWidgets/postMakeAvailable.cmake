@@ -24,6 +24,18 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
         if(NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
             target_compile_options("${t}" PRIVATE -w)
         endif()
+
+        # Force wx shared libs to be relocatable within the stage/install tree.
+        # This fixes cases like libwx_qtu depending on libwxwebp* in the same dir.
+        if(UNIX AND NOT APPLE)
+            if(type STREQUAL "SHARED_LIBRARY" OR type STREQUAL "MODULE_LIBRARY")
+                set_target_properties("${t}" PROPERTIES
+                        INSTALL_RPATH "\$ORIGIN"
+                        BUILD_RPATH   "\$ORIGIN"
+                        INSTALL_RPATH_USE_LINK_PATH FALSE
+                )
+            endif()
+        endif()
     endforeach()
 
     wxWidgets_export_variables(wxWidgets)
