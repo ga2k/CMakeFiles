@@ -21,7 +21,6 @@ consumes:
   plugin_path:     "@PLUGIN_PATH@"
   plugins:          @PLUGIN_YAML_LIST@
   features:         @FEATURES_YAML_LIST@
-  libs:             @CORE_LIBS_YAML_LIST@
 
 supplies:
   plugins:          @CREATES_PLUGINS_YAML_LIST@
