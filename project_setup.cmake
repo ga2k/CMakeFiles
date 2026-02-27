@@ -1,6 +1,5 @@
 include(GNUInstallDirs)
 
-
 # Per-project setup. This file MUST NOT use include_guard(GLOBAL).
 # It is intended to be included once for each subproject (Core, Gfx, MyCare).
 
@@ -16,13 +15,6 @@ if (APP_SHOW_SIZER_INFO_IN_SOURCE)
 else ()
     set(SHOW_SIZER_INFO_FLAG "")
 endif ()
-#
-## Project-root (this subproject)
-#set(PROJECT_ROOT "${PROJECT_SOURCE_DIR}")
-#
-## Ensure environment/output dirs are prepared for this specific project
-#include(${CMAKE_SOURCE_DIR}/cmake/check_environment.cmake)
-#check_environment("${CMAKE_SOURCE_DIR}")
 
 # Feature-scoped extras for this project
 if (WIDGETS IN_LIST APP_FEATURES)
@@ -57,11 +49,6 @@ endif ()
 
 # Define set: magic_enum override and general include paths
 list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
-#string(REGEX REPLACE ";" "${_TOK_LIST_SEP}" PI "${PLUGINS}")
-#list(REMOVE_ITEM extra_Definitions "PLUGINS")
-#if (NOT "${PI}" STREQUAL "")
-#    list(APPEND extra_Definitions "PLUGINS=${PI}")
-#endif ()
 
 list(APPEND extra_IncludePaths
         ${HEADER_BASE_DIRS}
@@ -77,17 +64,17 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
-fetchContents(
-        PREFIX HS
-        FEATURES ${APP_FEATURES}
-)
-
 if(STAGE_OUTPUT)
     set(CMAKE_INSTALL_PREFIX "${STAGED_FOLDER}" CACHE PATH "CMake Install Prefix" FORCE)
 else ()
     set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
 endif ()
 msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
+fetchContents(
+        PREFIX HS
+        FEATURES ${APP_FEATURES}
+)
 
 if (MONOREPO AND MONOBUILD)
     return()

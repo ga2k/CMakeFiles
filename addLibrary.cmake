@@ -214,21 +214,9 @@ function(addLibrary)
             VERSION                     "${arg_VERSION}"
     )
 
-    if (NOT APP_TYPE STREQUAL Executable)
+    if (APP_TYPE STREQUAL Executable)
         set_target_properties(${arg_NAME} PROPERTIES NO_SONAME ON)
     endif ()
-
-    # Runtime search path so binaries can find staged/installed shared libs next to the prefix.
-    # For Linux we want: <prefix>/bin/<app> to find <prefix>/lib64/*.so via $ORIGIN/../lib64
-    if(UNIX AND NOT APPLE)
-        set(_rpath_origin "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
-        set_target_properties(${arg_NAME} PROPERTIES
-                BUILD_RPATH              "${_rpath_origin}"
-                INSTALL_RPATH            "${_rpath_origin}"
-                INSTALL_RPATH_USE_LINK_PATH TRUE
-        )
-        unset(_rpath_origin)
-    endif()
 
     # Explicitly add the compile feature to help the exporter
     target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
