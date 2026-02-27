@@ -1,7 +1,5 @@
 include_guard(GLOBAL)
 
-SplitAt("${APP_VERSION}" "." SO_VERSION dc)
-
 # Shared feature/platform setup and environment checks
 include(${cmake_root}/tools.cmake)
 include(${cmake_root}/fetchContents.cmake)
@@ -11,6 +9,13 @@ include(${cmake_root}/sqlish.cmake)
 
 # The environment check validates OUTPUT_DIR etc.; call once globally
 check_environment("${CMAKE_SOURCE_DIR}")
+
+# Generate the ABI version from the major version, unless already set from APP_SOVERSION
+if(APP_SOVERSION)
+    set(SO_VERSION "${APP_SOVERSION}")
+else ()
+    SplitAt("${APP_VERSION}" "." SO_VERSION dc)
+endif ()
 
 # Derivations of common metadata (safe globally)
 string(TOUPPER ${APP_NAME} APP_NAME_UC)
