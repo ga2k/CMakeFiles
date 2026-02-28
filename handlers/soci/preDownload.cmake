@@ -75,4 +75,29 @@ function(soci_preDownload pkgname url tag srcDir)
 
     # @formatter:on
 
+    # Use a persistent local clone so SOCI survives `make clean`
+    set(_soci_local_src "$ENV{HOME}/dev/archives/soci_src")
+
+    if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
+        message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
+        execute_process(
+                COMMAND git clone https://github.com/SOCI/soci.git "${_soci_local_src}"
+                RESULT_VARIABLE _soci_clone_result
+        )
+        if (NOT _soci_clone_result EQUAL 0)
+            message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
+        endif ()
+    endif ()
+
+    set(FETCHCONTENT_SOURCE_DIR_SOCI "${_soci_local_src}" CACHE PATH "Pre-cloned SOCI source" FORCE)
+
+    set(_soci_src "${${pkgname}_SOURCE_DIR}")
+    set(_soci_bin "${${pkgname}_BINARY_DIR}")
+
+    if (COMMAND soci_fix)
+        soci_fix("${pkgname}" "" "${_soci_src}")
+    endif ()
+
+    set(HANDLED OFF PARENT_SCOPE)
+
 endfunction()
