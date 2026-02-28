@@ -2400,7 +2400,6 @@ function(DUMP)
                 string(LENGTH "${_c}" _len)
                 set(_hw_${_c} ${_len})
                 set(_w_${_c} ${_len})
-                msg("_hw_${_c}='${_hw_${_c}}', _w_${_c}='${_w_${_c}}'")
             endforeach ()
 
             foreach(_rname IN LISTS _names)
