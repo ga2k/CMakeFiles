@@ -95,7 +95,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(_soci_bin "${${pkgname}_BINARY_DIR}")
 
     if (COMMAND soci_fix)
-        soci_fix("${pkgname}" "" "${_soci_src}")
+        soci_fix("${pkgname}" "" "${_soci_local_src}")
     endif ()
 
     set(HANDLED OFF PARENT_SCOPE)
