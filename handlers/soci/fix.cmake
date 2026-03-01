@@ -1,24 +1,5 @@
 include("${cmake_root}/tools.cmake")
 
 function(soci_fix target tag sourceDir)
-
-    if (NOT ${target}_PATCHED)
-        unset(patches)
-        list(APPEND patches
-                "soci/3rdparty/fmt/include|${sourceDir}"
-                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
-
-                "soci/include|${sourceDir}"
-
-                "soci/CMakeLists.txt|${sourceDir}"
-                "soci/cmake/soci_define_backend_target.cmake|${sourceDir}"
-
-    #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
-                "soci/src|${sourceDir}"
-        )
-        replaceFile(${target} "${patches}")
-    endif ()
-    set(${target}_PATCHED ON PARENT_SCOPE)
     set(HANDLED ON PARENT_SCOPE)
-
 endfunction()

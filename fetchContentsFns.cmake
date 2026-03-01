@@ -109,11 +109,7 @@ endfunction()
 ########################################################################################################################
 ########################################################################################################################
 function(initialiseFeatureHandlers DRY_RUN)
-    if (MONOREPO)
-        file(GLOB_RECURSE handlers "${CMAKE_SOURCE_DIR}/${APP_VENDOR}/cmake/handlers/*.cmake")
-    else ()
-        file(GLOB_RECURSE handlers "${cmake_root}/handlers/*.cmake")
-    endif ()
+    file(GLOB_RECURSE handlers "${cmake_root}/handlers/*.cmake")
 
     foreach (handler IN LISTS handlers)
         get_filename_component(handlerName "${handler}" NAME_WE)
@@ -122,15 +118,11 @@ function(initialiseFeatureHandlers DRY_RUN)
 
         columnarTextOut("default" "added handler" "${handlerName}" "for package" "${packageName}" "" ""
                 "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
-#                "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]" ${DRY_RUN})
-        if (${handlerName} STREQUAL "init")
+
+        include("${handler}")
+        if ("${handlerName}" STREQUAL "init")
             columnarTextOut("default" "calling handler" "${handlerName}" "for package" "${packageName}" "" ""
                     "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
-        endif ()
-#        if (NOT DRY_RUN)
-            include("${handler}")
-#        endif ()
-        if ("${handlerName}" STREQUAL "init")
             ########################################################################################################
             ########################################################################################################
             set(fn "${packageName}_init") ##########################################################################

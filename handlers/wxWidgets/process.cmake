@@ -6,7 +6,7 @@ function(wxWidgets_process incs libs defs)
         message("Building wxWidgets from source")
         message("")
 
-        include(${CMAKE_SOURCE_DIR}/cmake/handlers/wxWidgets/helpers.cmake OPTIONAL RESULT_VARIABLE helper_found)
+        include(${cmake_root}/handlers/wxWidgets/helpers.cmake OPTIONAL RESULT_VARIABLE helper_found)
         if (helper_found)
             wxWidgets_set_build_options()
 

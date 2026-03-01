@@ -1465,31 +1465,40 @@ endfunction()
 ##
 function(replaceFile target patchList)
 
-    string(ASCII 27 ESC)
-    set(BOLD "${ESC}[1m")
-    set(RED "${ESC}[31m${BOLD}")
-    set(GREEN "${ESC}[32m${BOLD}")
-    set(ORANGE "${ESC}[33m")
-    set(YELLOW "${ESC}[33m${BOLD}")
-    set(OFF "${ESC}[0m")
+    if(NOT DEFINED BOLD)
+        string(ASCII 27 ESC)
+        set(BOLD "${ESC}[1m")
+        set(RED "${ESC}[31m${BOLD}")
+        set(GREEN "${ESC}[32m${BOLD}")
+        set(ORANGE "${ESC}[33m")
+        set(YELLOW "${ESC}[33m${BOLD}")
+        set(NC "${ESC}[0m")
+    endif ()
+
     unset(visited)
 
     msg(" ")
-    msg(CHECK_START "Replacing files for target ${YELLOW}${target}${OFF}")
+    set(any_errored OFF)
+    set(errored OFF)
+    set(error_msg)
+
+    msg(CHECK_START "Replacing files for target ${YELLOW}${target}${NC}")
     list(APPEND CMAKE_MESSAGE_INDENT "\t")
-    set(any_failed OFF)
 
     if (${target}_ALREADY_FOUND)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        msg(CHECK_PASS "Not required for ${BOLD}imported libraries${OFF}")
+        msg(CHECK_PASS "Not required for ${BOLD}imported libraries${NC}")
         return()
     endif ()
 
     foreach (patch IN LISTS patchList)
 
+        set(errored OFF)
+        set(error_msg)
+
         SplitAt("${patch}" "|" patchBranch externalTrunk)
 
-        msg(CHECK_START "Replacement pattern is ${YELLOW}${patchBranch}${OFF}")
+        msg(CHECK_START "Replacement pattern is ${YELLOW}${patchBranch}${NC}")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         string(LENGTH "${externalTrunk}" etLength)
@@ -1500,7 +1509,7 @@ function(replaceFile target patchList)
             set(etIsAbsolute ON)
         endif ()
 
-        set(from_path "${CMAKE_SOURCE_DIR}/cmake/patches/${patchBranch}")
+        set(from_path "${cmake_root}/patches/${patchBranch}")
         if (EXISTS "${from_path}" AND NOT IS_DIRECTORY "${from_path}")
             get_filename_component(actual_from_path "${from_path}" DIRECTORY)
             get_filename_component(file_pattern "${from_path}" NAME)
@@ -1518,8 +1527,6 @@ function(replaceFile target patchList)
             set(file_pattern "*")
         endif ()
 
-        set(failed OFF)
-
         if (EXISTS ${from_path})
             file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
             if (etIsAbsolute)
@@ -1527,7 +1534,11 @@ function(replaceFile target patchList)
             else ()
                 get_filename_component(to_path "${externalTrunk}/../${patchBranch}" ABSOLUTE)
             endif ()
+
             foreach (file_rel_path IN LISTS override_files)
+
+                set(errored OFF)
+                set(error_msg)
 
                 # Skip this file if it is a check file
                 get_filename_component(extn "${file_rel_path}" LAST_EXT)
@@ -1541,17 +1552,14 @@ function(replaceFile target patchList)
                 else ()
                     set(true_file_rel_path "${file_rel_path}")
                 endif ()
-                msg(CHECK_START "${BOLD}Replacing${OFF} ${file_rel_path}")
+                msg(CHECK_START "${BOLD}Replacing${NC} ${file_rel_path}")
                 list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                 set(override_file_path "${from_path}/${file_rel_path}")
                 set(system_file_path "${to_path}/${true_file_rel_path}")
 
-                msg("destination file = ${override_file_path}")
-                msg("     source file = ${system_file_path}")
-
-                set(errored OFF)
-                unset(error_message)
+                msg(" overwriting ${system_file_path}")
+                msg("        with ${override_file_path}")
 
                 if (EXISTS "${system_file_path}")
 
@@ -1573,17 +1581,17 @@ function(replaceFile target patchList)
                         endif ()
 
                         if ("${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
-                            set(error_message "Replaced in previous iteration of loop")
+                            set(error_msg "Replaced in previous iteration of loop")
                         elseif ("${source}" STREQUAL "${override_file_path}" AND NOT "${destination}" STREQUAL "${system_file_path}")
                             set(errored ON)
-                            set(error_message "source file has been used to replace ${destination}")
+                            set(error_msg "source file has been used to replace ${destination}")
                         elseif (NOT "${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
                             set(errored ON)
-                            set(error_message "destination has already been replaced by ${source}")
+                            set(error_msg "destination has already been replaced by ${source}")
                         endif ()
                     endif ()
 
-                    if (NOT error_message)
+                    if (NOT error_msg)
 
                         # save the details of this visit.
 
@@ -1601,52 +1609,56 @@ function(replaceFile target patchList)
 
                                 #  see if it has already been patched
                                 if ("${source_contents}" STREQUAL "${override_contents}")
-                                    set(error_message "Replacement has already been made.")
+                                    set(error_msg "Replacement has already been made.")
                                     set(errored OFF)
                                 elseif (NOT "${check_contents}" STREQUAL "${source_contents}")
-                                    set(error_message "Original destination file differs from expected. Replacement aborted.")
+                                    set(error_msg "Original destination file differs from expected. Replacement aborted.")
                                     set(errored ON)
                                 endif ()
                             endif ()
                         endif ()
                     endif ()
 
-                    if (NOT error_message)
+                    if (NOT error_msg)
                         file(COPY_FILE "${override_file_path}" "${system_file_path}")
                     endif ()
 
                 else ()
                     set(errored ON)
-                    set(error_message "destination file doesn't exist.")
+                    set(error_msg "destination file doesn't exist.")
                 endif ()
 
                 list(POP_BACK CMAKE_MESSAGE_INDENT)
 
-                if (NOT error_message)
-                    set(error_message "OK")
+                if (errored)
+                    msg(CHECK_FAIL "${RED}[FAILED]${NC} ${BOLD}${error_msg}${NC}")
+                    set(any_errored ON)
+                    set(errored OFF)
+                    set(error_msg)
+                else ()
+                    msg(CHECK_PASS "${GREEN}${error_msg}${NC}")
                 endif ()
 
-                if (errored)
-                    msg(CHECK_FAIL "${RED}[FAILED]${OFF} ${BOLD}${error_message}${OFF}")
-                else ()
-                    msg(CHECK_PASS "${GREEN}${error_message}${OFF}")
-                endif ()
             endforeach ()
         else ()
-            msg("${RED}[FAILED]${OFF} ${from_path} doesn't exist.")
-            set(any_failed ON)
+            msg("${RED}[FAILED]${NC} ${from_path} doesn't exist.")
+            set(any_errored ON)
         endif ()
 
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-        msg(CHECK_PASS "${GREEN}OK.${OFF}")
+        if(any_errored)
+            msg(CHECK_FAIL "${RED}[FAILED]${NC}")
+        else ()
+            msg(CHECK_PASS "${GREEN}OK.${NC}")
+        endif ()
 
     endforeach ()
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
-    if (any_failed)
-        msg(CHECK_FAIL "${ORANGE}[FAILED] Some patches failed.${OFF}")
+    if (any_errored)
+        msg(CHECK_FAIL "${ORANGE}[FAILED] Some patches failed.${NC}")
     else ()
-        msg(CHECK_PASS "${GREEN}OK.${OFF}")
+        msg(CHECK_PASS "${GREEN}OK.${NC}")
     endif ()
 
 endfunction()

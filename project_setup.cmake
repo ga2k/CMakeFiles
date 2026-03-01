@@ -80,4 +80,4 @@ if (MONOREPO AND MONOBUILD)
     return()
 endif ()
 
-include(${CMAKE_SOURCE_DIR}/cmake/project_install.cmake)
+include(${cmake_root}/project_install.cmake)
