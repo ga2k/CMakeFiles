@@ -54,17 +54,16 @@ set(_top "${BOLD}${CYAN}╔${_li}╗${NC}")
 set(_mid "${BOLD}${CYAN}║${_sp}║${NC}")
 set(_bot "${BOLD}${CYAN}╚${_li}╝${NC}")
 
-set(_txt "P r o c e s s i n g   ${APP_NAME}")
-
-string(LENGTH "${_txt}" _txl)
-
+set(_txt "P r o c e s s i n g")
+string(LENGTH "${_txt}   ${APP_NAME}" _txl)
 math(EXPR _tel "(${_w} - ${_txl}) / 2")
 math(EXPR _ter "${_w}  - ${_tel} - ${_txl}")
 
 string(REPEAT " " ${_tel} _lil)
 string(REPEAT " " ${_ter} _lir)
 
-set(_mod "${BOLD}${CYAN}║${NC}${_lil}${BOLD}${WHITE}Processing${NC} ${BOLD}${YELLOW}${APP_NAME}${NC}${_lir}${BOLD}${CYAN}║${NC}")
+set(_txt "${BOLD}${WHITE}${_txt}${NC}   ${BOLD_YELLOW}${APP_NAME}${NC}")
+set(_mod "${BOLD}${CYAN}║${NC}${_lil}${_txt}${_lir}${BOLD}${CYAN}║${NC}")
 
 msg(ALWAYS " ")
 msg(ALWAYS "${_top}")
