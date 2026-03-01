@@ -54,7 +54,7 @@ set(_top "${BOLD}${CYAN}╔${_li}╗${NC}")
 set(_mid "${BOLD}${CYAN}║${_sp}║${NC}")
 set(_bot "${BOLD}${CYAN}╚${_li}╝${NC}")
 
-set(_txt "Processing ${APP_NAME}")
+set(_txt "P r o c e s s i n g   ${APP_NAME}")
 
 string(LENGTH "${_txt}" _txl)
 
