@@ -352,10 +352,16 @@ function(fetchContents)
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
                     if (this_pkgname IN_LIST combinedLibraryComponents)
+                        # The feature is already PROVIDED by an upstream library target (e.g. HoffSoft::Core/Gfx).
+                        # We must still "consume" it for this app, i.e. add the provided target to our link lists.
+
+                        handleTarget(${this_pkgname})
+
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
-                        msg(CHECK_PASS "Feature already available without re-processing: skipped")
+                        msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
                         continue()
                     endif ()
+
                     if ("${this_method}" STREQUAL "PROCESS")
                         set(fn "${this_pkgname}_process")
                         if (COMMAND "${fn}")
@@ -530,9 +536,16 @@ function(fetchContents)
                         endif ()
 
                         if (this_pkgname IN_LIST combinedLibraryComponents)
-#                            handleTarget(${this_pkgname})
+                            # Feature is already PROVIDED by an upstream library target.
+                            # Still consume it for this app by adding the provided target to our link lists.
+                            handleTarget(${this_pkgname})
+
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
+<<<<<<< HEAD
                             msg(CHECK_PASS "Future already available without re-processing: skipped")
+=======
+                            msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
+>>>>>>> _sync_temp/master
                             continue()
                         endif ()
 

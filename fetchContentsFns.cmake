@@ -46,9 +46,11 @@ function(addTargetProperties target pkgname addToLists)
         msg("Target ${target} is an alias. Retargeting target to target target ${_aliasTarget}")
         addTargetProperties(${_aliasTarget} "${pkgname}" ${addToLists})
         if (addToLists)
-            set(_LibrariesList ${_LibrariesList} PARENT_SCOPE)
-            set(_DependenciesList ${_DependenciesList} PARENT_SCOPE)
+            # @formatter:off
+            set(_LibrariesList      ${_LibrariesList}    PARENT_SCOPE)
+            set(_DependenciesList   ${_DependenciesList} PARENT_SCOPE)
             set(at_LibraryPathsList ${_LibraryPathsList} PARENT_SCOPE)
+            # @formatter:on
         endif ()
         return()
     endif ()
@@ -66,9 +68,11 @@ function(addTargetProperties target pkgname addToLists)
         endif ()
     endif ()
 
-    target_compile_options("${target}" ${LIB_TYPE} "${_CompileOptionsList}")
-    target_compile_definitions("${target}" ${LIB_TYPE} "${_DefinesList}")
-    target_link_options("${target}" ${LIB_TYPE} "${_LinkOptionsList}")
+    # @formatter:off
+    target_compile_options(     "${target}" ${LIB_TYPE} "${_CompileOptionsList}")
+    target_compile_definitions( "${target}" ${LIB_TYPE} "${_DefinesList}")
+    target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
+    # @formatter:on
 
     if (WIN32)
         set_target_properties("${target}" PROPERTIES DEBUG_POSTFIX "")
@@ -850,7 +854,7 @@ function(scanLibraryTargets packageData libName packageNames)
                 # 2. Extract raw name for matching
                 set(raw_import_name "${clean_lib}")
                 if ("${clean_lib}" MATCHES "::")
-                    # Handle Core::name or Namespace::name
+                    # Handle ${APP_VENDOR}::name or Namespace::name
                     string(REGEX REPLACE ".*::" "" raw_import_name "${clean_lib}")
                 endif ()
 
@@ -979,7 +983,7 @@ macro(handleTarget _pkgname)
         list(APPEND _DefinesList USING_${this_feature})
 
         # 1. Check for the specific target cached by scanLibraryTargets
-        # This is the "Magic" that links you to Core::magic_enum instead of fetching a new one
+        # This is the "Magic" that links you to ${APP_VENDOR}::magic_enum instead of fetching a new one
         if (${_pkgname}_PROVIDED_TARGET AND TARGET ${${_pkgname}_PROVIDED_TARGET})
             set(_actualTarget ${${_pkgname}_PROVIDED_TARGET})
             msg("  Linking ${_pkgname} to existing target: ${_actualTarget}")
@@ -995,7 +999,7 @@ macro(handleTarget _pkgname)
         endif ()
 
         # 2. Standard component check
-        if (NOT _anyTargetFound)
+        if (_anyTargetFound)
             foreach (_component IN LISTS this_find_package_components)
                 if (TARGET ${_component})
                     addTargetProperties(${_component} ${_pkgname} ON)
@@ -1012,8 +1016,8 @@ macro(handleTarget _pkgname)
             elseif (TARGET ${_pkgname})
                 addTargetProperties(${_pkgname} ${_pkgname} ON)
                 set(_anyTargetFound ON)
-            elseif (TARGET Core::${_pkgname})
-                addTargetProperties(Core::${_pkgname} ${_pkgname} ON)
+            elseif (TARGET ${APP_VENDOR}::${_pkgname})
+                addTargetProperties(${APP_VENDOR}::${_pkgname} ${_pkgname} ON)
                 set(_anyTargetFound ON)
             endif ()
         endif ()
