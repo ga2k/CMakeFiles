@@ -44,22 +44,14 @@ function(registerPlugin pi dry_run)
             "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
 endfunction()
 
-execute_process(
-        COMMAND sh -c "tput cols </dev/tty"
-        OUTPUT_VARIABLE _term_cols
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-)
-if(NOT _term_cols MATCHES "^[0-9]+$")
-    set(_term_cols 120)
-endif()
+include(${cmake_root}/framework.cmake)
 
 math(EXPR _w "${_term_cols} - 2")
 string(REPEAT "═" ${_w} _li)
 string(REPEAT " " ${_w} _sp)
-set(_top "╔${_li}╗")
-set(_mid "║${_sp}║")
-set(_bot "╚${_li}╝")
+set(_top "${BOLD}${CYAN}╔${NC}${_li}${BOLD}${CYAN}╗${NC}")
+set(_mid "${BOLD}${CYAN}║${NC}${_sp}${BOLD}${CYAN}║${NC}")
+set(_bot "${BOLD}${CYAN}╚${NC}${_li}${BOLD}${CYAN}╝${NC}")
 set(_tex "Processing ${APP_NAME}")
 string(LENGTH "${_tex}" _tel)
 math(EXPR _tepl "(${_w} - ${_tel}) / 2")
@@ -69,16 +61,15 @@ string(LENGTH "${_tl}" _lol)
 math(EXPR _tepr "${_w} - ${_lol}")
 string(REPEAT " " ${_tepr} _tr)
 set(_mex "║${_tl}${_tr}║")
+set(_tex "${BOLD}${WHITE}Processing${NC} ${BOLD}${YELLOW}${APP_NAME}${NC}")
 
-include(${cmake_root}/framework.cmake)
-
-message(" ")
-message("${BOLD}${CYAN}${_top}${NC}")
-message("${BOLD}${CYAN}${_mid}${NC}")
-message("${BOLD}${CYAN}${_mid}${NC}")
-message("${BOLD}${CYAN}${_mex}${NC}")
-message("${BOLD}${CYAN}${_mid}${NC}")
-message("${BOLD}${CYAN}${_mid}${NC}")
-message("${BOLD}${CYAN}${_bot}${NC}")
-message(" ")
+msg(ALWAYS " ")
+msg(ALWAYS "${_top}")
+msg(ALWAYS "${_mid}")
+msg(ALWAYS "${_mid}")
+msg(ALWAYS "${_mex}")
+msg(ALWAYS "${_mid}")
+msg(ALWAYS "${_mid}")
+msg(ALWAYS "${_bot}")
+msg(ALWAYS " ")
 
