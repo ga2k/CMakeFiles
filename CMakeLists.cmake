@@ -50,9 +50,9 @@ math(EXPR _w "${_term_cols} - 2")
 string(REPEAT "═" ${_w} _li)
 string(REPEAT " " ${_w} _sp)
 
-set(_top "${BOLD}${CYAN}╔${NC}${_li}${BOLD}${CYAN}╗${NC}")
-set(_mid "${BOLD}${CYAN}║${NC}${_sp}${BOLD}${CYAN}║${NC}")
-set(_bot "${BOLD}${CYAN}╚${NC}${_li}${BOLD}${CYAN}╝${NC}")
+set(_top "${BOLD}${CYAN}╔${_li}╗${NC}")
+set(_mid "${BOLD}${CYAN}║${_sp}║${NC}")
+set(_bot "${BOLD}${CYAN}╚${_li}╝${NC}")
 
 set(_txt "Processing ${APP_NAME}")
 
