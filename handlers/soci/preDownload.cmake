@@ -113,6 +113,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(_soci_src "${${pkgname}_SOURCE_DIR}")
     set(_soci_bin "${${pkgname}_BINARY_DIR}")
 
-    set(HANDLED OFF PARENT_SCOPE)
+    set(HANDLED OFF)
+    set(HANDLED ${HANDLED} PARENT_SCOPE)
 
 endfunction()

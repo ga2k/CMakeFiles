@@ -48,7 +48,8 @@ function(soci_preMakeAvailable pkgname)
 #    endif ()
 #
     # Tell fetchContents() not to call FetchContent_MakeAvailable() again.
-    set(HANDLED ON PARENT_SCOPE)
+    set(HANDLED OFF)
+    set(HANDLED ${HANDLED} PARENT_SCOPE)
 #    set(${pkgname}_PATCHED ${pkgname}_PATCHED PARENT_SCOPE)
 #    unset(_soci_src)
 #    unset(_soci_bin)
