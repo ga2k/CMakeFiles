@@ -35,7 +35,7 @@ function(soci_preMakeAvailable pkgname)
 #
 #    if (COMMAND soci_fix)
 #        soci_fix("${pkgname}" "" "${_soci_src}")
-#    elseif (EXISTS "${CMAKE_SOURCE_DIR}/cmake/patches/${pkgname}")
+#    elseif (EXISTS "${cmake_root}/patches/${pkgname}")
 #        unset(_patches)
 #        record(APPEND _patches "${pkgname}|${_soci_src}")
 #        replaceFile("${pkgname}" ${_patches})

@@ -1,12 +1,12 @@
 function (wxWidgets_preDownload pkgname url tag srcDir)
 
     # Use a persistent local clone so wxWidgets survives `make clean`
-    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets-src")
+    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets")
 
     if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
         message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
         execute_process(
-                COMMAND git clone --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
+                COMMAND git clone --depth=1 --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
                 RESULT_VARIABLE _wx_clone_result
         )
         if (NOT _wx_clone_result EQUAL 0)
