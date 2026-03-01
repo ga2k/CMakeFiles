@@ -70,6 +70,8 @@ math(EXPR _tepr "${_w} - ${_lol}")
 string(REPEAT " " ${_tepr} _tr)
 set(_mex "║${_tl}${_tr}║")
 
+include(${cmake_root}/framework.cmake)
+
 message(" ")
 message("${BOLD}${CYAN}${_top}${NC}")
 message("${BOLD}${CYAN}${_mid}${NC}")
@@ -80,4 +82,3 @@ message("${BOLD}${CYAN}${_mid}${NC}")
 message("${BOLD}${CYAN}${_bot}${NC}")
 message(" ")
 
-include(${cmake_root}/framework.cmake)
