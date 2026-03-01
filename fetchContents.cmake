@@ -532,7 +532,7 @@ function(fetchContents)
                         if (this_pkgname IN_LIST combinedLibraryComponents)
 #                            handleTarget(${this_pkgname})
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
-                            msg(CHECK_PASS "Feature already available without re-processing: skipped")
+                            msg(CHECK_PASS "Future already available without re-processing: skipped")
                             continue()
                         endif ()
 
