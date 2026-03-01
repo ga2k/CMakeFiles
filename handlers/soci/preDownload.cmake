@@ -101,7 +101,7 @@ function(soci_preDownload pkgname url tag srcDir)
                 "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
 
                 #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
-                "soci/src|${sourceDir}"
+                "soci/src|${_soci_local_src}"
         )
 
         replaceFile(soci "${patches}")
