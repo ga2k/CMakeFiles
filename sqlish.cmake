@@ -154,10 +154,10 @@ function(_hs_sql_internal_insert hndl values)
 endfunction()
 
 macro(_hs_sql_generate_handle outVarName)
-    globalObjGet(HS_NEXT_HNDL _next)
+    globalObjGet(HS_ABS_NEXT_HNDL _next)
     set(_newHndl "HS_HNDL_${_next}")
     math(EXPR _next "${_next} + 1")
-    globalObjSet (HS_NEXT_HNDL ${_next})
+    globalObjSet (HS_ABS_NEXT_HNDL ${_next})
     set(${outVarName} "${_newHndl}" PARENT_SCOPE)
     set(${outVarName} "${_newHndl}") # Also set in current scope for immediate use
     set(_resolvedHndl "${_newHndl}")

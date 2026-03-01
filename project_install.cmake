@@ -32,9 +32,9 @@ if (APP_GLOBAL_RESOURCES)
             BUILD_BYPRODUCTS    "${GLOBAL_RESOURCES_DIR}/.fetched"
             COMMAND             ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
     )
-    add_custom_target(fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
+    add_custom_target(${APP_NAME}fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
     if (TARGET ${APP_NAME})
-        add_dependencies(${APP_NAME} fetch_resources)
+        add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
     endif ()
 endif ()
 # @formatting:on
