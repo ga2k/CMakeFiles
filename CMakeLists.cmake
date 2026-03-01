@@ -62,7 +62,7 @@ math(EXPR _ter "${_w}  - ${_tel} - ${_txl}")
 string(REPEAT " " ${_tel} _lil)
 string(REPEAT " " ${_ter} _lir)
 
-set(_txt "${BOLD}${WHITE}${_txt}${NC}   ${BOLD_YELLOW}${APP_NAME}${NC}")
+set(_txt "${BOLD}${WHITE}${_txt}${NC}   ${BOLD}${YELLOW}${APP_NAME}${NC}")
 set(_mod "${BOLD}${CYAN}║${NC}${_lil}${_txt}${_lir}${BOLD}${CYAN}║${NC}")
 
 msg(ALWAYS " ")
