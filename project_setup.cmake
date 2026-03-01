@@ -28,7 +28,7 @@ endif ()
 
 # Base header dirs and include per-project BaseDirs.cmake
 list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-if (NOT MONOREPO)
+if (NOT DEFINED MONOBUILD OR NOT MONOBUILD)
     include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
 endif ()
 

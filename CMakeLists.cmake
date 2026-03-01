@@ -53,6 +53,6 @@ endfunction()
 #    set(CUSTOM   "${CUSTOM}"   PARENT_SCOPE)
 #endfunction()
 
-message (NOTICE "\t\tProcessing ${APP_NAME}\n")
+message (NOTICE "\n\t\tProcessing ${APP_NAME}\n")
 
 include(${cmake_root}/framework.cmake)
