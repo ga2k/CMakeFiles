@@ -79,15 +79,13 @@ if ("${compiler_version}" MATCHES "clang")
             -fno-implicit-modules
             -fno-implicit-module-maps
     )
-    add_compile_options(
-            -Wno-unused-command-line-argument
-            -Wno-enum-compare-switch
-            -Wno-deprecated-declarations
-            -Wno-unused-lambda-capture
-            -Wno-deprecated-enum-enum-conversion
-
-    )
 endif ()
+
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-command-line-argument>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-enum-compare-switch>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-declarations>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-lambda-capture>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-enum-enum-conversion>)
 
 include(${cmake_root}/platform.cmake)
 
