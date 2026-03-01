@@ -1,18 +1,5 @@
 include_guard(GLOBAL)
 
-execute_process(
-        COMMAND sh -c "tput cols </dev/tty"
-        OUTPUT_VARIABLE _term_cols
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-)
-if(NOT _term_cols MATCHES "^[0-9]+$")
-    set(_term_cols 120)
-    set(COLOUR OFF)
-else ()
-    set(COLOUR ON)
-endif()
-
 ## Core build framework delegator (split into global + per-project)
 include (${cmake_root}/global.cmake)
 
@@ -57,6 +44,16 @@ function(registerPlugin pi dry_run)
             "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
 endfunction()
 
+execute_process(
+        COMMAND sh -c "tput cols </dev/tty"
+        OUTPUT_VARIABLE _term_cols
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+)
+if(NOT _term_cols MATCHES "^[0-9]+$")
+    set(_term_cols 120)
+endif()
+
 math(EXPR _w "${_term_cols} - 2")
 string(REPEAT "═" ${_w} _li)
 string(REPEAT " " ${_w} _sp)
@@ -65,24 +62,22 @@ set(_mid "║${_sp}║")
 set(_bot "╚${_li}╝")
 set(_tex "Processing ${APP_NAME}")
 string(LENGTH "${_tex}" _tel)
-math(EXPR _tepl "(${w} - ${tel}) / 2")
-math(EXPR _tepr "(${w} - ${tel}) / 2")
-math(EXPR _huh "${_tepl} + ${_tepr}")
-if (_huh LESS _w)
-    math(_tepl "${_tepl} + 1")
-endif ()
+math(EXPR _tepl "(${_w} - ${_tel}) / 2")
 string(REPEAT " " ${_tepl} _lil)
-string(REPEAT " " ${_tepr} _lir)
-set(_mex "${_lil}${_tex}${_lir}")
+set(_tl "${_lil}${_tex}")
+string(LENGTH "${_tl}" _lol)
+math(EXPR _tepr "${_w} - ${_lol}")
+string(REPEAT " " ${_tepr} _tr)
+set(_mex "║${_tl}${_tr}║")
 
-msg()
-msg(ALWAYS "${BOLD}${CYAN}${_top}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_mid}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_mid}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_mex}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_mid}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_mid}${NC}")
-msg(ALWAYS "${BOLD}${CYAN}${_bot}${NC}")
-msg()
+message(" ")
+message("${BOLD}${CYAN}${_top}${NC}")
+message("${BOLD}${CYAN}${_mid}${NC}")
+message("${BOLD}${CYAN}${_mid}${NC}")
+message("${BOLD}${CYAN}${_mex}${NC}")
+message("${BOLD}${CYAN}${_mid}${NC}")
+message("${BOLD}${CYAN}${_mid}${NC}")
+message("${BOLD}${CYAN}${_bot}${NC}")
+message(" ")
 
 include(${cmake_root}/framework.cmake)
