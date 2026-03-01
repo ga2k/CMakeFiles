@@ -530,6 +530,7 @@ function(fetchContents)
                         endif ()
 
                         if (this_pkgname IN_LIST combinedLibraryComponents)
+                            handleTarget(${this_pkgname})
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
                             msg(CHECK_PASS "Feature already available without re-processing: skipped")
                             continue()
@@ -605,7 +606,6 @@ function(fetchContents)
             msg("\n${divider}\n")
 
             endwhile () # this_feature_name
-
 
         endforeach () # pass_num
         list(POP_BACK CMAKE_MESSAGE_INDENT)
