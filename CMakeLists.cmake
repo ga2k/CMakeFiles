@@ -1,5 +1,18 @@
 include_guard(GLOBAL)
 
+execute_process(
+        COMMAND sh -c "tput cols </dev/tty"
+        OUTPUT_VARIABLE _term_cols
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+)
+if(NOT _term_cols MATCHES "^[0-9]+$")
+    set(_term_cols 120)
+    set(COLOUR OFF)
+else ()
+    set(COLOUR ON)
+endif()
+
 ## Core build framework delegator (split into global + per-project)
 include (${cmake_root}/global.cmake)
 
