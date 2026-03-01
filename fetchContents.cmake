@@ -541,11 +541,7 @@ function(fetchContents)
                             handleTarget(${this_pkgname})
 
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
-<<<<<<< HEAD
-                            msg(CHECK_PASS "Future already available without re-processing: skipped")
-=======
                             msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
->>>>>>> _sync_temp/master
                             continue()
                         endif ()
 
