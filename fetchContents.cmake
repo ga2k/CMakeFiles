@@ -683,7 +683,7 @@ macro(propegateUpwards whereWeAre REPORT)
     set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
     # @formatter:on
 
-#    if (REPORT)
+    if (REPORT)
         log(TITLE "${whereWeAre}" LISTS
 
                 ${AUE_PREFIX}_CompileOptionsList
@@ -702,5 +702,5 @@ macro(propegateUpwards whereWeAre REPORT)
                 ${AUE_PREFIX}_wxLibraries
                 ${AUE_PREFIX}_wxFrameworks
         )
-#    endif ()
+    endif ()
 endmacro()
