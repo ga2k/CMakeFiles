@@ -453,6 +453,7 @@ function(fetchContents)
                             if (${this_pkgname}_FOUND)
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
                                 scanLibraryTargets("${features}" "${this_pkgname}" "${feature_names}")
+                                handleTarget(${this_pkgname})
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 set(scanned${this_pkgname} ON)
                             else ()
