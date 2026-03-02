@@ -620,7 +620,7 @@ function(fetchContents)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         msg(CHECK_PASS "${GREEN}OK${NC}\n")
 
-        propegateUpwards("Interim" OFF)
+        propegateUpwards("Interim" ON)
 
     endfunction()
 
