@@ -447,16 +447,19 @@ function(fetchContents)
                             # 1. Is the library already available? (Probe it)
                             set(temporary_args ${this_find_package_args})
                             list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS)
+                            msg("Seek and you ...")
                             find_package(${this_pkgname} ${temporary_args})
 
                             set(scanned${this_pkgname} OFF)
                             if (${this_pkgname}_FOUND)
+                                msg("... shall find")
                                 # Library exists! Scan it to see what 3rd-party targets it supplies
                                 scanLibraryTargets("${features}" "${this_pkgname}" "${feature_names}")
                                 handleTarget(${this_pkgname})
                                 list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 set(scanned${this_pkgname} ON)
                             else ()
+                                msg("... d'oh")
                                 # Library not found yet. We must fulfill its metadata prerequisites
                                 # so that we can eventually load it.
                                 if (this_prereqs)
@@ -482,6 +485,7 @@ function(fetchContents)
                             #                            endif ()
                             # 2. Now attempt the real find_package
                             msg(STATUS "\nfind_package(${this_pkgname} ${this_find_package_args})")
+                            msg("Look and you ...")
                             find_package(${this_pkgname} ${this_find_package_args})
 
                             set(HANDLED OFF)
@@ -491,6 +495,7 @@ function(fetchContents)
                             endif ()
 
                             if (NOT HANDLED AND ${this_pkgname}_FOUND)
+                                msg("... shall see")
                                 if (${this_pkgname}_LIBRARIES)
                                     list(APPEND _LibrariesList ${${this_pkgname}_LIBRARIES})
                                 endif ()
