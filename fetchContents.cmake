@@ -702,5 +702,5 @@ macro(propegateUpwards whereWeAre REPORT)
                 ${AUE_PREFIX}_wxLibraries
                 ${AUE_PREFIX}_wxFrameworks
         )
-#    endif ()
+    endif ()
 endmacro()
