@@ -19,25 +19,28 @@ include(ExternalProject)
 if (APP_GLOBAL_RESOURCES)
     set(GLOBAL_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
     file(MAKE_DIRECTORY "${GLOBAL_RESOURCES_DIR}")
-    ExternalProject_Add(${APP_NAME}ResourceRepo
-            GIT_REPOSITORY      "${APP_GLOBAL_RESOURCES}"
-            GIT_TAG             master
-            GIT_SHALLOW         TRUE
-            UPDATE_DISCONNECTED TRUE
-            CONFIGURE_COMMAND   ""
-            BUILD_COMMAND       ""
-            INSTALL_COMMAND     ""
-            TEST_COMMAND        ""
-            SOURCE_DIR          "${GLOBAL_RESOURCES_DIR}"
-            BUILD_BYPRODUCTS    "${GLOBAL_RESOURCES_DIR}/.fetched"
-            COMMAND             ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
-    )
-    add_custom_target(${APP_NAME}fetch_resources DEPENDS ${APP_NAME}ResourceRepo)
+
+    if (NOT TARGET GlobalResourcesRepo)
+        ExternalProject_Add(GlobalResourcesRepo
+                GIT_REPOSITORY      "${APP_GLOBAL_RESOURCES}"
+                GIT_TAG             master
+                GIT_SHALLOW         TRUE
+                UPDATE_DISCONNECTED TRUE
+                CONFIGURE_COMMAND   ""
+                BUILD_COMMAND       ""
+                INSTALL_COMMAND     ""
+                TEST_COMMAND        ""
+                SOURCE_DIR          "${GLOBAL_RESOURCES_DIR}"
+                BUILD_BYPRODUCTS    "${GLOBAL_RESOURCES_DIR}/.fetched"
+                COMMAND             ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
+        )
+    endif ()
+
+    add_custom_target(${APP_NAME}fetch_resources DEPENDS GlobalResourcesRepo)
     if (TARGET ${APP_NAME})
         add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
     endif ()
-endif ()
-# @formatting:on
+endif ()# @formatting:on
 
 ## App configuration (app.yaml) generation paths
 set(APP_YAML_TEMPLATE_PATH "${cmake_root}/templates/app.yaml.in")
