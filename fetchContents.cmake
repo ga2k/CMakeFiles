@@ -512,10 +512,11 @@ function(fetchContents)
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif ()
 
-                                handleTarget(${this_pkgname} )
+                                handleTarget(${this_pkgname})
                             endif ()
                         else ()
                             msg("with the sound of mucus")
+                            handleTarget(${this_pkgname})
                         endif ()
                     endif ()
 
