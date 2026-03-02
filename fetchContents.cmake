@@ -620,7 +620,7 @@ function(fetchContents)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         msg(CHECK_PASS "${GREEN}OK${NC}\n")
 
-        propegateUpwards("Interim" ON)
+        propegateUpwards("Interim" OFF)
 
     endfunction()
 
@@ -683,7 +683,7 @@ macro(propegateUpwards whereWeAre REPORT)
     set(${AUE_PREFIX}_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks}       PARENT_SCOPE)
     # @formatter:on
 
-#    if (REPORT EQUAL ON)
+    if (${REPORT} STREQUAL "ON")
         log(TITLE "${whereWeAre}" LISTS
 
                 ${AUE_PREFIX}_CompileOptionsList
