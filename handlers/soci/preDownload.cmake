@@ -22,7 +22,7 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_TESTS           OFF CACHE BOOL "" FORCE)
 
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3"   FORCE)
-    set(SOCI_FMT_BUILTIN     ON CACHE BOOL "Prefer using built-in fmt"       FORCE) #OFF CACHE BOOL "Prefer using built-in fmt"       FORCE)
+    set(SOCI_FMT_BUILTIN    OFF CACHE BOOL "Prefer using built-in fmt"       FORCE)
 
     set(WITH_BOOST          OFF CACHE BOOL "Allow this feature"              FORCE)
     set(SOCI_TESTS          OFF CACHE BOOL "Allow this feature"              FORCE)
@@ -41,25 +41,25 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_POSTGRESQL     OFF CACHE BOOL "Disable SOCI PostgreSQL backend" FORCE)
 
     # 1. Fetch fmt first with install enabled
-#    message(STATUS [=[
-#    FetchContent_Declare(
-#            fmt
-#            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-#            GIT_TAG 12.1.0
-#    )]=])
-#    FetchContent_Declare(
-#        fmt
-#        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-#        GIT_TAG 12.1.0
-#    )
+    message(STATUS [=[
+    FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 12.1.0
+    )]=])
+    FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 12.1.0
+    )
 
     set(FMT_INSTALL ON CACHE BOOL "" FORCE)
     set(FMT_USE_CONSTEVAL OFF CACHE BOOL "Disable consteval in fmt" FORCE)
 
-#    message(STATUS "FetchContent_MakeAvailable(fmt)")
-#    FetchContent_MakeAvailable(fmt)
+    message(STATUS "FetchContent_MakeAvailable(fmt)")
+    FetchContent_MakeAvailable(fmt)
     # Also add it as a compile definition
-#    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
+    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
 
     # 2. Point SOCI to our fmt installation
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
@@ -67,8 +67,8 @@ function(soci_preDownload pkgname url tag srcDir)
     # 3. Now fetch SOCI and tell it to use the external fmt
     set(SOCI_INSTALL  OFF CACHE BOOL "Disable SOCI internal install" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
-    set(SOCI_EXTERNAL_FMT OFF CACHE BOOL "Use external fmt library" FORCE) # ON CACHE BOOL "Use external fmt library" FORCE)
-    set(SOCI_FMT_BUILTIN ON CACHE BOOL "Use external fmt library" FORCE) # OFF CACHE BOOL "Use external fmt library" FORCE)
+    set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
+    set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)
 
     # Love it like our own
     handleTarget("fmt")
