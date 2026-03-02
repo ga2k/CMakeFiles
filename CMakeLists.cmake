@@ -2,6 +2,7 @@ include_guard(GLOBAL)
 
 ## Core build framework delegator (split into global + per-project)
 include (${cmake_root}/global.cmake)
+include(${cmake_root}/framework.cmake)
 
 function(registerPackageCallback fn dry_run)
     if(NOT COMMAND "${fn}")
@@ -43,35 +44,3 @@ function(registerPlugin pi dry_run)
     columnarTextOut("default" "plugin library" "${pi}" "registered" "" "" ""
             "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
 endfunction()
-
-include(${cmake_root}/framework.cmake)
-
-math(EXPR _w "${_term_cols} - 2")
-string(REPEAT "═" ${_w} _li)
-string(REPEAT " " ${_w} _sp)
-
-set(_top "${BOLD}${CYAN}╔${_li}╗${NC}")
-set(_mid "${BOLD}${CYAN}║${_sp}║${NC}")
-set(_bot "${BOLD}${CYAN}╚${_li}╝${NC}")
-
-set(_txt "P r o c e s s i n g")
-string(LENGTH "${_txt}   ${APP_NAME}" _txl)
-math(EXPR _tel "(${_w} - ${_txl}) / 2")
-math(EXPR _ter "${_w}  - ${_tel} - ${_txl}")
-
-string(REPEAT " " ${_tel} _lil)
-string(REPEAT " " ${_ter} _lir)
-
-set(_txt "${BOLD}${WHITE}${_txt}${NC}   ${BOLD}${YELLOW}${APP_NAME}${NC}")
-set(_mod "${BOLD}${CYAN}║${NC}${_lil}${_txt}${_lir}${BOLD}${CYAN}║${NC}")
-
-msg(ALWAYS " ")
-msg(ALWAYS "${_top}")
-msg(ALWAYS "${_mid}")
-msg(ALWAYS "${_mid}")
-msg(ALWAYS "${_mod}")
-msg(ALWAYS "${_mid}")
-msg(ALWAYS "${_mid}")
-msg(ALWAYS "${_bot}")
-msg(ALWAYS " ")
-
