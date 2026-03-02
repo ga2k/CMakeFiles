@@ -503,6 +503,8 @@ function(fetchContents)
                                     scanLibraryTargets("${DATA}" "${this_pkgname}" "${feature_names}")
                                     list(APPEND combinedLibraryComponents ${${this_pkgname}_COMPONENTS})
                                 endif ()
+
+                                handleTarget(${this_pkgname} )
                             endif ()
                         endif ()
                     endif ()
