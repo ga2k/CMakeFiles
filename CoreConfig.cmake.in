@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+# find_dependency(OpenSSL) # Add any external dependencies here
+
+include("${CMAKE_CURRENT_LIST_DIR}/CoreTargets.cmake")
+
+check_required_components(Core)
