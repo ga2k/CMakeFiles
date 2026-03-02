@@ -59,7 +59,7 @@ function(soci_preDownload pkgname url tag srcDir)
 #    message(STATUS "FetchContent_MakeAvailable(fmt)")
 #    FetchContent_MakeAvailable(fmt)
     # Also add it as a compile definition
-    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
+#    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
 
     # 2. Point SOCI to our fmt installation
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
