@@ -12,6 +12,14 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
         if (NOT _wx_clone_result EQUAL 0)
             message(FATAL_ERROR "Failed to clone wxWidgets to ${_wx_local_src}")
         endif ()
+
+        unset(patches)
+        list(APPEND patches
+                "${pkgname}/include|${_wx_local_src}"
+                "${pkgname}/src|${_wx_local_src}"
+        )
+        replaceFile(${target} "${patches}")
+
     endif ()
 
     set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
