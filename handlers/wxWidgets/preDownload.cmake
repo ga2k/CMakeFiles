@@ -15,8 +15,8 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
 
         unset(patches)
         list(APPEND patches
-                "${pkgname}/include/|${_wx_local_src}"
-                "${pkgname}/src/|${_wx_local_src}"
+                "${pkgname}/include|${_wx_local_src}"
+                "${pkgname}/src|${_wx_local_src}"
         )
         replaceFile(${pkgname} "${patches}")
 
