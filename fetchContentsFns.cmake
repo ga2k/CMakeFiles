@@ -74,7 +74,7 @@ function(addTargetProperties target pkgname addToLists)
     target_compile_options(     "${target}" ${LIB_TYPE} "${_CompileOptionsList}")
     target_compile_definitions( "${target}" ${LIB_TYPE} "${_DefinesList}")
     target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
-    target_include_directories( "${target}" ${LIB_TYPE} "${_IncludePathsList}")
+#    target_include_directories( "${target}" ${LIB_TYPE} "${_IncludePathsList}")
     # @formatter:on
 
     if (WIN32)
