@@ -1,7 +1,7 @@
 #! /bin/env bash
 dry_run=0
 help=0
-automatic=0
+automatic=1
 commit_msg=""
 while [ $# -gt 0 ]
 do
@@ -11,7 +11,7 @@ do
 			shift ;;
 		(--dry-run | -n) dry_run=1
 			shift ;;
-		(--auto | -a) automatic=1
+		(--ask | -a) automatic=0
 			shift ;;
 		(*) commit_msg="$1"
 			shift ;;
@@ -43,7 +43,7 @@ then
 	echo "🔍 Usage:  seemake [--dry-run | -n] [--auto | -a] [\"Commit message\"]"
 	echo ""
 	echo "           --dry-run | -n   : Dry run - no data will be changed"
-	echo "           --auto    | -a   : Automatic push - don't ask, just do it"
+	echo "           --ask     | -a   : Manual push - ask, don't just do it"
 	echo "           \"Commit message\" : Optional commit message"
 	echo ""
 	return 0
