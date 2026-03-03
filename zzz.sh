@@ -58,7 +58,7 @@ echo "Commit message: $commit_msg"
 echo ""
 declare -A repos_with_changes
 echo "Checking for uncommitted changes..."
-local changes_found=0
+changes_found=0
 for repo in "${repos[@]}"
 do
 	if [ -e "$repo/.git" ]
@@ -113,19 +113,19 @@ do
 done
 echo ""
 echo "Determining most recent state..."
-local max_commit_date=0
-local reference_repo=""
-local branch_name=""
+max_commit_date=0
+reference_repo=""
+branch_name=""
 for repo in "${repos[@]}"
 do
 	if [ -e "$repo/.git" ]
 	then
 		cd "$repo" || continue
-		local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-		local commit_date=$(git log -1 --format=%ct 2>/dev/null)
-		local commit_hash=$(git rev-parse --short HEAD 2>/dev/null)
-		local commit_subject=$(git log -1 --format=%s 2>/dev/null)
-		local display_note=""
+		current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+		commit_date=$(git log -1 --format=%ct 2>/dev/null)
+		commit_hash=$(git rev-parse --short HEAD 2>/dev/null)
+		commit_subject=$(git log -1 --format=%s 2>/dev/null)
+		display_note=""
 		if [ $dry_run -eq 1 ] && [ "${repos_with_changes[$repo]}" = "1" ]
 		then
 			display_note=" (+ uncommitted → would be newer after commit)"
@@ -149,8 +149,8 @@ fi
 echo ""
 echo "📌 Using $reference_repo (branch: $branch_name) as reference"
 cd "$reference_repo" || return 1
-local reference_repo_abs=$(pwd)
-local reference_commit=$(git rev-parse --short HEAD)
+reference_repo_abs=$(pwd)
+reference_commit=$(git rev-parse --short HEAD)
 cd - > /dev/null
 echo "   Reference commit: $reference_commit"
 if [ $dry_run -eq 1 ] && [ "${repos_with_changes[$reference_repo]}" = "1" ]
@@ -159,7 +159,7 @@ then
 fi
 echo ""
 echo "Analyzing sync requirements..."
-local sync_needed=0
+sync_needed=0
 for repo in "${repos[@]}"
 do
 	if [ "$repo" = "$reference_repo" ]
@@ -169,14 +169,14 @@ do
 	if [ -e "$repo/.git" ]
 	then
 		cd "$repo" || continue
-		local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-		local current_commit=$(git rev-parse --short HEAD 2>/dev/null)
+		current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+		current_commit=$(git rev-parse --short HEAD 2>/dev/null)
 		if [ "$current_branch" != "$branch_name" ]
 		then
 			echo "⚠️  $repo is on branch '$current_branch', needs to switch to '$branch_name'"
 			sync_needed=1
 		fi
-		local needs_sync=0
+		needs_sync=0
 		if [ "${repos_with_changes[$repo]}" = "1" ] || [ "${repos_with_changes[$reference_repo]}" = "1" ]
 		then
 			needs_sync=1
@@ -208,11 +208,11 @@ do
 			else
 				git remote add _sync_temp_check "file://$reference_repo_abs" 2> /dev/null || git remote set-url _sync_temp_check "file://$reference_repo_abs"
 				git fetch _sync_temp_check 2> /dev/null
-				local ahead_behind=$(git rev-list --left-right --count HEAD..._sync_temp_check/"$branch_name" 2>/dev/null)
+				ahead_behind=$(git rev-list --left-right --count HEAD..._sync_temp_check/"$branch_name" 2>/dev/null)
 				if [ -n "$ahead_behind" ]
 				then
-					local ahead=$(echo "$ahead_behind" | awk '{print $1}')
-					local behind=$(echo "$ahead_behind" | awk '{print $2}')
+					ahead=$(echo "$ahead_behind" | awk '{print $1}')
+					behind=$(echo "$ahead_behind" | awk '{print $2}')
 					if [ -n "$ahead" ] && [ "$ahead" -gt 0 ]
 					then
 						echo "   📊 $ahead commits ahead of reference"
@@ -226,14 +226,14 @@ do
 						echo "   🔀 Merge required (branches have diverged)"
 					fi
 				fi
-				local merge_base=$(git merge-base HEAD _sync_temp_check/"$branch_name" 2>/dev/null)
+				merge_base=$(git merge-base HEAD _sync_temp_check/"$branch_name" 2>/dev/null)
 				if [ -n "$merge_base" ]
 				then
-					local files_diff_here=$(git diff --name-only "$merge_base" HEAD 2>/dev/null | sort)
-					local files_diff_there=$(git diff --name-only "$merge_base" _sync_temp_check/"$branch_name" 2>/dev/null | sort)
+					files_diff_here=$(git diff --name-only "$merge_base" HEAD 2>/dev/null | sort)
+					files_diff_there=$(git diff --name-only "$merge_base" _sync_temp_check/"$branch_name" 2>/dev/null | sort)
 					if [ -n "$files_diff_here" ] && [ -n "$files_diff_there" ]
 					then
-						local common_files=$(comm -12 <(echo "$files_diff_here") <(echo "$files_diff_there") 2>/dev/null | wc -l)
+						common_files=$(comm -12 <(echo "$files_diff_here") <(echo "$files_diff_there") 2>/dev/null | wc -l)
 						if [ "$common_files" -gt 0 ]
 						then
 							echo "   ⚠️  WARNING: $common_files file(s) modified in both branches"
@@ -274,7 +274,7 @@ then
 fi
 echo ""
 echo "Synchronizing repositories..."
-local had_conflicts=0
+had_conflicts=0
 for repo in "${repos[@]}"
 do
 	if [ "$repo" = "$reference_repo" ]
@@ -286,7 +286,7 @@ do
 	then
 		echo "Syncing: $repo"
 		cd "$repo" || continue
-		local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+		current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 		if [ "$current_branch" != "$branch_name" ]
 		then
 			git checkout "$branch_name" 2> /dev/null || {
@@ -299,7 +299,7 @@ do
 		git fetch _sync_temp 2> /dev/null
 		echo "  Attempting merge..."
 		git merge _sync_temp/"$branch_name" -m "Sync from $reference_repo" 2>&1
-		local unmerged_count=$(git ls-files -u | wc -l)
+		unmerged_count=$(git ls-files -u | wc -l)
 		if [ "$unmerged_count" -gt 0 ]
 		then
 			echo ""
@@ -311,8 +311,8 @@ do
 			echo "  Please resolve conflicts, save, and close the editor to continue."
 			echo "  (Or press Ctrl+C to abort the sync)"
 			echo ""
-			local editor="${EDITOR:-${VISUAL:-vi}}"
-			local conflicted_files=$(git diff --name-only --diff-filter=U)
+			editor="${EDITOR:-${VISUAL:-vi}}"
+			conflicted_files=$(git diff --name-only --diff-filter=U)
 			if [ -n "$conflicted_files" ]
 			then
 				$editor $conflicted_files
@@ -361,7 +361,7 @@ then
 		if [ -e "$repo/.git" ]
 		then
 			cd "$repo" || continue
-			local current_commit=$(git rev-parse --short HEAD 2>/dev/null)
+			current_commit=$(git rev-parse --short HEAD 2>/dev/null)
 			echo "  $repo: $current_commit"
 			cd - > /dev/null
 		fi
