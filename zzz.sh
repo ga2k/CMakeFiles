@@ -1,8 +1,8 @@
 #! /bin/env bash
-local dry_run=0
-local help=0
-local automatic=0
-local commit_msg=""
+dry_run=0
+help=0
+automatic=0
+commit_msg=""
 while [ $# -gt 0 ]
 do
 	case "$1" in
@@ -21,7 +21,7 @@ if [ -z "$commit_msg" ]
 then
 	commit_msg="Auto-sync: $(date '+%Y-%m-%d %H:%M:%S')"
 fi
-local repos=()
+repos=()
 if [ -e "./cmake/.git" ]
 then
 	repos+=("./cmake")
