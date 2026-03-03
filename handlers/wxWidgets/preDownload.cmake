@@ -18,7 +18,7 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
                 "${pkgname}/include|${_wx_local_src}/"
                 "${pkgname}/src|${_wx_local_src}/"
         )
-        replaceFile(${target} "${patches}")
+        replaceFile(${pkgname} "${patches}")
 
     endif ()
 
