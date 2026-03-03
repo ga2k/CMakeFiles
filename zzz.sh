@@ -46,12 +46,12 @@ then
 	echo "           --ask     | -a   : Manual push - ask, don't just do it"
 	echo "           \"Commit message\" : Optional commit message"
 	echo ""
-	return 0
+	exit 0
 fi
 if [ ${#repos[@]} -eq 0 ]
 then
 	echo "❌ No git repositories found"
-	return 1
+	exit 1
 fi
 echo "Found ${#repos[@]} repositories to sync"
 echo "Commit message: $commit_msg"
@@ -144,11 +144,11 @@ done
 if [ -z "$reference_repo" ]
 then
 	echo "❌ Could not determine reference repository"
-	return 1
+	exit 1
 fi
 echo ""
 echo "📌 Using $reference_repo (branch: $branch_name) as reference"
-cd "$reference_repo" || return 1
+cd "$reference_repo" || exit 1
 reference_repo_abs=$(pwd)
 reference_commit=$(git rev-parse --short HEAD)
 cd - > /dev/null
@@ -258,7 +258,7 @@ if [ $sync_needed -eq 0 ]
 then
 	echo ""
 	echo "✅ All repositories are already in sync!"
-	return 0
+	exit 0
 fi
 if [ $dry_run -eq 1 ]
 then
@@ -270,7 +270,7 @@ then
 	echo "2. Repos will be synced by merging with: $reference_repo"
 	echo "3. If merge conflicts occur, your editor will open for manual resolution"
 	echo "4. All repos will end up with all commits from all repos"
-	return 0
+	exit 0
 fi
 echo ""
 echo "Synchronizing repositories..."
