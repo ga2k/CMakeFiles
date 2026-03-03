@@ -548,7 +548,7 @@ function(fetchContents)
                             set(${this_package}_PASS_TWO_COMPLETED ON)
                         endif ()
 
-                        if (this_pkgname IN_LIST combinedLibraryComponents)
+                        if (this_pkgname IN_LIST combinedLibraryComponents OR ${this_pkgname}_FOUND)
                             # Feature is already PROVIDED by an upstream library target.
                             # Still consume it for this app by adding the provided target to our link lists.
                             handleTarget(${this_pkgname})
