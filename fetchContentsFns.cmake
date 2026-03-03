@@ -109,7 +109,7 @@ function(addTargetProperties target pkgname addToLists)
     list(APPEND at_LibraryPathsList ${_LibraryPathsList})
     list(APPEND at_DependenciesList ${_DependenciesList})
     list(APPEND at_IncludePathsList ${_IncludePathsList})
-                                      
+
     set(_LibrariesList        ${at_LibrariesList}        PARENT_SCOPE)
     set(_LibraryPathsList     ${at_LibraryPathsList}     PARENT_SCOPE)
     set(_DependenciesList     ${at_DependenciesList}     PARENT_SCOPE)
