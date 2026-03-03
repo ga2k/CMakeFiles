@@ -1710,16 +1710,24 @@ function(fittest)
 
     # Staged and Source files are the same?
     if (actualSourceFileFound AND actualStagedFileFound)
-#
-#            AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
-#            AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
 
         file(TIMESTAMP "${actualSourceFile}" sourceTimestamp)
         file(TIMESTAMP "${actualStagedFile}" stagedTimestamp)
 
-        msg("Source and Staged are the same. We'll use Staged.")
-        list(REMOVE_ITEM candidates "${actualStagedFileFound}")
-        list(INSERT candidates 0 "${actualStagedFileFound}")
+        if(sourceTimestamp STREQUAL stagedTimestamp)
+            msg("Source and Staged are the same. We'll use Staged.")
+            list(REMOVE_ITEM candidates "${actualStagedFile}")
+            list(INSERT candidates 0 "${actualStagedFile}")
+        elseif ("${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}")
+            msg("Source is newer than Staged. We'll use Source.")
+            list(REMOVE_ITEM candidates "${actualSourceFile}")
+            list(INSERT candidates 0 "${actualSourceFile}")
+        else ()
+            msg("Source is older than Staged. We'll use Staged.")
+            list(REMOVE_ITEM candidates "${actualStagedFile}")
+            list(INSERT candidates 0 "${actualStagedFile}")
+        endif ()
+
     endif ()
 
     list(APPEND candidates ${conditionals})
