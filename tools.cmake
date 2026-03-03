@@ -1709,9 +1709,13 @@ function(fittest)
     msg()
 
     # Staged and Source files are the same?
-    if (actualSourceFileFound AND actualStagedFileFound
-            AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
-            AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
+    if (actualSourceFileFound AND actualStagedFileFound)
+#
+#            AND "${actualSourceFile}" IS_NEWER_THAN "${actualStagedFile}"
+#            AND "${actualStagedFile}" IS_NEWER_THAN "${actualSourceFile}")
+
+        file(TIMESTAMP "${actualSourceFile}" sourceTimestamp)
+        file(TIMESTAMP "${actualStagedFile}" stagedTimestamp)
 
         msg("Source and Staged are the same. We'll use Staged.")
         list(REMOVE_ITEM candidates "${actualStagedFileFound}")
