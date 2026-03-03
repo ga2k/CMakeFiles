@@ -37,6 +37,7 @@ function(addTargetProperties target pkgname addToLists)
     unset(at_LibrariesList)
     unset(at_DependenciesList)
     unset(at_LibraryPathsList)
+    unset(at_IncludePathsList)
 
     msg(" ")
     msg("addTargetProperties called for '${target}'")
@@ -50,6 +51,7 @@ function(addTargetProperties target pkgname addToLists)
             set(_LibrariesList      ${_LibrariesList}    PARENT_SCOPE)
             set(_DependenciesList   ${_DependenciesList} PARENT_SCOPE)
             set(at_LibraryPathsList ${_LibraryPathsList} PARENT_SCOPE)
+            set(at_IncludePathsList ${_IncludePathsList} PARENT_SCOPE)
             # @formatter:on
         endif ()
         return()
@@ -72,6 +74,7 @@ function(addTargetProperties target pkgname addToLists)
     target_compile_options(     "${target}" ${LIB_TYPE} "${_CompileOptionsList}")
     target_compile_definitions( "${target}" ${LIB_TYPE} "${_DefinesList}")
     target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
+    target_include_directories( "${target}" ${LIB_TYPE} "${_IncludePathsList}")
     # @formatter:on
 
     if (WIN32)
@@ -79,15 +82,18 @@ function(addTargetProperties target pkgname addToLists)
     endif ()
 
     if (addToLists)
-        list(APPEND at_LibrariesList ${target})
+        list(APPEND at_LibrariesList    ${target})
         list(APPEND at_DependenciesList ${target})
         list(APPEND at_LibraryPathsList ${OUTPUT_DIR}/lib)
+        list(APPEND at_IncludePathsList ${_IncludePathsList})
+
     endif ()
 
     set_target_properties("${target}" PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}/bin
             LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
             ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
+            INCLUDE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/include
     )
 
     ####################################################################################################################
@@ -99,13 +105,15 @@ function(addTargetProperties target pkgname addToLists)
     ####################################################################################################################
     ####################################################################################################################
 
-    list(APPEND at_LibrariesList ${_LibrariesList})
+    list(APPEND at_LibrariesList    ${_LibrariesList})
     list(APPEND at_LibraryPathsList ${_LibraryPathsList})
     list(APPEND at_DependenciesList ${_DependenciesList})
-
-    set(_LibrariesList ${at_LibrariesList} PARENT_SCOPE)
-    set(_LibraryPathsList ${at_LibraryPathsList} PARENT_SCOPE)
-    set(_DependenciesList ${at_DependenciesList} PARENT_SCOPE)
+    list(APPEND at_IncludePathsList ${_IncludePathsList})
+                                      
+    set(_LibrariesList        ${at_LibrariesList}        PARENT_SCOPE)
+    set(_LibraryPathsList     ${at_LibraryPathsList}     PARENT_SCOPE)
+    set(_DependenciesList     ${at_DependenciesList}     PARENT_SCOPE)
+    set(_IncludePathsListList ${at_IncludePathsListList} PARENT_SCOPE)
 
 endfunction()
 
