@@ -1,4 +1,4 @@
-#! /bin/env zsh
+#! /bin/env bash
 local dry_run=0
 local help=0
 local automatic=0
