@@ -7,7 +7,6 @@ if(${APP_TYPE} STREQUAL "Executable")
   set(TARGET_NAME ${APP_NAME})
 else()
   set(TARGET_NAME "${APP_NAME}")
-#  set(TARGET_NAME "${APP_VENDOR}::${APP_NAME}")
 endif()
 
 if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
@@ -157,18 +156,25 @@ elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAM
 endif()
 
 if(WIN32)
-  # Add the wx/setup.h header to the include path
+  # Add the wx/setup.h header to the include path.
+  # @APP_VENDOR@::wxWidgets is an imported target we own, so set_property is fine here.
   if (TARGET @APP_VENDOR@::wxWidgets AND IS_DIRECTORY "${_incdir}/msvc")
     set_property(TARGET @APP_VENDOR@::wxWidgets
       APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
         "${_incdir}/msvc"
     )
   endif()
-  set_target_properties(${TARGET_NAME} PROPERTIES IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+
+  # @APP_VENDOR@::@APP_NAME@ is our own imported target — patching IMPORTED_IMPLIB is correct.
+  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+      IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
   set(_libdir "${_impdir}")
 endif()
 
-# For Clang consumers of modules, optionally provide prebuilt-module path (PCMs/BMIs).
+# For Clang/GCC consumers of modules, propagate prebuilt-module path (PCMs/BMIs) via the
+# imported target's INTERFACE_COMPILE_OPTIONS so callers pick it up automatically through
+# target_link_libraries() — no caller-side boilerplate needed.
+#
 # This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
 if(NOT DEFINED USE_PREBUILT_MODULES)
   # Default to ON to preserve existing behavior unless explicitly overridden.
@@ -178,18 +184,24 @@ endif()
 if(USE_PREBUILT_MODULES)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      set(fmodule_cmd "-fprebuilt-module-path")
+      set(_fmodule_cmd "-fprebuilt-module-path")
     else()
-      set(fmodule_cmd "-fmodule-mapper")
+      set(_fmodule_cmd "-fmodule-mapper")
     endif()
 
     if(_inDevelopment)
-      target_compile_options(${TARGET_NAME}
-        "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
+      set(_bmiArg "${_fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
     else()
-      target_compile_options(${TARGET_NAME}
-        "${fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+      set(_bmiArg "${_fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
     endif()
+
+    # Set on the IMPORTED target we own — callers inherit this via target_link_libraries().
+    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+        INTERFACE_COMPILE_OPTIONS "${_bmiArg}")
+
+    unset(_bmiArg)
+    unset(_fmodule_cmd)
+
   elseif(MSVC)
     if(_inDevelopment)
       set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
@@ -199,41 +211,16 @@ if(USE_PREBUILT_MODULES)
 
     # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
     # This forces VS to rely solely on the /ifcSearchDir provided below.
-    set_target_properties(${TARGET_NAME} PROPERTIES
+    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
         IMPORTED_CXX_MODULES_DEBUG ""
         IMPORTED_CXX_MODULES_RELEASE "")
 
-    set_property(TARGET ${TARGET_NAME} APPEND PROPERTY
+    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
         INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
 
+    unset(_bmiDir)
   endif()
 endif()
-
-#    if(_inDevelopment)
-#      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-#        "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
-#    else()
-#      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
-#        "${fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
-#    endif()
-#  elseif(MSVC)
-#    if(_inDevelopment)
-#      set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
-#    else()
-#      set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
-#    endif()
-#  
-#    # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
-#    # This forces VS to rely solely on the /ifcSearchDir provided below.
-#    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-#        IMPORTED_CXX_MODULES_DEBUG ""
-#        IMPORTED_CXX_MODULES_RELEASE "")
-#
-#    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-#        INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
-#
-#  endif()
-#endif()
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
