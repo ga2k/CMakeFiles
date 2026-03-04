@@ -966,6 +966,137 @@ function(scanLibraryTargets packageData libName packageNames)
                 endwhile ()
             endforeach ()
         endforeach ()
+
+
+
+
+
+
+        get_target_property(incs HoffSoft::wxWidgets INTERFACE_INCLUDE_DIRECTORIES)
+        if (incs)
+            foreach (pass RANGE 1 2)
+                foreach (inc IN LISTS incs)
+                    # 1. Clean up target name (remove generator expressions)
+                    string(REGEX REPLACE "\\$<.*>" "" clean_inc "${inc}")
+                    if ("${clean_inc}" STREQUAL "")
+                        continue()
+                    endif ()
+                    # 2. Extract raw name for matching
+                    set(raw_import_name "${clean_inc}")
+                    if ("${clean_inc}" MATCHES "::")
+                        # Handle ${APP_VENDOR}::name or Namespace::name
+                        string(REGEX REPLACE ".*::" "" raw_import_name "${clean_inc}")
+                    endif ()
+
+                    # 3. Cross-reference against packageData
+                    set(s_loop_counter 0)
+                    SELECT(COUNT AS s_max FROM packageNames)
+                    while (s_loop_counter LESS s_max)
+                        inc(s_loop_counter)
+                        set(s_ix ${s_loop_counter})
+                        SELECT(FeatureName AS feat_name PackageName AS pkg_name FROM packageNames WHERE ROWID = ${s_ix})
+                        if (NOT SELECT_OK)
+                            msg(ALWAYS FATAL_ERROR "PANIC!")
+                        endif ()
+                        SELECT(ROW AS feature_line FROM packageData WHERE FeatureName = ${feat_name} AND PackageName = ${pkg_name})
+                        if (NOT SELECT_OK)
+                            msg(ALWAYS FATAL_ERROR "PANIC!")
+                        endif ()
+                        list(GET feature_line ${FIXNamespace} ns)
+                        list(GET feature_line ${FIXComponents} components)
+
+                        # Does the incrary link to this package?
+                        set(MATCHED OFF)
+                        if (ns STREQUAL "")
+                            set(smoochie "Matching ${raw_import_name} to ${pkg_name} ")
+                        else ()
+                            set(smoochie "Matching ${raw_import_name} to ${ns}::${pkg_name} ")
+                        endif ()
+                        set(matching_component)
+                        if ("${raw_import_name}" STREQUAL "${pkg_name}" OR "${raw_import_name}" STREQUAL "${ns}")
+                            set(smoochie "${smoochie} ✔️")
+                            set(MATCHED ON)
+                        elseif (components)
+                            string(REPLACE "${_TOK_LIST_SEP}" ";" components ${components})
+                            set(smoochie "${smoochie} Nope ❌ Checking component ")
+                            # Check components
+                            foreach (comp IN LISTS components)
+                                set(smoochie "${smoochie} ${comp} ")
+
+                                # Match against component name (e.g. Core) or ns_component (e.g. SOCI_Core)
+                                # or common variations like pkg_component (e.g. soci_core)
+                                string(TOLOWER "${pkg_name}" pkg_lc)
+                                string(TOLOWER "${comp}" comp_lc)
+
+                                if ("${raw_import_name}" STREQUAL "${comp}" OR
+                                        "${raw_import_name}" STREQUAL "${ns}_${comp}" OR
+                                        "${raw_import_name}" STREQUAL "${pkg_name}_${comp}" OR
+                                        "${raw_import_name}" STREQUAL "${pkg_lc}_${comp_lc}")
+                                    set(MATCHED ON)
+                                    set(matching_component ${comp})
+                                    set(smoochie "${smoochie} ✔️")
+                                    break()
+                                else ()
+                                    set(smoochie "${smoochie} ❌ ")
+                                endif ()
+                            endforeach ()
+                        else ()
+                            set(smoochie "${smoochie} Nope ❌")
+                        endif ()
+                        #                msg("${smoochie}")
+
+                        set(dispFeatureName "\"${feat_name}\"")
+
+                        if (ns STREQUAL "")
+                            if (matching_component)
+                                set(dispPackageName "(${pkg_name}::${matching_component})")
+                            else ()
+                                set(dispPackageName "(${pkg_name})")
+                            endif ()
+                        else ()
+                            if (matching_component)
+                                set(dispPackageName "(${ns}::${matching_component})")
+                            else ()
+                                set(dispPackageName "(${pkg_name})")
+                            endif ()
+                        endif ()
+
+                        if (pass EQUAL 1)
+
+                            longest(RIGHT CURRENT ${sctLongestFeatureName} TEXT "${dispFeatureName}" LONGEST sctLongestFeatureName)
+                            longest(LEFT CURRENT ${sctLongestPackageName} TEXT "${dispPackageName}" LONGEST sctLongestPackageName)
+
+                            continue()
+                        else ()
+
+                            longest(RIGHT CURRENT ${sctLongestFeatureName} TEXT "${dispFeatureName}" LONGEST sctLongestFeatureName PADDED dispFeatureName)
+                            longest(LEFT CURRENT ${sctLongestPackageName} TEXT "${dispPackageName}" LONGEST sctLongestPackageName PADDED dispPackageName)
+
+                            set(sctLongestFeatureName ${sctLongestFeatureName} CACHE INTERNAL "" FORCE)
+                            set(sctLongestPackageName ${sctLongestPackageName} CACHE INTERNAL "" FORCE)
+
+                        endif ()
+                        if (MATCHED)
+                            msg("o   Feature ${dispFeatureName} ${dispPackageName} is provided by ${targetName} as ${clean_inc}")
+
+                            list(APPEND ${incName}_COMPONENTS ${pkg_name})
+                            set(${pkg_name}_PROVIDED_TARGET "${clean_inc}" CACHE INTERNAL "" FORCE)
+                            list(APPEND __alreadyLocated "${clean_inc}")
+                            set(__alreadyLocated "${__alreadyLocated}" CACHE INTERNAL "" FORCE)
+                            break()
+                        endif ()
+                    endwhile ()
+                endforeach ()
+            endforeach ()
+        endif ()
+
+
+
+
+
+
+
+
     endif ()
     set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
 
