@@ -104,19 +104,14 @@ function(wxWidgets_export_variables pkgname)
         get_target_property(_raw_includes ${_wx_main_target} INTERFACE_INCLUDE_DIRECTORIES)
         if (_raw_includes)
             foreach(_path IN LISTS _raw_includes)
-                if(_path MATCHES "include$")
-                    list(APPEND local_includes "${_path}")
-                elseif(_path MATCHES "mswu")
-                    string(REGEX REPLACE "\\$<.*>" "" _clean_path "${_path}")
-                    if (_clean_path)
-                        list(APPEND local_includes "${_clean_path}")
-                    endif()
+                # Strip any generator expressions to get a plain path
+                string(REGEX REPLACE "\\$<[^>]*>" "" _clean_path "${_path}")
+                if (_clean_path)
+                    list(APPEND local_includes "${_clean_path}")
                 endif()
             endforeach()
         endif()
-        
-        # Also extract link libraries for completeness if needed, 
-        # though we already populated local_libraries with wx::comp
+
     else()
         message(STATUS "wxWidgets: main target ${_wx_main_target} not found yet.")
     endif()
