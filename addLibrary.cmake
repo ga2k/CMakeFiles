@@ -250,7 +250,7 @@ function(addLibrary)
     endif ()
 
     # Link wxWidgets directly (no Widgets wrapper library)
-    if (WIDGETS IN_LIST arg_USES AND WIDGETS IN_LIST APP_FEATURES)
+    if (GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
         target_compile_definitions(${arg_NAME}  PRIVATE 
             ${HS_wxDefines}
             USING_WIDGETS
