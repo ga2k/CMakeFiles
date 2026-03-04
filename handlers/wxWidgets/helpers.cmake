@@ -74,7 +74,7 @@ function(wxWidgets_export_variables pkgname)
     endforeach ()
 
     # If targets exist, extract metadata like process.cmake does
-    if (TARGET ${_wx_main_target})
+    if (TARGET wxWidgets) #${_wx_main_target})
         # Extract Compiler Options
         get_target_property(_raw_options ${_wx_main_target} INTERFACE_COMPILE_OPTIONS)
         if (_raw_options)

@@ -39,7 +39,6 @@ function(addTargetProperties target pkgname addToLists)
     unset(at_LibraryPathsList)
     unset(at_IncludePathsList)
 
-    msg(" ")
     msg("addTargetProperties called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
 
@@ -1015,7 +1014,7 @@ macro(handleTarget _pkgname)
         # This is the "Magic" that links you to ${APP_VENDOR}::magic_enum instead of fetching a new one
         if (${_pkgname}_PROVIDED_TARGET AND TARGET ${${_pkgname}_PROVIDED_TARGET})
             set(_actualTarget ${${_pkgname}_PROVIDED_TARGET})
-            msg("  Linking ${_pkgname} to existing target: ${_actualTarget}")
+            msg("Linking ${_pkgname} to existing target: ${_actualTarget}")
 
             addTargetProperties(${_actualTarget} ${_pkgname} ON)
 

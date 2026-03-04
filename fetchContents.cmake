@@ -358,7 +358,9 @@ function(fetchContents)
                         handleTarget(${this_pkgname})
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        msg()
                         msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
+                        msg("\n${divider}")
                         continue()
                     endif ()
 
