@@ -39,7 +39,12 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
     endforeach()
 
     wxWidgets_export_variables(wxWidgets)
-    set (_wxLibraries    "${_wxLibraries}"    PARENT_SCOPE)
-    set (_wxIncludePaths "${_wxIncludePaths}" PARENT_SCOPE)
-    set(HANDLED ON PARENT_SCOPE)
+
+    # @formatter:off
+    set(_wxCompilerOptions  "${_wxCompilerOptions}" PARENT_SCOPE)
+    set(_wxDefines          "${_wxDefines}"         PARENT_SCOPE)
+    set(_wxLibraries        "${_wxLibraries}"       PARENT_SCOPE)
+    set(_wxIncludePaths     "${_wxIncludePaths}"    PARENT_SCOPE)
+    set(HANDLED             ON                      PARENT_SCOPE)
+    # @formatter:on
 endfunction()
