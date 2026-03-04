@@ -7,7 +7,7 @@ message(STATUS "=== Configuring Components ===")
 set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
 
 # Enter the project's src folder (defines targets)
-if (MONOREPO AND MONOBUILD)
+if (MONOREPO)
     # This is done in the root CMakeLists.txt
 else ()
     add_subdirectory(src)

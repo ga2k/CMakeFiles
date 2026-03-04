@@ -28,7 +28,7 @@ endif ()
 
 # Base header dirs and include per-project BaseDirs.cmake
 list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-if (NOT DEFINED MONOBUILD OR NOT MONOBUILD)
+if (NOT DEFINED MONOBUILD)
     include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
 endif ()
 
@@ -76,7 +76,7 @@ fetchContents(
         FEATURES ${APP_FEATURES}
 )
 
-if (MONOREPO AND MONOBUILD)
+if (MONOREPO)
     return()
 endif ()
 

@@ -1066,7 +1066,7 @@ function(preProcessFeatures featureList hDataSource outVar)
             math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
             string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
 
-            if (MONOREPO AND MONOBUILD)
+            if (MONOREPO)
                 set(SOURCE_PATH "${OUTPUT_DIR}")
             else ()
                 string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
