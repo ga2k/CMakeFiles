@@ -520,6 +520,8 @@ function(fetchContents)
                         endif ()
                     endif ()
 
+                    msg("\n${divider}\n")
+
                     list(POP_BACK CMAKE_MESSAGE_INDENT)
                     msg(" ")
                     msg(CHECK_PASS "${GREEN}Finished${NC}")
@@ -625,7 +627,7 @@ function(fetchContents)
 
                 inc(ix)
 
-            msg("\n${divider}\n")
+                msg("\n${divider}\n")
 
             endwhile () # this_feature_name
 
