@@ -177,10 +177,10 @@ if(USE_PREBUILT_MODULES)
     endif()
 
     if(_inDevelopment)
-      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+      target_compile_options(${APP_NAME}
         "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
     else()
-      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+      target_compile_options(${APP_NAME}
         "${fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
     endif()
   elseif(MSVC)
@@ -189,18 +189,44 @@ if(USE_PREBUILT_MODULES)
     else()
       set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
     endif()
-  
+
     # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
     # This forces VS to rely solely on the /ifcSearchDir provided below.
-    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+    set_target_properties(${APP_NAME} PROPERTIES
         IMPORTED_CXX_MODULES_DEBUG ""
         IMPORTED_CXX_MODULES_RELEASE "")
 
-    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+    set_property(TARGET ${APP_NAME} APPEND PROPERTY
         INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
 
   endif()
 endif()
+
+#    if(_inDevelopment)
+#      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+#        "${fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
+#    else()
+#      target_compile_options(@APP_VENDOR@::@APP_NAME@ INTERFACE
+#        "${fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+#    endif()
+#  elseif(MSVC)
+#    if(_inDevelopment)
+#      set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
+#    else()
+#      set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
+#    endif()
+#  
+#    # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
+#    # This forces VS to rely solely on the /ifcSearchDir provided below.
+#    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+#        IMPORTED_CXX_MODULES_DEBUG ""
+#        IMPORTED_CXX_MODULES_RELEASE "")
+#
+#    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+#        INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
+#
+#  endif()
+#endif()
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
