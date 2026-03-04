@@ -17,7 +17,7 @@ else ()
 endif ()
 
 # Feature-scoped extras for this project
-if (WIDGETS IN_LIST APP_FEATURES)
+if (GUI IN_LIST APP_FEATURES)
     set(extra_wxCompilerOptions)
     set(extra_wxDefines)
     set(extra_wxFrameworks)
