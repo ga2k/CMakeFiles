@@ -149,12 +149,18 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
         outvar
         "${outvar}")
 
-    string(REGEX REPLACE
-        "\n[ \t]+INTERFACE\n[ \t]+FILE_SET \"CXX_MODULES\"\n[ \t]+TYPE \"CXX_MODULES\"[^\n]*(\n[^\n]*)+"
-        ""
-        outvar
-        "${outvar}"
-    )
+    string(FIND "${outvar}"
+[=[    INTERFACE
+      FILE_SET "CXX_MODULES"
+      TYPE "CXX_MODULES"]=]
+    foundAt)
+
+    string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
+    set(firstBit "${firstBit})")
+    string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
+    string(FIND "${lastBit}" "else()" elseBit)
+    string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
+    set(outvar "${firstBit}\n${finally}")
 
     file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
