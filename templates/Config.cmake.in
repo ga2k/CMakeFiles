@@ -1,137 +1,138 @@
 # CMake package configuration (installed)
 @PACKAGE_INIT@
+# @formatter:off
 
 include(CMakeFindDependencyMacro)
 
 if(${APP_TYPE} STREQUAL "Executable")
-  set(TARGET_NAME ${APP_NAME})
+    set(TARGET_NAME ${APP_NAME})
 else()
-  set(TARGET_NAME "${APP_NAME}")
+    set(TARGET_NAME "${APP_NAME}")
 endif()
 
 if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
-  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-    message(NOTICE "In development")
-  endif()
-  set(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}")
-
-  set(_inDevelopment  ON)
-  set(_inStaging      OFF)
-  set(_installed      OFF)
-
-  list(APPEND _searchDirs
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-  )
-
-  # Search upwards for the "include" directory
-  set(_searchDir "${PACKAGE_PREFIX_DIR}")
-  set(_stopDir "@APP_NAME@")
-  set(_justDir "")
-  set(_foundInc OFF)
-
-  while(NOT _foundInc)
-    if(EXISTS "${_searchDir}/include")
-      set(_incdir "${_searchDir}/include")
-      set(_foundInc ON)
-      break()
-    else()
-      # Fail if we go higher than the parent of Core or hit root
-      if("${_justDir}" STREQUAL "${_stopDir}")
-        message(FATAL_ERROR "Could not find 'include' directory within development tree limits.")
-      endif()
-
-      get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
-      get_filename_component(_justDir "${_parentDir}" NAME)
-
-      set(_searchDir "${_parentDir}")
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+        message(NOTICE "In development")
     endif()
-  endwhile()
+    set(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}")
+
+    set(_inDevelopment  ON)
+    set(_inStaging      OFF)
+    set(_installed      OFF)
+
+    list(APPEND _searchDirs
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+    )
+
+    # Search upwards for the "include" directory
+    set(_searchDir "${PACKAGE_PREFIX_DIR}")
+    set(_stopDir "@APP_NAME@")
+    set(_justDir "")
+    set(_foundInc OFF)
+
+    while(NOT _foundInc)
+        if(EXISTS "${_searchDir}/include")
+            set(_incdir "${_searchDir}/include")
+            set(_foundInc ON)
+            break()
+        else()
+            # Fail if we go higher than the parent of Core or hit root
+            if("${_justDir}" STREQUAL "${_stopDir}")
+                message(FATAL_ERROR "Could not find 'include' directory within development tree limits.")
+            endif()
+
+            get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
+            get_filename_component(_justDir "${_parentDir}" NAME)
+
+            set(_searchDir "${_parentDir}")
+        endif()
+    endwhile()
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGED_PATH@")
-  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-    message(NOTICE "Staged")
-  endif()
-        
-  set(_inDevelopment  OFF)
-  set(_inStaging      ON)
-  set(_installed      OFF)
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+        message(NOTICE "Staged")
+    endif()
 
-  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+    set(_inDevelopment  OFF)
+    set(_inStaging      ON)
+    set(_installed      OFF)
 
-  list(APPEND _searchDirs
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-  )
+    set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+
+    list(APPEND _searchDirs
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+    )
 
 elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
-  if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-    message(NOTICE "Installed")
-  endif()
+    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+        message(NOTICE "Installed")
+    endif()
 
-  set(_inDevelopment  OFF)
-  set(_inStaging      OFF)
-  set(_installed      ON)
-  
-  set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-  
-  list(APPEND _searchDirs
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-  )
+    set(_inDevelopment  OFF)
+    set(_inStaging      OFF)
+    set(_installed      ON)
+
+    set(_incdir "${PACKAGE_PREFIX_DIR}/include")
+
+    list(APPEND _searchDirs
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+    )
 else ()
-  message(FATAL_ERROR "Illegal installation")
+    message(FATAL_ERROR "Illegal installation")
 endif ()
 
 if (GUI IN_LIST APP_FEATURES)
-  include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
 endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@.lib")
 
 foreach(_dir IN LISTS _searchDirs)
-  if(EXISTS "${_dir}/${_actualLibName}")
-    set(_lib    "${_dir}/${_actualLibName}")
-    set(_libdir "${_dir}")
-    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-      message(NOTICE "LIB is ${_lib}")
+    if(EXISTS "${_dir}/${_actualLibName}")
+        set(_lib    "${_dir}/${_actualLibName}")
+        set(_libdir "${_dir}")
+        if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+            message(NOTICE "LIB is ${_lib}")
+        endif()
     endif()
-  endif()
-  if(WIN32 AND EXISTS "${_dir}/${_winImpLibName}")
-    set(_imp    "${_dir}/${_winImpLibName}")
-    set(_impdir "${_dir}")
-    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-      message(NOTICE "IMP is ${_imp}")
+    if(WIN32 AND EXISTS "${_dir}/${_winImpLibName}")
+        set(_imp    "${_dir}/${_winImpLibName}")
+        set(_impdir "${_dir}")
+        if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
+            message(NOTICE "IMP is ${_imp}")
+        endif()
     endif()
-  endif()
 endforeach()
 
 if(NOT _lib)
-  message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualLibName}) not found using")
-  foreach(_dir IN LISTS _searchDirs)
-    message(NOTICE "${_dir}/${_actualLibName}")
-  endforeach()
-  message(FATAL_ERROR "Halted")
+    message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_actualLibName}) not found using")
+    foreach(_dir IN LISTS _searchDirs)
+        message(NOTICE "${_dir}/${_actualLibName}")
+    endforeach()
+    message(FATAL_ERROR "Halted")
 endif()
 
 if(WIN32)
-  if(NOT _imp)
-    message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_winImpLibName}) not found using")
-    foreach(_dir IN LISTS _searchDirs)
-      message(NOTICE "${_dir}/${_winImpLibName}")
-    endforeach()
-    message(FATAL_ERROR "Halted")
-  endif()
-  set(_libdir "${_impdir}")
+    if(NOT _imp)
+        message(NOTICE "@APP_VENDOR@::@APP_NAME@ (${_winImpLibName}) not found using")
+        foreach(_dir IN LISTS _searchDirs)
+            message(NOTICE "${_dir}/${_winImpLibName}")
+        endforeach()
+        message(FATAL_ERROR "Halted")
+    endif()
+    set(_libdir "${_impdir}")
 endif()
-  
+
 # Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
 find_dependency(OpenSSL REQUIRED)
@@ -139,87 +140,67 @@ find_dependency(OpenSSL REQUIRED)
 # Import the exported targets first (defines @APP_VENDOR@::@APP_NAME@ and friends).
 # The cxx-modules export expects the target(s) to already exist.
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
-  include("${_libdir}/cmake/@APP_NAME@Target.cmake")
+    include("${_libdir}/cmake/@APP_NAME@Target.cmake")
 endif()
 
 # In development (monorepo) include the build-tree export of module FILE_SET mappings.
 # For staged/installed layouts, load the installed cxx-modules export.
 if(_inDevelopment)
-  file(GLOB _DEV_MODULE_EXPORT
-       "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-  if(_DEV_MODULE_EXPORT)
-    list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
-    include("${_DEV_MODULE_EXPORT_FILE}")
-  endif()
+    file(GLOB _DEV_MODULE_EXPORT
+        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+    if(_DEV_MODULE_EXPORT)
+        list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
+        include("${_DEV_MODULE_EXPORT_FILE}")
+    endif()
 elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-  include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+    include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
 endif()
 
 if(WIN32)
-  # Add the wx/setup.h header to the include path.
-  # @APP_VENDOR@::wxWidgets is an imported target we own, so set_property is fine here.
-  if (TARGET @APP_VENDOR@::wxWidgets AND IS_DIRECTORY "${_incdir}/msvc")
-    set_property(TARGET @APP_VENDOR@::wxWidgets
-      APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-        "${_incdir}/msvc"
-    )
-  endif()
+    # Add the wx/setup.h header to the include path.
+    # @APP_VENDOR@::wxWidgets is an imported target we own, so set_property is fine here.
+    if (TARGET @APP_VENDOR@::wxWidgets AND IS_DIRECTORY "${_incdir}/msvc")
+        set_property(TARGET @APP_VENDOR@::wxWidgets
+            APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${_incdir}/msvc"
+        )
+    endif()
 
-  # @APP_VENDOR@::@APP_NAME@ is our own imported target — patching IMPORTED_IMPLIB is correct.
-  set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-      IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
-  set(_libdir "${_impdir}")
+    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+        IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+    set(_libdir "${_impdir}")
 endif()
 
-# For Clang/GCC consumers of modules, propagate prebuilt-module path (PCMs/BMIs) via the
-# imported target's INTERFACE_COMPILE_OPTIONS so callers pick it up automatically through
-# target_link_libraries() — no caller-side boilerplate needed.
-#
 # This can be disabled by setting USE_PREBUILT_MODULES=OFF in the consuming configure preset.
 if(NOT DEFINED USE_PREBUILT_MODULES)
-  # Default to ON to preserve existing behavior unless explicitly overridden.
-  set(USE_PREBUILT_MODULES ON)
+    # Default to ON to preserve existing behavior unless explicitly overridden.
+    set(USE_PREBUILT_MODULES ON)
 endif()
 
 if(USE_PREBUILT_MODULES)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      set(_fmodule_cmd "-fprebuilt-module-path")
-    else()
-      set(_fmodule_cmd "-fmodule-mapper")
-    endif()
-
-    if(_inDevelopment)
-      set(_bmiArg "${_fmodule_cmd}=@BUILD_DIR@/src/CMakeFiles/@APP_NAME@.dir")
-    else()
-      set(_bmiArg "${_fmodule_cmd}=${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
-    endif()
-
-    # Set on the IMPORTED target we own — callers inherit this via target_link_libraries().
-    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-        INTERFACE_COMPILE_OPTIONS "${_bmiArg}")
-
-    unset(_bmiArg)
-    unset(_fmodule_cmd)
-
-  elseif(MSVC)
-    if(_inDevelopment)
-      set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
-    else()
-      set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@/@BUILD_TYPE@")
-    endif()
-
-    # IMPORTANT: Strip the BMI-only source mapping that crashes the VS generator.
-    # This forces VS to rely solely on the /ifcSearchDir provided below.
+    # Stop CMake from re-scanning and recompiling module sources
     set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-        IMPORTED_CXX_MODULES_DEBUG ""
-        IMPORTED_CXX_MODULES_RELEASE "")
+        IMPORTED_CXX_MODULES_DEBUG   ""
+        IMPORTED_CXX_MODULES_RELEASE ""
+        IMPORTED_CXX_MODULES_RELWITHDEBINFO ""
+        IMPORTED_CXX_MODULES_MINSIZEREL ""
+    )
 
-    set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
-        INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
+    if(_inDevelopment)
+        set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
+    else()
+        set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
+    endif()
 
-    unset(_bmiDir)
-  endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+            INTERFACE_COMPILE_OPTIONS "-fprebuilt-module-path=${_bmiDir}")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GCC")
+        set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+            INTERFACE_COMPILE_OPTIONS "-fmodule-mapper=${_bmiDir}")
+    elseif(MSVC)
+        set_property(TARGET @APP_VENDOR@::@APP_NAME@ APPEND PROPERTY
+            INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
+    endif()
 endif()
 
 # Convenience variables
@@ -232,37 +213,37 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
 
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
-  # If the app creates plugins, set the plugin directory
-  if (_inDevelopment)
-    set(PLUGIN_DIR "@OUTPUT_DIR@/plugins")
-  else ()
-    set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
-  endif ()
-  set(PLUGIN_DIR              "${PLUGIN_DIR}" PARENT_SCOPE)
-  set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
-  set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}" PARENT_SCOPE)
+    # If the app creates plugins, set the plugin directory
+    if (_inDevelopment)
+        set(PLUGIN_DIR "@OUTPUT_DIR@/plugins")
+    else ()
+        set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
+    endif ()
+    set(PLUGIN_DIR              "${PLUGIN_DIR}" PARENT_SCOPE)
+    set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
+    set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}" PARENT_SCOPE)
 endif()
 
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
-  # If the app supplies resources, set the resource directory
-  if (_inDevelopment)
-    set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
-  else ()
-    set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
-  endif ()
-  set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
-  set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
-  set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
+    # If the app supplies resources, set the resource directory
+    if (_inDevelopment)
+        set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
+    else ()
+        set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
+    endif ()
+    set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
+    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
+    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
 elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
-  # If the app consumes resources, set the resource directory
-  if (_inDevelopment)
-    set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
-  else ()
-    set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
-  endif ()
-  set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
-  set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
-  set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
+    # If the app consumes resources, set the resource directory
+    if (_inDevelopment)
+        set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
+    else ()
+        set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/@APP_NAME@/resources")
+    endif ()
+    set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
+    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
+    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
 endif()
 
 unset(_inDevelopment)
@@ -274,3 +255,4 @@ unset(_DEV_MODULE_EXPORT)
 unset(_DEV_MODULE_EXPORT_FILE)
 unset(_searchDirs)
 unset(_actualLibName)
+# @formatter:on
