@@ -141,8 +141,10 @@ find_dependency(OpenSSL REQUIRED)
 # The cxx-modules export expects the target(s) to already exist.
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
+    set(firstBit [=[include("${CMAKE_CURRENT_LIST_DIR}/cxx/]=])
+    string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
     string(REPLACE
-        "include(\"\${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake\")"
+        "${firstBit}"
         ""
         outvar
         "${outvar}")
