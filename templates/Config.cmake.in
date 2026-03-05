@@ -143,18 +143,18 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     include("${_libdir}/cmake/@APP_NAME@Target.cmake")
 endif()
 
-# In development (monorepo) include the build-tree export of module FILE_SET mappings.
-# For staged/installed layouts, load the installed cxx-modules export.
-if(_inDevelopment)
-    file(GLOB _DEV_MODULE_EXPORT
-        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-    if(_DEV_MODULE_EXPORT)
-        list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
-        include("${_DEV_MODULE_EXPORT_FILE}")
-    endif()
-elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-    include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-endif()
+## In development (monorepo) include the build-tree export of module FILE_SET mappings.
+## For staged/installed layouts, load the installed cxx-modules export.
+#if(_inDevelopment)
+#    file(GLOB _DEV_MODULE_EXPORT
+#        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+#    if(_DEV_MODULE_EXPORT)
+#        list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
+#        include("${_DEV_MODULE_EXPORT_FILE}")
+#    endif()
+#elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+#    include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
+#endif()
 
 if(WIN32)
     # Add the wx/setup.h header to the include path.
