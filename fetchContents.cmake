@@ -642,7 +642,7 @@ function(fetchContents)
     endfunction()
 
     processFeatures(unifiedFeatures resolvedNames )
-    propegateUpwards("Finally" ON)
+    propegateUpwards("Finally" OFF)
 endfunction()
 
 macro(propegateUpwards whereWeAre REPORT)
