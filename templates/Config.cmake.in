@@ -142,7 +142,7 @@ find_dependency(OpenSSL REQUIRED)
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
     string(REPLACE
-        "include(\"${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake\")"
+        "include(\"\${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake\")"
         ""
         outvar
         "${outvar}")
