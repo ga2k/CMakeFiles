@@ -155,13 +155,14 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
       TYPE "CXX_MODULES"]=]
     foundAt)
 
-    string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
-    set(firstBit "${firstBit})")
-    string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
-    string(FIND "${lastBit}" "else()" elseBit)
-    string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
-    set(outvar "${firstBit}\n${finally}")
-
+    if(NOT foundAt EQUAL -1)
+        string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
+        set(firstBit "${firstBit})")
+        string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
+        string(FIND "${lastBit}" "else()" elseBit)
+        string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
+        set(outvar "${firstBit}\n${finally}")
+    endif()
     file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
     include("${_libdir}/cmake/@APP_NAME@Target.cmake")
