@@ -11,8 +11,13 @@ function(OpenSSL_process incs libs defs)
     set(paths       "${_LibraryPathsList}")
 
     if(WIN32)
-        set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
+        msg("You")
+        msg("YES YOU! LADDIE!")
+        msg("How can you have any pudding if you don't eat your meat?")
+        msg()
         
+        set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
+
         find_library(ssl
                 NAMES ssl
                 PATHS   "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
