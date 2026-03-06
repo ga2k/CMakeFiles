@@ -19,6 +19,14 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
         replaceFile(${pkgname} "${patches}")
     endif ()
 #
+    set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
+    include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
+
+    wxWidgets_set_build_options()
+
+    set(HANDLED ON PARENT_SCOPE)
+endfunction()
+
 #        message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
 #        execute_process(
 #                COMMAND git clone --depth=1 --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
@@ -37,10 +45,3 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
 #
 #    endif ()
 #
-#    set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
-    include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
-
-    wxWidgets_set_build_options()
-
-    set(HANDLED ON PARENT_SCOPE)
-endfunction()
