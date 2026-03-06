@@ -429,29 +429,12 @@ function(fetchContents)
                                     endif ()
 
                                     msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
-
-                                    if("PATHS" IN_LIST this_find_package_args)
-                                        msg("BUMP the BUPP")
-                                        set(bump "${CMAKE_MODULE_PATH}")
-                                        set(bupp "${CMAKE_PREFIX_PATH}")
-                                        unset(bump)
-                                        unset(bupp)
-                                    else ()
-                                        msg("Ain't gonna BUMP the BUPP")
-                                    endif ()
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
                                             SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
                                             ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                             ${COMPONENTS_KEYWORD} ${this_find_package_components}
                                             ${GIT_TAG_KEYWORD} ${this_tag})
-
-                                    if(bump)
-                                        set(CMAKE_MODULE_PATH "${bump}")
-                                    endif ()
-                                    if(bupp)
-                                        set(CMAKE_PREFIX_PATH "${bupp}")
-                                    endif ()
 
                                     set(fn "${this_pkgname}_postDeclare")
                                     if (COMMAND "${fn}")
@@ -468,9 +451,27 @@ function(fetchContents)
                             list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS)
 
                             msg("Probing for ${this_pkgname}...")
+
+                            if("PATHS" IN_LIST this_find_package_args)
+                                msg("BUMP the BUPP")
+                                set(bump "${CMAKE_MODULE_PATH}")
+                                set(bupp "${CMAKE_PREFIX_PATH}")
+                                unset(CMAKE_MODULE_PATH)
+                                unset(CMAKE_PREFIX_PATH)
+                            else ()
+                                msg("Ain't gonna BUMP the BUPP")
+                            endif ()
+
                             msg("find_package(${this_pkgname} ${temporary_args})")
 
                             find_package(${this_pkgname} ${temporary_args})
+
+                            if(bump)
+                                set(CMAKE_MODULE_PATH "${bump}")
+                            endif ()
+                            if(bupp)
+                                set(CMAKE_PREFIX_PATH "${bupp}")
+                            endif ()
 
                             set(scanned${this_pkgname} OFF)
                             if (${this_pkgname}_FOUND)
