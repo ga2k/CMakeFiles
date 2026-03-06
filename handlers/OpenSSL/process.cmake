@@ -32,8 +32,8 @@ function(OpenSSL_process incs libs defs)
 
             message("Using installed system OpenSSL libraries")
             list(APPEND libs    "${_LibrariesList}"      ${ssl_lib} ${crypto_lib})
-            list(APPEND incs    "${_IncludePathsList}"} "C:/Program Files/OpenSSL-Win64/include")
-            list(APPEND paths   "${_LibraryPathsList}"} "${lib_dir}")
+            list(APPEND incs    "${_IncludePathsList}" "C:/Program Files/OpenSSL-Win64/include")
+            list(APPEND paths   "${_LibraryPathsList}" "${lib_dir}")
 
             set (_LibrariesList    "${libs}"    PARENT_SCOPE)
             set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
