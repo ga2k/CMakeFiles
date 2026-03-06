@@ -91,7 +91,11 @@ else ()
 endif ()
 
 if (GUI IN_LIST APP_FEATURES)
-    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+    if(_inDevelopment)
+        include("@OUTPUT_DIR@/WX_Helper.cmake")
+    else()
+        include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+    endif()
 endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
