@@ -1,9 +1,24 @@
 function (wxWidgets_preDownload pkgname url tag srcDir)
 
 #    # Use a persistent local clone so wxWidgets survives `make clean`
-#    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets")
+    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets")
+    if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
+        FetchContent_Declare(wxWidgets
+                GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+                GIT_TAG master
+                SOURCE_DIR "${_wx_local_src}"
+                OVERRIDE_FIND_PACKAGE REQUIRED)
+
+        FetchContent_MakeAvailable(wxWidgets)
+
+        unset(patches)
+        list(APPEND patches
+                "${pkgname}/include|${_wx_local_src}"
+                "${pkgname}/src|${_wx_local_src}"
+        )
+        replaceFile(${pkgname} "${patches}")
+    endif ()
 #
-#    if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
 #        message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
 #        execute_process(
 #                COMMAND git clone --depth=1 --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
@@ -27,5 +42,5 @@ function (wxWidgets_preDownload pkgname url tag srcDir)
 
     wxWidgets_set_build_options()
 
-    set(HANDLED OFF PARENT_SCOPE)
+    set(HANDLED ON PARENT_SCOPE)
 endfunction()
