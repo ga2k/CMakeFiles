@@ -15,7 +15,7 @@ function(OpenSSL_process incs libs defs)
         msg("YES YOU! LADDIE!")
         msg("How can you have any pudding if you don't eat your meat?")
         msg()
-        
+
         set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
 
         find_library(ssl
@@ -31,13 +31,13 @@ function(OpenSSL_process incs libs defs)
             get_filename_component(lib_dir      "${crypto}" PATH)
 
             message("Using installed system OpenSSL libraries")
-            list(APPEND libs    ${ssl_lib} ${crypto_lib})
-            list(APPEND incs    "C:/Program Files/OpenSSL-Win64/include")
-            list(APPEND paths   "${lib_dir}")
+            list(APPEND libs    "${_LibrariesList}"      ${ssl_lib} ${crypto_lib})
+            list(APPEND incs    "${_IncludePathsList}"} "C:/Program Files/OpenSSL-Win64/include")
+            list(APPEND paths   "${_LibraryPathsList}"} "${lib_dir}")
 
             set (_LibrariesList    "${libs}"    PARENT_SCOPE)
             set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
-            set (_IncludePathsList "${incs}"    config-GfxPARENT_SCOPE)
+            set (_IncludePathsList "${incs}"    config-Gfx PARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
             return()
         endif ()
