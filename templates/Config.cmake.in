@@ -135,7 +135,6 @@ endif()
 
 # Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
-find_dependency(OpenSSL REQUIRED)
 
 # Import the exported targets first (defines @APP_VENDOR@::@APP_NAME@ and friends).
 # The cxx-modules export expects the target(s) to already exist.
