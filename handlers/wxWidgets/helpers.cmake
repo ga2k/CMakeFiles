@@ -119,8 +119,23 @@ function(wxWidgets_export_variables pkgname)
                 endforeach()
             else ()
                 msg(ALWAYS "wxWidgets: No INTERFACE_INCLUDE_DIRECTORIES for ${_wx_main_target} yet.")
+
+                set(_wx_inc "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+
+                file(GLOB _wx_incs  LIST_DIRECTORIES true "${_wx_inc}/wx*")
+                foreach(inc IN LISTS _wx_incs)
+                    if(inc MATCHES ".*wx$")
+                        get_filename_component(inc "${inc}" DIRECTORY)
+                    endif ()
+                    list(APPEND incs "${inc}")
+                    list(REMOVE_DUPLICATES incs)
+                endforeach ()
+
                 msg(ALWAYS "wxWidgets: Setting it to \"${_wx_inc_dir}\"")
-                list(APPEND local_includes "${_wx_inc_dir}")
+                list(APPEND local_includes "${_wx_inc_dir}" "${incs}")
+
+                set(_wx_inc_dir "${local_includes}" PARENT_SCOPE)
+
                 set_property(TARGET ${_wx_main_target} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${_wx_inc_dir}")
             endif ()
         endforeach ()
