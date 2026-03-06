@@ -28,17 +28,6 @@ else ()
     set(FEATURES_YAML_LIST "[]")
 endif ()
 
-#set(CORE_LIBS_YAML_LIST "")
-#if (REQD_LIBS)
-#    list(REMOVE_DUPLICATES REQD_LIBS)
-#    # Convert semicolon-separated list to individual items
-#    string(REPLACE ";" "\n" CORE_LIBS_ITEMS "${REQD_LIBS}")
-#    string(REPLACE "\n" "\n    - " CORE_LIBS_YAML_LIST "${CORE_LIBS_ITEMS}")
-#    set(CORE_LIBS_YAML_LIST "\n    - ${CORE_LIBS_YAML_LIST}\n")
-#else ()
-#    set(CORE_LIBS_YAML_LIST "[]")
-#endif ()
-
 set(CREATES_PLUGINS_YAML_LIST "")
 if (APP_CREATES_PLUGINS)
     list(REMOVE_DUPLICATES APP_CREATES_PLUGINS)
@@ -48,6 +37,13 @@ if (APP_CREATES_PLUGINS)
     set(CREATES_PLUGINS_YAML_LIST "\n    - ${CREATES_PLUGINS_YAML_LIST}\n")
 else ()
     set(CREATES_PLUGINS_YAML_LIST "[]")
+endif ()
+
+if (APP_LOCAL_RESOURCES)
+    get_filename_component(YAML_LOCAL_RESOURCES "${APP_LOCAL_RESOURCES}" ABSOLUTE)
+    if(YAML_LOCAL_RESOURCES STREQUAL APP_LOCAL_RESOURCES)
+        get_filename_component(YAML_LOCAL_RESOURCES "${CMAKE_SOURCE_DIR}/${APP_LOCAL_RESOURCES}" ABSOLUTE)
+    endif ()
 endif ()
 
 # Generate the app.yaml body first (without checksum)
@@ -66,6 +62,7 @@ file(WRITE "${APP_YAML_PATH}" "checksum_sha256: ${APP_YAML_BODY_SHA256}\n")
 file(READ "${_APP_YAML_BODY_PATH}" _APP_YAML_BODY_CONTENT)
 file(APPEND "${APP_YAML_PATH}" "${_APP_YAML_BODY_CONTENT}")
 
+
 # Clean up temporary body file
 file(REMOVE "${_APP_YAML_BODY_PATH}")
 
@@ -73,3 +70,4 @@ message(STATUS "Generated app configuration with checksum: ${APP_YAML_PATH}")
 if (PLUGIN_PATH)
     message(STATUS "Plugin path: ${PLUGIN_PATH}")
 endif ()
+
