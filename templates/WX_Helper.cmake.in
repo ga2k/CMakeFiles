@@ -184,3 +184,6 @@ if (UNIX AND NOT APPLE)
     unset(_wx_mono_so)
     unset(_wx_lib_dir)
 endif ()
+
+list(APPEND _wxIncludePaths "${_wx_inc_dir}")
+set(_wxIncludePaths "${_wxIncludePaths}" PARENT_SCOPE)
