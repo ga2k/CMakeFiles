@@ -10,9 +10,21 @@ def read_json(file_path):
         data = json.load(file)
         return data
 
+def is_cross_compile_preset(preset):
+    """
+    Returns True if this preset is a cross-compile preset that should always
+    be visible on the current host (e.g. Windows Cross presets on Linux).
+    Cross-compile presets are identified by having 'Cross' in their name.
+    """
+    return "Cross" in preset.get("name", "")
+
+
 def process_presets(presets):
     """
     Process presets to separate hidden, conditional, and inherited conditions.
+    Cross-compile presets (e.g. 'Windows Cross') are always included on the
+    current host platform regardless of their condition, since they are
+    intentionally run from a different host OS.
     """
     hidden_presets = []
     conditional_presets = {}
@@ -22,20 +34,30 @@ def process_presets(presets):
         if preset.get("hidden"):
             hidden_presets.append(preset)
             if "condition" in preset:
+                # Cross-compile hidden base presets: always register their
+                # condition so inheriting presets resolve correctly, but also
+                # mark them as cross-compile so we skip condition filtering.
                 conditional_presets[preset["name"]] = preset["condition"]
         else:
-            inherited_conditions = [
-                conditional_presets[inherited]
-                for inherited in preset.get("inherits", [])
-                if inherited in conditional_presets
-            ]
-            if inherited_conditions:
-                preset["condition"] = (
-                    {"type": "allOf", "conditions": inherited_conditions}
-                    if len(inherited_conditions) > 1
-                    else inherited_conditions[0]
-                )
-            processed_presets.append(preset)
+            if is_cross_compile_preset(preset):
+                # Cross-compile visible presets: include unconditionally,
+                # strip any inherited conditions so they survive filtering.
+                preset.pop("condition", None)
+                processed_presets.append(preset)
+            else:
+                inherited_conditions = [
+                    conditional_presets[inherited]
+                    for inherited in preset.get("inherits", [])
+                    if inherited in conditional_presets
+                    and not is_cross_compile_preset({"name": inherited})
+                ]
+                if inherited_conditions:
+                    preset["condition"] = (
+                        {"type": "allOf", "conditions": inherited_conditions}
+                        if len(inherited_conditions) > 1
+                        else inherited_conditions[0]
+                    )
+                processed_presets.append(preset)
 
     return hidden_presets, processed_presets, conditional_presets
 
