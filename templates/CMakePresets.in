@@ -436,7 +436,7 @@
       ]
     },
     {
-      "name": "Windows Cross",
+      "name": "WinX",
       "hidden": true,
       "description": "Windows x64 cross-compile from Linux via Clang/MinGW-w64",
       "condition": {
@@ -458,50 +458,50 @@
       }
     },
     {
-      "name": "Windows Cross (Debug Shared)",
+      "name": "WinX (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "Windows Cross",
+        "WinX",
         "Debug",
         "Shared"
       ]
     },
     {
-      "name": "Windows Cross (Release Shared)",
+      "name": "WinX (Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "Windows Cross",
+        "WinX",
         "Release",
         "Shared"
       ]
     },
     {
-      "name": "Windows Cross (Staged Debug Shared)",
+      "name": "WinX (Staged Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
-        "Windows Cross",
+        "WinX",
         "Debug",
         "Shared",
         "Staged"
       ]
     },
     {
-      "name": "Windows Cross (Staged Release Shared)",
+      "name": "WinX (Staged Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
-        "Windows Cross",
+        "WinX",
         "Release",
         "Shared",
         "Staged"
@@ -632,20 +632,20 @@
       "configurePreset": "MacOS (Staged Release Shared)"
     },
     {
-      "name": "Windows Cross (Debug Shared)",
-      "configurePreset": "Windows Cross (Debug Shared)"
+      "name": "WinX (Debug Shared)",
+      "configurePreset": "WinX (Debug Shared)"
     },
     {
-      "name": "Windows Cross (Release Shared)",
-      "configurePreset": "Windows Cross (Release Shared)"
+      "name": "WinX (Release Shared)",
+      "configurePreset": "WinX (Release Shared)"
     },
     {
-      "name": "Windows Cross (Staged Debug Shared)",
-      "configurePreset": "Windows Cross (Staged Debug Shared)"
+      "name": "WinX (Staged Debug Shared)",
+      "configurePreset": "WinX (Staged Debug Shared)"
     },
     {
-      "name": "Windows Cross (Staged Release Shared)",
-      "configurePreset": "Windows Cross (Staged Release Shared)"
+      "name": "WinX (Staged Release Shared)",
+      "configurePreset": "WinX (Staged Release Shared)"
     },
     {
       "name": "Linux (Debug Shared)",
