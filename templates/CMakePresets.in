@@ -436,6 +436,78 @@
       ]
     },
     {
+      "name": "Windows Cross",
+      "hidden": true,
+      "description": "Windows x64 cross-compile from Linux via Clang/MinGW-w64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/windows-mingw.cmake",
+      "environment": {
+        "hostType": "WindowsCross",
+        "hostPath": "/wincross",
+        "archType": "x64",
+        "archPath": "/x64",
+        "CMAKE_NINJA_FLAGS": "-k 0"
+      },
+      "cacheVariables": {
+        "BUILD_WX_FROM_SOURCE": "ON"
+      }
+    },
+    {
+      "name": "Windows Cross (Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
+      "inherits": [
+        "Windows Cross",
+        "Debug",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows Cross (Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
+      "inherits": [
+        "Windows Cross",
+        "Release",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows Cross (Staged Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows Cross",
+        "Debug",
+        "Shared",
+        "Staged"
+      ]
+    },
+    {
+      "name": "Windows Cross (Staged Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
+      "inherits": [
+        "Windows Cross",
+        "Release",
+        "Shared",
+        "Staged"
+      ]
+    },
+    {
       "name": "Linux (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{buildPath}$env{linkPath}"
@@ -558,6 +630,22 @@
     {
       "name": "MacOS (Staged Release Shared)",
       "configurePreset": "MacOS (Staged Release Shared)"
+    },
+    {
+      "name": "Windows Cross (Debug Shared)",
+      "configurePreset": "Windows Cross (Debug Shared)"
+    },
+    {
+      "name": "Windows Cross (Release Shared)",
+      "configurePreset": "Windows Cross (Release Shared)"
+    },
+    {
+      "name": "Windows Cross (Staged Debug Shared)",
+      "configurePreset": "Windows Cross (Staged Debug Shared)"
+    },
+    {
+      "name": "Windows Cross (Staged Release Shared)",
+      "configurePreset": "Windows Cross (Staged Release Shared)"
     },
     {
       "name": "Linux (Debug Shared)",

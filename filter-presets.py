@@ -135,24 +135,29 @@ def main(in_file, out_file):
     # Step 3: Filter presets based on their conditions
     presets = filter_presets_by_conditions(presets)
 
-    # Step 3.5: Rename visible configure presets to concise names
-    # Example: "Linux x64 (Debug Shared)" -> "Debug Shared"
-    #          "macOS arm64 (Release Static)" -> "Release Static"
-    #          "Windows (Staged Debug Static)" -> "Staged Debug Static"
+    # Step 3.5: Rename visible configure presets to readable names that retain
+    # the platform prefix, replacing "Platform (Variant)" with "Platform Variant".
+    # Examples:
+    #   "Linux (Debug Shared)"          -> "Linux Debug Shared"
+    #   "Windows Cross (Debug Shared)"  -> "Windows Cross Debug Shared"
+    #   "MacOS (Staged Release Shared)" -> "MacOS Staged Release Shared"
+    #   "Windows (VS Debug Shared)"     -> "Windows VS Debug Shared"
     # We also keep a name mapping to update buildPresets accordingly.
     import re
     name_map = {}
-    # Updated pattern to handle both regular and staged presets
-    concise_pattern = re.compile(r"\(\s*(.+)\s*\)")
+    # Match "Prefix (Variant)" — capture prefix and variant separately
+    concise_pattern = re.compile(r"^(.+?)\s*\(\s*(.+)\s*\)$")
     for preset in presets:
         orig_name = preset.get("name", "")
-        m = concise_pattern.search(orig_name)
+        m = concise_pattern.match(orig_name)
         if m:
-            concise = m.group(1).strip()
-            if concise != orig_name:
-                name_map[orig_name] = concise
-                preset["name"] = concise
-                preset["displayName"] = concise
+            prefix = m.group(1).strip()
+            variant = m.group(2).strip()
+            new_name = f"{prefix} {variant}"
+            if new_name != orig_name:
+                name_map[orig_name] = new_name
+                preset["name"] = new_name
+                preset["displayName"] = new_name
 
     # Step 4: Add the hidden presets back to the final list
     final_presets = hidden_presets + presets
@@ -170,24 +175,18 @@ def main(in_file, out_file):
             if cfg in name_map:
                 bp["configurePreset"] = name_map[cfg]
 
-        # Ensure build preset names align with their configurePreset names and are concise
-        # Example: a build preset named "Linux x64 (Debug Shared)" becomes "Debug Shared"
-        # and we also set displayName for better IDE visibility.
-        concise_pattern = re.compile(r"\(\s*(.+)\s*\)")
+        # Ensure build preset names align with their configurePreset names.
+        concise_pattern = re.compile(r"^(.+?)\s*\(\s*(.+)\s*\)$")
         for bp in build_presets:
             bp_name = bp.get("name", "")
-            # First, try direct rename via map if the full name was in the map
             if bp_name in name_map:
                 new_name = name_map[bp_name]
             else:
-                # Try to parse the concise part from parentheses
-                m = concise_pattern.search(bp_name)
+                m = concise_pattern.match(bp_name)
                 if m:
-                    new_name = m.group(1).strip()
+                    new_name = f"{m.group(1).strip()} {m.group(2).strip()}"
                 else:
-                    # As a last resort, align to the (possibly renamed) configurePreset
                     new_name = bp.get("configurePreset", bp_name)
-            # Apply name and displayName
             bp["name"] = new_name
             bp["displayName"] = new_name
 
