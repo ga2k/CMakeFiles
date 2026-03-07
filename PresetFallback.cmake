@@ -30,6 +30,14 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
     set(_linkPath  "/${_linkPathSuffix}")                  # e.g. /shared
     set(_stemPath  "${_buildPath}${_linkPath}")            # e.g. /debug/shared
 
+    get_filename_component(_b "${cmake_root}/../build/${_stemPath}"    ABSOLUTE)
+    get_filename_component(_o "${cmake_root}/../out/${_stemPath}"      ABSOLUTE)
+    get_filename_component(_e "${cmake_root}/../external/${_stemPath}" ABSOLUTE)
+
+    file(MAKE_DIRECTORY "${_b}")
+    file(MAKE_DIRECTORY "${_o}")
+    file(MAKE_DIRECTORY "${_e}")
+
     # ------------------------------------------------------------------
     # macOS  –  inherits: macOS + ${ARG_BUILD_TYPE} + ${ARG_LINK_TYPE}
     # ------------------------------------------------------------------
@@ -195,4 +203,5 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         message(WARNING "fixPresetMess: unrecognised host platform '${CMAKE_HOST_SYSTEM_NAME}' – no variables set.")
     endif()
 
+    file(MAKE_DIRECTORY ")
 endmacro()
