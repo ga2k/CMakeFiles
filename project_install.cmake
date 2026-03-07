@@ -201,15 +201,15 @@ endif()
 # wife. She said "Guess what's on TV tonight?" I answered "I don't know... Dust?"
 #
 # Worst. Birthday. Night. EVER
-if(EXISTS "${CMAKE_SOURCE_DIR}/src")
-    set(_hs_dev_cxx_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}")
-    file(MAKE_DIRECTORY "${_hs_dev_cxx_dir}")
-    file(COPY "${CMAKE_SOURCE_DIR}/src/"
-            DESTINATION "${_hs_dev_cxx_dir}"
-            FILES_MATCHING
-                PATTERN "*.ixx")
-    unset(_hs_dev_cxx_dir)
-endif()
+#if(EXISTS "${CMAKE_SOURCE_DIR}/src")
+#    set(_hs_dev_cxx_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}")
+#    file(MAKE_DIRECTORY "${_hs_dev_cxx_dir}")
+#    file(COPY "${CMAKE_SOURCE_DIR}/src/"
+#            DESTINATION "${_hs_dev_cxx_dir}"
+#            FILES_MATCHING
+#                PATTERN "*.ixx")
+#    unset(_hs_dev_cxx_dir)
+#endif()
 
 # Now for the library finder (if there really IS such a thing...)
 if(APP_TYPE MATCHES Library AND EXISTS "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake")
@@ -308,6 +308,7 @@ configure_package_config_file(
 add_custom_target(${APP_NAME}Config SOURCES "${cmake_root}/templates/Config.cmake.in")
 add_dependencies(${APP_NAME} ${APP_NAME}Config)
 
+# We prepared one earlier
 configure_package_config_file(
         ${cmake_root}/templates/WX_Helper.cmake.in
         "${OUTPUT_DIR}/WX_Helper.cmake"

@@ -91,7 +91,11 @@ else ()
 endif ()
 
 if (GUI IN_LIST APP_FEATURES)
-    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+    if(_inDevelopment)
+        include("@OUTPUT_DIR@/WX_Helper.cmake")
+    else()
+        include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+    endif()
 endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
@@ -135,28 +139,26 @@ endif()
 
 # Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
-find_dependency(OpenSSL REQUIRED)
 
-# Import the exported targets first (defines @APP_VENDOR@::@APP_NAME@ and friends).
-# The cxx-modules export expects the target(s) to already exist.
+# Rid the @APP_NAME@Target.cmake file of it's notion of the .ixx files. This will force the use of the .BMI
+# and prevent duplicate compilation.
+
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
+
+    # Remove the line
+#   include("${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
     set(firstBit [=[include("${CMAKE_CURRENT_LIST_DIR}/cxx/]=])
     string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
-    string(REPLACE
-        "${firstBit}"
-        ""
-        outvar
-        "${outvar}")
+    string(REPLACE "${firstBit}" "# No we don't" outvar "${outvar}")
 
-    string(FIND "${outvar}"
-[=[    INTERFACE
-      FILE_SET "CXX_MODULES"
-      TYPE "CXX_MODULES"]=]
-    foundAt)
-
+    # Remove any montion of the module files from the INTERFACE
+    string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] foundAt)
     if(NOT foundAt EQUAL -1)
+        # Walk back to find the INTERFACE keyword before FILE_SET "CXX_MODULES"
         string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
+        string(FIND "${firstBit}" "INTERFACE" interfaceAt REVERSE)
+        string(SUBSTRING "${outvar}" 0 ${interfaceAt} firstBit)
         set(firstBit "${firstBit})")
         string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
         string(FIND "${lastBit}" "else()" elseBit)
@@ -167,6 +169,21 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
 
     include("${_libdir}/cmake/@APP_NAME@Target.cmake")
 endif()
+
+#    string(FIND "${outvar}"
+#[=[    INTERFACE
+#      FILE_SET "CXX_MODULES"
+#      TYPE "CXX_MODULES"]=]
+#    foundAt)
+#
+#    if(NOT foundAt EQUAL -1)
+#        string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
+#        set(firstBit "${firstBit})")
+#        string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
+#        string(FIND "${lastBit}" "else()" elseBit)
+#        string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
+#        set(outvar "${firstBit}\n${finally}")
+#    endif()
 
 
 ## In development (monorepo) include the build-tree export of module FILE_SET mappings.

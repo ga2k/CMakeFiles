@@ -71,6 +71,14 @@ else ()
 endif ()
 msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 
+# Early Christmas present.
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+        ${cmake_root}/templates/WX_Helper.cmake.in
+        "${OUTPUT_DIR}/WX_Helper.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+)
+
 fetchContents(
         PREFIX HS
         FEATURES ${APP_FEATURES}
