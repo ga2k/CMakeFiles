@@ -48,6 +48,7 @@ msg("WTF IS GOING ON")
                 set(_wxIncludePaths "${_wxIncludePaths}" PARENT_SCOPE)
                 set_property(TARGET "${t}" APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${local_includes}")
             endif ()
+            msg("TARGET ${t} has ${_raw_includes}")
         endif ()
 
         if(NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
