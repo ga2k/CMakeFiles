@@ -339,10 +339,7 @@ function(fetchContents)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
 
                 foreach(flag IN LISTS this_flags)
-                    if(flag STREQUAL "F_EARLY_MAKEAVAILABLE")
-                        set(apf_EARLY_MAKEAVAILABLE ON)
-                        break()
-                    endif ()
+                    set(apf_${flag} ON)
                 endforeach ()
 
                 # ==========================================================================================================
@@ -665,6 +662,7 @@ function(fetchContents)
 
     processFeatures(unifiedFeatures resolvedNames )
     propegateUpwards("Finally" OFF)
+
 endfunction()
 
 macro(propegateUpwards whereWeAre REPORT)

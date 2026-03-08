@@ -26,7 +26,8 @@ function(addGfxFeatures dry_run)
     addPackageData(PLUGIN   FEATURE "PRINT"       PKGNAME "Print"         METHOD "IGNORE" DRY_RUN ${dry_run})
     addPackageData(OPTIONAL FEATURE "GUI"         PKGNAME "wxWidgets"     METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dry_run})
+            ARG REQUIRED DRY_RUN ${dry_run}
+            FLAGS ADD_TO_LIBRARY)
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft" DEFAULT 1
             ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dry_run})

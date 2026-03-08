@@ -1,41 +1,35 @@
 ########################################################################################################################
 function(createStandardPackageData dryRun)
 
-    # 0         1          2            3      4        5                6                       7          8                                            9                        10
-    # FEATURE | PKGNAME | [NAMESPACE] | KIND | METHOD | URL or SRCDIR | [GIT_TAG] or BUILDDIR | [INCDIR] | [COMPONENT [COMPONENT [ COMPONENT ... ]]]  | [ARG [ARG [ARG ... ]]] | [PREREQ | [PREREQ | [PREREQ ... ]]]
+    # 0         1         2            3           4      5        6     7          8         9        10         11       12                                        13                     14                                  15
+    # FEATURE | PKGNAME | IS_DEFAULT | NAMESPACE | KIND | METHOD | URL | GIT_REPO | GIT_TAG | SRCDIR | BUILDDIR | INCDIR | COMPONENT [COMPONENT [ COMPONENT ... ]] | ARG [ARG [ARG ... ]] | PREREQ | [PREREQ | [PREREQ ... ]] | FLAGS
 
-    #   [1] FEATURE is the name of a group of package alternatives (eg BOOST)
-    #   [2] PKGNAME is the individual package name (eg Boost)
+    #   [0] FEATURE is the name of a group of package alternatives (eg BOOST)
+    #   [1] PKGNAME is the individual package name (eg Boost)
+    #   [2] IS_DEFAULT 0 if PKGNAME is NOT the default package for FEATURE, 1 if PKGNAME IS the default package
     #   [3] NAMESPACE is the namespace the library lives in, if any (eg GTest)  or empty
     #   [4] KIND is one of LIBRARY / SYSTEM / OPTIONAL
-    #   [5] METHOD is the method of retrieving package. Can be FETCH for Fetch_Contents, FIND for find_package, or PROCESS
+    #   [5] METHOD is the method of retrieving package. Can be FETCH_CONTENT for Fetch_Contents, FIND_PACKAGE for find_package, or PROCESS
     #       If METHOD=PROCESS, when their turn comes, only ${cmake_root}/handlers/<pkgname>/process.cmake
     #       will be run and the rest of the handling skipped. No other fields are nessessary, leave them empty
-    #
-    #   [6] One or the other of
-    #       ----------------------------------------------------------------------------------------------------
-    #       GIT_REPOSITORY is the git url where the package can be found
-    #       URL is the location of a .zip, .tar, or .gz file, either remote or local
-    #       ----------------------------------------------------------------------------------------------------
-    #   or
-    #       ----------------------------------------------------------------------------------------------------
-    #       SRCDIR is the source directory if you have manually downloaded the source for the
+    #   [6] URL is the location of a .zip, .tar, or .gz file, either remote or local
+    #   [7] GIT_REPO is the git url where the package can be found
+    #   [8] GIT_TAG     for identifying which git branch/tag to retrieve, OR
+    #   [9] SRCDIR is the source directory if you have manually downloaded the source for the
     #       package and aren't using FetchContent to get it. Format the entry like :-
     #       [SRC]/path/to/folder        [SRC] will be replaced by the directory
     #                                   ${EXTERNALS_DIR}
     #       or
     #       [BUILD]/path/to/folder      [BUILD] will be replaced by the directory
     #                                   ${BUILD_DIR}/_deps
-    #       ----------------------------------------------------------------------------------------------------
-    #   [7] GIT_TAG     for identifying which git branch/tag to retrieve, OR
-    #       BUILDDIR    is the build directory if you have manually downloaded the source. Format as SRCDIR
-    #
-    #   [8] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
-    #
-    #   [9] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
-    #  [10] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
-    #
-    #  [11] PREREQ [PREREQ [PREREQ [...]]] Space separated list of FEATURES that must be loaded first
+    #  [10] BUILDDIR is the build directory if you have manually downloaded the source. Format as SRCDIR
+    #  [11] INCDIR the include folder if it can't be automatically found, or empty if not needed. Format as SRCDIR
+    #  [12] COMPONENT [COMPONENT [COMPONENT] [...]]] Space separated list of components, or empty if none
+    #  [13] ARG [ARG [ARG [...]]] Space separated list of arguments for FIND_PACKAGE_OVERRIDE, or empty if none
+    #  [14] PREREQ [PREREQ [PREREQ [...]]] Space separated list of FEATURES that must be loaded first
+    #  [15] FLAGS. Available flags are  Flag                    Use
+    #                                   EARLY_MAKEAVAILABLE     FetchContent_MakeAvailable() immediately after _Declare()
+    #                                   ADD_TO_LIBRARY          Add non-SYSTEM package to library
     #
     #   [, ...] More packages in the same feature, if any
     #

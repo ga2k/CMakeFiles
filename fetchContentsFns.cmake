@@ -24,7 +24,7 @@ set(FIXPrereqs      14)
 set(FIXFlags        15)
 math(EXPR FIXLength "${FIXFlags} + 1")
 
-set(APD_ALLOWABLE_FLAGS "F_EARLY_MAKEAVAILABLE")
+set(APD_ALLOWABLE_FLAGS EARLY_MAKEAVAILABLE ADD_TO_LIBRARY)
 
 CREATE(TABLE tbl_LongestStrings
     COLUMNS (longest)
@@ -38,6 +38,8 @@ function(addTargetProperties target pkgname addToLists)
     unset(at_DependenciesList)
     unset(at_LibraryPathsList)
     unset(at_IncludePathsList)
+
+    SELECT(Flags AS flags Kind AS kind FROM unifiedFeatures WHERE PackageName = ${pkgname})
 
     msg("addTargetProperties called for '${target}'")
     get_target_property(_aliasTarget ${target} ALIASED_TARGET)
@@ -82,7 +84,9 @@ function(addTargetProperties target pkgname addToLists)
 
     if (addToLists)
         list(APPEND at_LibrariesList    ${target})
-        list(APPEND at_DependenciesList ${target})
+        if(kind STREQUAL SYSTEM OR ADD_TO_LIBRARY IN_LIST flags)
+            list(APPEND at_DependenciesList ${target})
+        endif ()
         list(APPEND at_LibraryPathsList ${OUTPUT_DIR}/lib)
         list(APPEND at_IncludePathsList ${_IncludePathsList})
 
@@ -965,27 +969,6 @@ function(scanLibraryTargets packageData libName packageNames)
                 endwhile ()
             endforeach ()
         endforeach ()
-
-
-
-
-
-        if(targetName STREQUAL "HoffSoft::Gfx")
-            get_target_property(incs HoffSoft::wxWidgets INTERFACE_INCLUDE_DIRECTORIES)
-            if (incs)
-                msg("HoffSoft:wxWidgets has these include dirs")
-                msg("${incs}")
-            else ()
-                msg("HoffSoft:wxWidgets has no include dirs")
-            endif ()
-        endif ()
-
-
-
-
-
-
-
     endif ()
     set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
 
