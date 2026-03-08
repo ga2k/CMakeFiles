@@ -236,7 +236,8 @@ foreach(pkg IN LISTS _hs_install_targets)
         install(DIRECTORY "${BUILD_DIR}/${pkglc}-build/lib/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT Staging)
-            # /home/geoffrey/dev/stage/usr/local/lib64/wx/lib/include/qt-unicode-3.3/wx/setup.h
+            # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
+            # /home/geoffrey/dev/stage/usr/local/include/wx-3.3
             # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"
             #                                          wx/include/qt-unicode-3.3/wx/setup.h
     endif ()
