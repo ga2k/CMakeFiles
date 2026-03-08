@@ -223,6 +223,7 @@ function(addPackageData)
         list(APPEND APD_PREREQS ${APD_PREREQ})
     endif ()
 
+    set(flags "")
     foreach (flag IN LISTS APD_FLAGS)
         if (NOT flag IN_LIST APD_ALLOWABLE_FLAGS)
             msg(ALWAYS WARNING "addPackageData(${flag}): Unknown FLAG value \"${flag}\" removed from ${APD_FEATURE}/${APD_PKGNAME}")
@@ -377,7 +378,7 @@ function(addPackageData)
                 "${out_object}"
                 "${out_subject_prep}" "${out_subject}"
                 "${out_item_prep}" "${out_item}"
-                "${out_template}" ${APD_DRY_RUN})
+                "${out_template}" "${APD_DRY_RUN}")
 
     endfunction()
 
