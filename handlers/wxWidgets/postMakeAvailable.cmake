@@ -46,7 +46,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
                 endforeach ()
                 list(REMOVE_DUPLICATES local_includes)
 
-                msg(ALWAYS ""${t}": Setting it to \"${local_includes}\"")
+                msg(ALWAYS "\"${t}\": Setting it to \"${local_includes}\"")
                 list(APPEND _wxIncludePaths "${local_includes}")
                 set(_wxIncludePaths "${_wxIncludePaths}" PARENT_SCOPE)
                 set_property(TARGET "${t}" APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${local_includes}")
