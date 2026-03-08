@@ -20,7 +20,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
     message(STATUS "wx targets: ${_wx_targets}")
 
     foreach(t IN LISTS _wx_targets)
-
+msg("WTF IS GOING ON")
         get_target_property(type "${t}" TYPE)
         if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "SHARED_LIBRARY")
             msg("get_target_property(_raw_includes \"${t}\" INTERFACE_INCLUDE_DIRECTORIES)")
