@@ -311,7 +311,7 @@ add_dependencies(${APP_NAME} ${APP_NAME}Config)
 # We prepared one earlier
 configure_package_config_file(
         ${cmake_root}/templates/WX_Helper.cmake.in
-        "${OUTPUT_DIR}/WX_Helper.cmake"
+        "$ENV{TMP}/WX_Helper.cmake"
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")

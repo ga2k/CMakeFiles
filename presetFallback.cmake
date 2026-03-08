@@ -16,11 +16,11 @@
 macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
 
     # --- Validate arguments ---
-    if(NOT ARG_BUILD_TYPE STREQUAL "Debug" AND NOT ARG_BUILD_TYPE STREQUAL "Release")
-        message(FATAL_ERROR "fixPresetMess: ARG_BUILD_TYPE must be 'Debug' or 'Release', got '${ARG_BUILD_TYPE}'")
+    if(NOT ${ARG_BUILD_TYPE} STREQUAL "Debug" AND NOT ${ARG_BUILD_TYPE} STREQUAL "Release")
+        message(FATAL_ERROR "fixPresetMess: ${ARG_BUILD_TYPE} must be 'Debug' or 'Release', got '${ARG_BUILD_TYPE}'")
     endif()
-    if(NOT ARG_LINK_TYPE STREQUAL "Shared" AND NOT ARG_LINK_TYPE STREQUAL "Static")
-        message(FATAL_ERROR "fixPresetMess: ARG_LINK_TYPE must be 'Shared' or 'Static', got '${ARG_LINK_TYPE}'")
+    if(NOT ${ARG_LINK_TYPE} STREQUAL "Shared" AND NOT ${ARG_LINK_TYPE} STREQUAL "Static")
+        message(FATAL_ERROR "fixPresetMess: ${ARG_LINK_TYPE} must be 'Shared' or 'Static', got '${ARG_LINK_TYPE}'")
     endif()
 
     # --- Compute paths from arguments (mirrors preset inheritance) ---
@@ -87,15 +87,15 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
 
         # --- PARENT_SCOPE vars (mirror of the above for callers) ---
-        set(hostType   "macOS"            PARENT_SCOPE)
-        set(hostPath   "/macos"           PARENT_SCOPE)
-        set(archType   "arm64"            PARENT_SCOPE)
-        set(archPath   "/arm64"           PARENT_SCOPE)
-        set(buildType  "${ARG_BUILD_TYPE}" PARENT_SCOPE)
-        set(buildPath  "${_buildPath}"     PARENT_SCOPE)
-        set(linkType   "${ARG_LINK_TYPE}"  PARENT_SCOPE)
-        set(linkPath   "${_linkPath}"      PARENT_SCOPE)
-        set(stemPath   "${_stemPath}"      PARENT_SCOPE)
+        set(hostType   "macOS"            ) #PARENT_SCOPE)
+        set(hostPath   "/macos"           ) #PARENT_SCOPE)
+        set(archType   "arm64"            ) #PARENT_SCOPE)
+        set(archPath   "/arm64"           ) #PARENT_SCOPE)
+        set(buildType  "${ARG_BUILD_TYPE}" ) #PARENT_SCOPE)
+        set(buildPath  "${_buildPath}"     ) #PARENT_SCOPE)
+        set(linkType   "${ARG_LINK_TYPE}"  ) #PARENT_SCOPE)
+        set(linkPath   "${_linkPath}"      ) #PARENT_SCOPE)
+        set(stemPath   "${_stemPath}"      ) #PARENT_SCOPE)
 
     # ------------------------------------------------------------------
     # Windows  –  inherits: Windows (Ninja/LLVM) + ${ARG_BUILD_TYPE} + ${ARG_LINK_TYPE}
@@ -143,15 +143,15 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
 
         # --- PARENT_SCOPE vars ---
-        set(hostType   "Windows"           PARENT_SCOPE)
-        set(hostPath   "/winllvm"          PARENT_SCOPE)
-        set(archType   "x64"               PARENT_SCOPE)
-        set(archPath   "/x64"              PARENT_SCOPE)
-        set(buildType  "${ARG_BUILD_TYPE}" PARENT_SCOPE)
-        set(buildPath  "${_buildPath}"     PARENT_SCOPE)
-        set(linkType   "${ARG_LINK_TYPE}"  PARENT_SCOPE)
-        set(linkPath   "${_linkPath}"      PARENT_SCOPE)
-        set(stemPath   "${_stemPath}"      PARENT_SCOPE)
+        set(hostType   "Windows"           ) #PARENT_SCOPE)
+        set(hostPath   "/winllvm"          ) #PARENT_SCOPE)
+        set(archType   "x64"               ) #PARENT_SCOPE)
+        set(archPath   "/x64"              ) #PARENT_SCOPE)
+        set(buildType  "${ARG_BUILD_TYPE}" ) #PARENT_SCOPE)
+        set(buildPath  "${_buildPath}"     ) #PARENT_SCOPE)
+        set(linkType   "${ARG_LINK_TYPE}"  ) #PARENT_SCOPE)
+        set(linkPath   "${_linkPath}"      ) #PARENT_SCOPE)
+        set(stemPath   "${_stemPath}"      ) #PARENT_SCOPE)
 
     # ------------------------------------------------------------------
     # Linux  –  inherits: Linux + ${ARG_BUILD_TYPE} + ${ARG_LINK_TYPE}
@@ -189,19 +189,18 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
 
         # --- PARENT_SCOPE vars ---
-        set(hostType   "Linux"             PARENT_SCOPE)
-        set(hostPath   "/linux"            PARENT_SCOPE)
-        set(archType   "x64"               PARENT_SCOPE)
-        set(archPath   "/x64"              PARENT_SCOPE)
-        set(buildType  "${ARG_BUILD_TYPE}" PARENT_SCOPE)
-        set(buildPath  "${_buildPath}"     PARENT_SCOPE)
-        set(linkType   "${ARG_LINK_TYPE}"  PARENT_SCOPE)
-        set(linkPath   "${_linkPath}"      PARENT_SCOPE)
-        set(stemPath   "${_stemPath}"      PARENT_SCOPE)
+        set(hostType   "Linux"             ) #PARENT_SCOPE)
+        set(hostPath   "/linux"            ) #PARENT_SCOPE)
+        set(archType   "x64"               ) #PARENT_SCOPE)
+        set(archPath   "/x64"              ) #PARENT_SCOPE)
+        set(buildType  "${ARG_BUILD_TYPE}" ) #PARENT_SCOPE)
+        set(buildPath  "${_buildPath}"     ) #PARENT_SCOPE)
+        set(linkType   "${ARG_LINK_TYPE}"  ) #PARENT_SCOPE)
+        set(linkPath   "${_linkPath}"      ) #PARENT_SCOPE)
+        set(stemPath   "${_stemPath}"      ) #PARENT_SCOPE)
 
     else()
         message(WARNING "fixPresetMess: unrecognised host platform '${CMAKE_HOST_SYSTEM_NAME}' – no variables set.")
     endif()
 
-    file(MAKE_DIRECTORY ")
 endmacro()
