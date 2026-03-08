@@ -233,10 +233,12 @@ foreach(pkg IN LISTS _hs_install_targets)
     if (WX_SETUP_H)
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_H}"   PATH)
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
-        install(DIRECTORY "${BUILD_DIR}/${pkglc}-build/lib/${WX_SETUP_DIR}"
+        install(DIRECTORY "${BUILD_DIR}/${pkglc}-build/lib"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT Staging)
-        # home/geoffrey/dev/stage/usr/local/include/wx/include/qt-unicode-3.3/qt-unicode-3.3/wx/setup.h
+            # /home/geoffrey/dev/stage/usr/local/lib64/qt-unicode-3.3/wx
+            # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"
+            # wx/include/qt-unicode-3.3/wx/setup.h
     endif ()
     if (EXISTS "${${pkglc}_INCLUDE_DIR}")
         set(include_dir "${${pkglc}_INCLUDE_DIR}")
