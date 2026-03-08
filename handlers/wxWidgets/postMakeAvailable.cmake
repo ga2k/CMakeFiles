@@ -21,11 +21,11 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
     foreach(t IN LISTS _wx_targets)
         get_target_property(type "${t}" TYPE)
+            msg("${t}")
             get_target_property(_raw_includes "${t}" INTERFACE_INCLUDE_DIRECTORIES)
             if (NOT _raw_includes)
                 if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "SHARED_LIBRARY")
                     set(_wx_incs "${sourceDir}/include/wx")
-    #
                     file(GLOB_RECURSE _wx_setup_incs  LIST_DIRECTORIES true "${_wx_incs}")
                     foreach(inc IN LISTS _wx_setup_incs) # _wx_setup_incs)
                         if(IS_DIRECTORY "${inc}")
