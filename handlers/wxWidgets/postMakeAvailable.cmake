@@ -23,7 +23,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
         get_target_property(type "${t}" TYPE)
         if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "SHARED_LIBRARY")
-            msg("get_target_property(_raw_includes \"${t}"\ INTERFACE_INCLUDE_DIRECTORIES)")
+            msg("get_target_property(_raw_includes \"${t}\" INTERFACE_INCLUDE_DIRECTORIES)")
             get_target_property(_raw_includes "${t}" INTERFACE_INCLUDE_DIRECTORIES)
             if (NOT _raw_includes)
                 msg(ALWAYS "\"${t}\": No INTERFACE_INCLUDE_DIRECTORIES for \"${t}\" yet.")
