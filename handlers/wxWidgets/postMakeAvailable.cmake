@@ -19,50 +19,29 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
     _collect_targets_recursive("${buildDir}" _wx_targets)
     message(STATUS "wx targets: ${_wx_targets}")
 
-    set(_pass_separator "Just wait a cotton picking minute")
-    set(_skippidy_do_dah OFF)
-
-    foreach(t IN LISTS _wx_targets _pass_separator _wx_targets) # I'm seeing double! Four Krustys!
-        if(t STREQUAL _pass_separator)
-            set(_skippidy_do_dah ON)
-            continue()
-        endif ()
+    foreach(t IN LISTS _wx_targets)
 
         get_target_property(type "${t}" TYPE)
         if(type STREQUAL "INTERFACE_LIBRARY" OR type STREQUAL "SHARED_LIBRARY")
             msg("get_target_property(_raw_includes \"${t}\" INTERFACE_INCLUDE_DIRECTORIES)")
             get_target_property(_raw_includes "${t}" INTERFACE_INCLUDE_DIRECTORIES)
 
-            # Pick up some includes on the first pass
-            if(NOT _skippidy_do_dah AND _raw_includes)
+            if (NOT _raw_includes)
 
-                list(APPEND local_includes "${_raw_includes}")
+                set (local_includes "$<BUILD_INTERFACE:/home/geoffrey/dev/projects/MCA/Gfx/build/debug/shared/_deps/wxwidgets-build/lib/wx/include/qt-unicode-3.3>;$<BUILD_INTERFACE:/home/geoffrey/dev/projects/MCA/Gfx/external/debug/shared/wxWidgets/include>;$<INSTALL_INTERFACE:lib64/wx/include/qt-unicode-3.3>;$<INSTALL_INTERFACE:include/wx-3.3>")
+                msg(ALWAYS "\"${t}\": No INTERFACE_INCLUDE_DIRECTORIES for \"${t}\" yet.")
+                set(_wx_incs "${sourceDir}/include/wx" "${EXTERNALS_DIR}/include/wx")
+
+                foreach(inc IN LISTS _wx_incs _wx_setup_incs)
+                    if(IS_DIRECTORY "${inc}")
+                        if (inc MATCHES ".*wx$")
+                            get_filename_component(inc "${inc}" PATH)
+                            list(APPEND local_includes "$<BUILD_INTERFACE:${inc}>")
+                        endif ()
+                    endif ()
+                endforeach ()
                 list(REMOVE_DUPLICATES local_includes)
 
-            # Bung'em'in in the second
-            elseif (_skippidy_do_dah AND NOT _raw_includes)
-
-#                set (local_includes "$<BUILD_INTERFACE:/home/geoffrey/dev/projects/MCA/Gfx/build/debug/shared/_deps/wxwidgets-build/lib/wx/include/qt-unicode-3.3>;$<BUILD_INTERFACE:/home/geoffrey/dev/projects/MCA/Gfx/external/debug/shared/wxWidgets/include>;$<INSTALL_INTERFACE:lib64/wx/include/qt-unicode-3.3>;$<INSTALL_INTERFACE:include/wx-3.3>")
-#                msg(ALWAYS "\"${t}\": No INTERFACE_INCLUDE_DIRECTORIES for \"${t}\" yet.")
-#                set(_wx_incs "${sourceDir}/include/wx" "${EXTERNALS_DIR}/include/wx")
-#                set(_wx_setup_inc "${buildDir}/lib/wx/include")
-#
-#                file(GLOB_RECURSE _wx_setup_incs  RELATIVE ${buildDir}/lib LIST_DIRECTORIES false "${_wx_setup_inc}/**/setup.h")
-#
-#                foreach(inc IN LISTS _wx_incs _wx_setup_incs)
-#                    if(IS_DIRECTORY "${inc}")
-#                        if (inc MATCHES ".*wx$")
-#                            get_filename_component(inc "${inc}" PATH)
-#                            list(APPEND local_includes "$<BUILD_INTERFACE:${inc}>")
-#                        endif ()
-#                    elseif (inc MATCHES ".*setup.h$")
-#                        get_filename_component(inc "${inc}" PATH)
-#                        get_filename_component(inc "${inc}" PATH)
-#                        list(APPEND local_includes "$<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/${inc}>" "$<BUILD_INTERFACE:${EXTERNALS_DIR}/include/${inc}>")
-#                    endif ()
-#                endforeach ()
-#                list(REMOVE_DUPLICATES local_includes)
-#
                 msg(ALWAYS "\"${t}\": Setting it to \"${local_includes}\"")
                 list(APPEND _wxIncludePaths "${local_includes}")
                 list(REMOVE_DUPLICATES _wxIncludePaths)
@@ -71,9 +50,6 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
             endif ()
         endif ()
 
-        if(_skippidy_do_dah)
-            continue()
-        endif ()
         if(NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
             target_compile_options("${t}" PRIVATE -w)
         endif()
