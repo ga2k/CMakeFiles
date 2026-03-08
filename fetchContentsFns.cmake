@@ -83,10 +83,10 @@ function(addTargetProperties target pkgname addToLists)
     endif ()
 
     if (addToLists)
-        list(APPEND at_LibrariesList    ${target})
         if(kind STREQUAL SYSTEM OR ADD_TO_LIBRARY IN_LIST flags)
-            list(APPEND at_DependenciesList ${target})
+            list(APPEND at_LibrariesList    ${target})
         endif ()
+        list(APPEND at_DependenciesList ${target})
         list(APPEND at_LibraryPathsList ${OUTPUT_DIR}/lib)
         list(APPEND at_IncludePathsList ${_IncludePathsList})
 
