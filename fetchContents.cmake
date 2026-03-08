@@ -6,24 +6,26 @@ include(${cmake_root}/sqlish.cmake)
 
 macro(_initializeVars)
 
+    # @formatter:off
     set(FETCHCONTENT_QUIET OFF)
 
     set(_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList})
-    set(_DefinesList ${${AUE_PREFIX}_DefinesList})
-    set(_DependenciesList ${${AUE_PREFIX}_DependenciesList})
+    set(_DefinesList        ${${AUE_PREFIX}_DefinesList})
+    set(_DependenciesList   ${${AUE_PREFIX}_DependenciesList})
 
-    set(_IncludePathsList ${${AUE_PREFIX}_IncludePathsList})
-    set(_LibrariesList ${${AUE_PREFIX}_LibrariesList})
-    set(_LibraryPathsList ${${AUE_PREFIX}_LibraryPathsList})
-    set(_LinkOptionsList ${${AUE_PREFIX}_LinkOptionsList})
-    set(_PrefixPathsList ${${AUE_PREFIX}_PrefixPathsList})
+    set(_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList})
+    set(_LibrariesList      ${${AUE_PREFIX}_LibrariesList})
+    set(_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList})
+    set(_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList})
+    set(_PrefixPathsList    ${${AUE_PREFIX}_PrefixPathsList})
 
-    set(_wxCompilerOptions ${${AUE_PREFIX}_wxCompilerOptions})
-    set(_wxDefines ${${AUE_PREFIX}_wxDefines})
-    set(_wxFrameworks ${${AUE_PREFIX}_wxFrameworks})
-    set(_wxIncludePaths ${${AUE_PREFIX}_wxIncludePaths})
-    set(_wxLibraryPaths ${${AUE_PREFIX}_wxLibraryPaths})
-    set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
+    set(_wxCompilerOptions  ${${AUE_PREFIX}_wxCompilerOptions})
+    set(_wxDefines          ${${AUE_PREFIX}_wxDefines})
+    set(_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks})
+    set(_wxIncludePaths     ${${AUE_PREFIX}_wxIncludePaths})
+    set(_wxLibraryPaths     ${${AUE_PREFIX}_wxLibraryPaths})
+    set(_wxLibraries        ${${AUE_PREFIX}_wxLibraries})
+    # @formatter:on
 
     list(APPEND pseudoFeatures APPEARANCE PRINT LOGGER)
     list(APPEND noLibPackages googletest)
