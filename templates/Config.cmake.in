@@ -4,6 +4,10 @@
 
 include(CMakeFindDependencyMacro)
 
+if (@LINUX@ EQUAL true)
+    find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
+endif()
+
 if(${APP_TYPE} STREQUAL "Executable")
     set(TARGET_NAME ${APP_NAME})
 else()
