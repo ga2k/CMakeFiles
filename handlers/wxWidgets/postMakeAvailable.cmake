@@ -15,6 +15,7 @@ function(_collect_targets_recursive dir out)
 endfunction()
 
 function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
+    msg("sourceDir=${sourceDir},buildDir=${buildDir},outDir=${outDir},buildType=${buildType}")
     include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
     _collect_targets_recursive("${buildDir}" _wx_targets)
     message(STATUS "wx targets: ${_wx_targets}")
