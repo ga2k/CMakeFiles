@@ -433,10 +433,15 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
-                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    if(this_src)
+                                        set(use_src "${this_src}")
+                                    else ()
+                                        set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
+                                    endif ()
+                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${use_src} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
-                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                            SOURCE_DIR ${use_src}
                                             ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                             ${COMPONENTS_KEYWORD} ${this_find_package_components}
                                             ${GIT_TAG_KEYWORD} ${this_tag})

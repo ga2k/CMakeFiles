@@ -187,23 +187,20 @@ function(addPackageData)
     if (NOT APD_PKGNAME AND NOT APD_PLUGIN)
         msg(ALWAYS FATAL_ERROR "addPackageData: PKGNAME required")
     endif ()
-    if (
-    (APD_URL AND APD_GIT_REPOSITORY) OR
-    (APD_URL AND APD_SRCDIR) OR
-    (APD_GIT_REPOSITORY AND APD_SRCDIR)
-    )
-        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
+    if (    (APD_URL AND APD_GIT_REPOSITORY) OR
+            (APD_URL AND APD_SRCDIR))
+        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY allowed")
     endif ()
 
-    if (NOT APD_URL AND NOT APD_GIT_REPOSITORY AND NOT APD_SRCDIR AND APD_METHOD STREQUAL "FETCH_CONTENTS")
-        msg(ALWAYS FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR required")
+    if (NOT APD_URL AND NOT APD_GIT_REPOSITORY AND APD_METHOD STREQUAL "FETCH_CONTENTS")
+        msg(ALWAYS FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY required")
     endif ()
 
     if ((APD_GIT_REPOSITORY AND NOT APD_GIT_TAG) OR (NOT APD_GIT_REPOSITORY AND APD_GIT_TAG))
         msg(ALWAYS FATAL_ERROR "addPackageData: Neither or both GIT_REPOSITORY/GIT_TAG allowed")
     endif ()
 
-    if ((APD_URL AND APD_GIT_TAG) OR (APD_SRCDIR AND APD_GIT_TAG))
+    if (APD_URL AND APD_GIT_TAG)
         msg(ALWAYS FATAL_ERROR "addPackageData: GIT_TAG only allowed with GIT_REPOSITORY")
     endif ()
 
