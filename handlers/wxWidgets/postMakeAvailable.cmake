@@ -46,7 +46,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
             else ()
                 set(BranNeuDae "")
                 foreach(thing IN LISTS _raw_includes)
-                    if(thing MATCHES ".*wx-[0-9]+\\.[0-9]+>$")
+                    if(thing MATCHES "/wx-[0-9]+\\.[0-9]+")
                         msg("removing ${thing} from ${t}")
                     else ()
                         list(APPEND BranNeuDae "${thing}")
@@ -73,17 +73,6 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
             endif()
         endif()
     endforeach()
-
-
-
-
-
-
-
-
-
-
-
 
     wxWidgets_export_variables(wxWidgets)
 

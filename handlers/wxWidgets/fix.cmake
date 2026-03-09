@@ -2,6 +2,8 @@ include("${cmake_root}/tools.cmake")
 
 function(wxWidgets_fix target tag sourceDir)
 
+#    cmake_policy(SET CMP0111 OLD)
+
     if (NOT "${tag}" STREQUAL "master") # v4.0.3")
         message(FATAL_ERROR "Attempting to patch wrong version of ${target}")
     endif ()
