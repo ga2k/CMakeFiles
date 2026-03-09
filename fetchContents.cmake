@@ -259,7 +259,7 @@ function(fetchContents)
         string(REPEAT "─" ${usableCols} divider)
         set(divider "${BOLD}${WHITE}${divider}${NC}")
 
-        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
+        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}\n")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(combinedLibraryComponents)
@@ -274,7 +274,7 @@ function(fetchContents)
             set(phase ${pass_num})
             inc(phase)
 
-            msg("\n${divider}")
+            msg("${divider}")
             msg("${BOLD}${YELLOW_BG}${WHITE} ${APP_NAME}${phasePadding}Phase ${phase} ${NC}")
             msg("${divider}\n")
 
