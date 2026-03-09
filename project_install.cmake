@@ -222,44 +222,48 @@ foreach(pkg IN LISTS _hs_install_targets)
     # FetchContent sets <lowercaseName>_SOURCE_DIR
     string(TOLOWER "${pkg}" pkglc)
 
-    # 1. Bundle Headers
-    # Look in the source directory where FetchContent downloaded them
-    if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
-        install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
-                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
-                COMPONENT Development)
+    set(HANDLED OFF)
+    set(fn "${pkg}_installHeaders")
+    if (COMMAND "${fn}")
+        SELECT(SrcDir AS S BuildDir AS B FROM unifiedFeatures WHERE PackageName = ${pkg})
+        _hs_sql_field_to_user(S SRC_DIR)
+        if(NOT SRC_DIR)
+            set(SRC_DIR "${EXTERNALS_DIR}/${pkg}")
+        endif ()
+        _hs_sql_field_to_user(B BLD_DIR)
+        if(NOT BLD_DIR)
+            set(BLD_DIR "${BUILD_DIR}/${pkglc}-build")
+        endif ()
+        cmake_language(CALL "${fn}" "${pkg}" "${CMAKE_INSTALL_INCLUDEDIR}" "${SRC_DIR}" "${BLD_DIR}")
     endif ()
-    file(GLOB WX_SETUP_H DIRECTORIES false RELATIVE "${BUILD_DIR}/${pkglc}-build/lib" "${BUILD_DIR}/${pkglc}-build/lib/wx/include/*/wx/setup.h")
-    if (WX_SETUP_H)
-        get_filename_component(WX_SETUP_DIR "${WX_SETUP_H}"   PATH)
-        get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
-        install(DIRECTORY "${BUILD_DIR}/${pkglc}-build/lib/"
-                DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-                COMPONENT Staging)
-            # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
-            # /home/geoffrey/dev/stage/usr/local/include/wx-3.3
-            # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"
-            #                                          wx/include/qt-unicode-3.3/wx/setup.h
-    endif ()
-    if (EXISTS "${${pkglc}_INCLUDE_DIR}")
-        set(include_dir "${${pkglc}_INCLUDE_DIR}")
-    elseif (EXISTS "${${pkg}_INCLUDE_DIR}/include")
-        set(include_dir "${${pkg}_INCLUDE_DIR}")
-    elseif (EXISTS "${EXTERNALS_DIR}/${pkglc}/include")
-        set(include_dir "${EXTERNALS_DIR}/${pkglc}/include")
-    elseif (EXISTS "${${pkglc}_SOURCE_DIR}/include")
-        set(include_dir "${${pkglc}_SOURCE_DIR}/include")
-    elseif (EXISTS X)
-        set(include_dir "${${pkglc}_SOURCE_DIR}/include")
-    else ()
-        unset(include_dir)
-    endif ()
+    if(NOT HANDLED)
+        # 1. Bundle Headers
+        # Look in the source directory where FetchContent downloaded them
+        if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
+            install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
+                    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
+                    COMPONENT Development)
+        endif ()
+        if (EXISTS "${${pkglc}_INCLUDE_DIR}")
+            set(include_dir "${${pkglc}_INCLUDE_DIR}")
+        elseif (EXISTS "${${pkg}_INCLUDE_DIR}/include")
+            set(include_dir "${${pkg}_INCLUDE_DIR}")
+        elseif (EXISTS "${EXTERNALS_DIR}/${pkglc}/include")
+            set(include_dir "${EXTERNALS_DIR}/${pkglc}/include")
+        elseif (EXISTS "${${pkglc}_SOURCE_DIR}/include")
+            set(include_dir "${${pkglc}_SOURCE_DIR}/include")
+        elseif (EXISTS X)
+            set(include_dir "${${pkglc}_SOURCE_DIR}/include")
+        else ()
+            unset(include_dir)
+        endif ()
 
-    if(include_dir)
-        install(DIRECTORY "${include_dir}/"
-                   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
-                   COMPONENT Development)
-    endif()
+        if(include_dir)
+            install(DIRECTORY "${include_dir}/"
+                       DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
+                       COMPONENT Development)
+        endif()
+    endif ()
 
     # 2. Bundle Compiled Binaries (Static/Shared Libs)
     # Compiled libs usually land in the BINARY_DIR (build tree)
