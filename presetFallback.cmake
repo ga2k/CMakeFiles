@@ -10,25 +10,57 @@
 #   endif()
 #
 # Arguments:
+#   ARG_HOST_TYPE   - "Linux" "macOS" "Windows" "WinX"
 #   ARG_BUILD_TYPE  – "Debug" or "Release"
 #   ARG_LINK_TYPE   – "Shared" or "Static"
 
-macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
+macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
 
     # --- Validate arguments ---
-    if(NOT ${ARG_BUILD_TYPE} STREQUAL "Debug" AND NOT ${ARG_BUILD_TYPE} STREQUAL "Release")
-        message(FATAL_ERROR "fixPresetMess: ${ARG_BUILD_TYPE} must be 'Debug' or 'Release', got '${ARG_BUILD_TYPE}'")
+    if(NOT ${ARG_HOST_TYPE} MATCHES "Linux" AND NOT ${ARG_HOST_TYPE} MATCHES "MacOS"
+        AND NOT ${ARG_HOST_TYPE} MATCHES "Windows" AND NOT ${ARG_HOST_TYPE} MATCHES "WinX"
+    )
+        message(FATAL_ERROR "fixPresetMess: \"ARG_HOST_TYPE\" must be 'Linux', ''MacOS', ''Windows', or ''WinX', got '${ARG_BUILD_TYPE}'")
     endif()
-    if(NOT ${ARG_LINK_TYPE} STREQUAL "Shared" AND NOT ${ARG_LINK_TYPE} STREQUAL "Static")
-        message(FATAL_ERROR "fixPresetMess: ${ARG_LINK_TYPE} must be 'Shared' or 'Static', got '${ARG_LINK_TYPE}'")
+    if(NOT ${ARG_BUILD_TYPE} MATCHES "Debug" AND NOT ${ARG_BUILD_TYPE} MATCHES "Release")
+        message(FATAL_ERROR "fixPresetMess: \"ARG_BUILD_TYPE\" must be 'Debug' or 'Release', got '${ARG_BUILD_TYPE}'")
+    endif()
+    if(NOT ${ARG_LINK_TYPE} MATCHES "Shared" AND NOT ${ARG_LINK_TYPE} MATCHES "Static")
+        message(FATAL_ERROR "fixPresetMess: \"ARG_LINK_TYPE\" must be 'Shared' or 'Static', got '${ARG_LINK_TYPE}'")
     endif()
 
     # --- Compute paths from arguments (mirrors preset inheritance) ---
-    string(TOLOWER "${ARG_BUILD_TYPE}" _buildPathSuffix)   # "debug" or "release"
-    string(TOLOWER "${ARG_LINK_TYPE}"  _linkPathSuffix)    # "shared" or "static"
-    set(_buildPath "/${_buildPathSuffix}")                 # e.g. /debug
-    set(_linkPath  "/${_linkPathSuffix}")                  # e.g. /shared
-    set(_stemPath  "${_buildPath}${_linkPath}")            # e.g. /debug/shared
+    string(TOLOWER "${ARG_HOST_TYPE}"  _hostPathSuffix)     # as above
+    string(TOLOWER "${ARG_BUILD_TYPE}" _buildPathSuffix)    # "debug" or "release"
+    string(TOLOWER "${ARG_LINK_TYPE}"  _linkPathSuffix)     # "shared" or "static"
+
+    set(_hostPath  "/${_hostPathSuffix}")                   # e.g. /linux
+    set(_buildPath "/${_buildPathSuffix}")                  # e.g. /debug
+    set(_linkPath  "/${_linkPathSuffix}")                   # e.g. /shared
+    set(_stemPath  "${_hostPath}${_buildPath}${_linkPath}") # e.g. /linux//debug/shared
+
+    # --- ENV vars (host type) ---
+    set(ENV{hostPath}   "${_hostPath}")
+    set(ENV{hostType}   "${ARG_HOST_TYPE}")
+
+    # --- ENV vars (build type) ---
+    set(ENV{buildType}  "${ARG_BUILD_TYPE}")
+    set(ENV{buildPath}  "${_buildPath}")
+
+    # --- ENV vars (build type) ---
+    set(ENV{buildType}  "${ARG_BUILD_TYPE}")
+    set(ENV{buildPath}  "${_buildPath}")
+
+    # --- ENV vars (link type) ---
+    set(ENV{linkType}   "${ARG_LINK_TYPE}")
+    set(ENV{linkPath}   "${_linkPath}")
+
+    # --- Derived ENV (binaryDir / stemPath equivalent) ---
+    set(ENV{stemPath}   "${_stemPath}")   # $buildPath$linkPath
+
+    # --- CACHE vars (build/link type) ---
+    set(buildType       "${ARG_BUILD_TYPE}" CACHE STRING "" FORCE)
+    set(linkType        "${ARG_LINK_TYPE}"  CACHE STRING "" FORCE)
 
     get_filename_component(_b "${cmake_root}/../build/${_stemPath}"    ABSOLUTE)
     get_filename_component(_o "${cmake_root}/../out/${_stemPath}"      ABSOLUTE)
@@ -44,22 +76,9 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
 
         # --- ENV vars (macOS base) ---
-        set(ENV{hostType}   "macOS")
-        set(ENV{hostPath}   "/macos")
         set(ENV{archType}   "arm64")
         set(ENV{archPath}   "/arm64")
         set(ENV{CMAKE_NINJA_FLAGS} "-k 0")
-
-        # --- ENV vars (build type) ---
-        set(ENV{buildType}  "${ARG_BUILD_TYPE}")
-        set(ENV{buildPath}  "${_buildPath}")
-
-        # --- ENV vars (link type) ---
-        set(ENV{linkType}   "${ARG_LINK_TYPE}")
-        set(ENV{linkPath}   "${_linkPath}")
-
-        # --- Derived ENV (binaryDir / stemPath equivalent) ---
-        set(ENV{stemPath}   "${_stemPath}")   # $buildPath$linkPath
 
         # --- CACHE vars (macOS base) ---
         set(CMAKE_C_COMPILER        "/opt/homebrew/opt/llvm/bin/clang"   CACHE STRING "" FORCE)
@@ -79,23 +98,9 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(OPENSSL_SSL_LIBRARY     "/opt/local/lib/openssl-3/libssl.dylib"                   CACHE FILEPATH "" FORCE)
         set(BUILD_WX_FROM_SOURCE    "ON"                                 CACHE BOOL   "" FORCE)
 
-        # --- CACHE vars (build/link type) ---
-        set(buildType  "${ARG_BUILD_TYPE}" CACHE STRING "" FORCE)
-        set(linkType   "${ARG_LINK_TYPE}"  CACHE STRING "" FORCE)
-
-        # --- CACHE var (stemPath – set by the named preset itself) ---
-        set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
-
         # --- PARENT_SCOPE vars (mirror of the above for callers) ---
-        set(hostType   "macOS"            ) #PARENT_SCOPE)
-        set(hostPath   "/macos"           ) #PARENT_SCOPE)
-        set(archType   "arm64"            ) #PARENT_SCOPE)
-        set(archPath   "/arm64"           ) #PARENT_SCOPE)
-        set(buildType  "${ARG_BUILD_TYPE}" ) #PARENT_SCOPE)
-        set(buildPath  "${_buildPath}"     ) #PARENT_SCOPE)
-        set(linkType   "${ARG_LINK_TYPE}"  ) #PARENT_SCOPE)
-        set(linkPath   "${_linkPath}"      ) #PARENT_SCOPE)
-        set(stemPath   "${_stemPath}"      ) #PARENT_SCOPE)
+        set(archType   "arm64" )
+        set(archPath   "/arm64")
 
     # ------------------------------------------------------------------
     # Windows  –  inherits: Windows (Ninja/LLVM) + ${ARG_BUILD_TYPE} + ${ARG_LINK_TYPE}
@@ -103,22 +108,9 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 
         # --- ENV vars (Windows base) ---
-        set(ENV{hostType}   "Windows")
-        set(ENV{hostPath}   "/winllvm")
         set(ENV{archType}   "x64")
         set(ENV{archPath}   "/x64")
         set(ENV{CMAKE_NINJA_FLAGS} "-k 0")
-
-        # --- ENV vars (build type) ---
-        set(ENV{buildType}  "${ARG_BUILD_TYPE}")
-        set(ENV{buildPath}  "${_buildPath}")
-
-        # --- ENV vars (link type) ---
-        set(ENV{linkType}   "${ARG_LINK_TYPE}")
-        set(ENV{linkPath}   "${_linkPath}")
-
-        # --- Derived ENV ---
-        set(ENV{stemPath}   "${_stemPath}")
 
         # --- CACHE vars (Windows base) ---
         set(BUILD_WX_FROM_SOURCE "ON" CACHE BOOL "" FORCE)
@@ -135,23 +127,8 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(CMAKE_SYSTEM_NAME      "Windows" CACHE STRING "" FORCE)
         set(CMAKE_SYSTEM_PROCESSOR "AMD64"   CACHE STRING "" FORCE)
 
-        # --- CACHE vars (build/link type) ---
-        set(buildType  "${ARG_BUILD_TYPE}" CACHE STRING "" FORCE)
-        set(linkType   "${ARG_LINK_TYPE}"  CACHE STRING "" FORCE)
-
-        # --- CACHE var (stemPath) ---
-        set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
-
-        # --- PARENT_SCOPE vars ---
-        set(hostType   "Windows"           ) #PARENT_SCOPE)
-        set(hostPath   "/winllvm"          ) #PARENT_SCOPE)
-        set(archType   "x64"               ) #PARENT_SCOPE)
-        set(archPath   "/x64"              ) #PARENT_SCOPE)
-        set(buildType  "${ARG_BUILD_TYPE}" ) #PARENT_SCOPE)
-        set(buildPath  "${_buildPath}"     ) #PARENT_SCOPE)
-        set(linkType   "${ARG_LINK_TYPE}"  ) #PARENT_SCOPE)
-        set(linkPath   "${_linkPath}"      ) #PARENT_SCOPE)
-        set(stemPath   "${_stemPath}"      ) #PARENT_SCOPE)
+        set(archType   "x64" )
+        set(archPath   "/x64")
 
     # ------------------------------------------------------------------
     # Linux  –  inherits: Linux + ${ARG_BUILD_TYPE} + ${ARG_LINK_TYPE}
@@ -159,34 +136,14 @@ macro(fixPresetMess ARG_BUILD_TYPE ARG_LINK_TYPE)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 
         # --- ENV vars (Linux base) ---
-        set(ENV{hostType}   "Linux")
-        set(ENV{hostPath}   "/linux")
         set(ENV{archType}   "x64")
         set(ENV{archPath}   "/x64")
         set(ENV{CMAKE_NINJA_FLAGS} "-k 0")
-
-        # --- ENV vars (build type) ---
-        set(ENV{buildType}  "${ARG_BUILD_TYPE}")
-        set(ENV{buildPath}  "${_buildPath}")
-
-        # --- ENV vars (link type) ---
-        set(ENV{linkType}   "${ARG_LINK_TYPE}")
-        set(ENV{linkPath}   "${_linkPath}")
-
-        # --- Derived ENV ---
-        set(ENV{stemPath}   "${_stemPath}")
 
         # --- CACHE vars (Linux base) ---
         set(CMAKE_C_COMPILER   "/usr/bin/clang"   CACHE FILEPATH "" FORCE)
         set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE FILEPATH "" FORCE)
         set(BUILD_WX_FROM_SOURCE "ON"             CACHE BOOL     "" FORCE)
-
-        # --- CACHE vars (build/link type) ---
-        set(buildType  "${ARG_BUILD_TYPE}" CACHE STRING "" FORCE)
-        set(linkType   "${ARG_LINK_TYPE}"  CACHE STRING "" FORCE)
-
-        # --- CACHE var (stemPath) ---
-        set(stemPath   "${_stemPath}" CACHE STRING "" FORCE)
 
         # --- PARENT_SCOPE vars ---
         set(hostType   "Linux"             ) #PARENT_SCOPE)

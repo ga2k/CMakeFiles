@@ -271,9 +271,9 @@ function(fetchContents)
             set(phase ${pass_num})
             inc(phase)
 
-            msg("${divider}")
-            msg("\n${BLACK}${GREEN_BG} Phase ${phase} ${line}${NC}\n")
-            msg("${divider}")
+            msg("\n${divider}")
+            msg("${BLACK}${GREEN_BG} Phase ${phase} ${line}${NC}")
+            msg("${divider}\n")
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
