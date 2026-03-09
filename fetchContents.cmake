@@ -272,7 +272,7 @@ function(fetchContents)
             inc(phase)
 
             msg("\n${divider}")
-            msg("${BLACK}${GREEN_BG} Phase ${phase} ${line}${NC}")
+            msg("${BLACK}${GREEN_BG} Phase ${phase}${line}${NC}")
             msg("${divider}\n")
 
             set(ixloupe 0)
