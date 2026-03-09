@@ -67,6 +67,8 @@ macro(check_environment PROJECT_ROOT)
         message(WARNING "Preset env var buildPath is missing. Are you configuring with the expected preset?")
         include("${cmake_root}/presetFallback.cmake")
         fixPresetMess("Debug" "Shared")
+    else ()
+        log(LISTS stemPath buildPath)
     endif()
 
     if (NOT checkCompleted)

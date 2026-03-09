@@ -214,9 +214,9 @@
     {
       "name": "Windows (Debug Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
         "Debug",
@@ -226,9 +226,9 @@
     {
       "name": "Windows (Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
         "Debug",
@@ -238,9 +238,9 @@
     {
       "name": "Windows (Release Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
         "Release",
@@ -250,9 +250,9 @@
     {
       "name": "Windows (Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
         "Release",
@@ -262,9 +262,9 @@
     {
       "name": "Windows (Staged Debug Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Windows",
         "Debug",
@@ -275,9 +275,9 @@
     {
       "name": "Windows (Staged Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Windows",
         "Debug",
@@ -288,9 +288,9 @@
     {
       "name": "Windows (Staged Release Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Windows",
         "Release",
@@ -301,9 +301,9 @@
     {
       "name": "Windows (Staged Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Windows",
         "Release",
@@ -314,9 +314,9 @@
     {
       "name": "Windows (VS Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}/ninja"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}/ninja"
      },
-      "binaryDir": "build$env{buildPath}$env{linkPath}/vs",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}/vs",
       "inherits": [
         "Windows VS",
         "Debug",
@@ -326,9 +326,9 @@
     {
       "name": "Windows (VS Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}/vs",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}/vs",
       "inherits": [
         "Windows VS",
         "Release",
@@ -338,9 +338,9 @@
     {
       "name": "MacOS (Debug Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "macOS",
         "Debug",
@@ -350,9 +350,9 @@
     {
       "name": "MacOS (Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "macOS",
         "Debug",
@@ -362,9 +362,9 @@
     {
       "name": "MacOS (Release Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "macOS",
         "Release",
@@ -374,9 +374,9 @@
     {
       "name": "MacOS (Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "macOS",
         "Release",
@@ -386,9 +386,9 @@
     {
       "name": "MacOS (Staged Debug Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "macOS",
         "Debug",
@@ -399,9 +399,9 @@
     {
       "name": "MacOS (Staged Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "macOS",
         "Debug",
@@ -412,9 +412,9 @@
     {
       "name": "MacOS (Staged Release Static)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "macOS",
         "Release",
@@ -425,9 +425,9 @@
     {
       "name": "MacOS (Staged Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "macOS",
         "Release",
@@ -460,7 +460,7 @@
     {
       "name": "WinX (Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
@@ -472,7 +472,7 @@
     {
       "name": "WinX (Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
@@ -484,7 +484,7 @@
     {
       "name": "WinX (Staged Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
@@ -497,7 +497,7 @@
     {
       "name": "WinX (Staged Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
@@ -510,9 +510,9 @@
     {
       "name": "Linux (Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Linux",
         "Debug",
@@ -522,9 +522,9 @@
     {
       "name": "Linux (Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Linux",
         "Release",
@@ -534,9 +534,9 @@
     {
       "name": "Linux (Staged Debug Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Linux",
         "Debug",
@@ -547,9 +547,9 @@
     {
       "name": "Linux (Staged Release Shared)",
       "cacheVariables": {
-        "stemPath": "$env{buildPath}$env{linkPath}$env{stagePath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
-      "binaryDir": "build$env{buildPath}$env{linkPath}$env{stagePath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
       "inherits": [
         "Linux",
         "Release",
