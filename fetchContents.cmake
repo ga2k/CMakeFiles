@@ -264,15 +264,18 @@ function(fetchContents)
 
         unset(combinedLibraryComponents)
         set(scannedLibraries)
-        math(EXPR phaseLinePad "${usableCols} - 8")
+
+        string(LENGTH "${APP_NAME}" appNameLen)
+        string(LENGTH "Phase 1"     phaseLen)
+        math(EXPR phaseLineInternalPadding "${usableCols} - (${appNameLen} + ${phaseLen} + 2)")
+        string(REPEAT " " ${phaseLineInternalPadding} phasePadding)
 
         foreach (pass_num RANGE 1)
-            string(REPEAT " " ${phaseLinePad} line)
             set(phase ${pass_num})
             inc(phase)
 
             msg("\n${divider}")
-            msg("${BLACK}${GREEN_BG} Phase ${phase}${line}${NC}")
+            msg("${BOLD}${RED_BG}${WHITE} ${APP_NAME}${phasePadding}Phase ${phase} ${NC}")
             msg("${divider}\n")
 
             set(ixloupe 0)
