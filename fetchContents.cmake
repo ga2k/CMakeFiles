@@ -640,7 +640,7 @@ function(fetchContents)
                         # Final patching/fixing phase
                         set(fn "${this_pkgname}_fix")
                         if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                            cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${this_src}")
                         elseif (NOT ${this_pkgname}_PATCHED AND EXISTS "${cmake_root}/patches/${this_pkgname}")
                             unset(patches)
                             list(APPEND patches "${this_pkgname}|${EXTERNALS_DIR}/${this_pkgname}")
