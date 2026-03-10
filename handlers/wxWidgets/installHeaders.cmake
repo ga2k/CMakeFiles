@@ -13,11 +13,11 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
     endif ()
 
     # Make sure we grab the platform specific setup.h
-    file(GLOB WX_SETUP_H DIRECTORIES false RELATIVE "${buildDir}/lib/wx/include" "${buildDir}/lib/wx/include/*/wx/setup.h")
+    file(GLOB WX_SETUP_H DIRECTORIES false RELATIVE "${buildDir}/lib" "${buildDir}/lib/wx/include/*/wx/setup.h")
     if (WX_SETUP_H)
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_H}"   PATH)
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
-        install(DIRECTORY "${WX_SETUP_DIR}"
+        install(DIRECTORY "${buildDir}/lib/${WX_SETUP_DIR}"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT Staging)
         # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
