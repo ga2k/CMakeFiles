@@ -1,8 +1,10 @@
 # cmake/generate_app_config.cmake
 
-#if (${APP_VENDOR}_PLUGIN_DIR)
+if (${APP_VENDOR}_PLUGIN_DIR)
+    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_PATH}")
+else ()
     set(PLUGIN_PATH "${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}")
-#endif ()
+endif ()
 
 set(PLUGIN_YAML_LIST "")
 if (APP_CONSUMES_PLUGINS)
