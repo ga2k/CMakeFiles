@@ -105,8 +105,8 @@ function(createStandardPackageData dryRun)
     addPackageData(OPTIONAL FEATURE "GUI" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY
-            SRCDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/src
-            BINDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/bin)
+            SRCDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/Downloaded
+            BINDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/Binary)
 
 endfunction()
 ########################################################################################################################
