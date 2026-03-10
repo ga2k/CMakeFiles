@@ -28,6 +28,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
         if(t STREQUAL "BANG!")
             set(_secondTime ON)
+            continue()
         endif ()
 
         get_target_property(type "${t}" TYPE)
