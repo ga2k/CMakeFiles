@@ -10,7 +10,7 @@ function(wxWidgets_fix target tag sourceDir)
 
     unset(patches)
     list(APPEND patches
-            "${target}/include|${sourceDir}"
+            "${target}/include|${sourceDir}/include"
 #            "${target}/src|${sourceDir}/"
     )
     replaceFile(${target} "${patches}")
