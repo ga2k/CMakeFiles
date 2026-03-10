@@ -102,9 +102,11 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
             ARGS REQUIRED EXCLUDE_FROM_ALL COMPONENTS SSL Crypto DRY_RUN ${dryRun})
 
-    addPackageData(OPTIONAL FEATURE "GUI"         PKGNAME "wxWidgets"     METHOD "FETCH_CONTENTS"
+    addPackageData(OPTIONAL FEATURE "GUI" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY SRCDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets )
+            ARG REQUIRED DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY
+            SRCDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/src
+            BINDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/bin)
 
 endfunction()
 ########################################################################################################################

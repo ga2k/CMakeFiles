@@ -321,7 +321,7 @@ function(fetchContents)
                         FEATURE     ${this_feature_name}
                         PACKAGE     ${this_pkgname}
                         ARGS        this_find_package_args
-                        BUILD_DIR   this_build
+                        BIN_DIR     this_bin
                         COMPONENTS  this_find_package_components
                         FETCH_FLAG  this_fetch
                         FLAGS       this_flags
@@ -438,10 +438,18 @@ function(fetchContents)
                                     else ()
                                         set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
                                     endif ()
-                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${use_src} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+
+                                    if(this_bin)
+                                        set(use_bin "${this_src}")
+                                    else ()
+                                        set(use_bin "${BUILD_DIR}/${this_pkgname}-build")
+                                    endif ()
+
+                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${use_src} BINARY_DIR ${use_bin} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
                                             SOURCE_DIR ${use_src}
+                                            BINARY_DIR ${use_bin}
                                             ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                             ${COMPONENTS_KEYWORD} ${this_find_package_components}
                                             ${GIT_TAG_KEYWORD} ${this_tag})
@@ -600,9 +608,10 @@ function(fetchContents)
                                     set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
                                 endif ()
                             endif ()
-                            if (NOT this_build)
+
+                            if (NOT this_bin)
                                 if (EXISTS "${BUILD_DIR}/${this_pkglc}-build")
-                                    set(this_build "${BUILD_DIR}/${this_pkglc}-build")
+                                    set(this_bin "${BUILD_DIR}/${this_pkglc}-build")
                                 endif ()
                             endif ()
 
@@ -626,7 +635,7 @@ function(fetchContents)
 
                             set(fn "${this_pkgname}_postMakeAvailable")
                             if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                cmake_language(CALL "${fn}" "${this_src}" "${this_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
                             endif ()
 
                             # Auto-include the standard 'include' folder if it exists and wasn't handled
