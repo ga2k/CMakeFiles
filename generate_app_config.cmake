@@ -3,7 +3,7 @@
 if (${APP_VENDOR}_PLUGIN_DIR)
     set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_PATH}")
 else ()
-    set(PLUGIN_PATH "~/dev/stage/usr/local/${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}")
+    set(PLUGIN_PATH "~/dev/stage/usr/local/${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
