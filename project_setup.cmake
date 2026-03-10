@@ -84,7 +84,7 @@ fetchContents(
 )
 
 if (MONOREPO)
-    return()
+    #return()
 endif ()
 
 include(${cmake_root}/project_install.cmake)
