@@ -440,12 +440,12 @@ function(fetchContents)
                                     endif ()
 
                                     if(this_bin)
-                                        set(use_bin "${this_src}")
+                                        set(use_bin "${this_bin}")
                                     else ()
                                         set(use_bin "${BUILD_DIR}/${this_pkgname}-build")
                                     endif ()
 
-                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${use_src} BINARY_DIR ${use_bin} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} ${GIT_TAG_KEYWORD} ${this_tag} SOURCE_DIR ${use_src} BINARY_DIR ${use_bin} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components})")
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
                                             SOURCE_DIR ${use_src}
