@@ -98,8 +98,8 @@ function(soci_preDownload pkgname url tag srcDir)
                 "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
 
                 "soci/include|${_soci_local_src}/include"
-#
-#                "soci/CMakeLists.txt|${_soci_local_src}"
+
+                "soci/CMakeLists.txt|${_soci_local_src}"
 #                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 #
 #                "soci/src|${_soci_local_src}/src"
@@ -115,8 +115,8 @@ function(soci_preDownload pkgname url tag srcDir)
 #                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
 #
 #                "soci/include|${_soci_local_src}"
-
-                "soci/CMakeLists.txt|${_soci_local_src}"
+#
+#                "soci/CMakeLists.txt|${_soci_local_src}"
                 "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
 
                 #            "soci/src/core/CMakeLists.txt|${sourceDir}"
