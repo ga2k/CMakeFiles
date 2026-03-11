@@ -113,7 +113,8 @@ function(soci_preDownload pkgname url tag srcDir)
         unset(patches)
         list(APPEND patches
                 "soci/3rdparty/fmt/include|${_soci_local_src}"
-                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
+#                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
+                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
 
                 "soci/include|${_soci_local_src}"
 
