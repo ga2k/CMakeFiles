@@ -4,7 +4,7 @@ function(soci_fix target tag sourceDir)
 
 #    if (NOT soci_PATCHED)
         unset(patches)
-        set(_soci_local_src "${_soci_src}")
+        set(_soci_local_src "${${target}_SOURCE_DIR}}")
         list(APPEND patches
                 # Test whole folder
                 "${target}/3rdparty|${_soci_local_src}/3rdparty"
