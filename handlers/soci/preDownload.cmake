@@ -88,7 +88,7 @@ function(soci_preDownload pkgname url tag srcDir)
             message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
         endif ()
     endif ()
-thingimy_bob()
+
     if (NOT soci_PATCHED)
         unset(patches)
         list(APPEND patches
