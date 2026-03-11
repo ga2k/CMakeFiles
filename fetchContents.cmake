@@ -450,9 +450,9 @@ function(fetchContents)
                                     msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} ${GIT_TAG_KEYWORD} ${this_tag} SOURCE_DIR ${use_src} BINARY_DIR ${use_bin} SUBBUILD_DIR ${use_subbin} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components})")
                                     FetchContent_Declare(${this_pkgname}
                                             ${SOURCE_KEYWORD} ${this_git_repo}
-                                            SOURCE_DIR ${use_src}
-                                            BINARY_DIR ${use_bin}
-                                            SUBBUILD_DIR ${use_subbin}
+#                                            SOURCE_DIR ${use_src}
+#                                            BINARY_DIR ${use_bin}
+#                                            SUBBUILD_DIR ${use_subbin}
                                             ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
                                             ${COMPONENTS_KEYWORD} ${this_find_package_components}
                                             ${GIT_TAG_KEYWORD} ${this_tag})
