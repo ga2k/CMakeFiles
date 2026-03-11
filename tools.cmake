@@ -1641,7 +1641,12 @@ function(replaceFiles target patchList)
             continue()
         endif ()
 
-        file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
+        unset(override_files)
+        if (single_file_mode)
+            list(APPEND override_files "${file_pattern}")
+        else ()
+            file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
+        endif ()
 
         foreach (file_rel_path IN LISTS override_files)
 
