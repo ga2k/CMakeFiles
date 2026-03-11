@@ -91,7 +91,7 @@ function(soci_preDownload pkgname url tag srcDir)
 
     if (NOT soci_PATCHED)
         unset(patches)
-        set(_soci_local_src "${soci_SOURCE_DIR}")
+#        set(_soci_local_src "${soci_SOURCE_DIR}")
         list(APPEND patches
                 # Test whole folder
                 "soci/3rdparty|${_soci_local_src}/3rdparty"
