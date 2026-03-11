@@ -100,6 +100,8 @@ function(soci_preDownload pkgname url tag srcDir)
                 "soci/include|${_soci_local_src}/include"
 
                 "soci/CMakeLists.txt|${_soci_local_src}"
+                "soci/src/core/CMakeLists.txt|${_soci_local_src}/src/core"
+
                 "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 
                 "soci/src|${_soci_local_src}/src"
