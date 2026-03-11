@@ -284,7 +284,9 @@ function(resolve IN OUT_NAME OUT_VALUE)
     endif ()
 
     string(FIND "${OUT_NAME}" "\n" END_IT_HERE)
-    math(EXPR END_IT_HERE "${END_IT_HERE} - 1")
+    if (END_IT_HERE GREATER_EQUAL 0)
+        math(EXPR END_IT_HERE "${END_IT_HERE} - 1")
+    endif ()
     string(SUBSTRING "${OUT_NAME}" 0 ${END_IT_HERE} OUT_NAME)
 
     set(${OUT_NAME} ${THIS_NAME} CACHE STRING "" FORCE)
