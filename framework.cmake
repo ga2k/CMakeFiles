@@ -14,7 +14,7 @@ check_environment("${CMAKE_SOURCE_DIR}")
 if(APP_SOVERSION)
     set(SO_VERSION "${APP_SOVERSION}")
 else ()
-    SplitAt("${APP_VERSION}" "." SO_VERSION dc)
+    SplitAt("${APP_VERSION}" "." SO_VERSION dc1)
 endif ()
 
 # Derivations of common metadata (safe globally)

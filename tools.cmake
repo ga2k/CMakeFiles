@@ -283,6 +283,10 @@ function(resolve IN OUT_NAME OUT_VALUE)
         return()
     endif ()
 
+    string(FIND "${OUT_NAME}" "\n" END_IT_HERE)
+    math(EXPR END_IT_HERE "${END_IT_HERE} - 1")
+    string(SUBSTRING "${OUT_NAME}" 0 ${END_IT_HERE} OUT_NAME)
+
     set(${OUT_NAME} ${THIS_NAME} CACHE STRING "" FORCE)
     set(${OUT_VALUE} ${THIS_VALUE} CACHE STRING "" FORCE)
 
@@ -345,7 +349,7 @@ function(msg)
         set(text " ")
     endif ()
     if (NOT AA_VERBATIM)
-        resolve("${text}" dc text)
+        resolve("${text}" dc2 text)
     endif ()
 
     if (APP_DEBUG OR AA_ALWAYS)
