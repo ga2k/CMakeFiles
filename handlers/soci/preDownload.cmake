@@ -75,44 +75,44 @@ function(soci_preDownload pkgname url tag srcDir)
 
     # @formatter:on
 
-    # Use a persistent local clone so SOCI survives `make clean`
-    set(_soci_local_src "$ENV{HOME}/dev/archives/soci")
+#    # Use a persistent local clone so SOCI survives `make clean`
+#    set(_soci_local_src "$ENV{HOME}/dev/archives/soci")
+#
+#    if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
+#        message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
+#        execute_process(
+#                COMMAND git clone --depth=1 --recurse-submodules https://github.com/SOCI/soci.git "${_soci_local_src}"
+#                RESULT_VARIABLE _soci_clone_result
+#        )
+#        if (NOT _soci_clone_result EQUAL 0)
+#            message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
+#        endif ()
+#    endif ()
 
-    if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
-        message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
-        execute_process(
-                COMMAND git clone --depth=1 --recurse-submodules https://github.com/SOCI/soci.git "${_soci_local_src}"
-                RESULT_VARIABLE _soci_clone_result
-        )
-        if (NOT _soci_clone_result EQUAL 0)
-            message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
-        endif ()
-    endif ()
+#    if (NOT soci_PATCHED)
+#        unset(patches)
+#        list(APPEND patches
+#                # Test whole folder
+#                "soci/3rdparty|${_soci_local_src}/3rdparty"
+#                # Test single file
+#                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
+#
+#                "soci/include|${_soci_local_src}/include"
+#
+#                "soci/CMakeLists.txt|${_soci_local_src}"
+#                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
+#
+#                "soci/src|${_soci_local_src}/src"
+#        )
+#
+#        replaceFiles(soci "${patches}")
+#    endif ()
+#    set(soci_PATCHED ON PARENT_SCOPE)
 
-    if (NOT soci_PATCHED)
-        unset(patches)
-        list(APPEND patches
-                # Test whole folder
-                "soci/3rdparty|${_soci_local_src}/3rdparty"
-                # Test single file
-                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
+#    set(FETCHCONTENT_SOURCE_DIR_SOCI "${_soci_local_src}" CACHE PATH "Pre-cloned SOCI source" FORCE)
 
-                "soci/include|${_soci_local_src}/include"
-
-                "soci/CMakeLists.txt|${_soci_local_src}"
-                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
-
-                "soci/src|${_soci_local_src}/src"
-        )
-
-        replaceFiles(soci "${patches}")
-    endif ()
-    set(soci_PATCHED ON PARENT_SCOPE)
-
-    set(FETCHCONTENT_SOURCE_DIR_SOCI "${_soci_local_src}" CACHE PATH "Pre-cloned SOCI source" FORCE)
-
-    set(_soci_src "${${pkgname}_SOURCE_DIR}")
-    set(_soci_bin "${${pkgname}_BINARY_DIR}")
+#    set(_soci_src "${${pkgname}_SOURCE_DIR}")
+#    set(_soci_bin "${${pkgname}_BINARY_DIR}")
 
     set(HANDLED OFF)
     set(HANDLED ${HANDLED} PARENT_SCOPE)

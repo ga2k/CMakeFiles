@@ -1,213 +1,228 @@
-include(GNUInstallDirs)
+# Note: we need >= v3.23 in order to make use of file sets for header installation
+cmake_minimum_required(VERSION 3.23...3.31 FATAL_ERROR)
 
-set(SOCI_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}" CACHE STRING "Specifies suffix for the library file in debug mode")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/find_modules")
 
-
-add_library(soci_core
-  ${SOCI_LIB_TYPE}
-    "backend-loader.cpp"
-    "blob.cpp"
-    "common.cpp"
-    "connection-parameters.cpp"
-    "connection-pool.cpp"
-    "error.cpp"
-    "into-type.cpp"
-    "logger.cpp"
-    "once-temp-type.cpp"
-    "prepare-temp-type.cpp"
-    "procedure.cpp"
-    "ref-counted-prepare-info.cpp"
-    "ref-counted-statement.cpp"
-    "row.cpp"
-    "rowid.cpp"
-    "session.cpp"
-    "soci-simple.cpp"
-    "statement.cpp"
-    "transaction.cpp"
-    "unicode.cpp"
-    "use-type.cpp"
-    "values.cpp"
+include(soci_parse_version)
+soci_parse_version(
+        ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE SOCI_VERSION
 )
-# always define during compilation to control symbol visibility/export
-target_compile_definitions(soci_core PRIVATE SOCI_SOURCE)
 
-if(ABI_VERSION)
-  target_compile_definitions(soci_core PRIVATE SOCI_ABI_VERSION="${ABI_VERSION}")
+project(SOCI
+        VERSION ${SOCI_VERSION}
+        DESCRIPTION "C++ database access library"
+        HOMEPAGE_URL "https://soci.sourceforge.net/"
+        LANGUAGES C CXX
+)
+
+include(soci_utils)
+
+if (NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 14)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
+include(CMakeDependentOption)
+include(CheckIPOSupported)
+
+check_ipo_supported(RESULT LTO_AVAILABLE)
+
+if (SOCI_STATIC)
+  set(SHARED_DEFAULT OFF)
+elseif(DEFINED BUILD_SHARED_LIBS)
+  set(SHARED_DEFAULT ${BUILD_SHARED_LIBS})
+else()
+  set(SHARED_DEFAULT ON)
 endif()
 
-add_library(SOCI::Core ALIAS soci_core)
+option(SOCI_SHARED "Enable building SOCI as a shared library" ${SHARED_DEFAULT})
+option(SOCI_TESTS "Enable building SOCI test cases" ${PROJECT_IS_TOP_LEVEL})
+option(WITH_BOOST "Enable Boost support" ON)
+cmake_dependent_option(SOCI_LTO "Enable link time optimizations in release builds" ON "LTO_AVAILABLE" OFF)
 
-soci_build_library_name(soci_core_name "soci_core")
+# Determine if the CMake generator is single or multi config. This will be
+# useful later when printing the SOCI configuration in show_config.
+get_property(SOCI_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
-set_target_properties(
-  soci_core PROPERTIES
-  OUTPUT_NAME ${soci_core_name}
-  SOVERSION ${PROJECT_VERSION_MAJOR}
-  VERSION ${PROJECT_VERSION}
-  EXPORT_NAME Core
-)
+# Default build type to Release for single-config generators
+if(NOT SOCI_IS_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
 
-# We have to explicitly list all public header files in order for them to get
-# installed properly. This will automatically set the BASE_DIR up as an include
-# directory for the target wrapped in a BUILD_INTERFACE generator expression.
-# Note that we only add the general, public SOCI headers here. Backend-specific
-# headers are added by the respective backend target.
-target_sources(soci_core
-  PUBLIC
-    FILE_SET headers TYPE HEADERS
-    BASE_DIRS "${PROJECT_SOURCE_DIR}/include/"
-    FILES
-      "${PROJECT_SOURCE_DIR}/include/soci/backend-loader.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/bind-values.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/blob-exchange.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/blob.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/boost-fusion.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/boost-gregorian-date.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/boost-optional.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/boost-tuple.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/callbacks.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/column-info.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/connection-parameters.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/connection-pool.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/error.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/exchange-traits.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/fixed-size-ints.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/fmt.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/into-type.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/into.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/is-detected.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/log-context.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/logger.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/noreturn.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/once-temp-type.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/prepare-temp-type.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/procedure.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/query_transformation.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/ref-counted-prepare-info.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/ref-counted-statement.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/row-exchange.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/row.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/rowid-exchange.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/rowid.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/rowset.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/session.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci-backend.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci-platform.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci-simple.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci-types.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci-unicode.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/soci.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/statement.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/std-optional.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/transaction.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/trivial-blob-backend.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/type-conversion-traits.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/type-conversion.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/type-holder.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/type-ptr.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/type-wrappers.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/use-type.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/use.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/values-exchange.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/values.h"
-      "${PROJECT_SOURCE_DIR}/include/soci/version.h"
-)
+# Configure LTO for anything but Debug builds (if enabled in the first place)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${SOCI_LTO})
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
 
-target_include_directories(soci_core
-  PUBLIC
-    "$<INSTALL_INTERFACE:${SOCI_INSTALL_INCLUDEDIR}>"
-  PRIVATE
-    "${PROJECT_SOURCE_DIR}/include/soci"
-    "${PROJECT_SOURCE_DIR}/include/private"
-)
+if (NOT APPLE)
+  # This makes runtime loaders look for library dependencies
+  # in the same directory as the library is located in.
+  # For details see Craig Scott's CppCon 2019 talk
 
-# consistently define SOCI_DLL to enable export visibility
+  # Note: The variable's content is set to $ORIGIN literally,
+  # this is NOT a butchered cmake variable expansion
+  set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
+
+if (NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  # Ensure that build artifacts are easy to find. And on Windows this
+  # guarantees that the built DLLs end up next to applications
+  # linking to them as otherwise they won't be found.
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+  if (NOT PROJECT_IS_TOP_LEVEL)
+    # If the embedding project does not define these variables, this can lead to
+    # inconsistencies which can cause issues on Windows when e.g. the embedding
+    # project has an executable that links to a SOCI DLL which will be put into
+    # a different directory which will lead to the exe not finding the DLL.
+    message(WARNING "Setting CMAKE_{LIBRARY, ARCHIVE, RUNTIME}_DIRECTORY variables which should have done by the embedding cmake project")
+  endif()
+endif()
+
 if (SOCI_SHARED)
-  target_compile_definitions(soci_core PUBLIC SOCI_DLL)
+  set(SOCI_LIB_TYPE "SHARED")
+else()
+  set(SOCI_LIB_TYPE "STATIC")
 endif()
 
-target_link_libraries(soci_core PRIVATE ${soci_fmt})
+# When using shared libraries, use version-dependent suffix in their names.
+if (SOCI_SHARED)
+  if (WIN32)
+    # Use the full version number as ABI version on Windows, different minor
+    # versions are not ABI-compatible.
+    set(ABI_VERSION "${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
 
-if (WITH_BOOST)
-  # Try and find Boost with the date_time component.
-  find_package(Boost COMPONENTS date_time QUIET)
+    # Also use it in the library name by default to ensure that the DLLs of
+    # different versions are called differently as there is no SOVERSION on
+    # Windows to prevent this from happening.
+    set(soci_default_suffix "_${ABI_VERSION}")
+  elseif(UNIX)
+    # Use same value as for SOVERSION, which is only the major version (and is
+    # used automatically to construct the shared libraries names, so there is
+    # no need for any suffix).
+    set(ABI_VERSION "${PROJECT_VERSION_MAJOR}")
+  endif()
+endif()
 
-  # Note that we shouldn't check Boost_FOUND here as it will be true even if
-  # we found only Boost headers, but not the date_time library.
-  if (TARGET Boost::date_time)
-    set(SOCI_BOOST_DATE_TIME_MESSAGE " (with date_time component)")
-    set(SOCI_DEPENDENCY_BOOST_COMPONENTS "date_time" CACHE INTERNAL "Boost components used by SOCI")
+set(SOCI_NAME_PREFIX "" CACHE STRING "Optional prefix to add before 'soci_' in library names")
+set(SOCI_NAME_SUFFIX "${soci_default_suffix}" CACHE STRING "Optional suffix to add to the library names")
 
-    target_link_libraries(soci_core PUBLIC Boost::date_time)
-    target_compile_definitions(soci_core PUBLIC SOCI_HAVE_BOOST_DATE_TIME)
+# By default, we use system fmt if available, otherwise the bundled one, but
+# this option can be used to either force or forbid using the bundled one.
+set(SOCI_FMT_BUILTIN "" CACHE STRING "Prefer, or forbid, using the bundled fmt library")
+
+set(soci_use_bundled_fmt ON)
+if(NOT SOCI_FMT_BUILTIN)
+  find_package(fmt QUIET)
+  if (fmt_FOUND)
+    message(STATUS "Using system fmt library ${fmt_VERSION}")
+    set(soci_use_bundled_fmt OFF)
   else()
-    # If we couldn't find Boost::date_time, retry searching for Boost headers
-    # only and use only them, if found.
-    if (WITH_BOOST STREQUAL "REQUIRED")
-      find_package(Boost REQUIRED)
-    else()
-      find_package(Boost)
+    if ("${SOCI_FMT_BUILTIN}" STREQUAL "OFF")
+      message(
+              FATAL_ERROR
+              "System fmt library not found and using built-in version was disabled."
+      )
     endif()
   endif()
+endif()
 
-  # Here Boost_FOUND is true either if we had found date_time in the first
-  # find_package() call or just Boost headers in the second one.
-  if (Boost_FOUND)
-    message(STATUS "Found Boost: v${Boost_VERSION_STRING} in ${Boost_INCLUDE_DIRS}${SOCI_BOOST_DATE_TIME_MESSAGE}")
-    set(SOCI_DEPENDENCY_BOOST TRUE CACHE INTERNAL "Whether SOCI depends on Boost")
+# Name of the library to link with.
+set(soci_fmt fmt::fmt)
 
-    target_link_libraries(soci_core PUBLIC Boost::boost Boost::disable_autolinking)
-    target_compile_definitions(soci_core PUBLIC SOCI_HAVE_BOOST)
+if(soci_use_bundled_fmt)
+  if (NOT EXISTS ${PROJECT_SOURCE_DIR}/3rdparty/fmt/CMakeLists.txt)
+    message(
+            FATAL_ERROR
+            "fmt library submodule not found.\n"
+            "Please ensure that you have cloned the SOCI repository with --recurse-submodules."
+    )
+  endif()
+
+  add_subdirectory(3rdparty/fmt EXCLUDE_FROM_ALL)
+  if (NOT SOCI_SHARED)
+    # When building SOCI as static library, we can't depend on fmt library, as
+    # this would require SOCI users to link with fmt too, which would also
+    # require installing it and we don't want to do this, so use header-only
+    # library in this case and also use only its build interface, as otherwise
+    # we'd still have a dependency on it in the SOCI targets.
+    set(soci_fmt $<BUILD_INTERFACE:fmt::fmt-header-only>)
   endif()
 endif()
 
-target_link_libraries(soci_core
-  PUBLIC
-    $<BUILD_INTERFACE:soci_compiler_interface>
-)
+# Helper function appending prefix and suffix to the library name.
+function(soci_build_library_name result basename)
+  set(${result} "${SOCI_NAME_PREFIX}${basename}${SOCI_NAME_SUFFIX}" PARENT_SCOPE)
+endfunction()
 
-if (NOT MSVC)
-  find_package(Threads REQUIRED)
+include(soci_compiler_options)
+include(soci_install_dirs)
 
-  target_link_libraries(soci_core
-    PRIVATE
-      Threads::Threads
-      ${CMAKE_DL_LIBS}
-  )
+add_subdirectory(src)
+
+include(soci_compat)
+
+
+if (SOCI_TESTS)
+  include(CTest)
+  enable_testing()
+  add_subdirectory(tests)
 endif()
 
-cmake_path(
-  ABSOLUTE_PATH SOCI_INSTALL_LIBDIR
-  BASE_DIRECTORY "${CMAKE_INSTALL_PREFIX}"
-  OUTPUT_VARIABLE SOCI_INSTALL_FULL_LIBDIR
-)
 
-target_compile_definitions(soci_core
-  PRIVATE
-    DEFAULT_BACKENDS_PATH="${SOCI_INSTALL_FULL_LIBDIR}"
-    SOCI_LIB_PREFIX="${CMAKE_SHARED_LIBRARY_PREFIX}${SOCI_NAME_PREFIX}soci_"
-    SOCI_LIB_SUFFIX="${SOCI_NAME_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    SOCI_DEBUG_POSTFIX="${SOCI_DEBUG_POSTFIX}"
+# Packaging
+if (NOT SOCI_SKIP_INSTALL)
+include(CMakePackageConfigHelpers)
+configure_package_config_file("soci-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
+        INSTALL_DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
 )
+write_basic_package_version_file(soci-config-version.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+install(
+        FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/soci-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/soci-config-version.cmake"
+        DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
+)
+endif()
 
-install(
-  TARGETS soci_core
-  EXPORT SOCICoreTargets
-  RUNTIME DESTINATION "${SOCI_INSTALL_BINDIR}"
-    COMPONENT soci_runtime
-  LIBRARY DESTINATION "${SOCI_INSTALL_LIBDIR}"
-    COMPONENT          soci_runtime
-    NAMELINK_COMPONENT soci_development
-  ARCHIVE DESTINATION "${SOCI_INSTALL_LIBDIR}"
-    COMPONENT soci_development
-  FILE_SET headers DESTINATION "${SOCI_INSTALL_INCLUDEDIR}"
-    COMPONENT soci_development
+# Give build summary at the end but only if it's the first time we're running,
+# as indicated by SOCI_SUMMARY not being cached yet, or if it has changed.
+set(SOCI_SUMMARY_NOW
+        "${SOCI_VERSION}-${SOCI_LIB_TYPE}-${SOCI_ENABLED_BACKENDS}-${CMAKE_BUILD_TYPE}"
 )
-# Generate and install a targets file
-install(
-  EXPORT SOCICoreTargets
-  DESTINATION "${SOCI_INSTALL_CMAKEDIR}"
-  FILE SOCICoreTargets.cmake
-  NAMESPACE SOCI::
-  COMPONENT soci_development
+if(NOT "${SOCI_SUMMARY_NOW}" STREQUAL "${SOCI_SUMMARY}")
+  set(SOCI_SUMMARY ${SOCI_SUMMARY_NOW} CACHE INTERNAL "SOCI internal build summary")
+
+  if (CMAKE_BUILD_TYPE)
+    set(SOCI_CONFIG_DESCRIPTION " in ${CMAKE_BUILD_TYPE} configuration")
+  endif()
+  message(STATUS "SOCI ${SOCI_VERSION} will be built as ${SOCI_LIB_TYPE} library${SOCI_CONFIG_DESCRIPTION}.")
+  message(STATUS "Enabled SOCI backends are: ${SOCI_ENABLED_BACKENDS}")
+
+endif()
+
+# Also make it possible to see SOCI configuration later.
+add_custom_target(show_config
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "SOCI ${SOCI_VERSION} configured with:"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        # If using multi-config generator CMAKE_BUILD_TYPE is not meaningful. One
+        # would instead select a build type from CMAKE_CONFIGURATION_TYPES.
+        "  Build type:       $<IF:${SOCI_IS_MULTI_CONFIG},${CMAKE_CONFIGURATION_TYPES},${CMAKE_BUILD_TYPE}>"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "  Library type:     ${SOCI_LIB_TYPE}"
+        COMMAND ${CMAKE_COMMAND} -E echo
+        "  Enabled backends: ${SOCI_ENABLED_BACKENDS}"
+        COMMENT
+        "Show SOCI build configuration summary"
+        VERBATIM
 )
