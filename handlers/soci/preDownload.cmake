@@ -40,26 +40,26 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_ORACLE         OFF CACHE BOOL "Disable SOCI Oracle backend"     FORCE)
     set(SOCI_POSTGRESQL     OFF CACHE BOOL "Disable SOCI PostgreSQL backend" FORCE)
 
-    # 1. Fetch fmt first with install enabled
-    message(STATUS [=[
-    FetchContent_Declare(
-            fmt
-            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-            GIT_TAG 12.1.0
-    )]=])
-    FetchContent_Declare(
-        fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG 12.1.0
-    )
+#    # 1. Fetch fmt first with install enabled
+#    message(STATUS [=[
+#    FetchContent_Declare(
+#            fmt
+#            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+#            GIT_TAG 12.1.0
+#    )]=])
+#    FetchContent_Declare(
+#        fmt
+#        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+#        GIT_TAG 12.1.0
+#    )
 
     set(FMT_INSTALL ON CACHE BOOL "" FORCE)
     set(FMT_USE_CONSTEVAL OFF CACHE BOOL "Disable consteval in fmt" FORCE)
 
-    message(STATUS "FetchContent_MakeAvailable(fmt)")
-    FetchContent_MakeAvailable(fmt)
-    # Also add it as a compile definition
-    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
+#    message(STATUS "FetchContent_MakeAvailable(fmt)")
+#    FetchContent_MakeAvailable(fmt)
+#    # Also add it as a compile definition
+#    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
 
     # 2. Point SOCI to our fmt installation
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
