@@ -1780,7 +1780,7 @@ function(replaceFiles target patchList)
 
     list(POP_BACK CMAKE_MESSAGE_INDENT)
     if (any_errored)
-        msg(CHECK_FAIL "${MAGENTA}[FAILED] Some patches failed.${NC}")
+        msg(CHECK_FAIL "${BOLD}${MAGENTA}[FAILED] Some patches failed.${NC}")
     else ()
         msg(CHECK_PASS "${GREEN}OK.${NC}")
     endif ()
