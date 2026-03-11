@@ -40,47 +40,45 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_ORACLE         OFF CACHE BOOL "Disable SOCI Oracle backend"     FORCE)
     set(SOCI_POSTGRESQL     OFF CACHE BOOL "Disable SOCI PostgreSQL backend" FORCE)
 
-#    # 1. Fetch fmt first with install enabled
-#    message(STATUS [=[
-#    FetchContent_Declare(
-#            fmt
-#            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-#            GIT_TAG 12.1.0
-#    )]=])
-#    FetchContent_Declare(
-#        fmt
-#        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-#        GIT_TAG 12.1.0
-#    )
+    # 1. Fetch fmt first with install enabled
+    message(STATUS [=[
+    FetchContent_Declare(
+            fmt
+            GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+            GIT_TAG 12.1.0
+    )]=])
+    FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 12.1.0
+    )
 
     set(FMT_INSTALL ON CACHE BOOL "" FORCE)
     set(FMT_USE_CONSTEVAL OFF CACHE BOOL "Disable consteval in fmt" FORCE)
 
-#    message(STATUS "FetchContent_MakeAvailable(fmt)")
-#    FetchContent_MakeAvailable(fmt)
-#    # Also add it as a compile definition
-#    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
+    message(STATUS "FetchContent_MakeAvailable(fmt)")
+    FetchContent_MakeAvailable(fmt)
+    # Also add it as a compile definition
+    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
 
     # 2. Point SOCI to our fmt installation
-#    set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
+    set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
 
     # 3. Now fetch SOCI and tell it to use the external fmt
     set(SOCI_INSTALL  OFF CACHE BOOL "Disable SOCI internal install" FORCE)
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3" FORCE)
-    set(SOCI_EXTERNAL_FMT OFF CACHE BOOL "Use external fmt library" FORCE)
-    set(SOCI_FMT_BUILTIN ON CACHE BOOL "Use external fmt library" FORCE)
-#    set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
-#    set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)
+    set(SOCI_EXTERNAL_FMT ON CACHE BOOL "Use external fmt library" FORCE)
+    set(SOCI_FMT_BUILTIN OFF CACHE BOOL "Use external fmt library" FORCE)
 
     # Love it like our own
     handleTarget("fmt")
 
     # @formatter:on
 
-#    # Use a persistent local clone so SOCI survives `make clean`
+    # Use a persistent local clone so SOCI survives `make clean`
     set(_soci_local_src "$ENV{HOME}/dev/archives/soci")
 
-    if (NOT EXISTS "${_soci_local_src}")
+    if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
         message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
         execute_process(
                 COMMAND git clone --depth=1 --recurse-submodules https://github.com/SOCI/soci.git "${_soci_local_src}"
@@ -90,26 +88,25 @@ function(soci_preDownload pkgname url tag srcDir)
             message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
         endif ()
     endif ()
-#
-#    if (NOT soci_PATCHED)
-#        unset(patches)
-#        list(APPEND patches
-#                # Test whole folder
-#                "soci/3rdparty|${_soci_local_src}/3rdparty"
-#                # Test single file
-#                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
-#
-#                "soci/include|${_soci_local_src}/include"
-#
-#                "soci/CMakeLists.txt|${_soci_local_src}"
-#                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
-#
-#                "soci/src|${_soci_local_src}/src"
-#        )
-#
-#        replaceFiles(soci "${patches}")
-#    endif ()
-#    set(soci_PATCHED ON PARENT_SCOPE)
+
+    if (NOT soci_PATCHED)
+        unset(patches)
+        list(APPEND patches
+                "soci/3rdparty/fmt/include|${_soci_local_src}"
+                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
+
+                "soci/include|${_soci_local_src}"
+
+                "soci/CMakeLists.txt|${_soci_local_src}"
+                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
+
+                #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
+                "soci/src|${_soci_local_src}"
+        )
+
+        replaceFile(soci "${patches}")
+    endif ()
+    set(soci_PATCHED ON PARENT_SCOPE)
 
     set(FETCHCONTENT_SOURCE_DIR_SOCI "${_soci_local_src}" CACHE PATH "Pre-cloned SOCI source" FORCE)
 
