@@ -78,7 +78,7 @@ function(soci_preDownload pkgname url tag srcDir)
 #    # Use a persistent local clone so SOCI survives `make clean`
     set(_soci_local_src "$ENV{HOME}/dev/archives/soci")
 
-    if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
+    if (NOT EXISTS "${_soci_local_src}")
         message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
         execute_process(
                 COMMAND git clone --depth=1 --recurse-submodules https://github.com/SOCI/soci.git "${_soci_local_src}"
