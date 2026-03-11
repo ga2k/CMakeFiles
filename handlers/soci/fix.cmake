@@ -14,7 +14,7 @@ function(soci_fix target tag sourceDir)
                 "${target}/include|${_soci_local_src}/include"
 
                 "${target}/CMakeLists.txt|${_soci_local_src}"
-#                "${target}/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
+                "${target}/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 
                 "${target}/src|${_soci_local_src}/src"
         )
