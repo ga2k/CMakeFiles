@@ -13,7 +13,7 @@ function(wxWidgets_fix target tag sourceDir)
             "${target}/include|${sourceDir}/include/wx/"
             #  "${target}/src/common|${sourceDir}/src/common/"
             # "${target}/src/osx|${sourceDir}/src/osx/carbon/"
-            "${target}/src|${cmake_root}/patches/wxWidgets/src/"
+            "${target}/src|${sourceDir}/"
     )
     replaceFile(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
