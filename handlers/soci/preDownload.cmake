@@ -96,8 +96,8 @@ function(soci_preDownload pkgname url tag srcDir)
                 "soci/3rdparty|${_soci_local_src}/3rdparty"
 #                # Test single file
                 "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
-#
-#                "soci/include|${_soci_local_src}/include"
+
+                "soci/include|${_soci_local_src}/include"
 #
 #                "soci/CMakeLists.txt|${_soci_local_src}"
 #                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
@@ -113,8 +113,8 @@ function(soci_preDownload pkgname url tag srcDir)
         list(APPEND patches
 #                "soci/3rdparty/fmt/include|${_soci_local_src}"
 #                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
-
-                "soci/include|${_soci_local_src}"
+#
+#                "soci/include|${_soci_local_src}"
 
                 "soci/CMakeLists.txt|${_soci_local_src}"
                 "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
