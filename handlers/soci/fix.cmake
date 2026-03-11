@@ -4,18 +4,19 @@ function(soci_fix target tag sourceDir)
 
 #    if (NOT soci_PATCHED)
         unset(patches)
+        set(_soci_local_src "${_soci_src}")
         list(APPEND patches
                 # Test whole folder
-                "${target}/3rdparty|${sourceDir}/3rdparty"
+                "${target}/3rdparty|${_soci_local_src}/3rdparty"
                 # Test single file
                 "${target}/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
 
-                "${target}/include|${sourceDir}/include"
+                "${target}/include|${_soci_local_src}/include"
 
-                "${target}/CMakeLists.txt|${sourceDir}"
-                "${target}/cmake/soci_define_backend_target.cmake|${sourceDir}/cmake"
+                "${target}/CMakeLists.txt|${_soci_local_src}"
+                "${target}/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 
-                "${target}/src|${sourceDir}/src"
+                "${target}/src|${_soci_local_src}/src"
         )
 
         replaceFiles(soci "${patches}")
