@@ -1510,6 +1510,267 @@ function(replaceFile target patchList)
 
 endfunction()
 
+function(replaceFiles target patchList)
+
+    if(NOT DEFINED BOLD)
+        string(ASCII 27 ESC)
+        set(BOLD "${ESC}[1m")
+        set(RED "${ESC}[31m${BOLD}")
+        set(GREEN "${ESC}[32m${BOLD}")
+        set(ORANGE "${ESC}[33m")
+        set(YELLOW "${ESC}[33m${BOLD}")
+        set(NC "${ESC}[0m")
+    endif ()
+
+    # Format of each entry in patchList
+    # patch_descriptor | source_descriptor
+    #
+    # patch_descriptor:
+    #
+    #       Note: "${cmake_root}/patches/" is prepended to every patch_descriptor before further processing
+    #
+    #   ${target}/folder            The patch source dir will be - each leaf file in
+    #                               "${cmake_root}/patches/${target}/folder/*"
+    #                               Each variable "LEAF" will be set to the path to the leaf AFTER the specified path.
+    #                               ie the resolved value of the assumed "*" in ${target}/folder/*
+    #
+    #   ${target}/folder/file.h     The variable LEAF will be set to "file.h"
+    #
+    # source_descriptor:
+    #
+    #       Note: "${sourceDir}" is the true source dir for this target (usually "${EXTERNALS_DIR}/${target}-build")
+    #
+    #   ${source_dir}/some/path     The value ${LEAF} will appended to the supplied path
+    #
+    # If the literal token "LEAF" appears in source_descriptor, it is replaced in-place.
+    # Otherwise, LEAF is appended to source_descriptor.
+    #
+    # =================================================================================================================
+    # Examples  Let ${sourceDir}  be ~/dev/MyProject/external/${target}-build)
+    #
+    #   ~/dev/MyProject/cmake/patches
+    #   ├── magic-enum
+    #   │   └── include
+    #   │       └── magic_enum
+    #   │           └── algorithms.hpp
+    #   └── wxWidgets
+    #       ├── include
+    #       │   └── wx
+    #       │        └── deps.h
+    #       ├── lib
+    #       │   └── wx
+    #       │       └── include
+    #       │           └── wxqt-unicode-3.3
+    #       └── src
+    #           └── qt
+    #               └── utils.cpp
+    #
+    # Let target be "magic-enum"
+    #
+    # ${target} | ${sourceDir}
+    #
+    # patch_descriptor will effectively be ${target}/*
+    # LEAF will be set to "include/magic_enum/algorithms.hpp" by file system inspection
+    # source_descriptor will effectively be ${sourceDir}/${LEAF}
+    #
+    # Let target be "wxWidgets"
+    #
+    # ${target}/include | ${sourceDir}/include
+    #
+    # patch_descriptor will effectively be ${target}/include/*
+    # LEAF will be "wx/deps.h" by file system inspection
+    # source_descriptor will effectively be ${sourceDir}/include/${LEAF}
+    #
+    # ${target}/lib/wx/include/wxqt-unicode-3.3/include/wx/setup.h | ${sourceDir}/include/wx-3.3/wx
+    #
+    # patch_descriptor will effectively be ${target}/lib/wx/include/wxqt-unicode-3.3/include/wx/setup.h
+    # LEAF will be "setup.h" by path extraction
+    # source_descriptor will effectively be ${sourceDir}/include/wx-3.3/wx/setup.h
+
+    unset(visited)
+
+    msg(" ")
+    set(any_errored OFF)
+    set(errored OFF)
+    set(error_msg)
+
+    msg(CHECK_START "Replacing files for target ${YELLOW}${target}${NC}")
+    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+    if (${target}_ALREADY_FOUND)
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        msg(CHECK_PASS "Not required for ${BOLD}imported libraries${NC}")
+        return()
+    endif ()
+
+    foreach (patch IN LISTS patchList)
+
+        set(errored OFF)
+        set(error_msg)
+
+        SplitAt("${patch}" "|" patchBranch externalTrunk)
+
+        if (NOT patchBranch OR NOT externalTrunk)
+            msg(CHECK_FAIL "${RED}[FAILED]${NC} Invalid patch descriptor '${patch}'")
+            set(any_errored ON)
+            continue()
+        endif ()
+
+        msg(CHECK_START "Replacement pattern is ${YELLOW}${patchBranch}${NC}")
+        list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+        set(patch_path "${cmake_root}/patches/${patchBranch}")
+        unset(from_path)
+        unset(file_pattern)
+        set(single_file_mode OFF)
+
+        if (EXISTS "${patch_path}" AND NOT IS_DIRECTORY "${patch_path}")
+            get_filename_component(from_path "${patch_path}" DIRECTORY)
+            get_filename_component(file_pattern "${patch_path}" NAME)
+            set(single_file_mode ON)
+        elseif (EXISTS "${patch_path}" AND IS_DIRECTORY "${patch_path}")
+            set(from_path "${patch_path}")
+            set(file_pattern "*")
+        else ()
+            msg("${RED}[FAILED]${NC} ${patch_path} doesn't exist.")
+            set(any_errored ON)
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+            if(any_errored)
+                msg(CHECK_FAIL "${RED}[FAILED]${NC}")
+            else ()
+                msg(CHECK_PASS "${GREEN}OK.${NC}")
+            endif ()
+            continue()
+        endif ()
+
+        file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
+
+        foreach (file_rel_path IN LISTS override_files)
+
+            set(errored OFF)
+            set(error_msg)
+            unset(source)
+            unset(destination)
+
+            get_filename_component(extn "${file_rel_path}" LAST_EXT)
+            if ("${extn}" STREQUAL ".check")
+                continue()
+            endif ()
+
+            if (single_file_mode)
+                get_filename_component(leaf "${file_rel_path}" NAME)
+            else ()
+                set(leaf "${file_rel_path}")
+            endif ()
+
+            if ("${externalTrunk}" MATCHES "(^|/)LEAF($|/)")
+                string(REPLACE "LEAF" "${leaf}" system_file_path "${externalTrunk}")
+            else ()
+                string(REGEX REPLACE "/$" "" destination_base "${externalTrunk}")
+                set(system_file_path "${destination_base}/${leaf}")
+            endif ()
+
+            get_filename_component(system_file_path "${system_file_path}" ABSOLUTE)
+            set(override_file_path "${from_path}/${file_rel_path}")
+
+            msg(CHECK_START "${BOLD}Replacing${NC} ${file_rel_path}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+            msg(" overwriting ${system_file_path}")
+            msg("        with ${override_file_path}")
+
+            if (EXISTS "${system_file_path}")
+
+                # See if we are attempting to patch again.
+                # visited[Override_1,System_1,Override_2,System_2,...,Override_n,System_n]
+
+                list(FIND visited "${override_file_path}" patchIndex)
+                list(FIND visited "${system_file_path}" sourceIndex)
+
+                if (visited)
+                    if (${patchIndex} GREATER_EQUAL 0)
+                        math(EXPR six "${patchIndex} + 1")
+                        list(GET visited ${six} destination)
+                    endif ()
+
+                    if (${sourceIndex} GREATER 0)
+                        math(EXPR pix "${sourceIndex} - 1")
+                        list(GET visited ${pix} source)
+                    endif ()
+
+                    if ("${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
+                        set(error_msg "Replaced in previous iteration of loop")
+                    elseif ("${source}" STREQUAL "${override_file_path}" AND NOT "${destination}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(error_msg "source file has been used to replace ${destination}")
+                    elseif (NOT "${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(error_msg "destination has already been replaced by ${source}")
+                    endif ()
+                endif ()
+
+                if (NOT error_msg)
+
+                    list(APPEND visited "${override_file_path}" "${system_file_path}")
+
+                    set(check_file_path "${override_file_path}.check")
+                    if (EXISTS "${check_file_path}")
+                        file(READ "${check_file_path}" check_contents)
+                        file(READ "${override_file_path}" override_contents)
+                        file(READ "${system_file_path}" source_contents)
+
+                        if (NOT "${check_contents}" STREQUAL "${source_contents}")
+                            if ("${source_contents}" STREQUAL "${override_contents}")
+                                set(error_msg "Replacement has already been made.")
+                                set(errored OFF)
+                            else ()
+                                set(error_msg "Original destination file differs from expected. Replacement aborted.")
+                                set(errored ON)
+                            endif ()
+                        endif ()
+                    endif ()
+                endif ()
+
+                if (NOT error_msg)
+                    file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                endif ()
+
+            else ()
+                set(errored ON)
+                set(error_msg "destination file doesn't exist.")
+            endif ()
+
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+
+            if (errored)
+                msg(CHECK_FAIL "${RED}[FAILED]${NC} ${BOLD}${error_msg}${NC}")
+                set(any_errored ON)
+                set(errored OFF)
+                set(error_msg)
+            else ()
+                msg(CHECK_PASS "${GREEN}${error_msg}${NC}")
+            endif ()
+
+        endforeach ()
+
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        if(any_errored)
+            msg(CHECK_FAIL "${RED}[FAILED]${NC}")
+        else ()
+            msg(CHECK_PASS "${GREEN}OK.${NC}")
+        endif ()
+
+    endforeach ()
+
+    list(POP_BACK CMAKE_MESSAGE_INDENT)
+    if (any_errored)
+        msg(CHECK_FAIL "${ORANGE}[FAILED] Some patches failed.${NC}")
+    else ()
+        msg(CHECK_PASS "${GREEN}OK.${NC}")
+    endif ()
+
+endfunction()
+
 function(inc var)
     set(_ ${${var}})
     math(EXPR _ "${_} + 1")
