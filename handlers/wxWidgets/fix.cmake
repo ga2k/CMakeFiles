@@ -11,8 +11,9 @@ function(wxWidgets_fix target tag sourceDir)
     unset(patches)
     list(APPEND patches
             "${target}/include|${sourceDir}/include/wx/"
-            "${target}/src/common|${sourceDir}/src/common/"
-            "${target}/src/osx|${sourceDir}/src/osx/carbon/"
+            #  "${target}/src/common|${sourceDir}/src/common/"
+            # "${target}/src/osx|${sourceDir}/src/osx/carbon/"
+            "${target}/src|${sourceDir}/src/"
     )
     replaceFile(${target} "${patches}")
     set(HANDLED ON PARENT_SCOPE)
