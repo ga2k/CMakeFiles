@@ -2,7 +2,7 @@
 
 function(soci_preDownload pkgname url tag srcDir)
 
-    if(soci_ALREADY_FOUND)
+    if (soci_ALREADY_FOUND)
         message("bleep blorp blorp blah blah means that I love you")
         return()
     endif ()
@@ -89,51 +89,45 @@ function(soci_preDownload pkgname url tag srcDir)
         endif ()
     endif ()
 
-#    #    if (NOT soci_PATCHED)
-#    unset(patches)
-#    set(_soci_local_src "${${target}_SOURCE_DIR}")
-#    list(APPEND patches
-#            # Test whole folder
-#            "${target}/3rdparty|${_soci_local_src}/3rdparty"
-#            # Test single file
-#            "${target}/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
-#
-#            "${target}/include|${_soci_local_src}/include"
-#
-#            "${target}/CMakeLists.txt|${_soci_local_src}"
-#            #                "${target}/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
-#
-#            "${target}/src|${_soci_local_src}/src"
-#    )
-#
-#    replaceFiles(soci "${patches}")
-#    #    endif ()
-#    #    set(soci_PATCHED ON PARENT_SCOPE)
-
-
-
-
-
-
-
-        if (NOT soci_PATCHED)
+    if (NOT soci_PATCHED)
         unset(patches)
+        set(_soci_local_src "${${target}_SOURCE_DIR}")
         list(APPEND patches
-                "soci/3rdparty/fmt/include|${_soci_local_src}"
-                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
+                # Test whole folder
+                "${target}/3rdparty|${_soci_local_src}/3rdparty"
+                # Test single file
+                "${target}/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/fmt-src/include/fmt/"
 
-                "soci/include|${_soci_local_src}"
+                "${target}/include|${_soci_local_src}/include"
 
-                "soci/CMakeLists.txt|${_soci_local_src}"
-                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
+                "${target}/CMakeLists.txt|${_soci_local_src}"
+                #                "${target}/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 
-                #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
-                "soci/src|${_soci_local_src}"
+                "${target}/src|${_soci_local_src}/src"
         )
 
-        replaceFile(soci "${patches}")
+        replaceFiles(soci "${patches}")
     endif ()
     set(soci_PATCHED ON PARENT_SCOPE)
+
+#    if (NOT soci_PATCHED)
+#        unset(patches)
+#        list(APPEND patches
+#                "soci/3rdparty/fmt/include|${_soci_local_src}"
+#                "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
+#
+#                "soci/include|${_soci_local_src}"
+#
+#                "soci/CMakeLists.txt|${_soci_local_src}"
+#                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
+#
+#                #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
+#                "soci/src|${_soci_local_src}"
+#        )
+#
+#        replaceFile(soci "${patches}")
+#    endif ()
+#    set(soci_PATCHED ON PARENT_SCOPE)
 
     set(FETCHCONTENT_SOURCE_DIR_SOCI "${_soci_local_src}" CACHE PATH "Pre-cloned SOCI source" FORCE)
 
