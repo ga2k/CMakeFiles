@@ -92,19 +92,20 @@ function(soci_preDownload pkgname url tag srcDir)
     if (NOT soci_PATCHED)
         unset(patches)
         list(APPEND patches
-                "soci/3rdparty/fmt/include|${_soci_local_src}"
+                # Test whole folder
+                "soci/3rdparty|${_soci_local_src}/3rdparty"
+                # Test single file
                 "soci/3rdparty/fmt/include/fmt/base.h|${BUILD_DIR}/_deps/fmt-src/include/fmt/"
 
-                "soci/include|${_soci_local_src}"
+                "soci/include|${_soci_local_src}/include"
 
                 "soci/CMakeLists.txt|${_soci_local_src}"
-                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}"
+                "soci/cmake/soci_define_backend_target.cmake|${_soci_local_src}/cmake"
 
-                #1            "soci/src/core/CMakeLists.txt|${sourceDir}"
-                "soci/src|${_soci_local_src}"
+                "soci/src|${_soci_local_src}/src"
         )
 
-        replaceFile(soci "${patches}")
+        replaceFiles(soci "${patches}")
     endif ()
     set(soci_PATCHED ON PARENT_SCOPE)
 
