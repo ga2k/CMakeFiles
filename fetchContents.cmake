@@ -439,7 +439,6 @@ function(fetchContents)
                                     endif ()
 
                                     set(use_bin)
-                                    set(this_subbin)
                                     if(this_bin)
                                         set(use_bin "${this_bin}")
                                         set(use_subbin "${this_bin}-subbuild")
