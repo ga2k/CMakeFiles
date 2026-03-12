@@ -433,7 +433,7 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
-                                    set(this_src)
+                                    set(this_src "${EXTERNALS_DIR}")
                                     if(this_src)
                                         set(use_src "${this_src}")
                                     endif ()
