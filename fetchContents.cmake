@@ -455,8 +455,8 @@ function(fetchContents)
                                         list(APPEND outStr "BINARY_DIR" "${use_bin}")
                                         list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
                                     endif ()
-                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" "${this_find_package_args}")
-                                    list(APPEND outStr "${COMPONENTS_KEYWORD}" "${this_find_package_components})")
+                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" ${this_find_package_args})
+                                    list(APPEND outStr "${COMPONENTS_KEYWORD}" ${this_find_package_components})
                                     string(REPLACE ";" " " output "${outStr}")
 
                                     msg("FetchContent_Declare(${this_pkgname} ${output}")
@@ -607,20 +607,28 @@ function(fetchContents)
                         endif ()
 
                         if ("${this_method}" STREQUAL "FIND_PACKAGE")
+
                             if (NOT TARGET ${this_namespace}::${this_pkgname})
                                 handleTarget(${this_pkgname})
                             endif ()
+
                         elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
-                            if (NOT this_src)
+                            set(use_src)
+                            if (this_src)
+                                set(use_src "${this_src}")
+                            else ()
                                 if (EXISTS "${EXTERNALS_DIR}/${this_pkgname}")
-                                    set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
+                                    set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
                                 endif ()
                             endif ()
 
-                            if (NOT this_bin)
+                            set(use_bin)
+                            if (this_bin)
+                                set(use_bin "${this_bin}")
+                            else ()
                                 if (EXISTS "${BUILD_DIR}/${this_pkglc}-build")
-                                    set(this_bin "${BUILD_DIR}/${this_pkglc}-build")
+                                    set(use_bin "${BUILD_DIR}/${this_pkglc}-build")
                                 endif ()
                             endif ()
 
@@ -644,7 +652,7 @@ function(fetchContents)
 
                             set(fn "${this_pkgname}_postMakeAvailable")
                             if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_src}" "${this_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                cmake_language(CALL "${fn}" "${use_src}" "${use_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
                             endif ()
 
                             # Auto-include the standard 'include' folder if it exists and wasn't handled
