@@ -453,13 +453,15 @@ function(fetchContents)
                                         list(APPEND outStr "BINARY_DIR" "${use_bin}")
                                         list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
                                     endif ()
+
                                     list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" ${this_find_package_args})
                                     list(APPEND outStr "${COMPONENTS_KEYWORD}" ${this_find_package_components})
                                     list(APPEND outStr "${GIT_TAG_KEYWORD}" "${this_tag}")
+
+                                    string(REPLACE ";;" ";" outStr "${outStr}")
                                     string(REPLACE ";" " " output "${outStr}")
 
                                     msg(" FetchContent_Declare(${this_pkgname} ${output})")
-                                    msg(STATUS "[FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})]")
 
                                     FetchContent_Declare(${this_pkgname} ${outStr})
 
