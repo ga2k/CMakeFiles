@@ -458,7 +458,8 @@ function(fetchContents)
                                     list(APPEND outStr "${COMPONENTS_KEYWORD}" ${this_find_package_components})
                                     string(REPLACE ";" " " output "${outStr}")
 
-                                    msg("FetchContent_Declare(${this_pkgname} ${output}")
+                                    msg(" FetchContent_Declare(${this_pkgname} ${output})")
+                                    msg(STATUS "[FetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})]")
 
                                     FetchContent_Declare(${this_pkgname} ${outStr})
 
