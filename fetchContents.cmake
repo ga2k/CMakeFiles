@@ -433,29 +433,35 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
+                                    set(this_src)
                                     if(this_src)
                                         set(use_src "${this_src}")
-                                    else ()
-                                        set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
                                     endif ()
 
+                                    set(this_bin)
+                                    set(this_subbin)
                                     if(this_bin)
                                         set(use_bin "${this_bin}")
                                         set(use_subbin "${this_bin}-subbuild")
-                                    else ()
-                                        set(use_bin "${BUILD_DIR}/${this_pkgname}-build")
-                                        set(use_subbin "${BUILD_DIR}/${this_pkgname}-subbuild")
                                     endif ()
 
-                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} ${GIT_TAG_KEYWORD} ${this_tag} SOURCE_DIR ${use_src} BINARY_DIR ${use_bin} SUBBUILD_DIR ${use_subbin} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components})")
-                                    FetchContent_Declare(${this_pkgname}
-                                            ${SOURCE_KEYWORD} ${this_git_repo}
-#                                            SOURCE_DIR ${use_src}
-#                                            BINARY_DIR ${use_bin}
-#                                            SUBBUILD_DIR ${use_subbin}
-                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
-                                            ${GIT_TAG_KEYWORD} ${this_tag})
+                                    set(outStr)
+                                    list(APPEND outStr "${SOURCE_KEYWORD}" "${this_git_repo}")
+                                    list(APPEND outStr "${GIT_TAG_KEYWORD}" "${this_tag}")
+                                    if(use_src)
+                                        list(APPEND outStr "SOURCE_DIR" "${use_src}")
+                                    endif ()
+                                    if(use_bin)
+                                        list(APPEND outStr "BINARY_DIR" "${use_bin}")
+                                        list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
+                                    endif ()
+                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" "${this_find_package_args}")
+                                    list(APPEND outStr "${COMPONENTS_KEYWORD}" "${this_find_package_components})")
+                                    string(REPLACE ";" " " output "${outStr}")
+
+                                    msg("FetchContent_Declare(${this_pkgname} ${output}")
+
+                                    FetchContent_Declare(${this_pkgname} ${outStr})
 
                                     set(fn "${this_pkgname}_postDeclare")
                                     if (COMMAND "${fn}")
