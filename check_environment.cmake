@@ -331,10 +331,10 @@ macro(check_environment PROJECT_ROOT)
             set(UNDERLINE   "")
             set(NC          "")
 
-            macro(F256 VAR RR GG BB)
+            macro(F256C VAR RR GG BB)
                 set(${VAR} "")
             endmacro()
-            macro(B256 VAR RR GG BB)
+            macro(B256C VAR RR GG BB)
                 set(${VAR} "")
             endmacro()
 
