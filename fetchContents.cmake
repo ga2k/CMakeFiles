@@ -270,6 +270,10 @@ function(fetchContents)
         math(EXPR phaseLineInternalPadding "${usableCols} - (${appNameLen} + ${phaseLen} + 2)")
         string(REPEAT " " ${phaseLineInternalPadding} phasePadding)
 
+        set(itemN 0)
+        set(ofM ${numFeatures})
+        string(LENGTH "${ofM}" howLongIsOfM)
+
         foreach (pass_num RANGE 1)
             set(phase ${pass_num})
             inc(phase)
@@ -345,14 +349,20 @@ function(fetchContents)
                     set(apf_${flag} ON)
                 endforeach ()
 
+                longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
+                longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
+
+                string(LENGTH "${ix}" howLongIsItemN)
+                set(useThisAsItemN "${ix}")
+                if(howLongIsItemN LESS howLongIsOfM)
+                    set(useThisAsItemN " ${useThisAsItemN}")
+                endif ()
+
                 # ==========================================================================================================
                 # PASS 0: DECLARATION & FIND_PACKAGE phase
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
-
-                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
-                    longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
-                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} [${BOLD}${BLUE}${ITALICS}${UNDERLINE}${APP_NAME}${NC}${BLUE} Item${BOLD} ${useThisAsItemN}${NC}${BLUE} of ${BOLD}${ofM}${NC}] ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     msg(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -590,9 +600,7 @@ function(fetchContents)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ OR apf_EARLY_MAKEAVAILABLE)
 
-                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
-                    longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
-                    msg(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BLUE}Phase ${NC}${BOLD}2${NC}")
+                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} [${BOLD}${BLUE}${ITALICS}${UNDERLINE}${APP_NAME}${NC}${BLUE} Item${BOLD} ${useThisAsItemN}${NC}${BLUE} of ${BOLD}${ofM}${NC}] ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     msg(" ")
 
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
