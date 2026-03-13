@@ -42,6 +42,8 @@ if (APP_GLOBAL_RESOURCES)
     endif ()
 endif ()# @formatting:on
 
+file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
+
 ## App configuration (app.yaml) generation paths
 set(APP_YAML_TEMPLATE_PATH "${cmake_root}/templates/app.yaml.in")
 include(${cmake_root}/generate_app_config.cmake)
