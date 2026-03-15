@@ -701,7 +701,7 @@ class CppGroupGenerator:
             if self.target_type == "groups":
                 target_parent = "getPanel()"
             elif self.target_type == "pages":
-                target_parent = "this"  # Changed from "getForm()"
+                target_parent = "getForm()"  # Reverted
             elif self.target_type == "wizardpages":
                 target_parent = "this"
 
