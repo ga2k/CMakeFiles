@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import datetime
 from dataclasses import dataclass
 
+
 def ensure_yaml():
     try:
         import yaml
@@ -25,6 +26,7 @@ def ensure_yaml():
         except Exception as e:
             print(f"Failed to install pyyaml: {e}")
             sys.exit(1)
+
 
 yaml = ensure_yaml()
 
@@ -239,93 +241,93 @@ class CppGroupGenerator:
         }
         self.event_mapping = {
 
-            'EVT_BUTTON' : 'wxEVT_BUTTON',
+            'EVT_BUTTON': 'wxEVT_BUTTON',
             'EVT_TOGGLEBUTTON': 'wxEVT_TOGGLEBUTTON',
 
-            'EVT_CHECKBOX' : 'wxEVT_CHECKBOX',
+            'EVT_CHECKBOX': 'wxEVT_CHECKBOX',
 
-            'EVT_CHOICE' : 'wxEVT_CHOICE',
+            'EVT_CHOICE': 'wxEVT_CHOICE',
 
-            'EVT_COMBOBOX_CLOSEUP' : 'wxEVT_COMBOBOX_CLOSEUP',
-            'EVT_COMBOBOX_DROPDOWN' : 'wxEVT_COMBOBOX_DROPDOWN',
-            'EVT_COMBOBOX' : 'wxEVT_COMBOBOX',
+            'EVT_COMBOBOX_CLOSEUP': 'wxEVT_COMBOBOX_CLOSEUP',
+            'EVT_COMBOBOX_DROPDOWN': 'wxEVT_COMBOBOX_DROPDOWN',
+            'EVT_COMBOBOX': 'wxEVT_COMBOBOX',
 
-            'EVT_DATE_CHANGED' : 'wxEVT_DATE_CHANGED',
+            'EVT_DATE_CHANGED': 'wxEVT_DATE_CHANGED',
 
-            'EVT_LISTBOX' : 'wxEVT_LISTBOX',
-            'EVT_LISTBOX_DCLICK' : 'wxEVT_LISTBOX_DCLICK',
+            'EVT_LISTBOX': 'wxEVT_LISTBOX',
+            'EVT_LISTBOX_DCLICK': 'wxEVT_LISTBOX_DCLICK',
 
-            'EVT_LIST_BEGIN_LABEL_EDIT' : 'wxEVT_LIST_BEGIN_LABEL_EDIT',
-            'EVT_LIST_BEGIN_RDRAG' : 'wxEVT_LIST_BEGIN_RDRAG',
-            'EVT_LIST_CACHE_HINT' : 'wxEVT_LIST_CACHE_HINT',
-            'EVT_LIST_COL_BEGIN_DRAG' : 'wxEVT_LIST_COL_BEGIN_DRAG',
-            'EVT_LIST_COL_CLICK' : 'wxEVT_LIST_COL_CLICK',
-            'EVT_LIST_COL_DRAGGING' : 'wxEVT_LIST_COL_DRAGGING',
-            'EVT_LIST_COL_END_DRAG' : 'wxEVT_LIST_COL_END_DRAG',
-            'EVT_LIST_COL_RIGHT_CLICK' : 'wxEVT_LIST_COL_RIGHT_CLICK',
-            'EVT_LIST_DELETE_ALL_ITEMS' : 'wxEVT_LIST_DELETE_ALL_ITEMS',
-            'EVT_LIST_DELETE_ITEM' : 'wxEVT_LIST_DELETE_ITEM',
-            'EVT_LIST_END_LABEL_EDIT' : 'wxEVT_LIST_END_LABEL_EDIT',
-            'EVT_LIST_INSERT_ITEM' : 'wxEVT_LIST_INSERT_ITEM',
-            'EVT_LIST_ITEM_ACTIVATED' : 'wxEVT_LIST_ITEM_ACTIVATED',
-            'EVT_LIST_ITEM_CHECKED' : 'wxEVT_LIST_ITEM_CHECKED',
-            'EVT_LIST_ITEM_DESELECTED' : 'wxEVT_LIST_ITEM_DESELECTED',
-            'EVT_LIST_ITEM_FOCUSED' : 'wxEVT_LIST_ITEM_FOCUSED',
-            'EVT_LIST_ITEM_MIDDLE_CLICK' : 'wxEVT_LIST_ITEM_MIDDLE_CLICK',
-            'EVT_LIST_ITEM_RIGHT_CLICK' : 'wxEVT_LIST_ITEM_RIGHT_CLICK',
-            'EVT_LIST_ITEM_SELECTED' : 'wxEVT_LIST_ITEM_SELECTED',
-            'EVT_LIST_ITEM_UNCHECKED' : 'wxEVT_LIST_ITEM_UNCHECKED',
-            'EVT_LIST_KEY_DOWN' : 'wxEVT_LIST_KEY_DOWN',
+            'EVT_LIST_BEGIN_LABEL_EDIT': 'wxEVT_LIST_BEGIN_LABEL_EDIT',
+            'EVT_LIST_BEGIN_RDRAG': 'wxEVT_LIST_BEGIN_RDRAG',
+            'EVT_LIST_CACHE_HINT': 'wxEVT_LIST_CACHE_HINT',
+            'EVT_LIST_COL_BEGIN_DRAG': 'wxEVT_LIST_COL_BEGIN_DRAG',
+            'EVT_LIST_COL_CLICK': 'wxEVT_LIST_COL_CLICK',
+            'EVT_LIST_COL_DRAGGING': 'wxEVT_LIST_COL_DRAGGING',
+            'EVT_LIST_COL_END_DRAG': 'wxEVT_LIST_COL_END_DRAG',
+            'EVT_LIST_COL_RIGHT_CLICK': 'wxEVT_LIST_COL_RIGHT_CLICK',
+            'EVT_LIST_DELETE_ALL_ITEMS': 'wxEVT_LIST_DELETE_ALL_ITEMS',
+            'EVT_LIST_DELETE_ITEM': 'wxEVT_LIST_DELETE_ITEM',
+            'EVT_LIST_END_LABEL_EDIT': 'wxEVT_LIST_END_LABEL_EDIT',
+            'EVT_LIST_INSERT_ITEM': 'wxEVT_LIST_INSERT_ITEM',
+            'EVT_LIST_ITEM_ACTIVATED': 'wxEVT_LIST_ITEM_ACTIVATED',
+            'EVT_LIST_ITEM_CHECKED': 'wxEVT_LIST_ITEM_CHECKED',
+            'EVT_LIST_ITEM_DESELECTED': 'wxEVT_LIST_ITEM_DESELECTED',
+            'EVT_LIST_ITEM_FOCUSED': 'wxEVT_LIST_ITEM_FOCUSED',
+            'EVT_LIST_ITEM_MIDDLE_CLICK': 'wxEVT_LIST_ITEM_MIDDLE_CLICK',
+            'EVT_LIST_ITEM_RIGHT_CLICK': 'wxEVT_LIST_ITEM_RIGHT_CLICK',
+            'EVT_LIST_ITEM_SELECTED': 'wxEVT_LIST_ITEM_SELECTED',
+            'EVT_LIST_ITEM_UNCHECKED': 'wxEVT_LIST_ITEM_UNCHECKED',
+            'EVT_LIST_KEY_DOWN': 'wxEVT_LIST_KEY_DOWN',
 
-            'EVT_RADIOBOX' : 'wxEVT_RADIOBOX',
+            'EVT_RADIOBOX': 'wxEVT_RADIOBOX',
 
-            'EVT_RADIOBUTTON' : 'wxEVT_RADIOBUTTON',
+            'EVT_RADIOBUTTON': 'wxEVT_RADIOBUTTON',
 
-            'EVT_SCROLL_TOP' : 'wxEVT_SCROLL_TOP',
-            'EVT_SCROLL_BOTTOM' : 'wxEVT_SCROLL_BOTTOM',
-            'EVT_SCROLL_LINEUP' : 'wxEVT_SCROLL_LINEUP',
-            'EVT_SCROLL_LINEDOWN' : 'wxEVT_SCROLL_LINEDOWN',
-            'EVT_SCROLL_PAGEUP' : 'wxEVT_SCROLL_PAGEUP',
-            'EVT_SCROLL_PAGEDOWN' : 'wxEVT_SCROLL_PAGEDOWN',
-            'EVT_SCROLL_THUMBTRACK' : 'wxEVT_SCROLL_THUMBTRACK',
-            'EVT_SCROLL_THUMBRELEASE' : 'wxEVT_SCROLL_THUMBRELEASE',
-            'EVT_SCROLL_CHANGED' : 'wxEVT_SCROLL_CHANGED',
+            'EVT_SCROLL_TOP': 'wxEVT_SCROLL_TOP',
+            'EVT_SCROLL_BOTTOM': 'wxEVT_SCROLL_BOTTOM',
+            'EVT_SCROLL_LINEUP': 'wxEVT_SCROLL_LINEUP',
+            'EVT_SCROLL_LINEDOWN': 'wxEVT_SCROLL_LINEDOWN',
+            'EVT_SCROLL_PAGEUP': 'wxEVT_SCROLL_PAGEUP',
+            'EVT_SCROLL_PAGEDOWN': 'wxEVT_SCROLL_PAGEDOWN',
+            'EVT_SCROLL_THUMBTRACK': 'wxEVT_SCROLL_THUMBTRACK',
+            'EVT_SCROLL_THUMBRELEASE': 'wxEVT_SCROLL_THUMBRELEASE',
+            'EVT_SCROLL_CHANGED': 'wxEVT_SCROLL_CHANGED',
 
             'EVT_SLIDER': 'wxEVT_SLIDER',
 
-            'EVT_SPIN' : 'wxEVT_SPIN',
+            'EVT_SPIN': 'wxEVT_SPIN',
             'EVT_SPINCTRL': 'wxEVT_SPINCTRL',
             'EVT_SPINCTRLDOUBLE': 'wxEVT_SPINCTRLDOUBLE',
 
-            'EVT_TEXT' : 'wxEVT_TEXT',
-            'EVT_TEXT_ENTER' : 'wxEVT_TEXT_ENTER',
-            'EVT_TEXT_URL' : 'wxEVT_TEXT_URL',
-            'EVT_TEXT_MAXLEN' : 'wxEVT_TEXT_MAXLEN',
+            'EVT_TEXT': 'wxEVT_TEXT',
+            'EVT_TEXT_ENTER': 'wxEVT_TEXT_ENTER',
+            'EVT_TEXT_URL': 'wxEVT_TEXT_URL',
+            'EVT_TEXT_MAXLEN': 'wxEVT_TEXT_MAXLEN',
 
-            'EVT_TREE_BEGIN_DRAG' : 'wxEVT_TREE_BEGIN_DRAG',
-            'EVT_TREE_BEGIN_LABEL_EDIT' : 'wxEVT_TREE_BEGIN_LABEL_EDIT',
-            'EVT_TREE_BEGIN_RDRAG' : 'wxEVT_TREE_BEGIN_RDRAG',
-            'EVT_TREE_DELETE_ITEM' : 'wxEVT_TREE_DELETE_ITEM',
-            'EVT_TREE_END_DRAG' : 'wxEVT_TREE_END_DRAG',
-            'EVT_TREE_END_LABEL_EDIT' : 'wxEVT_TREE_END_LABEL_EDIT',
-            'EVT_TREE_GET_INFO' : 'wxEVT_TREE_GET_INFO',
-            'EVT_TREE_ITEM_GETTOOLTIP' : 'wxEVT_TREE_ITEM_GETTOOLTIP',
-            'EVT_TREE_ITEM_ACTIVATED' : 'wxEVT_TREE_ITEM_ACTIVATED',
-            'EVT_TREE_ITEM_COLLAPSED' : 'wxEVT_TREE_ITEM_COLLAPSED',
-            'EVT_TREE_ITEM_COLLAPSING' : 'wxEVT_TREE_ITEM_COLLAPSING',
-            'EVT_TREE_ITEM_EXPANDED' : 'wxEVT_TREE_ITEM_EXPANDED',
-            'EVT_TREE_ITEM_EXPANDING' : 'wxEVT_TREE_ITEM_EXPANDING',
-            'EVT_TREE_ITEM_MENU' : 'wxEVT_TREE_ITEM_MENU',
-            'EVT_TREE_ITEM_MIDDLE_CLICK' : 'wxEVT_TREE_ITEM_MIDDLE_CLICK',
-            'EVT_TREE_ITEM_RIGHT_CLICK' : 'wxEVT_TREE_ITEM_RIGHT_CLICK',
-            'EVT_TREE_KEY_DOWN' : 'wxEVT_TREE_KEY_DOWN',
-            'EVT_TREE_SEL_CHANGED' : 'wxEVT_TREE_SEL_CHANGED',
-            'EVT_TREE_SEL_CHANGING' : 'wxEVT_TREE_SEL_CHANGING',
-            'EVT_TREE_SET_INFO' : 'wxEVT_TREE_SET_INFO',
-            'EVT_TREE_STATE_IMAGE_CLICK' : 'wxEVT_TREE_STATE_IMAGE_CLICK',
+            'EVT_TREE_BEGIN_DRAG': 'wxEVT_TREE_BEGIN_DRAG',
+            'EVT_TREE_BEGIN_LABEL_EDIT': 'wxEVT_TREE_BEGIN_LABEL_EDIT',
+            'EVT_TREE_BEGIN_RDRAG': 'wxEVT_TREE_BEGIN_RDRAG',
+            'EVT_TREE_DELETE_ITEM': 'wxEVT_TREE_DELETE_ITEM',
+            'EVT_TREE_END_DRAG': 'wxEVT_TREE_END_DRAG',
+            'EVT_TREE_END_LABEL_EDIT': 'wxEVT_TREE_END_LABEL_EDIT',
+            'EVT_TREE_GET_INFO': 'wxEVT_TREE_GET_INFO',
+            'EVT_TREE_ITEM_GETTOOLTIP': 'wxEVT_TREE_ITEM_GETTOOLTIP',
+            'EVT_TREE_ITEM_ACTIVATED': 'wxEVT_TREE_ITEM_ACTIVATED',
+            'EVT_TREE_ITEM_COLLAPSED': 'wxEVT_TREE_ITEM_COLLAPSED',
+            'EVT_TREE_ITEM_COLLAPSING': 'wxEVT_TREE_ITEM_COLLAPSING',
+            'EVT_TREE_ITEM_EXPANDED': 'wxEVT_TREE_ITEM_EXPANDED',
+            'EVT_TREE_ITEM_EXPANDING': 'wxEVT_TREE_ITEM_EXPANDING',
+            'EVT_TREE_ITEM_MENU': 'wxEVT_TREE_ITEM_MENU',
+            'EVT_TREE_ITEM_MIDDLE_CLICK': 'wxEVT_TREE_ITEM_MIDDLE_CLICK',
+            'EVT_TREE_ITEM_RIGHT_CLICK': 'wxEVT_TREE_ITEM_RIGHT_CLICK',
+            'EVT_TREE_KEY_DOWN': 'wxEVT_TREE_KEY_DOWN',
+            'EVT_TREE_SEL_CHANGED': 'wxEVT_TREE_SEL_CHANGED',
+            'EVT_TREE_SEL_CHANGING': 'wxEVT_TREE_SEL_CHANGING',
+            'EVT_TREE_SET_INFO': 'wxEVT_TREE_SET_INFO',
+            'EVT_TREE_STATE_IMAGE_CLICK': 'wxEVT_TREE_STATE_IMAGE_CLICK',
 
-            'EVT_SET_FOCUS' : 'wxEVT_SET_FOCUS',
-            'EVT_KILL_FOCUS' : 'wxEVT_KILL_FOCUS',
+            'EVT_SET_FOCUS': 'wxEVT_SET_FOCUS',
+            'EVT_KILL_FOCUS': 'wxEVT_KILL_FOCUS',
 
             'EVT_MENU': 'wxEVT_MENU',
             'EVT_UPDATE_UI': 'wxEVT_UPDATE_UI',
@@ -567,7 +569,7 @@ class CppGroupGenerator:
             code.append(f"{pad1}long style = 0)")
             code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
 
-    # Page args_out at ctor top
+        # Page args_out at ctor top
         # if top_base_class == "Page" and page_args_out_triplets:
         if page_args_out_triplets:
             for name_out, type_out, default_out in page_args_out_triplets:
@@ -697,7 +699,7 @@ class CppGroupGenerator:
                 continue
 
             if self.target_type == "groups":
-                target_parent = "getSBSizer()->GetStaticBox();"
+                target_parent = "getPanel()" # getSBSizer()->GetStaticBox();"
             elif self.target_type == "pages":
                 target_parent = "getForm()"
             elif self.target_type == "wizardpages":
@@ -794,7 +796,8 @@ class CppGroupGenerator:
             sizer_def = member_def.get('sizer')
             if sizer_def:
                 sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
-                code.append(f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
+                code.append(
+                    f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
         # chain
         member_accessor = '->'
@@ -910,7 +913,8 @@ class CppGroupGenerator:
             sizer_def = member_def.get('sizer')
             if sizer_def:
                 sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
-                code.append(f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
+                code.append(
+                    f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
         # Placement: per-member verbatim before addGroup
         if controlset_verbatim:
@@ -1362,7 +1366,7 @@ class CppGroupGenerator:
         return var.strip()
 
     def extract_needed_modules(self, element_name: str, elements: Dict[str, Any], control_name: str,
-                       yaml_file: Path) -> List[str] | None:
+                               yaml_file: Path) -> List[str] | None:
 
         modules: List[str] = [] or None
         if 'modules' in elements:
@@ -1471,6 +1475,23 @@ class CppGroupGenerator:
 
         return layout
 
+        # def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
+        #     style = ''
+        #     if 'style' in elements:
+        #         if isinstance(elements['style'], list):
+        #             style = '|'.join(elements['style'])
+        #         elif isinstance(elements['style'], int):
+        #             ss = elements['style']
+        #             style = f'{{ss}}'
+        #         elif isinstance(elements['style'], str):
+        #             style = elements['style']
+        #         else:
+        #             print(f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
+        #                   file=sys.stderr)
+        #     else:
+        #         style = '0'
+        #     return style
+
     def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         style = ''
         if 'style' in elements:
@@ -1482,10 +1503,15 @@ class CppGroupGenerator:
             elif isinstance(elements['style'], str):
                 style = elements['style']
             else:
-                print(f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
-                      file=sys.stderr)
+                print(
+                    f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
+                    file=sys.stderr)
         else:
-            style = '0'
+            # Default to wxTAB_TRAVERSAL for Groups and Pages to enable tab navigation
+            if self.target_type in ("groups", "pages", "wizardpages"):
+                style = 'wxTAB_TRAVERSAL'
+            else:
+                style = '0'
         return style
 
     def extract_uicreate_flags(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[
@@ -1860,7 +1886,6 @@ class CppGroupGenerator:
         if t == "bool":
             return "true" if bool(val) else "false"
 
-
         if not t and isinstance(val, str):
             s = val.strip().lower()
             if s in ("true", "false"):
@@ -2096,7 +2121,8 @@ class CppGroupGenerator:
             if (not isinstance(elements, list) or len(elements) == 0):
                 elements = {}
                 if not self.quiet:
-                    print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section", file=sys.stderr)
+                    print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section",
+                          file=sys.stderr)
 
             module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim)
 
@@ -2211,7 +2237,8 @@ def main():
     parser.add_argument('-o', '--output', type=Path, help='Output directory or file path')
     parser.add_argument('--scan', type=Path, action='append',
                         help='Scan this directory recursively for *.yaml (can be used multiple times)')
-    parser.add_argument('-x', '--export-var', action='store', help='The name of the generated export variable like GFX_EXPORT')
+    parser.add_argument('-x', '--export-var', action='store',
+                        help='The name of the generated export variable like GFX_EXPORT')
     parser.add_argument('-f', '--first-pagetype', action='store', help='First page type to generate')
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
