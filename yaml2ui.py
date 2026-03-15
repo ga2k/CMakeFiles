@@ -699,13 +699,11 @@ class CppGroupGenerator:
                 continue
 
             if self.target_type == "groups":
-                target_parent = "getPanel()" # getSBSizer()->GetStaticBox();"
+                target_parent = "getPanel()"
             elif self.target_type == "pages":
-                target_parent = "getForm()"
+                target_parent = "this"  # Changed from "getForm()"
             elif self.target_type == "wizardpages":
                 target_parent = "this"
-            else:
-                target_parent = "pParent"
 
             for item in items:
                 if not isinstance(item, dict):
