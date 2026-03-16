@@ -16,7 +16,7 @@ function(wxWidgets_set_build_options)
     set(wxUSE_UNICODE       ON CACHE BOOL "" FORCE)
     # @formatter:on
     if (LINUX)
-        set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
+        set(wxBUILD_TOOLKIT "gtk3" CACHE STRING "" FORCE)
     elseif (APPLE)
         set(wxBUILD_TOOLKIT "osx_cocoa" CACHE STRING "" FORCE)
     elseif (WIN32)
