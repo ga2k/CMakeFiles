@@ -64,8 +64,8 @@ elseif(LINUX)
         set(CMAKE_INSTALL_LIBDIR "lib64")
     endif ()
 
-    list(APPEND extra_Definitions __WXQT__)
-    set(wxBUILD_TOOLKIT qt CACHE STRING "" FORCE)
+    list(APPEND extra_Definitions __WXGTK__ __WXGTK3__)
+    set(wxBUILD_TOOLKIT gtk3 CACHE STRING "" FORCE)
     list(APPEND extra_CompileOptions -fvisibility=default)
 
     set(DYN_FLAG dl)
