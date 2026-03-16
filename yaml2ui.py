@@ -699,7 +699,7 @@ class CppGroupGenerator:
                 continue
 
             if self.target_type == "groups":
-                target_parent = "getPanel()" # getSBSizer()->GetStaticBox();"
+                target_parent = "getSBSizer()->GetStaticBox();"
             elif self.target_type == "pages":
                 target_parent = "getForm()"
             elif self.target_type == "wizardpages":
