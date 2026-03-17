@@ -78,8 +78,8 @@
           },
           {
             "type": "equals",
-            "lhs": "$env{CPU}",
-            "rhs": "x86_64"
+            "lhs": "$env{PROCESSOR_ARCHITECTURE}",
+            "rhs": "AMD64"
           }
         ]
       },
@@ -111,8 +111,8 @@
           },
           {
             "type": "equals",
-            "lhs": "$env{CPU}",
-            "rhs": "x86_64"
+            "lhs": "$env{PROCESSOR_ARCHITECTURE}",
+            "rhs": "AMD64"
           }
         ]
       },
