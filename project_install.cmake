@@ -117,7 +117,7 @@ endforeach()
 message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
 
 # @formatting:off
-install(TARGETS                 ${APP_NAME}
+install(TARGETS                 ${APP_VENDOR}::${APP_NAME}
                                 ${_hs_install_targets}
         EXPORT                  ${APP_NAME}Target
         LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
