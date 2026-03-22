@@ -186,31 +186,45 @@ macro(check_environment PROJECT_ROOT)
         endif ()
 
         if(WIN32)
-            if(DEFINED ENV{STAGE_DIR})
-                set(_PATH "$ENV{STAGE_DIR}")
-            elseif (DEFINED DESTDIR)
-                set(_PATH "${DESTDIR}")
-            else()
-                if(DEFINED ENV{HOME})
-                    set(_PATH "$ENV{HOME}/dev/stage")
-                elseif(DEFINED ENV{USERPROFILE})
-                    set(_PATH "$ENV{USERPROFILE}/dev/stage")
+            if(CMAKE_CROSSCOMPILING)
+                # Cross-compiling for Windows from Linux — use Linux-style staging layout
+                # so both builds share ~/dev/stage/usr/local/ without C:\ path nonsense
+                if(DEFINED ENV{STAGE_DIR})
+                    set(_PATH "$ENV{STAGE_DIR}")
+                elseif(DEFINED DESTDIR)
+                    set(_PATH "${DESTDIR}")
                 else()
-                    set(_PATH "C:/dev/stage")
+                    set(_PATH "~/dev/stage")
                 endif()
-            endif ()
-
-            # Release install - use APPDATA
-            if(DEFINED ENV{APPDATA})
-                set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
+                set(SYSTEM_PATH "/usr/local")
+                set(_SYSPATH "${SYSTEM_PATH}")
             else()
-                set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/${APP_VENDOR}")
+                if(DEFINED ENV{STAGE_DIR})
+                    set(_PATH "$ENV{STAGE_DIR}")
+                elseif (DEFINED DESTDIR)
+                    set(_PATH "${DESTDIR}")
+                else()
+                    if(DEFINED ENV{HOME})
+                        set(_PATH "$ENV{HOME}/dev/stage")
+                    elseif(DEFINED ENV{USERPROFILE})
+                        set(_PATH "$ENV{USERPROFILE}/dev/stage")
+                    else()
+                        set(_PATH "C:/dev/stage")
+                    endif()
+                endif ()
+
+                # Release install - use APPDATA
+                if(DEFINED ENV{APPDATA})
+                    set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
+                else()
+                    set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/${APP_VENDOR}")
+                endif()
+
+                string(REPLACE "\\" "/" _PATH "${_PATH}")
+                string(REPLACE "\\" "/" SYSTEM_PATH "${SYSTEM_PATH}")
+
+                string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _SYSPATH)
             endif()
-
-            string(REPLACE "\\" "/" _PATH "${_PATH}")
-            string(REPLACE "\\" "/" SYSTEM_PATH "${SYSTEM_PATH}")
-
-            string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _SYSPATH)
 
         else()
 
