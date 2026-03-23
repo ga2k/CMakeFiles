@@ -212,8 +212,10 @@ if(WIN32)
         )
     endif()
 
-    set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
-        IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+    if(TARGET @APP_VENDOR@::@APP_NAME@)
+        set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
+            IMPORTED_IMPLIB "${_impdir}/${_winImpLibName}")
+    endif()
     set(_libdir "${_impdir}")
 endif()
 
@@ -223,7 +225,7 @@ if(NOT DEFINED USE_PREBUILT_MODULES)
     set(USE_PREBUILT_MODULES ON)
 endif()
 
-if(USE_PREBUILT_MODULES)
+if(USE_PREBUILT_MODULES AND TARGET @APP_VENDOR@::@APP_NAME@)
     # Stop CMake from re-scanning and recompiling module sources
     set_target_properties(@APP_VENDOR@::@APP_NAME@ PROPERTIES
         IMPORTED_CXX_MODULES_DEBUG   ""
