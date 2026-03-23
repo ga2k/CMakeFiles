@@ -68,10 +68,14 @@ set(CMAKE_MODULE_LINKER_FLAGS_INIT ${_COMMON_LINKER_FLAGS})
 # Windows target version and character set
 # Note: WIN32_LEAN_AND_MEAN is intentionally omitted here — it strips shell
 # APIs that wxWidgets requires. Define it per-target in your own code if needed.
+# _UCRT: tell MinGW headers to expose UCRT APIs (quick_exit, at_quick_exit,
+# etc.) that GCC 15's c++config.h declares as available but MinGW's stdlib.h
+# guards behind _UCRT. Required for Windows 10+ targets.
 add_compile_definitions(
         _WIN32_WINNT=0x0A00
         WINVER=0x0A00
         UNICODE
         _UNICODE
         NOMINMAX
+        _UCRT
 )
