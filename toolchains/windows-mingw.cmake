@@ -56,10 +56,19 @@ set(CMAKE_CXX_FLAGS_INIT
      -isystem ${MINGW_SYSROOT}/lib/gcc/${MINGW_TARGET}/${MINGW_GCC_VER}/include-fixed")
 
 # Linker — LLD, static GCC/C++ runtime, static winpthreads, Windows 10 PE header
+#
+# --defsym aliases: libstdc++.a from GCC 15 references clock_gettime64 and
+# nanosleep64 (the Y2038-safe _64 variants added in newer MinGW-w64 winpthreads),
+# but the installed libpthread.a (GCC 13-era winpthreads) only exposes the
+# unprefixed names.  On Windows x64 time_t is already 64-bit, so the functions
+# are semantically identical; aliasing resolves the undefined-symbol errors
+# without requiring a winpthreads rebuild.
 set(_COMMON_LINKER_FLAGS
         "-fuse-ld=lld \
      -static-libgcc -static-libstdc++ \
      -Wl,-Bstatic -lpthread -Wl,-Bdynamic \
+     -Wl,--defsym,clock_gettime64=clock_gettime \
+     -Wl,--defsym,nanosleep64=nanosleep \
      -Wl,--major-os-version,10 -Wl,--minor-os-version,0")
 set(CMAKE_EXE_LINKER_FLAGS_INIT    ${_COMMON_LINKER_FLAGS})
 set(CMAKE_SHARED_LINKER_FLAGS_INIT ${_COMMON_LINKER_FLAGS})
