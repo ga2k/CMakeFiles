@@ -36,7 +36,8 @@ if (APP_GLOBAL_RESOURCES)
     if (TARGET ${APP_NAME})
         add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
     endif ()
-endif ()# @formatting:on
+endif ()
+# @formatting:on
 
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
@@ -74,15 +75,6 @@ endif ()
 
 # ========================= Install & packaging =========================
 #
-#set_target_properties(${APP_NAME} PROPERTIES RESOURCE "")
-
-if(APP_GLOBAL_RESOURCES)
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/global-resources/"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_VENDOR}/Resources"
-            COMPONENT GlobalResources
-    )
-endif()
-
 # ---- Debug + sanitize dependency targets for install(TARGETS) ----
 message(STATUS "Install(${APP_NAME}): HS_DependenciesList = [${HS_DependenciesList}]")
 
@@ -132,10 +124,10 @@ install(TARGETS                 ${APP_NAME}
 if(APP_GLOBAL_RESOURCES)
     if(APPLE)
         # Shared resources go to Application Support
-        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}/${APP_NAME}")
+        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
     else()
         # Linux/Windows fallback
-        set(GLOBAL_RES_DEST "share/${APP_VENDOR}/${APP_NAME}")
+        set(GLOBAL_RES_DEST "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
     endif()
 
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
@@ -194,20 +186,6 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include")
     file(COPY "${CMAKE_SOURCE_DIR}/include/"
             DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}")
 endif()
-
-# Copy the ixx files. Why, when it has the BMI files, I do not know. I'm not a very good guesser. Just ask my
-# wife. She said "Guess what's on TV tonight?" I answered "I don't know... Dust?"
-#
-# Worst. Birthday. Night. EVER
-#if(EXISTS "${CMAKE_SOURCE_DIR}/src")
-#    set(_hs_dev_cxx_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}")
-#    file(MAKE_DIRECTORY "${_hs_dev_cxx_dir}")
-#    file(COPY "${CMAKE_SOURCE_DIR}/src/"
-#            DESTINATION "${_hs_dev_cxx_dir}"
-#            FILES_MATCHING
-#                PATTERN "*.ixx")
-#    unset(_hs_dev_cxx_dir)
-#endif()
 
 # Now for the library finder (if there really IS such a thing...)
 if(APP_TYPE MATCHES Library AND EXISTS "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake")
@@ -323,14 +301,7 @@ configure_package_config_file(
 )
 add_custom_target(${APP_NAME}Config SOURCES "${cmake_root}/templates/Config.cmake.in")
 add_dependencies(${APP_NAME} ${APP_NAME}Config)
-#add_dependencies(${APP_VENDOR}::${APP_NAME} ${APP_NAME}Config)
 
-## We prepared one earlier
-#configure_package_config_file(
-#        ${cmake_root}/templates/WX_Helper.cmake.in
-#        "${OUTPUT_DIR}/WX_Helper.cmake"
-#        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-#)
 add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")
 add_dependencies(${APP_NAME} ${APP_NAME}WX_Helper)
 
@@ -344,7 +315,7 @@ install(FILES
 # User guide, if present
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/doc")
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Docs/${APP_NAME}")
 endif ()
 
 if (APP_LOCAL_RESOURCES)
@@ -358,7 +329,7 @@ if (APP_LOCAL_RESOURCES)
     else()
         # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/Core/${APP_NAME}/Resources
         install(DIRECTORY "${LOCAL_RES_SRC}/"
-                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
     endif()
 endif ()
 
