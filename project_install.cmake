@@ -120,22 +120,6 @@ install(TARGETS                 ${APP_NAME}
         RESOURCE                ${resource_list}
 )
 
-# Install Global Shared Resources
-if(APP_GLOBAL_RESOURCES)
-    if(APPLE)
-        # Shared resources go to Application Support
-        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
-    else()
-        # Linux/Windows fallback
-        set(GLOBAL_RES_DEST "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
-    endif()
-
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
-            DESTINATION ${GLOBAL_RES_DEST}/${APP_NAME}
-            COMPONENT GlobalResources
-    )
-endif()
-
 # PCM/PCM-like files
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir/"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
@@ -318,6 +302,22 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
             DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Docs/${APP_NAME}")
 endif ()
 
+# Install Global Shared Resources
+if(APP_GLOBAL_RESOURCES)
+    if(APPLE)
+        # Shared resources go to Application Support
+        set(GLOBAL_RES_DEST "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    else()
+        # Linux/Windows fallback
+        set(GLOBAL_RES_DEST "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    endif()
+
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
+            DESTINATION ${GLOBAL_RES_DEST}
+            COMPONENT GlobalResources
+    )
+endif()
+
 if (APP_LOCAL_RESOURCES)
     set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
 
@@ -325,7 +325,7 @@ if (APP_LOCAL_RESOURCES)
         # If it's a macOS Bundle, we can still put them in the bundle
         # but per your tree requirements for a unified stagedir:
         install(DIRECTORY "${LOCAL_RES_SRC}/"
-                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/${APP_NAME}/Resources")
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
     else()
         # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/Core/${APP_NAME}/Resources
         install(DIRECTORY "${LOCAL_RES_SRC}/"
