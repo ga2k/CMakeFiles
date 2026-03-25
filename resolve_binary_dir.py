@@ -36,4 +36,3 @@ def resolve_env(match):
 
 binary_dir = re.sub(r"\$env\{([^}]+)\}", resolve_env, binary_dir)
 print(binary_dir, end="")
-
