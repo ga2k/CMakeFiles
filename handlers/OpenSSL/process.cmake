@@ -70,7 +70,7 @@ function(OpenSSL_process incs libs defs)
             find_package(Perl REQUIRED)
         endif ()
 
-        find_program(MAKE_EXECUTABLE NAMES nmake REQUIRED)
+        find_program(MAKE_EXECUTABLE NAMES make REQUIRED)
 
         # Use the absolute path found by CMake instead of just 'perl'
         set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${installDir} --openssldir=${installDir} shared no-asm)
