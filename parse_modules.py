@@ -13,7 +13,3 @@ try:
                 sys.exit(0)
 except Exception:
     pass
-<<<<<<< HEAD
-
-=======
->>>>>>> 1128d811df0c97c7ac1cfa26d6edee0108ff99a7

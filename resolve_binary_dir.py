@@ -36,7 +36,3 @@ def resolve_env(match):
 
 binary_dir = re.sub(r"\$env\{([^}]+)\}", resolve_env, binary_dir)
 print(binary_dir, end="")
-<<<<<<< HEAD
-
-=======
->>>>>>> 1128d811df0c97c7ac1cfa26d6edee0108ff99a7
