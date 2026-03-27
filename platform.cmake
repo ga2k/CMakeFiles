@@ -63,6 +63,7 @@ elseif(LINUX)
     list(APPEND extra_IncludePaths
             /usr/include/bullshit
             /usr/include/gtk-4.0
+            /usr/include/glib-2.0
             /usr/include/glib-2.0/include
     )
 
