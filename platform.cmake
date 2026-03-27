@@ -70,6 +70,7 @@ elseif(LINUX)
             /usr/include/harfbuzz
             /usr/include/gdk-pixbuf-2.0
             /usr/include/graphene-1.0
+            /usr/lib64/graphene-1.0/include
     )
 
     if (NOT CMAKE_INSTALL_LIBDIR)
