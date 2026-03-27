@@ -60,6 +60,12 @@ if (APPLE)
 
 elseif(LINUX)
 
+    list(APPEND extra_IncludePaths
+            /usr/include/bullshit
+            /usr/include/gtk-3.0
+            /usr/include/glib-2.0
+    )
+
     if (NOT CMAKE_INSTALL_LIBDIR)
         set(CMAKE_INSTALL_LIBDIR "lib64")
     endif ()
