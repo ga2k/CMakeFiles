@@ -65,6 +65,7 @@ elseif(LINUX)
             /usr/include/gtk-4.0
             /usr/include/glib-2.0
             /usr/lib64/glib-2.0/include
+            /usr/include/cairo
     )
 
     if (NOT CMAKE_INSTALL_LIBDIR)
