@@ -55,6 +55,32 @@ set(CMAKE_CXX_FLAGS_INIT
      -isystem ${MINGW_SYSROOT}/include \
      -isystem ${MINGW_SYSROOT}/lib/gcc/${MINGW_TARGET}/${MINGW_GCC_VER}/include-fixed")
 
+# Compile Y2038-safe time stubs at configure time.
+# GCC 15's libstdc++ references clock_gettime64/nanosleep64 which are absent
+# from this MinGW-w64 sysroot. The stubs implement them via the Win32 API.
+set(_STUBS_SRC "${CMAKE_CURRENT_LIST_DIR}/stubs/mingw_time64_stubs.c")
+set(_STUBS_OBJ "${CMAKE_CURRENT_LIST_DIR}/stubs/mingw_time64_stubs.o")
+execute_process(
+        COMMAND clang --target=${MINGW_TARGET}
+                -nostdinc
+                -isystem ${CLANG_RESOURCE_DIR}/include
+                -isystem ${MINGW_SYSROOT}/include
+                -D_WIN32_WINNT=0x0A00
+                -c "${_STUBS_SRC}" -o "${_STUBS_OBJ}"
+        RESULT_VARIABLE _STUBS_RESULT
+)
+if(NOT _STUBS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to compile mingw_time64_stubs.c")
+endif()
+
+# Inject the stub into every C/C++ link via CMAKE_<LANG>_STANDARD_LIBRARIES.
+# Using CACHE FORCE so this is never shadowed by a stale CMakeCache.txt value.
+foreach(_lang C CXX)
+    set(CMAKE_${_lang}_STANDARD_LIBRARIES
+        "${_STUBS_OBJ} ${CMAKE_${_lang}_STANDARD_LIBRARIES}"
+        CACHE STRING "Standard libraries for ${_lang}" FORCE)
+endforeach()
+
 # Linker — LLD, static GCC/C++ runtime, static winpthreads, Windows 10 PE header
 set(_COMMON_LINKER_FLAGS
         "-fuse-ld=lld \
