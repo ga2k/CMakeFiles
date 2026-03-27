@@ -60,8 +60,6 @@ if (APPLE)
 
 elseif(LINUX)
 
-    do what?
-
     list(APPEND extra_IncludePaths
             /usr/include/bullshit
             /usr/include/gtk-3.0
