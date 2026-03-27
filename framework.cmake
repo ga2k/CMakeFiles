@@ -73,6 +73,10 @@ elseif (STDCXX_BACKTRACE_LIB)
     list(APPEND extra_LibrariesList ${STDCXX_BACKTRACE_LIB})
 endif ()
 
+#ifdef __WXGTK__
+    list(APPEND extra_IncludePaths /usr/include/gtk-4.0)
+#endif
+
 # Extra compile flags for clang module handling
 if ("${compiler_version}" MATCHES "clang")
     list(APPEND extra_CompileOptions
