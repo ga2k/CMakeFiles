@@ -68,6 +68,7 @@ elseif(LINUX)
             /usr/include/cairo
             /usr/include/pango-1.0
             /usr/include/harfbuzz
+            /usr/include/gdk-pixbuf-2.0
     )
 
     if (NOT CMAKE_INSTALL_LIBDIR)
