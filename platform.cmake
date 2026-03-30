@@ -105,6 +105,36 @@ elseif (WIN32)
         set(CMAKE_INSTALL_LIBDIR "lib")
     endif ()
 
+#    set(GSASL_ROOT          ${CMAKE_CURRENT_SOURCE_DIR}/windows/GSASL)
+#    set(GSASL_INCLUDE_DIR   ${GSASL_ROOT}/include)
+#    set(GSASL_LIBRARIES     ${GSASL_ROOT}/bin;${GSASL_ROOT}/lib)
+#    set(GNUTLS_ROOT         ${CMAKE_CURRENT_SOURCE_DIR}/windows/GnuTLS)
+#    set(GNUTLS_INCLUDE_DIR  ${GNUTLS_ROOT}include)
+#    set(GNUTLS_LIBRARIES    ${GNUTLS_ROOT}bin;${GNUTLS_ROOT}lib)
+#    set(ICU_ROOT            ${CMAKE_CURRENT_SOURCE_DIR}/windows/ICU)
+#    set(ICU_LIBRARIES       ${ICU_ROOT}/bin64;${ICU_ROOT}/lib64)
+#    set(SQLite3_ROOT        ${CMAKE_CURRENT_SOURCE_DIR}/windows/SQLite3)
+#    set(SQLite3_LIBRARY     ${SQLite3_ROOT})
+#    set(SQLite3_INCLUDE_DIR ${SQLite3_ROOT})
+
+#    set(ENV:OPENSSL_CRYPTO_LIBRARY "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib")
+#    set(ENV:OPENSSL_INCLUDE_DIR "C:/Program Files/OpenSSL-Win64/include")
+#    set(ENV{OPENSSL_ROOT_DIR} "C:/Program Files/OpenSSL-Win64")
+
+#    if (LINK_SHARED)
+#        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.dll.a)
+#        set(GNUTLS_LIBRARY  ${GNUTLS_ROOT}/lib/libgnutls.dll.a)
+#        set(ICU_LIBRARY     ${ICU_ROOT}/bin64/icuuc75.dll)
+#    else ()
+#        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.a)
+#        set(GNUTLS_LIBRARY  ${GNUTLS_ROOT}/lib/libgnutls.a)
+#        set(ICU_LIBRARY     ${ICU_ROOT}/bin64/icuuc.lib)
+#    endif ()
+
+    #    message(NOTICE "SQLite3_ROOT=${SQLite3_ROOT}")
+    #    message(NOTICE "SQLite3_LIBRARY=${SQLite3_LIBRARY}")
+    #    message(NOTICE "SQLite3_INCLUDE_DIR=${SQLite3_INCLUDE_DIR}")
+
     set(PlatformFlag "WIN32")
     set(DYN_FLAG ws2_32)
 
@@ -115,6 +145,14 @@ elseif (WIN32)
     endif ()
 
     set(gui "win")
+
+    # Shared CMake module paths (stage + repo cmake directory)
+#    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
+#    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
+#    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
+#    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
+#        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
+#    endif ()
 
     list(APPEND extra_Definitions __WXMSW__ UNICODE _UNICODE)
 
