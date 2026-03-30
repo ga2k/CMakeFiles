@@ -10,6 +10,43 @@ function(OpenSSL_process incs libs defs)
     set(installDir  "${outDir}/openssl_install")
     set(paths       "${_LibraryPathsList}")
 
+
+    # --- OpenSSL: install via winget if not present ---
+    if(WIN32 AND NOT CMAKE_CROSSCOMPILING)
+        set(_openssl_root "C:/Program Files/OpenSSL-Win64")
+        set(_openssl_lib  "${_openssl_root}/lib/VC/x64/MT/libssl.lib")
+
+        if(NOT EXISTS "${_openssl_lib}")
+            message(STATUS "OpenSSL not found at ${_openssl_root}, attempting install via winget...")
+            find_program(_winget_exe NAMES winget winget.exe
+                    PATHS "$ENV{LOCALAPPDATA}/Microsoft/WindowsApps"
+                    NO_CACHE)
+            if(_winget_exe)
+                execute_process(
+                        COMMAND "${_winget_exe}" install
+                        --id ShiningLight.OpenSSL
+                        --silent
+                        --accept-package-agreements
+                        --accept-source-agreements
+                        RESULT_VARIABLE _winget_result
+                        OUTPUT_VARIABLE _winget_output
+                        ERROR_VARIABLE  _winget_error
+                        ECHO_OUTPUT_VARIABLE
+                )
+                if(_winget_result EQUAL 0)
+                    message(STATUS "OpenSSL installed successfully.")
+                else()
+                    message(WARNING "winget exited with code ${_winget_result}. "
+                            "Install manually: winget install --id ShiningLight.OpenSSL\n${_winget_error}")
+                endif()
+            else()
+                message(WARNING "winget not found. Install OpenSSL manually: "
+                        "winget install --id ShiningLight.OpenSSL")
+            endif()
+        endif()
+    endif()
+    # --------------------------------------------------
+
     if(WIN32)
         msg("You")
         msg("YES YOU! LADDIE!")
@@ -57,64 +94,64 @@ function(OpenSSL_process incs libs defs)
     file(MAKE_DIRECTORY ${outDir}/openssl_install/include)
     include(ExternalProject)
 
-    if(WIN32)
-
-        # Force CMake to find Strawberry Perl specifically if it exists
-        find_program(PERL_EXECUTABLE
-                NAMES perl
-                PATHS "C:/Strawberry/perl/bin"
-                NO_DEFAULT_PATH
-        )
-        if ("${PERL_EXECUTABLE}" STREQUAL "PERL_EXECUTABLE-NOTFOUND")
-            # If not in the specific path, find any perl
-            find_package(Perl REQUIRED)
-        endif ()
-
-        find_program(MAKE_EXECUTABLE NAMES make REQUIRED)
-
-        # Use the absolute path found by CMake instead of just 'perl'
-        set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${installDir} --openssldir=${installDir} shared no-asm)
-        set(OPENSSL_BUILD ${MAKE_EXECUTABLE})
-        set(OPENSSL_INSTALL ${MAKE_EXECUTABLE} install)
-    else()
-        set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${installDir} --openssldir=${installDir} shared)
-        set(OPENSSL_BUILD make -j)
-        set(OPENSSL_INSTALL make install)
-    endif()
-
-    message("
-ExternalProject_Add(OpenSSLProj
-        GIT_REPOSITORY      https://github.com/openssl/openssl.git
-        GIT_TAG             openssl-3.3.2
-        SOURCE_DIR          ${sourceDir}/OpenSSL
-        BINARY_DIR          ${buildDir}/OpenSSL
-        INSTALL_DIR         ${installDir}/
-        CONFIGURE_COMMAND   ${OPENSSL_CONFIGURE}
-        BUILD_COMMAND       ${OPENSSL_BUILD}
-        INSTALL_COMMAND     ${OPENSSL_INSTALL}
-        BUILD_BYPRODUCTS    ${installDir}/lib/libssl.lib
-        ${installDir}/lib/libcrypto.lib
-        USES_TERMINAL_DOWNLOAD  ON
-        USES_TERMINAL_CONFIGURE ON
-        USES_TERMINAL_BUILD     ON
-        USES_TERMINAL_INSTALL   ON
-)")
-    ExternalProject_Add(OpenSSLProj
-            GIT_REPOSITORY      https://github.com/openssl/openssl.git
-            GIT_TAG             openssl-3.3.2
-            SOURCE_DIR          ${sourceDir}/OpenSSL
-            BINARY_DIR          ${buildDir}/OpenSSL
-            INSTALL_DIR         ${installDir}/
-            CONFIGURE_COMMAND   ${OPENSSL_CONFIGURE}
-            BUILD_COMMAND       ${OPENSSL_BUILD}
-            INSTALL_COMMAND     ${OPENSSL_INSTALL}
-            BUILD_BYPRODUCTS    ${installDir}/lib/libssl.lib
-                                ${installDir}/lib/libcrypto.lib
-            USES_TERMINAL_DOWNLOAD  ON
-            USES_TERMINAL_CONFIGURE ON
-            USES_TERMINAL_BUILD     ON
-            USES_TERMINAL_INSTALL   ON
-    )
+#    if(NOT WIN32)
+#
+#        # Force CMake to find Strawberry Perl specifically if it exists
+#        find_program(PERL_EXECUTABLE
+#                NAMES perl
+#                PATHS "C:/Strawberry/perl/bin"
+#                NO_DEFAULT_PATH
+#        )
+#        if ("${PERL_EXECUTABLE}" STREQUAL "PERL_EXECUTABLE-NOTFOUND")
+#            # If not in the specific path, find any perl
+#            find_package(Perl REQUIRED)
+#        endif ()
+#
+#        find_program(MAKE_EXECUTABLE NAMES make REQUIRED)
+#
+#        # Use the absolute path found by CMake instead of just 'perl'
+#        set(OPENSSL_CONFIGURE ${PERL_EXECUTABLE} ${sourceDir}/OpenSSL/Configure VC-WIN64A --prefix=${installDir} --openssldir=${installDir} shared no-asm)
+#        set(OPENSSL_BUILD ${MAKE_EXECUTABLE})
+#        set(OPENSSL_INSTALL ${MAKE_EXECUTABLE} install)
+#    else()
+#        set(OPENSSL_CONFIGURE ${sourceDir}/OpenSSL/config --prefix=${installDir} --openssldir=${installDir} shared)
+#        set(OPENSSL_BUILD make -j)
+#        set(OPENSSL_INSTALL make install)
+#    endif()
+#
+#    message("
+#ExternalProject_Add(OpenSSLProj
+#        GIT_REPOSITORY      https://github.com/openssl/openssl.git
+#        GIT_TAG             openssl-3.3.2
+#        SOURCE_DIR          ${sourceDir}/OpenSSL
+#        BINARY_DIR          ${buildDir}/OpenSSL
+#        INSTALL_DIR         ${installDir}/
+#        CONFIGURE_COMMAND   ${OPENSSL_CONFIGURE}
+#        BUILD_COMMAND       ${OPENSSL_BUILD}
+#        INSTALL_COMMAND     ${OPENSSL_INSTALL}
+#        BUILD_BYPRODUCTS    ${installDir}/lib/libssl.lib
+#        ${installDir}/lib/libcrypto.lib
+#        USES_TERMINAL_DOWNLOAD  ON
+#        USES_TERMINAL_CONFIGURE ON
+#        USES_TERMINAL_BUILD     ON
+#        USES_TERMINAL_INSTALL   ON
+#)")
+#    ExternalProject_Add(OpenSSLProj
+#            GIT_REPOSITORY      https://github.com/openssl/openssl.git
+#            GIT_TAG             openssl-3.3.2
+#            SOURCE_DIR          ${sourceDir}/OpenSSL
+#            BINARY_DIR          ${buildDir}/OpenSSL
+#            INSTALL_DIR         ${installDir}/
+#            CONFIGURE_COMMAND   ${OPENSSL_CONFIGURE}
+#            BUILD_COMMAND       ${OPENSSL_BUILD}
+#            INSTALL_COMMAND     ${OPENSSL_INSTALL}
+#            BUILD_BYPRODUCTS    ${installDir}/lib/libssl.lib
+#                                ${installDir}/lib/libcrypto.lib
+#            USES_TERMINAL_DOWNLOAD  ON
+#            USES_TERMINAL_CONFIGURE ON
+#            USES_TERMINAL_BUILD     ON
+#            USES_TERMINAL_INSTALL   ON
+#    )
 
     add_library(OpenSSL::SSL SHARED IMPORTED)
     set_target_properties(OpenSSL::SSL PROPERTIES

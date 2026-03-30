@@ -116,42 +116,6 @@ elseif (WIN32)
 
     set(gui "win")
 
-    # --- OpenSSL: install via winget if not present ---
-    if(WIN32 AND NOT CMAKE_CROSSCOMPILING)
-        set(_openssl_root "C:/Program Files/OpenSSL-Win64")
-        set(_openssl_lib  "${_openssl_root}/lib/VC/x64/MT/libssl.lib")
-
-        if(NOT EXISTS "${_openssl_lib}")
-            message(STATUS "OpenSSL not found at ${_openssl_root}, attempting install via winget...")
-            find_program(_winget_exe NAMES winget winget.exe
-                    PATHS "$ENV{LOCALAPPDATA}/Microsoft/WindowsApps"
-                    NO_CACHE)
-            if(_winget_exe)
-                execute_process(
-                        COMMAND "${_winget_exe}" install
-                        --id ShiningLight.OpenSSL
-                        --silent
-                        --accept-package-agreements
-                        --accept-source-agreements
-                        RESULT_VARIABLE _winget_result
-                        OUTPUT_VARIABLE _winget_output
-                        ERROR_VARIABLE  _winget_error
-                        ECHO_OUTPUT_VARIABLE
-                )
-                if(_winget_result EQUAL 0)
-                    message(STATUS "OpenSSL installed successfully.")
-                else()
-                    message(WARNING "winget exited with code ${_winget_result}. "
-                            "Install manually: winget install --id ShiningLight.OpenSSL\n${_winget_error}")
-                endif()
-            else()
-                message(WARNING "winget not found. Install OpenSSL manually: "
-                        "winget install --id ShiningLight.OpenSSL")
-            endif()
-        endif()
-    endif()
-    # --------------------------------------------------
-
     list(APPEND extra_Definitions __WXMSW__ UNICODE _UNICODE)
 
     list(APPEND extra_IncludePaths
