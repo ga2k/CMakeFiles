@@ -4,7 +4,7 @@
 
 include(CMakeFindDependencyMacro)
 
-if ("@LINUX@" EQUAL "1")
+if ("@LINUX@" STREQUAL "1")
     find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
 endif()
 
@@ -254,11 +254,8 @@ endif()
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
-set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" PARENT_SCOPE)
 set(@APP_NAME@_LIBRARIES    "@APP_VENDOR@::@APP_NAME@" )
-set(@APP_NAME@_LIBRARIES    "@APP_VENDOR@::@APP_NAME@"   PARENT_SCOPE)
 set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
-set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" PARENT_SCOPE)
 
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
@@ -268,9 +265,7 @@ if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
     else ()
         set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
     endif ()
-    set(PLUGIN_DIR              "${PLUGIN_DIR}" PARENT_SCOPE)
     set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
-    set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}" PARENT_SCOPE)
 endif()
 
 if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
@@ -280,9 +275,7 @@ if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
     else ()
         set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
     endif ()
-    set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
     set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
-    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
 elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
     # If the app consumes resources, set the resource directory
     if (_inDevelopment)
@@ -290,9 +283,8 @@ elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
     else ()
         set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
     endif ()
-    set(RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
     set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
-    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}" PARENT_SCOPE)
+    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
 endif()
 
 unset(_inDevelopment)
