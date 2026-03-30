@@ -1,4 +1,3 @@
-# CMake package configuration (installed)
 @PACKAGE_INIT@
 # @formatter:off
 
@@ -8,11 +7,7 @@ if ("@LINUX@" EQUAL 1)
     find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
 endif()
 
-#if("${APP_TYPE}" STREQUAL "Executable")
-    set(TARGET_NAME "${APP_NAME}")
-#else()
-#    set(TARGET_NAME "${APP_NAME}")
-#endif()
+set(TARGET_NAME "${APP_NAME}")
 
 if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
     if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
@@ -144,14 +139,9 @@ endif()
 # Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
 
-# Rid the @APP_NAME@Target.cmake file of it's notion of the .ixx files. This will force the use of the .BMI
-# and prevent duplicate compilation.
-
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
 
-    # Remove the line
-#   include("${CMAKE_CURRENT_LIST_DIR}/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
     set(firstBit [=[include("${CMAKE_CURRENT_LIST_DIR}/cxx/]=])
     string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
     string(REPLACE "${firstBit}" "# No we don't" outvar "${outvar}")
@@ -174,38 +164,7 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     include("${_libdir}/cmake/@APP_NAME@Target.cmake")
 endif()
 
-#    string(FIND "${outvar}"
-#[=[    INTERFACE
-#      FILE_SET "CXX_MODULES"
-#      TYPE "CXX_MODULES"]=]
-#    foundAt)
-#
-#    if(NOT foundAt EQUAL -1)
-#        string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
-#        set(firstBit "${firstBit})")
-#        string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
-#        string(FIND "${lastBit}" "else()" elseBit)
-#        string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
-#        set(outvar "${firstBit}\n${finally}")
-#    endif()
-
-
-## In development (monorepo) include the build-tree export of module FILE_SET mappings.
-## For staged/installed layouts, load the installed cxx-modules export.
-#if(_inDevelopment)
-#    file(GLOB _DEV_MODULE_EXPORT
-#        "@BUILD_DIR@/CMakeFiles/Export/*/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-#    if(_DEV_MODULE_EXPORT)
-#        list(GET _DEV_MODULE_EXPORT 0 _DEV_MODULE_EXPORT_FILE)
-#        include("${_DEV_MODULE_EXPORT_FILE}")
-#    endif()
-#elseif(EXISTS "${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-#    include("${_libdir}/cmake/cxx/@APP_VENDOR@/@APP_NAME@/cxx-modules-@APP_NAME@Target.cmake")
-#endif()
-
 if(WIN32)
-    # Add the wx/setup.h header to the include path.
-    # @APP_VENDOR@::wxWidgets is an imported target we own, so set_property is fine here.
     if (TARGET "@APP_VENDOR@::wxWidgets" AND IS_DIRECTORY "${_incdir}/msvc")
         set_property(TARGET "@APP_VENDOR@::wxWidgets"
             APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${_incdir}/msvc"

@@ -10,7 +10,7 @@ endfunction()
 function(addCoreFeatures dry_run)
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "Core"
             METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft" DEFAULT 1
-            ARGS REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dry_run})
+            ARGS NO_CMAKE_FIND_ROOT_PATH REQUIRED CONFIG PREREQ DATABASE=soci DRY_RUN ${dry_run})
 endfunction()
 
 function(FindCore_init dry_run)
@@ -26,7 +26,7 @@ function(addGfxFeatures dry_run)
     addPackageData(PLUGIN   FEATURE "PRINT"       PKGNAME "Print"         METHOD "IGNORE" DRY_RUN ${dry_run})
 
     addPackageData(LIBRARY FEATURE "GFX" PKGNAME "Gfx" METHOD "FIND_PACKAGE" NAMESPACE "HoffSoft" DEFAULT 1
-            ARGS REQUIRED CONFIG PREREQ CORE DRY_RUN ${dry_run})
+            ARGS NO_CMAKE_FIND_ROOT_PATH REQUIRED CONFIG PREREQ CORE DRY_RUN ${dry_run})
     # @formatter:on
 
     registerPlugin("Appearance" ${dry_run})
