@@ -177,6 +177,11 @@ elseif (WIN32)
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
+    if(CMAKE_CROSSCOMPILING AND NOT EXISTS /usr/x86_64-w64-mingw32/sys-root/mingw/lib/libwx_mswu-3.3.a)
+        file(CREATE_LINK /usr/x86_64-w64-mingw32/sys-root/mingw/lib/libwx_mswu-3.3-Windows.a
+                /usr/x86_64-w64-mingw32/sys-root/mingw/lib/libwx_mswu-3.3.a)
+    endif ()
+
 endif ()
 
 #if defined(__clang__)
