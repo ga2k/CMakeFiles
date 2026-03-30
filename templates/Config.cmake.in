@@ -139,6 +139,14 @@ endif()
 # Find dependencies that Core needs
 include(CMakeFindDependencyMacro)
 
+# yaml-cpp appears in Core's INTERFACE_LINK_LIBRARIES (CoreData.h includes yaml-cpp/yaml.h).
+# If the consuming project's processFeatures hasn't loaded yaml-cpp yet (e.g. Windows
+# cross-build where CORE feature is resolved before STORAGE), find it now so that
+# set_target_properties in CoreTarget.cmake doesn't fail target validation.
+if(NOT TARGET yaml-cpp::yaml-cpp)
+    find_dependency(yaml-cpp)
+endif()
+
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
 
