@@ -177,61 +177,6 @@ elseif (WIN32)
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
-    if (CMAKE_CROSSCOMPILING)
-        set(_mingw_lib /usr/x86_64-w64-mingw32/sys-root/mingw/lib)
-
-        # Discover the installed wxWidgets version suffix from the sysroot.
-        file(GLOB _wx_probe "${_mingw_lib}/libwx_mswu-*-Windows.a")
-        if (_wx_probe)
-            list(GET _wx_probe 0 _wx_probe)
-            string(REGEX REPLACE ".*libwx_mswu-([0-9.]+)-Windows\\.a$" "\\1" _wx_ver "${_wx_probe}")
-        else ()
-            set(_wx_ver "")
-        endif ()
-
-        if (_wx_ver)
-            # This wxWidgets package installs component libraries with a non-standard
-            # -Windows suffix.  wx-config and find_package(wxWidgets) expect the plain
-            # names, so create symlinks for every affected library.
-            foreach(_base IN ITEMS
-                    libwx_mswu
-                    libwx_mswu_adv
-                    libwx_mswu_aui
-                    libwx_mswu_core
-                    libwx_mswu_gl
-                    libwx_mswu_html
-                    libwx_mswu_media
-                    libwx_mswu_propgrid
-                    libwx_mswu_qa
-                    libwx_mswu_ribbon
-                    libwx_mswu_richtext
-                    libwx_mswu_stc
-                    libwx_mswu_webview
-                    libwx_mswu_xrc
-                    libwx_baseu
-                    libwx_baseu_net
-                    libwx_baseu_xml
-            )
-                set(_src "${_mingw_lib}/${_base}-${_wx_ver}-Windows.a")
-                set(_dst "${_mingw_lib}/${_base}-${_wx_ver}.a")
-                if (EXISTS "${_src}" AND NOT EXISTS "${_dst}")
-                    file(CREATE_LINK "${_src}" "${_dst}" SYMBOLIC)
-                endif ()
-            endforeach()
-        endif ()
-
-        # These three bundled libraries are missing the lib prefix entirely.
-        foreach(_lib IN ITEMS wxwebp wxwebpdemux wxsharpyuv)
-            if (EXISTS "${_mingw_lib}/${_lib}.a" AND NOT EXISTS "${_mingw_lib}/lib${_lib}.a")
-                file(CREATE_LINK "${_mingw_lib}/${_lib}.a" "${_mingw_lib}/lib${_lib}.a" SYMBOLIC)
-            endif ()
-        endforeach()
-
-        unset(_wx_ver)
-        unset(_wx_probe)
-        unset(_mingw_lib)
-    endif ()
-
 endif ()
 
 #if defined(__clang__)
