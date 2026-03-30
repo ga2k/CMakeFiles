@@ -251,11 +251,10 @@ function(addLibrary)
 
     # Link wxWidgets directly (no Widgets wrapper library)
     if (GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
-        target_compile_definitions(${arg_NAME}  PRIVATE 
+        target_compile_definitions(${arg_NAME}  PRIVATE
             ${HS_wxDefines}
             USING_WIDGETS
             USING_wxWidgets
-            WXUSINGDLL
             _FILE_OFFSET_BITS=64
         )
         # NOTE: PCH disabled project-wide by request; do not define WX_PRECOMP or set target_precompile_headers here
