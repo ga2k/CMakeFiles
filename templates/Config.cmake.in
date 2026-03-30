@@ -4,7 +4,7 @@
 
 include(CMakeFindDependencyMacro)
 
-if ("@LINUX@" STREQUAL "1")
+if ("@LINUX@" EQUAL 1)
     find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
 endif()
 
