@@ -53,14 +53,14 @@ function(fetchContents)
 
     globalObjSet(GLOBAL_FEATURES "${AUE_FEATURES}")
 
-    CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE initialFeatures COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE resolvedNames   COLUMNS ( FslashP FeatureName PackageName HasPrereqs ))
+    CREATE(TABLE allFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE initialFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE unifiedFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE resolvedNames COLUMNS (FslashP FeatureName PackageName HasPrereqs))
 
     msg()
 
-    foreach(DRY_RUN IN ITEMS ON OFF)
+    foreach (DRY_RUN IN ITEMS ON OFF)
         initialiseFeatureHandlers(${DRY_RUN})
         createStandardPackageData(${DRY_RUN})
         runPackageCallbacks(${DRY_RUN})
@@ -80,16 +80,16 @@ function(fetchContents)
         # Get user's selected package
         SELECT(ROW AS _uPackage FROM userPackages WHERE ROWID = ${pkgIndex})
 
-        list(GET _uPackage ${FIXName}       _uFeatureName)
-        list(GET _uPackage ${FIXPkgName}    _uPackageName)
-        list(GET _uPackage ${FIXNamespace}  _uNS)
+        list(GET _uPackage ${FIXName} _uFeatureName)
+        list(GET _uPackage ${FIXPkgName} _uPackageName)
+        list(GET _uPackage ${FIXNamespace} _uNS)
 
         # Get corresponding system package
         SELECT(ROW AS _sPackage FROM allFeatures WHERE "FeatureName" = "${_uFeatureName}" AND "PackageName" = "${_uPackageName}")
 
-        list(GET _sPackage ${FIXName}    _sFeatureName)
+        list(GET _sPackage ${FIXName} _sFeatureName)
         list(GET _sPackage ${FIXPkgName} _sPackageName)
-        list(GET _sPackage ${FIXKind}    _sKind)
+        list(GET _sPackage ${FIXKind} _sKind)
 
         # Integrity check
         if (NOT _uFeatureName STREQUAL "${_sFeatureName}")
@@ -141,11 +141,11 @@ function(fetchContents)
             list(REMOVE_DUPLICATES _sArgs)
             string(JOIN "${_TOK_LIST_SEP}" _args ${_sArgs})
 
-            if(NOT _args)
+            if (NOT _args)
                 set(_args ${_TOK_EMPTY_FIELD})
             endif ()
             list(REMOVE_AT wip ${FIXArgs})
-            list(INSERT    wip ${FIXArgs} "${_args}")
+            list(INSERT wip ${FIXArgs} "${_args}")
         endif ()
 
         # Step 2. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
@@ -157,18 +157,18 @@ function(fetchContents)
             list(APPEND _sComps ${_uComps})
             list(REMOVE_DUPLICATES _sComps)
             string(JOIN "${_TOK_LIST_SEP}" _comps ${_sComps})
-            if(NOT _comps)
+            if (NOT _comps)
                 set(_comps ${_TOK_EMPTY_FIELD})
             endif ()
             list(REMOVE_AT wip ${FIXComponents})
-            list(INSERT    wip ${FIXComponents} "${_comps}")
+            list(INSERT wip ${FIXComponents} "${_comps}")
         endif ()
 
         # Step 3. Remove prerequisites from libraries (they are not used at link time)
         list(GET wip ${FIXKind} kkk)
         if (kkk STREQUAL "LIBRARY")
             list(REMOVE_AT wip ${FIXPrereqs})
-            list(INSERT    wip ${FIXPrereqs} ${_TOK_EMPTY_FIELD})
+            list(INSERT wip ${FIXPrereqs} ${_TOK_EMPTY_FIELD})
         endif ()
 
         INSERT(INTO initialFeatures VALUES (${wip}))
@@ -183,7 +183,7 @@ function(fetchContents)
         set(haveIt OFF)
 
         SELECT(ROW AS hsf_SysPkg FROM systemPackagesOnly WHERE ROWID = ${_rowID})
-        list(GET hsf_SysPkg ${FIXName}    sys_Feature)
+        list(GET hsf_SysPkg ${FIXName} sys_Feature)
         list(GET hsf_SysPkg ${FIXPkgName} sys_Package)
 
         SELECT(COUNT AS numUserPackages FROM userPackages)
@@ -195,8 +195,8 @@ function(fetchContents)
             set(haveIt OFF)
 
             SELECT(ROW AS hsf_UsrPkg FROM userPackages WHERE ROWID = ${thisIndex})
-            if(hsf_UsrPkg)
-                list(GET hsf_UsrPkg ${FIXName}    usr_Feature)
+            if (hsf_UsrPkg)
+                list(GET hsf_UsrPkg ${FIXName} usr_Feature)
                 list(GET hsf_UsrPkg ${FIXPkgName} usr_Package)
 
                 # Is this exact package already in the user's list?
@@ -206,7 +206,7 @@ function(fetchContents)
                 endif ()
             endif ()
 
-            if(NOT haveIt)
+            if (NOT haveIt)
                 _hs_sql_fields_to_storage(hsf_SysPkg _encodedPkg)
                 INSERT(INTO initialFeatures VALUES (${_encodedPkg}))
             endif ()
@@ -243,14 +243,14 @@ function(fetchContents)
         set(lFName 0)
         set(lPName 0)
         set(prereqs)
-        SELECT(COUNT AS numFeatures FROM ${feature_names} )
+        SELECT(COUNT AS numFeatures FROM ${feature_names})
 
         while (fix LESS numFeatures)
             inc(fix)
             set(row_id ${fix})
 
             SELECT(FeatureName AS f PackageName AS p FROM resolvedNames WHERE ROWID = ${row_id})
-            longest(QUIET CURRENT ${lFName} TEXT  "${f}"  LONGEST lFName)
+            longest(QUIET CURRENT ${lFName} TEXT "${f}" LONGEST lFName)
             longest(QUIET CURRENT ${lPName} TEXT "(${p})" LONGEST lPName)
 
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
@@ -266,7 +266,7 @@ function(fetchContents)
         set(scannedLibraries)
 
         string(LENGTH "${APP_NAME}" appNameLen)
-        string(LENGTH "Phase 1"     phaseLen)
+        string(LENGTH "Phase 1" phaseLen)
         math(EXPR phaseLineInternalPadding "${usableCols} - (${appNameLen} + ${phaseLen} + 2)")
         string(REPEAT " " ${phaseLineInternalPadding} phasePadding)
 
@@ -345,16 +345,16 @@ function(fetchContents)
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
 
-                foreach(flag IN LISTS this_flags)
+                foreach (flag IN LISTS this_flags)
                     set(apf_${flag} ON)
                 endforeach ()
 
-                longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
-                longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
+                longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
+                longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
 
                 string(LENGTH "${ix}" howLongIsItemN)
                 set(useThisAsItemN "${ix}")
-                if(howLongIsItemN LESS howLongIsOfM)
+                if (howLongIsItemN LESS howLongIsOfM)
                     set(useThisAsItemN " ${useThisAsItemN}")
                 endif ()
 
@@ -415,8 +415,14 @@ function(fetchContents)
                                 list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
                                 find_package(${this_pkgname} QUIET ${temporary_args})
 
-                                if (${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} Skipping FetchContent.\n")
+                                if (${this_pkgname}_FOUND)
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (${this_pkgname}_FOUND is ON) Skipping FetchContent.\n")
+                                    # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
+                                elseif (TARGET ${this_pkgname}::${this_pkgname})
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (TARGET ${this_pkgname}::${this_pkgname} exists) Skipping FetchContent.\n")
+                                    # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
+                                elseif (TARGET ${this_pkgname})
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (TARGET ${this_pkgname} exists) Skipping FetchContent.\n")
                                     # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
                                 else ()
                                     msg(STATUS "${MAGENTA}Nope!${NC} Doing it the hard way...")
@@ -444,22 +450,22 @@ function(fetchContents)
                                     endif ()
 
                                     set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
-                                    if(this_src)
+                                    if (this_src)
                                         set(use_src "${this_src}")
                                     endif ()
 
                                     set(use_bin)
-                                    if(this_bin)
+                                    if (this_bin)
                                         set(use_bin "${this_bin}")
                                         set(use_subbin "${this_bin}-subbuild")
                                     endif ()
 
                                     set(outStr)
                                     list(APPEND outStr "${SOURCE_KEYWORD}" "${this_git_repo}")
-                                    if(use_src)
+                                    if (use_src)
                                         list(APPEND outStr "SOURCE_DIR" "${use_src}")
                                     endif ()
-                                    if(use_bin)
+                                    if (use_bin)
                                         list(APPEND outStr "BINARY_DIR" "${use_bin}")
                                         list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
                                     endif ()
@@ -476,16 +482,16 @@ function(fetchContents)
                                     FetchContent_Declare(${this_pkgname} ${outStr})
 
                                     set(fn "${this_pkgname}_postDeclare")
-#                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
-#
-#                                    FetchContent_Declare(${this_pkgname}
-#                                            ${SOURCE_KEYWORD} ${this_git_repo}
-#                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
-#                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-#                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
-#                                            ${GIT_TAG_KEYWORD} ${this_tag})
-#
-#                                    set(fn "${this_pkgname}_postDeclare")
+                                    #                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    #
+                                    #                                    FetchContent_Declare(${this_pkgname}
+                                    #                                            ${SOURCE_KEYWORD} ${this_git_repo}
+                                    #                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                    #                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                    #                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                    #                                            ${GIT_TAG_KEYWORD} ${this_tag})
+                                    #
+                                    #                                    set(fn "${this_pkgname}_postDeclare")
                                     if (COMMAND "${fn}")
                                         cmake_language(CALL "${fn}" "${this_pkgname}")
                                     endif ()
@@ -501,7 +507,7 @@ function(fetchContents)
 
                             msg("Probing for ${this_pkgname}...")
 
-                            if("PATHS" IN_LIST this_find_package_args)
+                            if ("PATHS" IN_LIST this_find_package_args)
                                 msg("BUMP the BUPP")
                                 set(bump "${CMAKE_MODULE_PATH}")
                                 set(bupp "${CMAKE_PREFIX_PATH}")
@@ -515,10 +521,10 @@ function(fetchContents)
 
                             find_package(${this_pkgname} ${temporary_args})
 
-                            if(bump)
+                            if (bump)
                                 set(CMAKE_MODULE_PATH "${bump}")
                             endif ()
-                            if(bupp)
+                            if (bupp)
                                 set(CMAKE_PREFIX_PATH "${bupp}")
                             endif ()
 
@@ -536,22 +542,22 @@ function(fetchContents)
                                 # so that we can eventually load it.
                                 if (this_prereqs)
                                     msg(ALWAYS FATAL "Prerequisites not handled yet!!")
-#                                    CREATE(TABLE "${this_pkgname}Prerequisites" COLUMNS (${PkgColNames}))
-#                                    array(CREATE needed_prereqs "${this_pkgname}Prerequisites" RECORDS)
-#                                    record(CREATE needed_prereqFeatureNames "${this_pkgname}PrerequisiteNames")
-#                                    foreach (p IN LISTS this_prereqs)
-#                                        SplitAt("${p}" "=" preFeatName prePkgName)
-#                                        if (prePkg)
-#                                            getFeaturePackageByName("${DATA}" "${preFeatName}" "${prePkgName}" prePkg dc)
-#                                        else ()
-#                                            getFeaturePackageBy("${DATA}" "${preFeatName}" 0 prePkg)
-#                                        endif ()
-#                                        array(APPEND needed_prereqs RECORD "${prePkg}")
-#                                        record(APPEND needed_prereqFeatureNames "${p}")
-#                                    endforeach ()
-#
-#                                    msg(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
-#                                    processFeatures("${needed_prereqs}" "${needed_prereqFeatureNames}")
+                                    #                                    CREATE(TABLE "${this_pkgname}Prerequisites" COLUMNS (${PkgColNames}))
+                                    #                                    array(CREATE needed_prereqs "${this_pkgname}Prerequisites" RECORDS)
+                                    #                                    record(CREATE needed_prereqFeatureNames "${this_pkgname}PrerequisiteNames")
+                                    #                                    foreach (p IN LISTS this_prereqs)
+                                    #                                        SplitAt("${p}" "=" preFeatName prePkgName)
+                                    #                                        if (prePkg)
+                                    #                                            getFeaturePackageByName("${DATA}" "${preFeatName}" "${prePkgName}" prePkg dc)
+                                    #                                        else ()
+                                    #                                            getFeaturePackageBy("${DATA}" "${preFeatName}" 0 prePkg)
+                                    #                                        endif ()
+                                    #                                        array(APPEND needed_prereqs RECORD "${prePkg}")
+                                    #                                        record(APPEND needed_prereqFeatureNames "${p}")
+                                    #                                    endforeach ()
+                                    #
+                                    #                                    msg(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
+                                    #                                    processFeatures("${needed_prereqs}" "${needed_prereqFeatureNames}")
                                 endif ()
                             endif ()
                             #                            endif ()
@@ -714,7 +720,7 @@ function(fetchContents)
 
     endfunction()
 
-    processFeatures(unifiedFeatures resolvedNames )
+    processFeatures(unifiedFeatures resolvedNames)
     propegateUpwards("Finally" OFF)
 
 endfunction()
