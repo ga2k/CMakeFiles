@@ -270,10 +270,12 @@ function(addLibrary)
         # On Windows, targets that link Gfx already get wx symbols from libhoffsoft_gfx.dll
         # (Gfx absorbs wx statically and exports all symbols).  Linking wx again here would
         # produce duplicate-symbol errors from LLD.
-        if (NOT (WIN32 AND GFX IN_LIST arg_USES))
+        list(FIND arg_USES "GFX" _gfx_idx)
+        if (NOT (WIN32 AND _gfx_idx GREATER_EQUAL 0))
             target_link_libraries(${arg_NAME}   PRIVATE ${HS_wxLibraries} ${HS_wxFrameworks})
             target_link_options(${arg_NAME}     PRIVATE ${HS_wxLinkOptions})
         endif ()
+        unset(_gfx_idx)
     endif ()
     # @formatter:on
 
