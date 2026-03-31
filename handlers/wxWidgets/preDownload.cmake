@@ -27,5 +27,6 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
 
     wxWidgets_set_build_options()
 
+    set(HANDLED OFF)
     set(HANDLED OFF PARENT_SCOPE)
 endfunction()
