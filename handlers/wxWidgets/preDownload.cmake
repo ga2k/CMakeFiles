@@ -1,7 +1,7 @@
 function(wxWidgets_preDownload pkgname url tag srcDir)
 
     # Use a persistent local clone so wxWidgets survives `make clean`
-    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets/${stemPath}")
+    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets${stemPath}")
     if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
 
         message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
@@ -22,7 +22,7 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
 
     endif ()
 #
-#    set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
+    set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
     include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
 
     wxWidgets_set_build_options()
