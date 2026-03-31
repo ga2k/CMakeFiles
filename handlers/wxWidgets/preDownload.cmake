@@ -1,26 +1,26 @@
 function(wxWidgets_preDownload pkgname url tag srcDir)
 
     # Use a persistent local clone so wxWidgets survives `make clean`
-#    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets")
-#    if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
-#
-#        message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
-#        execute_process(
-#                COMMAND git clone --depth=1 --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
-#                RESULT_VARIABLE _wx_clone_result
-#        )
-#        if (NOT _wx_clone_result EQUAL 0)
-#            message(FATAL_ERROR "Failed to clone wxWidgets to ${_wx_local_src}")
-#        endif ()
-#
-#        unset(patches)
-#        list(APPEND patches
-#                "${pkgname}/include|${_wx_local_src}"
-#                "${pkgname}/src|${_wx_local_src}"
-#        )
-#        replaceFile(${pkgname} "${patches}")
-#
-#    endif ()
+    set(_wx_local_src "$ENV{HOME}/dev/archives/wxWidgets/${stemPath}")
+    if (NOT EXISTS "${_wx_local_src}/CMakeLists.txt")
+
+        message(STATUS "Cloning wxWidgets with submodules to ${_wx_local_src} (one-time)...")
+        execute_process(
+                COMMAND git clone --depth=1 --recurse-submodules https://github.com/wxWidgets/wxWidgets.git "${_wx_local_src}"
+                RESULT_VARIABLE _wx_clone_result
+        )
+        if (NOT _wx_clone_result EQUAL 0)
+            message(FATAL_ERROR "Failed to clone wxWidgets to ${_wx_local_src}")
+        endif ()
+
+        unset(patches)
+        list(APPEND patches
+                "${pkgname}/include|${_wx_local_src}"
+                "${pkgname}/src|${_wx_local_src}"
+        )
+        replaceFile(${pkgname} "${patches}")
+
+    endif ()
 #
 #    set(FETCHCONTENT_SOURCE_DIR_WXWIDGETS "${_wx_local_src}" CACHE PATH "Pre-cloned wxWidgets source" FORCE)
     include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
