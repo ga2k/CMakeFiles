@@ -1,4 +1,4 @@
-import json, re, sys
+import json, os, re, sys
 
 def get_preset_with_inheritance(presets, name, visited=None):
     if visited is None:
@@ -21,8 +21,25 @@ def get_preset_with_inheritance(presets, name, visited=None):
 
 preset_name = sys.argv[1] if len(sys.argv) > 1 else ""
 
+# Walk up from CWD to find CMakePresets.json, mirroring how cmake --preset works.
+def find_presets_file():
+    d = os.getcwd()
+    while True:
+        candidate = os.path.join(d, "CMakePresets.json")
+        if os.path.isfile(candidate):
+            return candidate
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+presets_file = find_presets_file()
+if presets_file is None:
+    print("", end="")
+    sys.exit(0)
+
 try:
-    with open("CMakePresets.json") as f:
+    with open(presets_file) as f:
         data = json.load(f)
 except Exception:
     print("", end="")

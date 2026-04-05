@@ -448,7 +448,7 @@
       "toolchainFile": "${sourceDir}/cmake/toolchains/windows-mingw.cmake",
       "environment": {
         "hostType": "WindowsCross",
-        "hostPath": "/wincross",
+        "hostPath": "/winx",
         "archType": "x64",
         "archPath": "/x64",
         "CMAKE_NINJA_FLAGS": "-k 0"

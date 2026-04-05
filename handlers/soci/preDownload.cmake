@@ -76,7 +76,11 @@ function(soci_preDownload pkgname url tag srcDir)
     # @formatter:on
 
     # Use a persistent local clone so SOCI survives `make clean`
-    set(_soci_local_src "$ENV{HOME}/dev/archives/soci")
+    set(_soci_local_src "${ARCHIVE_DIR}/soci/source")
+
+    if (EXISTS "${_soci_local_src}" AND NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
+        file(REMOVE_RECURSE "${_soci_local_src}")
+    endif ()
 
     if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
         message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")

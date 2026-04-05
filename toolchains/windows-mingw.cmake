@@ -86,6 +86,7 @@ set(_COMMON_LINKER_FLAGS
         "-fuse-ld=lld \
      -static-libgcc -static-libstdc++ \
      -Wl,-Bstatic -lpthread -Wl,-Bdynamic \
+     -lucrtbase -lmsvcrt \
      -Wl,--major-os-version,10 -Wl,--minor-os-version,0")
 set(CMAKE_EXE_LINKER_FLAGS_INIT    ${_COMMON_LINKER_FLAGS})
 set(CMAKE_SHARED_LINKER_FLAGS_INIT ${_COMMON_LINKER_FLAGS})

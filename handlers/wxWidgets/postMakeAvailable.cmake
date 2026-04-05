@@ -17,6 +17,18 @@ endfunction()
 function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
     include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
 
+    msg("function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)")
+
+    # When building from source, prevent the sysroot find_package(wxWidgets) result
+    # (set during fetchContents PASS 0) from causing PASS 1 to skip FetchContent_MakeAvailable.
+    if(BUILD_WX_FROM_SOURCE)
+        set(wxWidgets_FOUND FALSE PARENT_SCOPE)
+    endif()
+
+    if(NOT sourceDir STREQUAL "${ARCHIVE_DIR}/wxWidgets/source")
+        msg(FATAL_ERROR ALWAYS "sourceDir ${sourceDir} is not ${ARCHIVE_DIR}/wxWidgets/source")
+    endif ()
+
     # Generate Wayland protocol headers/sources from XML on Linux
     if (LINUX)
         find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
@@ -24,15 +36,23 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
         set(_wx_protocols_out_dir "${sourceDir}/include/wx/protocols")
         file(MAKE_DIRECTORY "${_wx_protocols_out_dir}")
         file(GLOB _wx_protocol_xmls "${_wx_protocols_xml_dir}/*.xml")
+        string(REPLACE ";" "\n" _wxes "${_wx_protocol_xmls}")
+        log(LIST _wxes)
         foreach(_xml IN LISTS _wx_protocol_xmls)
             get_filename_component(_proto_name "${_xml}" NAME_WE)
             set(_header "${_wx_protocols_out_dir}/${_proto_name}-client-protocol.h")
             set(_source "${_wx_protocols_out_dir}/${_proto_name}-client-protocol.c")
             if (NOT EXISTS "${_header}")
+                msg("Generating ${_header}")
                 execute_process(COMMAND "${WAYLAND_SCANNER}" client-header "${_xml}" "${_header}")
+            else ()
+                msg("Consuming ${_header}")
             endif ()
             if (NOT EXISTS "${_source}")
+                msg("Generating ${_source}")
                 execute_process(COMMAND "${WAYLAND_SCANNER}" private-code "${_xml}" "${_source}")
+            elseif ()
+                msg("Consuming ${_source}")
             endif ()
         endforeach ()
     endif ()
@@ -40,7 +60,7 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
     set(_secondTime OFF)
     set(_triggered "BANG!")
-    set(local_includes "")
+    set(local_includes "${ARCHIVE_DIR}/wxWidgets/source/include")
 
     foreach(t IN LISTS _wx_targets _triggered _wx_targets)
 

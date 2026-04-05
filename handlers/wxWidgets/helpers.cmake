@@ -21,7 +21,6 @@ function(wxWidgets_set_build_options)
         set(wxBUILD_TOOLKIT "osx_cocoa" CACHE STRING "" FORCE)
     elseif (WIN32)
         set(wxBUILD_TOOLKIT "msw" CACHE STRING "" FORCE)
-        set(CMAKE_RC_COMPILER "rc")
     endif ()
 
     # Ensure it doesn't try to use system-installed wxWidgets when we are building from source

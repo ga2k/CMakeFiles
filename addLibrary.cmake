@@ -267,7 +267,12 @@ function(addLibrary)
         target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
         target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
         target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})
-        target_link_libraries(${arg_NAME}   PRIVATE ${HS_wxLibraries} ${HS_wxFrameworks})
+        if(NOT (WIN32 AND GFX IN_LIST arg_USES))
+            # On WIN32, GFX consumers get wx symbols from libhoffsoft_gfx.dll.a
+            # (Gfx.dll is built with --export-all-symbols). Linking static wx alongside
+            # the import lib produces duplicate symbol errors.
+            target_link_libraries(${arg_NAME} PRIVATE ${HS_wxLibraries} ${HS_wxFrameworks})
+        endif()
         target_link_options(${arg_NAME}     PRIVATE ${HS_wxLinkOptions})
     endif ()
     # @formatter:on

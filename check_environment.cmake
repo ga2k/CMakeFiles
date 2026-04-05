@@ -68,6 +68,7 @@ macro(check_environment PROJECT_ROOT)
         include("${cmake_root}/presetFallback.cmake")
         fixPresetMess("Linux" "Debug" "Shared")
     else ()
+        include(cmake/tools.cmake)
         log(LISTS stemPath buildPath)
     endif()
 
@@ -176,13 +177,16 @@ macro(check_environment PROJECT_ROOT)
         string(TOUPPER ${BUILD_TYPE} BUILD_TYPE_UC)
 
         if (NOT PRESERVE_DIRS)
-            forceSet(BUILD_DIR "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
-            forceSet(OUTPUT_DIR "" "${PROJECT_ROOT}/out${stemPath}" FILEPATH)
-            forceSet(EXTERNALS_DIR "" "${PROJECT_ROOT}/external${stemPath}" FILEPATH)
+            # @formatter:off
+            forceSet(BUILD_DIR      "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
+            forceSet(OUTPUT_DIR     "" "${PROJECT_ROOT}/out${stemPath}"         FILEPATH)
+            forceSet(EXTERNALS_DIR  "" "${PROJECT_ROOT}/external${stemPath}"    FILEPATH)
+            forceSet(ARCHIVE_DIR    "" "$ENV{HOME}/dev/archives${stemPath}"     FILEPATH)
 
             forceSet(CMAKE_RUNTIME_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}" FILEPATH)
             forceSet(CMAKE_LIBRARY_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
             forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
+            # @formatter:on
         endif ()
 
         if(WIN32)

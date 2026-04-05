@@ -136,16 +136,6 @@ if(WIN32)
     set(_libdir "${_impdir}")
 endif()
 
-# Find dependencies that Core needs
-include(CMakeFindDependencyMacro)
-
-# yaml-cpp appears in Core's INTERFACE_LINK_LIBRARIES (CoreData.h includes yaml-cpp/yaml.h).
-# If the consuming project's processFeatures hasn't loaded yaml-cpp yet (e.g. Windows
-# cross-build where CORE feature is resolved before STORAGE), find it now so that
-# set_target_properties in CoreTarget.cmake doesn't fail target validation.
-if(NOT TARGET yaml-cpp::yaml-cpp)
-    find_dependency(yaml-cpp)
-endif()
 
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
@@ -167,6 +157,28 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
         string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
         set(outvar "${firstBit}\n${finally}")
     endif()
+    # Strip any FetchContent-only deps that are statically embedded in the shared library
+    # and have no corresponding installed target (yaml-cpp is the known case: it's linked
+    # into Core.dll but not exported or staged as a separate package).
+    foreach(_fc_dep "yaml-cpp::yaml-cpp")
+        string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
+        string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
+        string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
+    endforeach()
+    unset(_fc_dep)
+
+    # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
+    # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
+    # don't also link the static wx archive, which would duplicate every wx symbol.
+    if(WIN32)
+        foreach(_win_dep "wxWidgets::wxWidgets" "OpenGL::GL")
+            string(REPLACE "${_win_dep};" "" outvar "${outvar}")
+            string(REPLACE ";${_win_dep}" "" outvar "${outvar}")
+            string(REPLACE "${_win_dep}"  "" outvar "${outvar}")
+        endforeach()
+        unset(_win_dep)
+    endif()
+
     file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
     include("${_libdir}/cmake/@APP_NAME@Target.cmake")

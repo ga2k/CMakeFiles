@@ -136,31 +136,23 @@ install(EXPORT      ${APP_NAME}Target
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
-# For in-repo development, we also want a usable package under ${OUTPUT_DIR} without requiring
-# an explicit "cmake --install". Copy the generated export set files (and cxx-modules mapping)
-# into the output prefix so ${OUTPUT_DIR}/${APP_NAME}Config.cmake can include them via _libdir/cmake.
-if(DEFINED BUILD_DIR AND EXISTS "${BUILD_DIR}/CMakeFiles/Export")
-    file(GLOB _hs_export_roots LIST_DIRECTORIES true "${BUILD_DIR}/CMakeFiles/Export/*")
-    list(SORT _hs_export_roots)
-    if(_hs_export_roots)
-        list(GET _hs_export_roots 0 _hs_export_root)
-        set(_hs_dev_cmake_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
-        file(MAKE_DIRECTORY "${_hs_dev_cmake_dir}")
-
-        file(GLOB _hs_export_files "${_hs_export_root}/*Target*.cmake")
-        if(_hs_export_files)
-            file(COPY ${_hs_export_files} DESTINATION "${_hs_dev_cmake_dir}")
-        endif()
-
-        if(EXISTS "${_hs_export_root}/cxx")
-            file(COPY "${_hs_export_root}/cxx" DESTINATION "${_hs_dev_cmake_dir}")
-        endif()
-
-        unset(_hs_dev_cmake_dir)
-        unset(_hs_export_files)
-        unset(_hs_export_root)
-    endif()
-    unset(_hs_export_roots)
+# For in-repo development, copy the build-tree export into OUTPUT_DIR so that
+# ${OUTPUT_DIR}/${APP_NAME}Config.cmake can include it via _libdir/cmake.
+# CMakeFiles/Export/ is populated during cmake's *generation* phase (after configure),
+# so on the very first configure this glob finds nothing — that is harmless.
+# On every subsequent incremental configure the files are already there and get copied.
+if(APP_TYPE MATCHES Library)
+    set(_hs_dev_cmake_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
+    file(MAKE_DIRECTORY "${_hs_dev_cmake_dir}")
+    file(GLOB _hs_export_cmake_files
+        "${CMAKE_BINARY_DIR}/CMakeFiles/Export/*/${APP_NAME}Target*.cmake"
+    )
+    foreach(_hs_f IN LISTS _hs_export_cmake_files)
+        file(COPY "${_hs_f}" DESTINATION "${_hs_dev_cmake_dir}")
+    endforeach()
+    unset(_hs_dev_cmake_dir)
+    unset(_hs_export_cmake_files)
+    unset(_hs_f)
 endif()
 
 # Also stage the public headers and module interface units needed by the export FILE_SETs.

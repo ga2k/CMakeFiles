@@ -60,7 +60,9 @@ function(createStandardPackageData dryRun)
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" NAMESPACE "SOCI" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
-            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 DRY_RUN ${dryRun})
+            ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 DRY_RUN ${dryRun}
+            SRCDIR ${ARCHIVE_DIR}/soci/source
+            BINDIR ${ARCHIVE_DIR}/soci/build)
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "sqliteOrm" NAMESPACE "sqlite_orm" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
@@ -105,8 +107,8 @@ function(createStandardPackageData dryRun)
     addPackageData(OPTIONAL FEATURE "GUI" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "master"
             ARG REQUIRED DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY
-            SRCDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/Downloaded
-            BINDIR ${CMAKE_SOURCE_DIR}/archive/wxWidgets/Binary)
+            SRCDIR ${ARCHIVE_DIR}/wxWidgets/source
+            BINDIR ${ARCHIVE_DIR}/wxWidgets/build)
 
 endfunction()
 ########################################################################################################################

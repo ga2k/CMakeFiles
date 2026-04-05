@@ -3,11 +3,11 @@
 function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDir)
 
     # Look in the source directory where FetchContent downloaded them
-    if (EXISTS "${sourceDir}/include")
+    if (EXISTS "${ARCHIVE_DIR}/wxWidgets/source/include")
         SplitAt("${wxVERSION}" "." vMajor vMinorAndPatch)
         SplitAt("${vMinorAndPatch}" "." vMinor vPatch)
 
-        install(DIRECTORY "${sourceDir}/include/"
+        install(DIRECTORY "${ARCHIVE_DIR}/wxWidgets/source/include/"
                 DESTINATION "${installIncludeDir}/wx-${vMajor}.${vMinor}"
                 COMPONENT Development)
     endif ()
