@@ -177,6 +177,19 @@ elseif (WIN32)
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
+    # Select the correct MSVC CRT for each build type.
+    # On native Windows with Clang/lld-link, the compiler's -D_DEBUG/-D_DLL/-D_MT flags
+    # cause clang to embed --dependent-lib=msvcrtd in object files, which pulls in
+    # msvcprtd.lib (debug STL). That library needs _calloc_dbg/_free_dbg/_CrtDbgReport
+    # from ucrtbased.lib, but CMake can default to the release variants (ucrt.lib +
+    # msvcrt.lib) even in Debug builds, causing undefined symbol link errors.
+    # Setting CMAKE_MSVC_RUNTIME_LIBRARY makes CMake select ucrtbased.lib + msvcrtd.lib
+    # for Debug and ucrt.lib + msvcrt.lib for Release.
+    # This has no effect on the WinX cross-compile (MinGW/GCC ignores this variable).
+    if (NOT CMAKE_CROSSCOMPILING)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    endif()
+
 endif ()
 
 #if defined(__clang__)
