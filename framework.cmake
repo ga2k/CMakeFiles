@@ -86,6 +86,7 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-enum-compare-switch>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-declarations>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-lambda-capture>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-enum-enum-conversion>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-ignored-attributes>)
 
 include(${cmake_root}/platform.cmake)
 

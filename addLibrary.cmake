@@ -183,7 +183,7 @@ function(addLibrary)
         )
 
         set_source_files_properties(${arg_MODULES} PROPERTIES
-                SKIP_PRECOMPILE_HEADERS ON
+                SKIP_PRECOMPILE_HEADERS OFF
                 CXX_SCAN_FOR_MODULES ON
         )
     endif ()
@@ -249,6 +249,15 @@ function(addLibrary)
         add_dependencies(${arg_NAME}                    ${APP_VENDOR}::Gfx)
     endif ()
 
+    # Core PCH: applied to all targets. Stores source-location tables for Core/Core.h
+    # (pulls in <windows.h> on Windows), Core/CoreData.h (yaml-cpp), and Core/Util.h
+    # (magic_enum) once in a shared PCH rather than duplicating them in every module BMI.
+    # Core has no GUI dependency; this file is safe to use in isolation. See wx_pch.h
+    # for the complementary wx / Gfx PCH that is added on top for GUI targets.
+    target_precompile_headers(${arg_NAME} PRIVATE
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/core_pch.h"
+    )
+
     # Link wxWidgets directly (no Widgets wrapper library)
     if (GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
         target_compile_definitions(${arg_NAME}  PRIVATE
@@ -257,7 +266,15 @@ function(addLibrary)
             USING_wxWidgets
             _FILE_OFFSET_BITS=64
         )
-        # NOTE: PCH disabled project-wide by request; do not define WX_PRECOMP or set target_precompile_headers here
+        # wx PCH (GUI targets only): applied in addition to core_pch.h.
+        # Gfx/wx.h (~40 wx headers + the Windows SDK pulled in transitively) is the
+        # dominant source of per-BMI source-location bloat. Storing it once here
+        # rather than once per module BMI is the fix for the 2 GB address-space limit
+        # being hit at the end of the MyCare build.
+        # Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.
+        target_precompile_headers(${arg_NAME} PRIVATE
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
+        )
         if (${BUILD_TYPE} STREQUAL "Debug")
             target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
         else ()
