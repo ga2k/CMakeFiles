@@ -133,7 +133,7 @@
         "CMAKE_RC_COMPILER": "C:/Program Files/LLVM/bin/llvm-rc.exe",
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_SYSTEM_PROCESSOR": "AMD64",
-        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
       }
     },
     {
@@ -454,7 +454,8 @@
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
-        "BUILD_WX_FROM_SOURCE": "ON"
+        "BUILD_WX_FROM_SOURCE": "ON",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
       }
     },
     {
