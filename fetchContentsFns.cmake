@@ -16,7 +16,7 @@ set(FIXUrl           6)
 set(FIXGitRepository 7)
 set(FIXGitTag        8)
 set(FIXSrcDir        9)
-set(FIXBinDir     10)
+set(FIXBinDir       10)
 set(FIXIncDir       11)
 set(FIXComponents   12)
 set(FIXArgs         13)
@@ -119,7 +119,6 @@ function(addTargetProperties target pkgname addToLists)
     set(_IncludePathsListList ${at_IncludePathsListList} PARENT_SCOPE)
 
 endfunction()
-
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################

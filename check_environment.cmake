@@ -185,6 +185,7 @@ macro(check_environment PROJECT_ROOT)
             endif ()
 
             cmake_path(CONVERT "${HOME_DIR}" TO_CMAKE_PATH_LIST HOME_DIR NORMALIZE)
+
             forceSet(HOME_DIR       "" "${HOME_DIR}"                            FILEPATH)
 
             forceSet(BUILD_DIR      "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
@@ -197,29 +198,21 @@ macro(check_environment PROJECT_ROOT)
             forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
             # @formatter:on
 
+            if (DEFINED ENV{STAGE_DIR})
+                set(_PATH "$ENV{STAGE_DIR}")
+            elseif (DEFINED DESTDIR)
+                set(_PATH "${DESTDIR}")
+            else ()
+                set(_PATH "${HOME_DIR}/dev/stage${stepPath}")
+            endif ()
+
             if (WIN32)
                 if (CMAKE_CROSSCOMPILING)
                     # Cross-compiling for Windows from Linux — use Linux-style staging layout
                     # so both builds share ~/dev/stage/usr/local/ without C:\ path nonsense
-                    if (DEFINED ENV{STAGE_DIR})
-                        set(_PATH "$ENV{STAGE_DIR}")
-                    elseif (DEFINED DESTDIR)
-                        set(_PATH "${DESTDIR}")
-                    else ()
-                        set(_PATH "${HOME_DIR}/dev/stage")
-                    endif ()
                     set(SYSTEM_PATH "/AppData/Roaming/${APP_VENDOR}")
                     set(_SYSPATH "${SYSTEM_PATH}")
                 else ()
-                    if (DEFINED ENV{STAGE_DIR})
-                        set(_PATH "$ENV{STAGE_DIR}")
-                    elseif (DEFINED DESTDIR)
-                        set(_PATH "${DESTDIR}")
-                    else ()
-                        set(_PATH "${HOME_DIR}/dev/stage")
-                    endif ()
-
-                    # Release install - use APPDATA
                     if (DEFINED ENV{APPDATA})
                         set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
                     else ()
@@ -231,13 +224,6 @@ macro(check_environment PROJECT_ROOT)
 
             else ()
 
-                if (DEFINED ENV{STAGE_DIR})
-                    set(_PATH "$ENV{STAGE_DIR}")
-                elseif (DEFINED DESTDIR)
-                    set(_PATH "${DESTDIR}")
-                else ()
-                    set(_PATH "${HOME_DIR}/dev/stage")
-                endif ()
                 set(SYSTEM_PATH "/usr/local")
 
                 set(_SYSPATH "${SYSTEM_PATH}")
@@ -254,6 +240,8 @@ macro(check_environment PROJECT_ROOT)
             endif ()
         endif ()
 
+        log(TITLE "Paths" LISTS HOME_DIR BUILD_DIR OUTPUT_DIR EXTERNALS_DIR ARCHIVE_DIR STAGE_DIR)
+        
         if (NOT DEFINED CMAKE_CXX_STANDARD)
             set(CMAKE_CXX_STANDARD 23)
         endif ()
