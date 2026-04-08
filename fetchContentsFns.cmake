@@ -16,7 +16,7 @@ set(FIXUrl           6)
 set(FIXGitRepository 7)
 set(FIXGitTag        8)
 set(FIXSrcDir        9)
-set(FIXBinDir       10)
+set(FIXBinDir     10)
 set(FIXIncDir       11)
 set(FIXComponents   12)
 set(FIXArgs         13)
@@ -119,6 +119,7 @@ function(addTargetProperties target pkgname addToLists)
     set(_IncludePathsListList ${at_IncludePathsListList} PARENT_SCOPE)
 
 endfunction()
+
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
@@ -1075,7 +1076,7 @@ function(preProcessFeatures featureList hDataSource outVar)
                 string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
             endif ()
             set(actualSourcePath "${SOURCE_PATH}")
-            set(actualStagedPath "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
+            set(actualStagedPath "${STAGE_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
             set(actualSystemPath "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
             fittest(PACKAGE "${pkgName}"

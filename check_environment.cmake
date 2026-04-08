@@ -69,7 +69,6 @@ macro(check_environment PROJECT_ROOT)
         fixPresetMess("Linux" "Debug" "Shared")
     else ()
         include(cmake/tools.cmake)
-        log(LISTS stemPath buildPath)
     endif ()
 
     if (NOT checkCompleted)
@@ -198,12 +197,10 @@ macro(check_environment PROJECT_ROOT)
             forceSet(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "" "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}" FILEPATH)
             # @formatter:on
 
-            if (DEFINED ENV{STAGE_DIR})
-                set(_PATH "$ENV{STAGE_DIR}")
-            elseif (DEFINED DESTDIR)
+            if (DEFINED DESTDIR)
                 set(_PATH "${DESTDIR}")
             else ()
-                set(_PATH "${HOME_DIR}/dev/stage${stepPath}")
+                set(_PATH "${HOME_DIR}/dev/stage${stemPath}")
             endif ()
 
             if (WIN32)
@@ -225,13 +222,12 @@ macro(check_environment PROJECT_ROOT)
             else ()
 
                 set(SYSTEM_PATH "/usr/local")
-
                 set(_SYSPATH "${SYSTEM_PATH}")
 
             endif ()
 
-            set(STAGED_PATH "${_PATH}${_SYSPATH}")
-            get_filename_component(STAGED_PATH "${STAGED_PATH}" ABSOLUTE)
+            set(STAGE_DIR "${_PATH}${_SYSPATH}")
+            get_filename_component(STAGE_DIR "${STAGE_DIR}" ABSOLUTE)
 
             if (UNIX AND NOT STAGING)
                 set(SUDO sudo)
@@ -240,8 +236,8 @@ macro(check_environment PROJECT_ROOT)
             endif ()
         endif ()
 
-        log(TITLE "Paths" LISTS HOME_DIR BUILD_DIR OUTPUT_DIR EXTERNALS_DIR ARCHIVE_DIR STAGE_DIR)
-        
+        log(LISTS stemPath buildPath _PATH HOME_DIR BUILD_DIR OUTPUT_DIR EXTERNALS_DIR STAGE_DIR ARCHIVE_DIR)
+
         if (NOT DEFINED CMAKE_CXX_STANDARD)
             set(CMAKE_CXX_STANDARD 23)
         endif ()
