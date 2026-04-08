@@ -42,12 +42,14 @@ execute_process(
 # compatibility shims that are safe with Clang.
 set(CMAKE_C_FLAGS_INIT
         "-nostdinc \
+     -fno-autolink \
      -isystem ${CLANG_RESOURCE_DIR}/include \
      -isystem ${MINGW_SYSROOT}/include \
      -isystem ${MINGW_SYSROOT}/lib/gcc/${MINGW_TARGET}/${MINGW_GCC_VER}/include-fixed")
 
 set(CMAKE_CXX_FLAGS_INIT
         "-nostdinc \
+     -fno-autolink \
      -isystem ${CLANG_RESOURCE_DIR}/include \
      -isystem ${MINGW_SYSROOT}/include/c++/${MINGW_GCC_VER} \
      -isystem ${MINGW_SYSROOT}/include/c++/${MINGW_GCC_VER}/${MINGW_TARGET} \
