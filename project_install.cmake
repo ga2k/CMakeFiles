@@ -145,38 +145,6 @@ install(EXPORT      ${APP_NAME}Target
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
-# For in-repo development, copy the build-tree export into OUTPUT_DIR so that
-# ${OUTPUT_DIR}/${APP_NAME}Config.cmake can include it via _libdir/cmake.
-# CMakeFiles/Export/ is populated during cmake's *generation* phase (after configure),
-# so on the very first configure this glob finds nothing — that is harmless.
-# On every subsequent incremental configure the files are already there and get copied.
-if(APP_TYPE MATCHES Library)
-    set(_hs_dev_cmake_dir "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
-    file(MAKE_DIRECTORY "${_hs_dev_cmake_dir}")
-    file(GLOB _hs_export_cmake_files
-        "${CMAKE_BINARY_DIR}/CMakeFiles/Export/*/${APP_NAME}Target*.cmake"
-    )
-    foreach(_hs_f IN LISTS _hs_export_cmake_files)
-        file(COPY "${_hs_f}" DESTINATION "${_hs_dev_cmake_dir}")
-    endforeach()
-    unset(_hs_dev_cmake_dir)
-    unset(_hs_export_cmake_files)
-    unset(_hs_f)
-endif()
-
-# Also stage the public headers and module interface units needed by the export FILE_SETs.
-# The generated ${APP_NAME}Target.cmake references these paths under the output prefix.
-if(EXISTS "${CMAKE_SOURCE_DIR}/include")
-    file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}")
-    file(COPY "${CMAKE_SOURCE_DIR}/include/"
-            DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}")
-endif()
-
-# Now for the library finder (if there really IS such a thing...)
-if(APP_TYPE MATCHES Library AND EXISTS "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake")
-    file(COPY "${CMAKE_SOURCE_DIR}/${APP_NAME}.cmake"
-         DESTINATION "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_VENDOR}")
-endif()
 
 # Install the headers from the 3rd party libraries
 foreach(pkg IN LISTS _hs_install_targets)

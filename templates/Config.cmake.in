@@ -13,95 +13,20 @@ endif()
 @HS_FIND_DEPENDENCIES@
 set(TARGET_NAME "${APP_NAME}")
 
-if ("${CMAKE_CURRENT_LIST_DIR}" STREQUAL "@OUTPUT_DIR@")
-    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-        message(NOTICE "In development")
-    endif()
-    set(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(_incdir "${PACKAGE_PREFIX_DIR}/include")
 
-    set(_inDevelopment  ON)
-    set(_inStaging      OFF)
-    set(_installed      OFF)
-
-    list(APPEND _searchDirs
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-    )
-
-    # Search upwards for the "include" directory
-    set(_searchDir "${PACKAGE_PREFIX_DIR}")
-    set(_stopDir "@APP_NAME@")
-    set(_justDir "")
-    set(_foundInc OFF)
-
-    while(NOT _foundInc)
-        if(EXISTS "${_searchDir}/include")
-            set(_incdir "${_searchDir}/include")
-            set(_foundInc ON)
-            break()
-        else()
-            # Fail if we go higher than the parent of Core or hit root
-            if("${_justDir}" STREQUAL "${_stopDir}")
-                message(FATAL_ERROR "Could not find 'include' directory within development tree limits.")
-            endif()
-
-            get_filename_component(_parentDir "${_searchDir}/.." ABSOLUTE)
-            get_filename_component(_justDir "${_parentDir}" NAME)
-
-            set(_searchDir "${_parentDir}")
-        endif()
-    endwhile()
-
-elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@STAGE_DIR@")
-    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-        message(NOTICE "Staged")
-    endif()
-
-    set(_inDevelopment  OFF)
-    set(_inStaging      ON)
-    set(_installed      OFF)
-
-    set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-
-    list(APPEND _searchDirs
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-    )
-
-elseif ("${PACKAGE_PREFIX_DIR}" STREQUAL "@SYSTEM_PATH@")
-    if(NOT "@PACKAGE_FIND_QUIETLY@" STREQUAL "ON")
-        message(NOTICE "Installed")
-    endif()
-
-    set(_inDevelopment  OFF)
-    set(_inStaging      OFF)
-    set(_installed      ON)
-
-    set(_incdir "${PACKAGE_PREFIX_DIR}/include")
-
-    list(APPEND _searchDirs
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
-    )
-else ()
-    message(FATAL_ERROR "Illegal installation")
-endif ()
+list(APPEND _searchDirs
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
+    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+)
 
 if (GUI IN_LIST APP_FEATURES)
     # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
     # before GfxTarget.cmake (or any wx-bearing target file) is included.
     find_dependency(OpenGL)
-    if(_inDevelopment)
-        include("@OUTPUT_DIR@/WX_Helper.cmake")
-    else()
-        include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
-    endif()
+    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
 endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
@@ -220,11 +145,7 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
         IMPORTED_CXX_MODULES_MINSIZEREL ""
     )
 
-    if(_inDevelopment)
-        set(_bmiDir "@BUILD_DIR@/src/@APP_NAME@.dir/@BUILD_TYPE@")
-    else()
-        set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
-    endif()
+    set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
@@ -245,35 +166,14 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
 
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
-    # If the app creates plugins, set the plugin directory
-    if (_inDevelopment)
-        set(PLUGIN_DIR "@OUTPUT_DIR@/plugins")
-    else ()
-        set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
-    endif ()
+    set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
     set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
 endif()
 
-if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "")
-    # If the app supplies resources, set the resource directory
-    if (_inDevelopment)
-        set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
-    else ()
-        set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
-    endif ()
-    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
-elseif (NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
-    # If the app consumes resources, set the resource directory
-    if (_inDevelopment)
-        set(RESOURCE_DIR "@CMAKE_SOURCE_DIR@/resources")
-    else ()
-        set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
-    endif ()
-    set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
+if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "" OR NOT "@APP_INCLUDES_RESOURCES@" STREQUAL "")
+    set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
     set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
 endif()
-
-unset(_inDevelopment)
 unset(_incdir)
 unset(_libdir)
 unset(_lib)

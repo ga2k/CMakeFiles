@@ -54,17 +54,6 @@
       }
     },
     {
-      "name": "Staged",
-      "hidden": true,
-      "description": "Create a staged build with STAGE_OUTPUT enabled",
-      "cacheVariables": {
-        "STAGE_OUTPUT": "ON"
-      },
-      "environment": {
-        "stagePath": "/staged"
-      }
-    },
-    {
       "name": "Windows VS",
       "hidden": true,
       "description": "Windows build for x64 processors",
@@ -262,58 +251,6 @@
       ]
     },
     {
-      "name": "Windows (Staged Debug Static)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Windows",
-        "Debug",
-        "Static",
-        "Staged"
-      ]
-    },
-    {
-      "name": "Windows (Staged Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Windows",
-        "Debug",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
-      "name": "Windows (Staged Release Static)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Windows",
-        "Release",
-        "Static",
-        "Staged"
-      ]
-    },
-    {
-      "name": "Windows (Staged Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Windows",
-        "Release",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
       "name": "Windows (VS Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}/ninja"
@@ -386,58 +323,6 @@
       ]
     },
     {
-      "name": "macOS (Staged Debug Static)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "macOS",
-        "Debug",
-        "Static",
-        "Staged"
-      ]
-    },
-    {
-      "name": "macOS (Staged Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "macOS",
-        "Debug",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
-      "name": "macOS (Staged Release Static)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "macOS",
-        "Release",
-        "Static",
-        "Staged"
-      ]
-    },
-    {
-      "name": "macOS (Staged Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "macOS",
-        "Release",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
       "name": "WinX",
       "hidden": true,
       "description": "Windows x64 cross-compile from Linux via Clang/MinGW-w64",
@@ -485,32 +370,6 @@
       ]
     },
     {
-      "name": "WinX (Staged Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "WinX",
-        "Debug",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
-      "name": "WinX (Staged Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "WinX",
-        "Release",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
       "name": "Linux (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
@@ -533,32 +392,6 @@
         "Release",
         "Shared"
       ]
-    },
-    {
-      "name": "Linux (Staged Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Linux",
-        "Debug",
-        "Shared",
-        "Staged"
-      ]
-    },
-    {
-      "name": "Linux (Staged Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}",
-      "inherits": [
-        "Linux",
-        "Release",
-        "Shared",
-        "Staged"
-      ]
     }
   ],
   "buildPresets": [
@@ -577,22 +410,6 @@
     {
       "name": "Windows (Release Shared)",
       "configurePreset": "Windows (Release Shared)"
-    },
-    {
-      "name": "Windows (Staged Debug Static)",
-      "configurePreset": "Windows (Staged Debug Static)"
-    },
-    {
-      "name": "Windows (Staged Debug Shared)",
-      "configurePreset": "Windows (Staged Debug Shared)"
-    },
-    {
-      "name": "Windows (Staged Release Static)",
-      "configurePreset": "Windows (Staged Release Static)"
-    },
-    {
-      "name": "Windows (Staged Release Shared)",
-      "configurePreset": "Windows (Staged Release Shared)"
     },
     {
       "name": "Windows (VS Debug Shared)",
@@ -619,22 +436,6 @@
       "configurePreset": "macOS (Release Shared)"
     },
     {
-      "name": "macOS (Staged Debug Static)",
-      "configurePreset": "macOS (Staged Debug Static)"
-    },
-    {
-      "name": "macOS (Staged Debug Shared)",
-      "configurePreset": "macOS (Staged Debug Shared)"
-    },
-    {
-      "name": "macOS (Staged Release Static)",
-      "configurePreset": "macOS (Staged Release Static)"
-    },
-    {
-      "name": "macOS (Staged Release Shared)",
-      "configurePreset": "macOS (Staged Release Shared)"
-    },
-    {
       "name": "WinX (Debug Shared)",
       "configurePreset": "WinX (Debug Shared)"
     },
@@ -643,28 +444,12 @@
       "configurePreset": "WinX (Release Shared)"
     },
     {
-      "name": "WinX (Staged Debug Shared)",
-      "configurePreset": "WinX (Staged Debug Shared)"
-    },
-    {
-      "name": "WinX (Staged Release Shared)",
-      "configurePreset": "WinX (Staged Release Shared)"
-    },
-    {
       "name": "Linux (Debug Shared)",
       "configurePreset": "Linux (Debug Shared)"
     },
     {
       "name": "Linux (Release Shared)",
       "configurePreset": "Linux (Release Shared)"
-    },
-    {
-      "name": "Linux (Staged Debug Shared)",
-      "configurePreset": "Linux (Staged Debug Shared)"
-    },
-    {
-      "name": "Linux (Staged Release Shared)",
-      "configurePreset": "Linux (Staged Release Shared)"
     }
   ]
 }

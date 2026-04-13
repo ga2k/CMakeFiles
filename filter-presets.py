@@ -158,6 +158,13 @@ def main(in_file, out_file):
                 name_map[orig_name] = new_name
                 preset["name"] = new_name
                 preset["displayName"] = new_name
+        else:
+            new_name = orig_name
+        # Stamp MCA_PRESET so CMakeLists.txt can read back the active preset name
+        # without parsing .modules, enabling multi-platform superbuild invocations.
+        if "cacheVariables" not in preset:
+            preset["cacheVariables"] = {}
+        preset["cacheVariables"]["MCA_PRESET"] = new_name
 
     # Step 4: Add the hidden presets back to the final list
     final_presets = hidden_presets + presets

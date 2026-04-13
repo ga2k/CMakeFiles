@@ -64,11 +64,7 @@ list(PREPEND HS_LibrariesList ${extra_LibrariesList})
 list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
 list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
 
-if(STAGE_OUTPUT)
-    set(CMAKE_INSTALL_PREFIX "${STAGED_FOLDER}" CACHE PATH "CMake Install Prefix" FORCE)
-else ()
-    set(CMAKE_INSTALL_PREFIX "${SYSTEM_PATH}" CACHE PATH "CMake Install Prefix" FORCE)
-endif ()
+set(CMAKE_INSTALL_PREFIX "${STAGE_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
 msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 
 # Early Christmas present.
