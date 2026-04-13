@@ -13,8 +13,19 @@ add_subdirectory(src)
 # @formatting:off
 include(ExternalProject)
 if (APP_GLOBAL_RESOURCES)
-    set(GLOBAL_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/global-resources")
-    file(MAKE_DIRECTORY "${GLOBAL_RESOURCES_DIR}")
+    set(_global_resources_src "${CMAKE_SOURCE_DIR}/global-resources")
+    file(MAKE_DIRECTORY "${_global_resources_src}")
+
+    # Relative path (from bin/) embedded in app.yaml — resolved at runtime from exe location.
+    if(APPLE)
+        file(RELATIVE_PATH GLOBAL_RESOURCES_DIR
+            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+            "${CMAKE_INSTALL_PREFIX}/Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    else()
+        file(RELATIVE_PATH GLOBAL_RESOURCES_DIR
+            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    endif()
 
     if (NOT TARGET GlobalResourcesRepo)
         ExternalProject_Add(GlobalResourcesRepo
@@ -26,9 +37,9 @@ if (APP_GLOBAL_RESOURCES)
                 BUILD_COMMAND       ""
                 INSTALL_COMMAND     ""
                 TEST_COMMAND        ""
-                SOURCE_DIR          "${GLOBAL_RESOURCES_DIR}"
-                BUILD_BYPRODUCTS    "${GLOBAL_RESOURCES_DIR}/.fetched"
-                COMMAND             ${CMAKE_COMMAND} -E touch "${GLOBAL_RESOURCES_DIR}/.fetched"
+                SOURCE_DIR          "${_global_resources_src}"
+                BUILD_BYPRODUCTS    "${_global_resources_src}/.fetched"
+                COMMAND             ${CMAKE_COMMAND} -E touch "${_global_resources_src}/.fetched"
         )
     endif ()
 

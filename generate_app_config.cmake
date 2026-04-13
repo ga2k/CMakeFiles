@@ -3,7 +3,11 @@
 if (${APP_VENDOR}_PLUGIN_DIR)
     set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_DIR}")
 else ()
-    set(PLUGIN_PATH "${STAGE_DIR}/${CMAKE_INSTALL_LIBDIR}")
+    # Use a path relative to the binary dir so the installed/extracted package
+    # works from any prefix (resolved at runtime relative to the executable).
+    file(RELATIVE_PATH PLUGIN_PATH
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
@@ -42,10 +46,11 @@ else ()
 endif ()
 
 if (APP_LOCAL_RESOURCES)
-    get_filename_component(YAML_LOCAL_RESOURCES "${APP_LOCAL_RESOURCES}" ABSOLUTE)
-    if(YAML_LOCAL_RESOURCES STREQUAL APP_LOCAL_RESOURCES)
-        get_filename_component(YAML_LOCAL_RESOURCES "${CMAKE_SOURCE_DIR}/${APP_LOCAL_RESOURCES}" ABSOLUTE)
-    endif ()
+    # Use a path relative to the binary dir so the installed/extracted package
+    # works from any prefix (resolved at runtime relative to the executable).
+    file(RELATIVE_PATH YAML_LOCAL_RESOURCES
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
 endif ()
 
 # Generate the app.yaml body first (without checksum)
