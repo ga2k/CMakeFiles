@@ -448,7 +448,7 @@ if (APPLE AND APP_TYPE MATCHES "Executable")
         # runs. fixup_bundle calls 'install_name_tool -delete_rpath' for every rpath it
         # finds via 'otool -l'. Some rpaths (build-tree paths, LLVM toolchain paths,
         # Linux-style $ORIGIN paths) were already removed by CMake's install RPATH handling,
-        # so install_name_tool fails with "no LC_RPATH load command". By stripping them here
+        # so install_name_tool fails with 'no LC_RPATH load command'. By stripping them here
         # first (silently), fixup_bundle's own scan finds a clean set and succeeds.
         file(GLOB_RECURSE _all_staged
             \"\${_bundle}/Contents/MacOS/*\"

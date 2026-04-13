@@ -41,7 +41,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 # Set explicit RPATH for build and install
 set(CMAKE_BUILD_RPATH "${OUTPUT_DIR}/bin;${OUTPUT_DIR}/lib;${OUTPUT_DIR}/dll")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+if (LINUX)
+    # Use $ORIGIN so staged libs find their siblings regardless of install prefix.
+    # Executables override this per-target (e.g. $ORIGIN/../lib64).
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+else()
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")

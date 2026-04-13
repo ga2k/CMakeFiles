@@ -1,9 +1,9 @@
 # cmake/generate_app_config.cmake
 
 if (${APP_VENDOR}_PLUGIN_DIR)
-    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_PATH}")
+    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_DIR}")
 else ()
-    set(PLUGIN_PATH "/home/geoffrey/dev/stage/usr/local/${CMAKE_INSTALL_LIBDIR}")
+    set(PLUGIN_PATH "${STAGE_DIR}/${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
