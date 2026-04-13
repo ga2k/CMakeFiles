@@ -16,15 +16,13 @@ if (APP_GLOBAL_RESOURCES)
     set(_global_resources_src "${CMAKE_SOURCE_DIR}/global-resources")
     file(MAKE_DIRECTORY "${_global_resources_src}")
 
-    # Relative path (from bin/) embedded in app.yaml — resolved at runtime from exe location.
+    # Prefix-relative path embedded in app.yaml — resolved at runtime from the
+    # inferred install prefix (exe dir parent, or bundle parent on macOS).
     if(APPLE)
-        file(RELATIVE_PATH GLOBAL_RESOURCES_DIR
-            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-            "${CMAKE_INSTALL_PREFIX}/Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+        set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
     else()
-        file(RELATIVE_PATH GLOBAL_RESOURCES_DIR
-            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-            "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+        # Linux / Windows: CMAKE_INSTALL_DATADIR is already prefix-relative (e.g. "share")
+        set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
     endif()
 
     if (NOT TARGET GlobalResourcesRepo)
@@ -235,9 +233,14 @@ foreach(pkg IN LISTS _hs_install_targets)
 endforeach()
 
 if (APP_CREATES_PLUGINS)
+    if (APPLE AND APP_TYPE MATCHES "Executable")
+        set(_plugin_lib_dest "${APP_NAME}.app/Contents/PlugIns")
+    else ()
+        set(_plugin_lib_dest "${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins")
+    endif ()
     install(TARGETS                          ${APP_CREATES_PLUGINS}
             EXPORT                           ${APP_NAME}PluginTarget
-            LIBRARY DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
+            LIBRARY DESTINATION              ${_plugin_lib_dest}
             RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
             ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
             CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}

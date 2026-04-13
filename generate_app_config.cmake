@@ -1,13 +1,24 @@
 # cmake/generate_app_config.cmake
 
+# PLUGIN_PATH is stored in the embedded YAML as a path relative to
+# CMAKE_INSTALL_PREFIX.  At runtime Util.cpp resolves it from the
+# inferred install prefix (exe dir parent, or bundle parent on macOS).
 if (${APP_VENDOR}_PLUGIN_DIR)
-    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_DIR}")
-else ()
-    # Use a path relative to the binary dir so the installed/extracted package
-    # works from any prefix (resolved at runtime relative to the executable).
+    # ${APP_VENDOR}_PLUGIN_DIR is an absolute staging path.
+    # Both it and CMAKE_INSTALL_PREFIX share the staging root, so
+    # file(RELATIVE_PATH) produces the correct prefix-relative fragment.
     file(RELATIVE_PATH PLUGIN_PATH
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+        "${CMAKE_INSTALL_PREFIX}"
+        "${${APP_VENDOR}_PLUGIN_DIR}")
+elseif (WIN32)
+    # Windows plugins are DLLs: RUNTIME DESTINATION → bin/<vendor>/<name>/plugins
+    set(PLUGIN_PATH "${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins")
+elseif (APPLE AND APP_TYPE MATCHES "Executable")
+    # macOS bundle: plugins live in Contents/PlugIns inside the bundle
+    set(PLUGIN_PATH "${APP_NAME}.app/Contents/PlugIns")
+else ()
+    # Linux / macOS non-bundle: LIBRARY DESTINATION → lib[64]/<vendor>/<name>/plugins
+    set(PLUGIN_PATH "${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins")
 endif ()
 
 set(PLUGIN_YAML_LIST "")
@@ -46,11 +57,13 @@ else ()
 endif ()
 
 if (APP_LOCAL_RESOURCES)
-    # Use a path relative to the binary dir so the installed/extracted package
-    # works from any prefix (resolved at runtime relative to the executable).
-    file(RELATIVE_PATH YAML_LOCAL_RESOURCES
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
+    if (APPLE AND APP_TYPE MATCHES "Executable")
+        # macOS bundle: resources live inside Contents/Resources
+        set(YAML_LOCAL_RESOURCES "${APP_NAME}.app/Contents/Resources")
+    else ()
+        # Linux / Windows: standard share layout (CMAKE_INSTALL_DATADIR is already relative)
+        set(YAML_LOCAL_RESOURCES "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
+    endif ()
 endif ()
 
 # Generate the app.yaml body first (without checksum)
