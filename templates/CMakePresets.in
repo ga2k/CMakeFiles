@@ -164,6 +164,7 @@
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
         "CMAKE_OSX_SYSROOT": "macosx",
@@ -206,6 +207,7 @@
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_COMPILER": "/usr/bin/clang",
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
         "BUILD_WX_FROM_SOURCE": "ON"
@@ -336,7 +338,7 @@
       ]
     },
     {
-      "name": "MacOS (Debug Static)",
+      "name": "macOS (Debug Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
@@ -348,7 +350,7 @@
       ]
     },
     {
-      "name": "MacOS (Debug Shared)",
+      "name": "macOS (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
@@ -360,7 +362,7 @@
       ]
     },
     {
-      "name": "MacOS (Release Static)",
+      "name": "macOS (Release Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
@@ -372,7 +374,7 @@
       ]
     },
     {
-      "name": "MacOS (Release Shared)",
+      "name": "macOS (Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
@@ -384,7 +386,7 @@
       ]
     },
     {
-      "name": "MacOS (Staged Debug Static)",
+      "name": "macOS (Staged Debug Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
@@ -397,7 +399,7 @@
       ]
     },
     {
-      "name": "MacOS (Staged Debug Shared)",
+      "name": "macOS (Staged Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
@@ -410,7 +412,7 @@
       ]
     },
     {
-      "name": "MacOS (Staged Release Static)",
+      "name": "macOS (Staged Release Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
@@ -423,7 +425,7 @@
       ]
     },
     {
-      "name": "MacOS (Staged Release Shared)",
+      "name": "macOS (Staged Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{stagePath}"
       },
@@ -601,36 +603,36 @@
       "configurePreset": "Windows (VS Release Shared)"
     },
     {
-      "name": "MacOS (Debug Static)",
-      "configurePreset": "MacOS (Debug Static)"
+      "name": "macOS (Debug Static)",
+      "configurePreset": "macOS (Debug Static)"
     },
     {
-      "name": "MacOS (Debug Shared)",
-      "configurePreset": "MacOS (Debug Shared)"
+      "name": "macOS (Debug Shared)",
+      "configurePreset": "macOS (Debug Shared)"
     },
     {
-      "name": "MacOS (Release Static)",
-      "configurePreset": "MacOS (Release Static)"
+      "name": "macOS (Release Static)",
+      "configurePreset": "macOS (Release Static)"
     },
     {
-      "name": "MacOS (Release Shared)",
-      "configurePreset": "MacOS (Release Shared)"
+      "name": "macOS (Release Shared)",
+      "configurePreset": "macOS (Release Shared)"
     },
     {
-      "name": "MacOS (Staged Debug Static)",
-      "configurePreset": "MacOS (Staged Debug Static)"
+      "name": "macOS (Staged Debug Static)",
+      "configurePreset": "macOS (Staged Debug Static)"
     },
     {
-      "name": "MacOS (Staged Debug Shared)",
-      "configurePreset": "MacOS (Staged Debug Shared)"
+      "name": "macOS (Staged Debug Shared)",
+      "configurePreset": "macOS (Staged Debug Shared)"
     },
     {
-      "name": "MacOS (Staged Release Static)",
-      "configurePreset": "MacOS (Staged Release Static)"
+      "name": "macOS (Staged Release Static)",
+      "configurePreset": "macOS (Staged Release Static)"
     },
     {
-      "name": "MacOS (Staged Release Shared)",
-      "configurePreset": "MacOS (Staged Release Shared)"
+      "name": "macOS (Staged Release Shared)",
+      "configurePreset": "macOS (Staged Release Shared)"
     },
     {
       "name": "WinX (Debug Shared)",

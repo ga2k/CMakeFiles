@@ -183,7 +183,15 @@ function(addLibrary)
         )
 
         set_source_files_properties(${arg_MODULES} PROPERTIES
-                SKIP_PRECOMPILE_HEADERS OFF
+                # PCH must not be applied to C++ module interface units (.ixx):
+                # Clang 21 processes the global module fragment with separate include
+                # state from the PCH. _LIBCPP_HIDE_FROM_ABI functions tagged with
+                # [[abi_tag("ne210105")]] (new in libc++ 21) end up defined twice in
+                # the same compilation unit — once from the PCH and once from the
+                # module's global fragment — producing "definition with same mangled
+                # name" hard errors. Disabling PCH for module files is the correct
+                # fix; the wx_pch.h comment already noted this intent.
+                SKIP_PRECOMPILE_HEADERS ON
                 CXX_SCAN_FOR_MODULES ON
         )
     endif ()

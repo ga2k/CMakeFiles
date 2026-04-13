@@ -91,11 +91,6 @@ macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
         set(CMAKE_EXE_LINKER_FLAGS
             "-L/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++abi.dylib"
             CACHE STRING "" FORCE)
-        set(OPENSSL_ROOT_DIR        "/opt/local"                                              CACHE PATH   "" FORCE)
-        set(OPENSSL_PATH            "/opt/local/libexec/openssl3/lib/cmake/OpenSSL"           CACHE PATH   "" FORCE)
-        set(OPENSSL_INCLUDE_DIR     "/opt/local/include/openssl-3"                            CACHE PATH   "" FORCE)
-        set(OPENSSL_CRYPTO_LIBRARY  "/opt/local/lib/openssl-3/libcrypto.dylib"                CACHE FILEPATH "" FORCE)
-        set(OPENSSL_SSL_LIBRARY     "/opt/local/lib/openssl-3/libssl.dylib"                   CACHE FILEPATH "" FORCE)
         set(BUILD_WX_FROM_SOURCE    "ON"                                 CACHE BOOL   "" FORCE)
 
         # --- PARENT_SCOPE vars (mirror of the above for callers) ---

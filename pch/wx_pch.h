@@ -12,9 +12,12 @@
 //
 // This file targets the dominant source of compile-time overhead and BMI
 // source-location bloat: the wxWidgets headers and the Windows SDK they pull
-// in on Windows.  CMake currently does not inject PCH into C++ module
-// interface units (.ixx), so the benefit is limited to regular .cpp
-// implementation files (plugins, app source).
+// in on Windows.  PCH is intentionally NOT applied to C++ module interface
+// units (.ixx) — see addLibrary.cmake (SKIP_PRECOMPILE_HEADERS ON for MODULES):
+// Clang 21 processes the global module fragment with separate include state,
+// causing libc++ 21 [[abi_tag]]-versioned _LIBCPP_HIDE_FROM_ABI symbols to be
+// defined twice in the same compilation unit.  The benefit here is limited to
+// regular .cpp implementation files (plugins, app source).
 //
 // Rules:
 //   - Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.

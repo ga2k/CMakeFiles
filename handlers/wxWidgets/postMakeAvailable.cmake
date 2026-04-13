@@ -1,11 +1,61 @@
 function(_collect_targets_recursive dir out)
+
+    msg("function(_collect_targets_recursive dir=${dir} out=${out}")
+
     if(NOT EXISTS "${dir}")
+        msg("dir does not exist")
         set(${out} "" PARENT_SCOPE)
         return()
     endif ()
-    get_property(tgts DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+    msg("dir exists")
+
+    # get_property DIRECTORY only works for directories that CMake processed via
+    # add_subdirectory() in this configure run. When the binary dir is outside
+    # CMAKE_BINARY_DIR (e.g. an archive/cache dir), CMake registers the scope
+    # under the SOURCE dir, not the binary dir. Always use the source dir so
+    # that get_property DIRECTORY reliably finds the scope.
+    #
+    # Also guard for the "already found" / stale-cached path where
+    # FetchContent_MakeAvailable was never called and no add_subdirectory ran.
+    FetchContent_GetProperties(wxWidgets)
+    if(NOT wxWidgets_POPULATED)
+        msg("wxWidgets not populated in this run — skipping build-tree scan")
+        set(${out} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    # Cross-check: even if POPULATED is cached from a prior run, verify that
+    # non-IMPORTED (build-tree) wx targets exist before querying directory scopes.
+    set(_has_wx_build_targets OFF)
+    foreach(_wx_candidate IN ITEMS wx_core wx_base wxcore wxbase)
+        if(TARGET "${_wx_candidate}")
+            get_target_property(_wx_imported "${_wx_candidate}" IMPORTED)
+            if(NOT _wx_imported)
+                set(_has_wx_build_targets ON)
+                break()
+            endif()
+        endif()
+    endforeach()
+    unset(_wx_candidate)
+    unset(_wx_imported)
+    if(NOT _has_wx_build_targets)
+        msg("No non-IMPORTED wx build targets — add_subdirectory not run this session, skipping scan")
+        set(${out} "" PARENT_SCOPE)
+        return()
+    endif()
+    unset(_has_wx_build_targets)
+
+    # Use the SOURCE dir (not binary dir) for get_property DIRECTORY — cmake
+    # registers external add_subdirectory scopes by source path, not binary path.
+    if(wxWidgets_SOURCE_DIR AND EXISTS "${wxWidgets_SOURCE_DIR}")
+        set(_scan_dir "${wxWidgets_SOURCE_DIR}")
+    else()
+        set(_scan_dir "${dir}")
+    endif()
+
+    get_property(tgts DIRECTORY "${_scan_dir}" PROPERTY BUILDSYSTEM_TARGETS)
     set(all "${tgts}")
-    get_property(subs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+    get_property(subs DIRECTORY "${_scan_dir}" PROPERTY SUBDIRECTORIES)
     foreach(sd IN LISTS subs)
         _collect_targets_recursive("${sd}" sub_tgts)
         list(APPEND all ${sub_tgts})
@@ -17,7 +67,7 @@ endfunction()
 function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
     include(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cmake)
 
-    msg("function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)")
+    msg("function(wxWidgets_postMakeAvailable sourceDir=${sourceDir} buildDir=${buildDir} outDir=${outDir} buildType=${buildType})")
 
     # When building from source, prevent the sysroot find_package(wxWidgets) result
     # (set during fetchContents PASS 0) from causing PASS 1 to skip FetchContent_MakeAvailable.

@@ -482,17 +482,15 @@ class CppGroupGenerator:
         if packed_args_in is not None:
             static_lines, page_args_var, page_args_out_triplets = packed_args_in
             if static_lines is not None:
-                code.append(f"   static inline anymap {page_args_var} {{")
-                currentAssignLine = 0
-                for line in static_lines:
-                    currentAssignLine += 1
-                    if currentAssignLine == len(static_lines):
-                        code.append(line)
-                    else:
-                        code.append(line + ",")
-
-                code.append("   };")
-                parent_args_var_for_children = page_args_var
+                # Clang 21 crashes (infinite recursion in getTypeInfoImpl) on any
+                # static anymap variable initialized with std::any values inside a
+                # C++ module — class-level inline or function-local, doesn't matter.
+                # Workaround: emit no static at all.  The constructor default becomes
+                # nullanymap; hs::param() falls through to its literal default anyway,
+                # which is identical to what the map values were.
+                # hs::param calls in the body use 'args' (the ctor parameter) so that
+                # callers can still override via custom anymap arguments.
+                parent_args_var_for_children = "args"
 
         on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
         on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
@@ -548,8 +546,14 @@ class CppGroupGenerator:
         code.append(f"   ~{cpp_class}() override = default;")
         code.append("")
 
-        # Constructor signature and base ctor call
-        default_args_expr = (parent_args_var_for_children or "nullanymap")
+        # Constructor signature and base ctor call.
+        # When parent_args_var_for_children is "args" it means we suppressed the
+        # static anymap (clang 21 crash workaround); use nullanymap as the default
+        # so the constructor signature doesn't read "= args" which is circular.
+        if parent_args_var_for_children == "args":
+            default_args_expr = "nullanymap"
+        else:
+            default_args_expr = (parent_args_var_for_children or "nullanymap")
         value_default = "PageType::Null" if top_base_class == "Page" else "std::string{}"
         pad1: str = " " * len(f"   explicit {cpp_class} ( ")
         if self.target_type == "pages":
@@ -565,7 +569,7 @@ class CppGroupGenerator:
             code.append(f"{pad1}std::string name, ")
             code.append(f"{pad1}wxWindow *pParent, ")
             code.append(f"{pad1}value_t value = {value_default},")
-            code.append(f"{pad1}anymap &args = {default_args_expr},")
+            code.append(f"{pad1}const anymap &args = {default_args_expr},")
             code.append(f"{pad1}long style = 0)")
             code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
 

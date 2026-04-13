@@ -104,12 +104,21 @@ endforeach()
 
 message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
 
+# On macOS app bundles, route built libraries and resources inside the bundle.
+if(APPLE AND APP_TYPE MATCHES "Executable")
+    set(_hs_lib_dest "${APP_NAME}.app/Contents/Frameworks")
+    set(_hs_bin_dest "${APP_NAME}.app/Contents/MacOS")
+else()
+    set(_hs_lib_dest "${CMAKE_INSTALL_LIBDIR}")
+    set(_hs_bin_dest "${CMAKE_INSTALL_BINDIR}")
+endif()
+
 # @formatting:off
 install(TARGETS                 ${APP_NAME}
                                 ${_hs_install_targets}
         EXPORT                  ${APP_NAME}Target
-        LIBRARY                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME                 DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY                 DESTINATION ${_hs_lib_dest}
+        RUNTIME                 DESTINATION ${_hs_bin_dest}
         ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
         CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
         FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
@@ -263,6 +272,47 @@ endif ()
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+# Build the find_dependency block embedded into @APP_NAME@Config.cmake.
+# For every namespace-qualified target in HS_LibrariesList that is NOT our
+# own vendor target, emit a find_dependency() so consumers can resolve those
+# targets when they include @APP_NAME@Target.cmake.
+set(_hs_fd_seen "")
+set(HS_FIND_DEPENDENCIES "")
+foreach(_lib IN LISTS HS_LibrariesList)
+    string(FIND "${_lib}" "::" _nsep)
+    if(_nsep LESS 0)
+        continue()
+    endif()
+    string(SUBSTRING "${_lib}" 0 ${_nsep} _ns)
+    if(_ns STREQUAL "${APP_VENDOR}")
+        continue()
+    endif()
+    if(_ns IN_LIST _hs_fd_seen)
+        continue()
+    endif()
+    list(APPEND _hs_fd_seen "${_ns}")
+
+    if(_ns STREQUAL "SOCI")
+        string(APPEND HS_FIND_DEPENDENCIES "find_dependency(SOCI CONFIG COMPONENTS Core SQLite3)\n")
+    elseif(_ns STREQUAL "OpenSSL")
+        string(APPEND HS_FIND_DEPENDENCIES "find_dependency(OpenSSL COMPONENTS SSL Crypto)\n")
+    elseif(_ns STREQUAL "cpptrace")
+        string(APPEND HS_FIND_DEPENDENCIES "find_dependency(cpptrace CONFIG)\n")
+    elseif(_ns STREQUAL "yaml-cpp")
+        # yaml-cpp is statically embedded — consumers must not re-link it (it stays in the strip list)
+    elseif(_ns STREQUAL "wxWidgets")
+        # wxWidgets is handled separately via WX_Helper.cmake
+    elseif(_ns STREQUAL "Qt6")
+        # Qt6 is handled by the LINUX guard above in Config.cmake.in
+    else()
+        string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_ns})\n")
+    endif()
+endforeach()
+unset(_hs_fd_seen)
+unset(_lib)
+unset(_ns)
+unset(_nsep)
+
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
         "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
@@ -314,12 +364,11 @@ if (APP_LOCAL_RESOURCES)
     set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
 
     if (APPLE AND "${APP_TYPE}" STREQUAL "Executable")
-        # If it's a macOS Bundle, we can still put them in the bundle
-        # but per your tree requirements for a unified stagedir:
+        # Local resources go inside the bundle's Contents/Resources/
         install(DIRECTORY "${LOCAL_RES_SRC}/"
-                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
+                DESTINATION "${APP_NAME}.app/Contents/Resources")
     else()
-        # Windows/Linux/Generic: $CMAKE_INSTALL_DATADIR/Core/${APP_NAME}/Resources
+        # Windows/Linux/Generic
         install(DIRECTORY "${LOCAL_RES_SRC}/"
                 DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
     endif()
@@ -355,3 +404,77 @@ if (WIN32)
         )
     ")
 endif ()
+
+# macOS: use BundleUtilities to copy all non-system dylib dependencies
+# into Contents/Frameworks and rewrite @rpath / @loader_path references
+# so the bundle is self-contained.
+if (APPLE AND APP_TYPE MATCHES "Executable")
+    install(CODE "
+        cmake_policy(SET CMP0009 NEW)
+        include(BundleUtilities)
+        # Override item resolution for two problem cases:
+        # 1. libunwind: LLVM 21's libc++ references @rpath/libunwind.1.dylib; fixup_bundle
+        #    calls 'otool -l' on the raw @rpath/... path before IGNORE_ITEM kicks in.
+        #    Resolve to the real system path so it's classified as 'system' and skipped.
+        # 2. Unversioned dylib names (e.g. libc++abi.1.dylib): the install step copies only
+        #    the versioned file (libc++abi.1.0.dylib), not the unversioned symlink. When
+        #    libc++.1.0.dylib references @executable_path/../Frameworks/libc++abi.1.dylib,
+        #    fixup_bundle fails because the file doesn't exist. Redirect to the versioned
+        #    copy already in Frameworks — fixup_bundle sees it's already been keyed and skips.
+        function(gp_resolve_item_override context item exepath dirs resolved_item_var resolved_var)
+          if(item MATCHES \"libunwind\")
+            set(\${resolved_item_var} \"/usr/lib/libunwind.1.dylib\" PARENT_SCOPE)
+            set(\${resolved_var} 1 PARENT_SCOPE)
+            return()
+          endif()
+          # Derive the Frameworks dir from the executable path (Contents/MacOS/MyCare -> Contents/Frameworks)
+          get_filename_component(_macos_dir \"\${exepath}\" DIRECTORY)
+          get_filename_component(_contents_dir \"\${_macos_dir}\" DIRECTORY)
+          set(_fw_dir \"\${_contents_dir}/Frameworks\")
+          get_filename_component(_item_name \"\${item}\" NAME)
+          if(NOT EXISTS \"\${_fw_dir}/\${_item_name}\")
+            string(REGEX REPLACE \"\\\\.dylib$\" \"\" _stem \"\${_item_name}\")
+            file(GLOB _versioned \"\${_fw_dir}/\${_stem}.*.dylib\")
+            if(_versioned)
+              list(SORT _versioned)
+              list(GET _versioned 0 _first)
+              set(\${resolved_item_var} \"\${_first}\" PARENT_SCOPE)
+              set(\${resolved_var} 1 PARENT_SCOPE)
+            endif()
+          endif()
+        endfunction()
+        set(_bundle \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${APP_NAME}.app\")
+        # Pre-strip non-system absolute rpaths from all staged binaries before fixup_bundle
+        # runs. fixup_bundle calls 'install_name_tool -delete_rpath' for every rpath it
+        # finds via 'otool -l'. Some rpaths (build-tree paths, LLVM toolchain paths,
+        # Linux-style $ORIGIN paths) were already removed by CMake's install RPATH handling,
+        # so install_name_tool fails with "no LC_RPATH load command". By stripping them here
+        # first (silently), fixup_bundle's own scan finds a clean set and succeeds.
+        file(GLOB_RECURSE _all_staged
+            \"\${_bundle}/Contents/MacOS/*\"
+            \"\${_bundle}/Contents/Frameworks/*.dylib\")
+        foreach(_bin IN LISTS _all_staged)
+          if(NOT IS_SYMLINK \"\${_bin}\" AND NOT IS_DIRECTORY \"\${_bin}\")
+            execute_process(COMMAND otool -l \"\${_bin}\"
+              OUTPUT_VARIABLE _otool RESULT_VARIABLE _r ERROR_QUIET)
+            if(_r EQUAL 0)
+              string(REGEX MATCHALL \"path ([^\t\n ]+) \\\\(offset\" _matches \"\${_otool}\")
+              foreach(_m IN LISTS _matches)
+                string(REGEX REPLACE \"path ([^\t\n ]+) \\\\(offset\" \"\\\\1\" _rp \"\${_m}\")
+                if(NOT _rp MATCHES \"^@\" AND NOT _rp MATCHES \"^/usr/lib\" AND NOT _rp MATCHES \"^/System\")
+                  execute_process(COMMAND install_name_tool -delete_rpath \"\${_rp}\" \"\${_bin}\"
+                    RESULT_VARIABLE _dr ERROR_QUIET)
+                endif()
+              endforeach()
+            endif()
+          endif()
+        endforeach()
+        # Include any dylibs already placed in Frameworks by install(TARGETS)
+        file(GLOB_RECURSE _fw_libs \"\${_bundle}/Contents/Frameworks/*.dylib\")
+        # Search both the build-tree output dir and the staged lib dir for deps
+        fixup_bundle(\"\${_bundle}\" \"\${_fw_libs}\"
+            \"${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR};\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+            IGNORE_ITEM \"libunwind.1.dylib\"
+        )
+    " COMPONENT Runtime)
+endif()

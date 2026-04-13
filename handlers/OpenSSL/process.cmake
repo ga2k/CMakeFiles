@@ -4,6 +4,40 @@ function(OpenSSL_process incs libs defs)
         return()
     endif ()
 
+    find_package(OpenSSL)
+    if (OpenSSL_FOUND)
+        msg("OpenSSL was found : OPENSSL_LIBRARIES=${OPENSSL_LIBRARIES}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}")
+
+#        get_cmake_property(_vars VARIABLES)
+#        foreach(_v ${_vars})
+#            if(_v MATCHES "^[Oo][Pp].*")
+#                message(STATUS "${_v} = ${${_v}}")
+#            endif()
+#        endforeach()
+
+#        set_target_properties(OpenSSL::SSL PROPERTIES
+#                IMPORTED_LOCATION ${installDir}/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
+#                IMPORTED_IMPLIB ${installDir}/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
+#                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+#        )
+#        set_target_properties(OpenSSL::Crypto PROPERTIES
+#                IMPORTED_LOCATION ${installDir}/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
+#                IMPORTED_IMPLIB ${installDir}/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
+#                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
+#        )
+
+        set(librariesList     ${_LibrariesList}     OpenSSL::SSL OpenSSL::Crypto)
+        set(includePathsList  ${_IncludePathsList}  ${OPENSSL_INCLUDE_DIR})
+        set(_LibrariesList    ${librariesList}      PARENT_SCOPE)
+        set(_IncludePathsList ${includePathsList}   PARENT_SCOPE)
+        set(HANDLED           ON                    PARENT_SCOPE)
+
+
+
+    else ()
+        msg("OpenSSL was NOT found")
+    endif ()
+
     set(sourceDir   "${EXTERNALS_DIR}")
     set(buildDir    "${BUILD_DIR}/_deps")
     set(outDir      "${OUTPUT_DIR}/${this_pkglc}")
@@ -43,7 +77,7 @@ function(OpenSSL_process incs libs defs)
         endif ()
     elseif (APPLE OR LINUX)
         set(ENV{OPENSSL_DIR} "${OPENSSL_PATH}")
-        find_package(OpenSSL CONFIG)
+        find_package(OpenSSL)
         if(OpenSSL_FOUND)
             message("Using installed system OpenSSL libraries")
 #            list(APPEND libs OpenSSL::SSL OpenSSL::Crypto)
@@ -134,6 +168,9 @@ ExternalProject_Add(OpenSSLProj
 
     set(librariesList  ${_LibrariesList} OpenSSL::SSL OpenSSL::Crypto)
     set(_LibrariesList ${librariesList}  PARENT_SCOPE)
+
+    set(_IncludePathsList ${incs} ${installDir}/include  PARENT_SCOPE)
+
     set(HANDLED        ON                PARENT_SCOPE)
 
 endfunction()

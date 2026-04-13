@@ -140,7 +140,7 @@ def main(in_file, out_file):
     # Examples:
     #   "Linux (Debug Shared)"          -> "Linux Debug Shared"
     #   "WinX (Debug Shared)"           -> "WinX Debug Shared"
-    #   "MacOS (Staged Release Shared)" -> "MacOS Staged Release Shared"
+    #   "macOS (Staged Release Shared)" -> "macOS Staged Release Shared"
     #   "Windows (VS Debug Shared)"     -> "Windows VS Debug Shared"
     # We also keep a name mapping to update buildPresets accordingly.
     import re

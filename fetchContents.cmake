@@ -279,7 +279,7 @@ function(fetchContents)
             inc(phase)
 
             msg("${divider}")
-            msg("${BOLD}${YELLOW_BG}${WHITE} ${APP_NAME}${phasePadding}Phase ${phase} ${NC}")
+            msg("${BOLD}${YELLOW_BG}${BLACK} ${APP_NAME}${phasePadding}Phase ${phase} ${NC}")
             msg("${divider}\n")
 
             set(ixloupe 0)
@@ -624,6 +624,18 @@ function(fetchContents)
                             # Feature is already PROVIDED by an upstream library target.
                             # Still consume it for this app by adding the provided target to our link lists.
                             handleTarget(${this_pkgname})
+
+                            # For FETCH_CONTENTS packages found via find_package (e.g. soci found in
+                            # /usr/local from a prior install), handleTarget may not resolve namespace-
+                            # qualified targets like SOCI::Core. Call postMakeAvailable so the package-
+                            # specific handler can add those targets to _LibrariesList.
+                            if ("${this_method}" STREQUAL "FETCH_CONTENTS")
+                                set(fn "${this_pkgname}_postMakeAvailable")
+                                set(HANDLED OFF)
+                                if (COMMAND "${fn}")
+                                    cmake_language(CALL "${fn}" "${this_src}" "${this_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                endif ()
+                            endif ()
 
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
                             msg()
