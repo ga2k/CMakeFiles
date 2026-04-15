@@ -166,7 +166,7 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
 
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
-    set(PLUGIN_DIR "${_libdir}/@APP_VENDOR@/@APP_NAME@/plugins")
+    set(PLUGIN_DIR "${_libdir}")
     set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
 endif()
 

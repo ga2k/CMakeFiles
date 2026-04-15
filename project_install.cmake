@@ -129,18 +129,19 @@ install(TARGETS                 ${APP_NAME}
         LIBRARY                 DESTINATION ${_hs_lib_dest}
         RUNTIME                 DESTINATION ${_hs_bin_dest}
         ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-        FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
-        FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
-        FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+        CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
+        FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
+        FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
+        FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
         INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         BUNDLE                  DESTINATION .
         RESOURCE                ${resource_list}
 )
 
-# PCM/PCM-like files
+# PCM/PCM-like files (Development only — not needed in runtime packages)
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir/"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+        COMPONENT Development
         FILES_MATCHING
         PATTERN "*.pcm"
         PATTERN "*.ifc"
@@ -151,6 +152,7 @@ install(EXPORT      ${APP_NAME}Target
         FILE        ${APP_NAME}Target.cmake
         NAMESPACE   ${APP_VENDOR}::
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
+        COMPONENT   Development
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
@@ -236,16 +238,16 @@ if (APP_CREATES_PLUGINS)
     if (APPLE AND APP_TYPE MATCHES "Executable")
         set(_plugin_lib_dest "${APP_NAME}.app/Contents/PlugIns")
     else ()
-        set(_plugin_lib_dest "${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins")
+        set(_plugin_lib_dest "${CMAKE_INSTALL_LIBDIR}")
     endif ()
     install(TARGETS                          ${APP_CREATES_PLUGINS}
             EXPORT                           ${APP_NAME}PluginTarget
             LIBRARY DESTINATION              ${_plugin_lib_dest}
-            RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}/${APP_VENDOR}/${APP_NAME}/plugins
-            CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}
-            FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+            RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}
+            ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}
+            CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
+            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
+            FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
             INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
     )
 endif ()
