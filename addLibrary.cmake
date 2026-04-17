@@ -278,7 +278,7 @@ function(addLibrary)
     # ────────────────────────────────────────────────────────────────────────────
 
     if (WIN32 AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES
-            AND GFX NOT IN_LIST arg_USES)
+            AND NOT GFX IN_LIST arg_USES)
         # This is the wx-provider library (Gfx).  Build the shared PCH binary and
         # apply it; consumers (MyCare) receive it via HoffSoft::Gfx
         # INTERFACE_COMPILE_OPTIONS set in GfxConfig.cmake.
