@@ -2,41 +2,116 @@
 //
 // wx_pch.h — Precompiled header for Gfx / MyCare GUI targets (wx portion)
 //
-// Contains only pure wxWidgets headers — no Core, no Gfx/Widgets.h.
+// Contains only wxWidgets headers and STL headers — no project-specific paths.
 //
-// Core library headers are excluded for the same reason documented in
-// core_pch.h: they exist at different physical paths in Core-source builds vs
-// staged/installed builds, and including them causes "redefinition" errors in
-// .cpp files that also load Core module BMIs.  Gfx/Widgets.h is also excluded
-// because it transitively includes Core/Core.h.
+// This file is built ONCE at the stable stage path and shared across all
+// consumers (Gfx module BMIs + MyCare compilations).  All includes must use
+// angle-bracket paths so the PCH binary is valid regardless of which project's
+// source tree is active.
 //
-// This file targets the dominant source of compile-time overhead and BMI
-// source-location bloat: the wxWidgets headers and the Windows SDK they pull
-// in on Windows.  PCH is intentionally NOT applied to C++ module interface
-// units (.ixx) — see addLibrary.cmake (SKIP_PRECOMPILE_HEADERS ON for MODULES):
-// Clang 21 processes the global module fragment with separate include state,
-// causing libc++ 21 [[abi_tag]]-versioned _LIBCPP_HIDE_FROM_ABI symbols to be
-// defined twice in the same compilation unit.  The benefit here is limited to
-// regular .cpp implementation files (plugins, app source).
+// "Gfx/gfx_export.h" and "Gfx/wx.h" are intentionally NOT included here:
+// they use source-relative paths which resolve to different absolute paths
+// in Gfx builds vs MyCare builds, causing Clang PCH path validation failures.
 //
 // Rules:
 //   - Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.
 //   - Do NOT include headers that contain C++ module import statements.
-//   - Do NOT include Core headers here; they belong in core_pch.h but cannot
-//     safely be added there (see that file's comment for the reason).
+//   - Do NOT include project headers (Core, Gfx) — they are path-unstable.
 //
 
-// Gfx export macros — macro-only, no includes, completely path-neutral.
-#include "Gfx/gfx_export.h"
+// Standard library — path-stable across all consumers
+#include <algorithm>
+#include <any>
+#include <array>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <queue>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <variant>
+#include <vector>
 
 // wxWidgets — the dominant source of source-location bloat.
-// Gfx/wx.h is <wx/wx.h> plus ~40 individual wx headers.
-// All paths here are angle-bracket or from Gfx/include, which is consistent
-// across all consumers.
-#include "Gfx/wx.h"
+// Direct angle-bracket includes (equivalent to Gfx/wx.h contents).
+#include <wx/wx.h>
+
+#include <wx/activityindicator.h>
+#include <wx/app.h>
+#include <wx/artprov.h>
+#include <wx/bitmap.h>
+#include <wx/bmpbuttn.h>
+#include <wx/busyinfo.h>
+#include <wx/button.h>
+#include <wx/checkbox.h>
+#include <wx/choice.h>
+#include <wx/clipbrd.h>
+#include <wx/cmdline.h>
+#include <wx/colordlg.h>
+#include <wx/combo.h>
+#include <wx/combobox.h>
+#include <wx/confbase.h>
+#include <wx/datectrl.h>
+#include <wx/dateevt.h>
+#include <wx/datetime.h>
+#include <wx/datetimectrl.h>
+#include <wx/dcsvg.h>
+#include <wx/docview.h>
+#include <wx/event.h>
+#include <wx/filefn.h>
+#include <wx/filesys.h>
+#include <wx/fontdata.h>
+#include <wx/fontdlg.h>
+#include <wx/fs_inet.h>
+#include <wx/gauge.h>
+#include <wx/gbsizer.h>
+#include <wx/generic/splash.h>
+#include <wx/generic/stattextg.h>
+#include <wx/grid.h>
+#include <wx/image.h>
+#include <wx/infobar.h>
+#include <wx/intl.h>
+#include <wx/list.h>
+#include <wx/listbase.h>
+#include <wx/msgdlg.h>
+#include <wx/notebook.h>
+#include <wx/panel.h>
+#include <wx/popupwin.h>
+#include <wx/printdlg.h>
+#include <wx/radiobox.h>
+#include <wx/radiobut.h>
+#include <wx/renderer.h>
+#include <wx/richmsgdlg.h>
+#include <wx/rtti.h>
+#include <wx/scrolbar.h>
+#include <wx/sizer.h>
+#include <wx/slider.h>
+#include <wx/spinbutt.h>
+#include <wx/spinctrl.h>
+#include <wx/splitter.h>
+#include <wx/srchctrl.h>
+#include <wx/statline.h>
+#include <wx/stattext.h>
+#include <wx/stdpaths.h>
+#include <wx/textctrl.h>
+#include <wx/tglbtn.h>
+#include <wx/timer.h>
+#include <wx/treectrl.h>
+#include <wx/utils.h>
+#include <wx/valgen.h>
+#include <wx/wizard.h>
 
 // Additional wx headers that appear frequently in module global fragments
-// but are not pulled in by Gfx/wx.h:
 #include <wx/aui/aui.h>
 #include <wx/aui/auibar.h>
 #include <wx/aui/auibook.h>

@@ -159,6 +159,22 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
     endif()
 endif()
 
+# On WIN32, propagate the shared wx PCH to consumers so that all compilations
+# that import this target's BMIs use the same PCH binary, sharing Clang SLOC.
+# This prevents the "ran out of source locations" error (Clang 2GB SLOC limit).
+if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND TARGET "@APP_VENDOR@::@APP_NAME@")
+    set(_app_features "@APP_FEATURES@")
+    if("GUI" IN_LIST _app_features)
+        set(_hs_pch_bin "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/pch/@APP_VENDOR@/wx_pch.gch")
+        if(EXISTS "${_hs_pch_bin}")
+            set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
+                INTERFACE_COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}")
+        endif()
+        unset(_hs_pch_bin)
+    endif()
+    unset(_app_features)
+endif()
+
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
 set(@APP_NAME@_LIBRARIES    "@APP_VENDOR@::@APP_NAME@" )

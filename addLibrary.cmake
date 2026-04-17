@@ -257,14 +257,93 @@ function(addLibrary)
         add_dependencies(${arg_NAME}                    ${APP_VENDOR}::Gfx)
     endif ()
 
-    # Core PCH: applied to all targets. Stores source-location tables for Core/Core.h
-    # (pulls in <windows.h> on Windows), Core/CoreData.h (yaml-cpp), and Core/Util.h
-    # (magic_enum) once in a shared PCH rather than duplicating them in every module BMI.
-    # Core has no GUI dependency; this file is safe to use in isolation. See wx_pch.h
-    # for the complementary wx / Gfx PCH that is added on top for GUI targets.
-    target_precompile_headers(${arg_NAME} PRIVATE
-        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/core_pch.h"
-    )
+    # ── Precompile Headers ──────────────────────────────────────────────────────
+    #
+    # Non-WIN32 (Linux / macOS — libc++ / libstdc++):
+    #   core_pch.h   : STL headers, applied to all targets via per-target PCH.
+    #   wx_pch.h     : wx + Windows SDK headers, added on top for GUI targets.
+    #   .ixx files   : SKIP_PRECOMPILE_HEADERS ON (see MODULES block above) to
+    #                  avoid the libc++ 21 abi_tag double-definition hard error.
+    #
+    # WIN32 (native Windows or cross-compile targeting Windows):
+    #   MSVC STL and MinGW libstdc++ do NOT have the libc++ abi_tag problem, so
+    #   PCH CAN be applied to .ixx files.  A SHARED binary is compiled once to
+    #   ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch (the stable
+    #   stage path) and injected into every compilation — including .ixx — via an
+    #   explicit -include-pch flag.  Because all Gfx BMIs are compiled with the
+    #   same binary, and downstream consumers (MyCare) use that same binary, the
+    #   SLOC entries for wx / Windows SDK headers are loaded ONCE rather than once
+    #   per BMI.  Without this, loading 60+ Gfx BMIs exhausts Clang's 2 GB SLOC
+    #   address-space limit.
+    # ────────────────────────────────────────────────────────────────────────────
+
+    if (WIN32 AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES
+            AND GFX NOT IN_LIST arg_USES)
+        # This is the wx-provider library (Gfx).  Build the shared PCH binary and
+        # apply it; consumers (MyCare) receive it via HoffSoft::Gfx
+        # INTERFACE_COMPILE_OPTIONS set in GfxConfig.cmake.
+        set(_hs_pch_dir "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}")
+        set(_hs_pch_bin "${_hs_pch_dir}/wx_pch.gch")
+
+        if (NOT TARGET _hs_wx_pch)
+            set(_hs_wx_I "")
+            foreach(_inc IN LISTS HS_wxIncludePaths)
+                list(APPEND _hs_wx_I "-I${_inc}")
+            endforeach()
+            set(_hs_wx_D "")
+            foreach(_def IN LISTS HS_wxDefines)
+                if(NOT "${_def}" MATCHES "^-D")
+                    list(APPEND _hs_wx_D "-D${_def}")
+                else()
+                    list(APPEND _hs_wx_D "${_def}")
+                endif()
+            endforeach()
+            file(MAKE_DIRECTORY "${_hs_pch_dir}")
+            add_custom_command(
+                OUTPUT  "${_hs_pch_bin}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${_hs_pch_dir}"
+                COMMAND ${CMAKE_CXX_COMPILER}
+                        "-std=c++23"
+                        "$<IF:$<CONFIG:Debug>,-O0,-O2>"
+                        "$<$<CONFIG:Debug>:-D_DEBUG>"
+                        "$<$<NOT:$<CONFIG:Debug>>:-DNDEBUG>"
+                        "-D_DLL" "-D_MT"
+                        "-Xclang"
+                        "$<IF:$<CONFIG:Debug>,--dependent-lib=msvcrtd,--dependent-lib=msvcrt>"
+                        ${_hs_wx_D}
+                        ${_hs_wx_I}
+                        ${HS_wxCompilerOptions}
+                        "-fno-implicit-modules"
+                        "-fno-implicit-module-maps"
+                        "-Wno-deprecated-declarations"
+                        "-Wno-ignored-attributes"
+                        "-x" "c++-header"
+                        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
+                        "-o" "${_hs_pch_bin}"
+                DEPENDS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
+                COMMENT "Building shared wx PCH → ${_hs_pch_bin}"
+                VERBATIM
+            )
+            add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
+        endif()
+
+        # Apply shared PCH to this target.  target_compile_options reaches ALL
+        # source files (including .ixx), bypassing SKIP_PRECOMPILE_HEADERS.
+        # This is intentional on WIN32: no libc++ abi_tag hazard here.
+        target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
+        add_dependencies(${arg_NAME} _hs_wx_pch)
+
+        unset(_hs_wx_I)
+        unset(_hs_wx_D)
+        # No target_precompile_headers needed: the shared PCH covers both STL
+        # (from core_pch.h) and wx headers.
+    else ()
+        # Non-WIN32, or WIN32 non-GUI, or WIN32 GFX consumer (MyCare):
+        #   Core PCH for STL headers (.cpp only; .ixx skips via SKIP_PRECOMPILE_HEADERS).
+        target_precompile_headers(${arg_NAME} PRIVATE
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/core_pch.h"
+        )
+    endif ()
 
     # Link wxWidgets directly (no Widgets wrapper library)
     if (GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
@@ -274,15 +353,14 @@ function(addLibrary)
             USING_wxWidgets
             _FILE_OFFSET_BITS=64
         )
-        # wx PCH (GUI targets only): applied in addition to core_pch.h.
-        # Gfx/wx.h (~40 wx headers + the Windows SDK pulled in transitively) is the
-        # dominant source of per-BMI source-location bloat. Storing it once here
-        # rather than once per module BMI is the fix for the 2 GB address-space limit
-        # being hit at the end of the MyCare build.
-        # Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.
-        target_precompile_headers(${arg_NAME} PRIVATE
-            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
-        )
+        if (NOT WIN32)
+            # wx PCH (non-WIN32 GUI targets only).
+            # On WIN32 the shared wx_pch.gch built above covers these headers.
+            # Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.
+            target_precompile_headers(${arg_NAME} PRIVATE
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
+            )
+        endif ()
         if (${BUILD_TYPE} STREQUAL "Debug")
             target_compile_definitions(${arg_NAME}  PRIVATE DEBUG _DEBUG)
         else ()
