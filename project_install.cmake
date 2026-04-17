@@ -226,9 +226,13 @@ foreach(pkg IN LISTS _hs_install_targets)
             install(DIRECTORY "${${pkglc}_BINARY_DIR}/bin/"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                     COMPONENT Runtime
-                    FILES_MATCHING
-                        PATTERN "*.dll"
-                        PATTERN "*d.dll"
+                    FILES_MATCHING PATTERN "*.dll"
+            )
+            # wxWidgets CMake builds place webp/aux DLLs in lib/ rather than bin/
+            install(DIRECTORY "${${pkglc}_BINARY_DIR}/lib/"
+                    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                    COMPONENT Runtime
+                    FILES_MATCHING PATTERN "*.dll"
             )
         endif()
     endif()
