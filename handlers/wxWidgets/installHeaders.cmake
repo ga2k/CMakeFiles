@@ -26,5 +26,15 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
         #                                          wx/include/qt-unicode-3.3/wx/setup.h
     endif ()
 
+    # On WIN32, wx's CMake build places auxiliary DLLs (webp, sharpyuv, etc.)
+    # in lib/ rather than bin/.  Stage them all to bin/ alongside the main wx DLL.
+    if (WIN32)
+        install(DIRECTORY "${buildDir}/lib/"
+                DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                COMPONENT Runtime
+                FILES_MATCHING PATTERN "wx*.dll"
+        )
+    endif()
+
     set(HANDLED ON PARENT_SCOPE)
 endfunction()
