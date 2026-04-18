@@ -265,6 +265,17 @@ endif ()
 # Static libraries (copy built libs)
 install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+# On WIN32, aux DLLs built by third-party (e.g. wx's webp/sharpyuv) land in
+# OUTPUT_DIR/bin/ alongside our own DLLs but are not CMake install(TARGETS).
+# Copy them all flat to bin/ now.
+if (WIN32)
+    install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/"
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            COMPONENT Runtime
+            FILES_MATCHING PATTERN "*.dll"
+    )
+endif()
+
 # Build the find_dependency block embedded into @APP_NAME@Config.cmake.
 # For every namespace-qualified target in HS_LibrariesList that is NOT our
 # own vendor target, emit a find_dependency() so consumers can resolve those
