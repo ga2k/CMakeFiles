@@ -25,7 +25,7 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
 
     unset(patches)
     list(APPEND patches
-            "${pkgname}/include|${_wx_local_src}/include/wx/"
+#            "${pkgname}/include|${_wx_local_src}/include/wx/"
             "${pkgname}/src/tiff/libtiff|${_wx_local_src}/src/tiff/libtiff/"
             "${pkgname}/src/osx/carbon|${_wx_local_src}/src/osx/carbon/"
             "${pkgname}/src/qt|${_wx_local_src}/src/qt/"
