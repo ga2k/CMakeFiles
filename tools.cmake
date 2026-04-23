@@ -1854,6 +1854,28 @@ function(fittest)
             list(REMOVE_ITEM candidates "${actualSourceFile}")
         endif ()
 
+    elseif (actualStagedFileFound)
+
+        msg("Stage exists but Source does not. We'll use Stage.")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
+        list(INSERT candidates 0 "${actualStagedFile}")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+
+    elseif (actualSourceFileFound)
+
+        msg("Source exists but Staged does not. We'll use Source.")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+        list(INSERT candidates 0 "${actualSourceFile}")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
+
+    elseif (actualSystemFile)
+
+        msg("Neither Stage nor Source exists but System does. We'll use System.")
+        list(REMOVE_ITEM candidates "${actualSystemFile}")
+        list(INSERT candidates 0 "${actualSystemFile}")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
+
     endif ()
 
     list(APPEND candidates ${conditionals})

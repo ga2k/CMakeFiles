@@ -156,6 +156,25 @@ install(EXPORT      ${APP_NAME}Target
         CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
 )
 
+# Build-tree export: after each library build, install the Development component
+# into OUTPUT_DIR so that downstream projects with <APP_NAME>_DIR pointing to
+# the out dir can resolve ${APP_VENDOR}::${APP_NAME} without staging first.
+# Uses cmake --install (which drives install(EXPORT)) rather than export(EXPORT)
+# because export(EXPORT) errors on transitive deps not in the export set
+# (e.g. wx sub-targets webp/webpdemux/sharpyuv), while install(EXPORT) is lenient.
+if(APP_TYPE MATCHES "Library")
+    # add_custom_command(TARGET ... POST_BUILD) requires the target to be in the
+    # current directory scope, but ${APP_NAME} is created inside add_subdirectory(src).
+    # add_custom_target + add_dependencies has no such restriction.
+    add_custom_target(${APP_NAME}_build_tree_export ALL
+        COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
+                --prefix "${OUTPUT_DIR}"
+                --component Development
+        COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
+        VERBATIM
+    )
+    add_dependencies(${APP_NAME}_build_tree_export ${APP_NAME})
+endif()
 
 # Install the headers from the 3rd party libraries
 foreach(pkg IN LISTS _hs_install_targets)

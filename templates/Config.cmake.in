@@ -3,6 +3,9 @@
 
 include(CMakeFindDependencyMacro)
 
+get_filename_component(_ppdir "${PACKAGE_PREFIX_DIR}/.." ABSOLUTE)
+message("PACKAGE_PREFIX_DIR=${PACKAGE_PREFIX_DIR}, _ppdir=${_ppdir}")
+
 if ("@LINUX@" EQUAL 1)
     find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
 endif()
@@ -11,23 +14,23 @@ endif()
 # Generated at configure time from HS_LibrariesList so consumers can resolve
 # those targets before @APP_NAME@Target.cmake validates them.
 @HS_FIND_DEPENDENCIES@
-set(TARGET_NAME "${APP_NAME}")
+#set(TARGET_NAME "${APP_NAME}")
 
 set(_incdir "${PACKAGE_PREFIX_DIR}/include")
 
 list(APPEND _searchDirs
     "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}"
     "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/${BUILD_TYPE}"
-    "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}/${BUILD_TYPE}"
+    "${_ppdir}@stemPath@/${CMAKE_INSTALL_LIBDIR}"
+    "${_ppdir}@stemPath@/${CMAKE_INSTALL_BINDIR}"
 )
-
-if (GUI IN_LIST APP_FEATURES)
-    # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
-    # before GfxTarget.cmake (or any wx-bearing target file) is included.
-    find_dependency(OpenGL)
-    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
-endif()
+#
+#if (GUI IN_LIST APP_FEATURES)
+#    # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
+#    # before GfxTarget.cmake (or any wx-bearing target file) is included.
+#    find_dependency(OpenGL)
+#    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
+#endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_IMPORT_LIBRARY_SUFFIX@")
@@ -68,6 +71,14 @@ if(WIN32)
     set(_libdir "${_impdir}")
 endif()
 
+set(_cmakedir "${_libdir}/cmake")
+
+if (GUI IN_LIST APP_FEATURES)
+  # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
+  # before GfxTarget.cmake (or any wx-bearing target file) is included.
+  find_dependency(OpenGL)
+  include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
+endif()
 
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
@@ -183,6 +194,7 @@ set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
     set(PLUGIN_DIR "${_libdir}")
+
     set(@APP_VENDOR@_PLUGIN_DIR "${PLUGIN_DIR}")
 endif()
 
@@ -192,6 +204,8 @@ if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "" OR NOT "@APP_INCLUDES_RESOURCES@"
 endif()
 unset(_incdir)
 unset(_libdir)
+unset(_cmakedir)
+unset(_ppdir)
 unset(_lib)
 unset(_dir)
 unset(_DEV_MODULE_EXPORT)
