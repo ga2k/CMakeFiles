@@ -167,7 +167,8 @@ if(APP_TYPE MATCHES "Library")
     # current directory scope, but ${APP_NAME} is created inside add_subdirectory(src).
     # add_custom_target + add_dependencies has no such restriction.
     add_custom_target(${APP_NAME}_build_tree_export ALL
-        COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
+                ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
                 --prefix "${OUTPUT_DIR}"
                 --component Development
         COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
@@ -334,6 +335,40 @@ endforeach()
 unset(_hs_fd_seen)
 unset(_lib)
 unset(_ns)
+unset(_nsep)
+
+# LIBRARY-kind peer deps (e.g. HoffSoft::Core when building Gfx) live in
+# DependenciesList but not LibrariesList.  Emit find_dependency() for each so
+# consumers load the peer's Config.cmake before *Target.cmake references it.
+set(_hs_peer_seen "")
+foreach(_dep IN LISTS HS_DependenciesList)
+    if(_dep IN_LIST HS_LibrariesList)
+        continue()
+    endif()
+    string(FIND "${_dep}" "::" _nsep)
+    if(_nsep LESS 0)
+        continue()
+    endif()
+    string(SUBSTRING "${_dep}" 0 ${_nsep} _dep_ns)
+    if(NOT _dep_ns STREQUAL "${APP_VENDOR}")
+        continue()
+    endif()
+    math(EXPR _dep_start "${_nsep} + 2")
+    string(SUBSTRING "${_dep}" ${_dep_start} -1 _dep_name)
+    if(_dep_name STREQUAL "${APP_NAME}")
+        continue()
+    endif()
+    if(_dep_name IN_LIST _hs_peer_seen)
+        continue()
+    endif()
+    list(APPEND _hs_peer_seen "${_dep_name}")
+    string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_dep_name} CONFIG)\n")
+endforeach()
+unset(_hs_peer_seen)
+unset(_dep)
+unset(_dep_ns)
+unset(_dep_name)
+unset(_dep_start)
 unset(_nsep)
 
 include(CMakePackageConfigHelpers)

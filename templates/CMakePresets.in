@@ -115,6 +115,7 @@
       },
       "cacheVariables": {
         "BUILD_WX_FROM_SOURCE": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
         "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe",
         "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
