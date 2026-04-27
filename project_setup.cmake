@@ -10,6 +10,11 @@ macro(project_setup _Folder)
     msg(NOTICE "Processing project: ${_Target}")
     include("${_Folder}/AppSpecific.cmake")
 
+    string(TOLOWER "${APP_NAME}"    APP_NAME_LC)
+    string(TOLOWER "${APP_VENDOR}"  APP_VENDOR_LC)
+
+    string(TOUPPER "${APP_NAME}"    APP_NAME_UC)
+    string(TOUPPER "${APP_VENDOR}"  APP_VENDOR_UC)
 
     math(EXPR _w "${_term_cols} - 2")
     string(REPEAT "═" ${_w} _li)
