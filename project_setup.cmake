@@ -96,6 +96,7 @@ macro(project_setup _Folder)
     configure_file(
             ${cmake_root}/templates/WX_Helper.cmake.in
             "${OUTPUT_DIR}/WX_Helper.cmake"
+            @ONLY
     )
 
     fetchContents(

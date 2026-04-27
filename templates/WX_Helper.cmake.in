@@ -8,11 +8,15 @@ include(CMakeFindDependencyMacro)
 #
 # IMPORTANT: In superbuild flows, find_package(Gfx) may happen before staging has copied wx binaries
 # into the prefix. In that case, we must NOT fail at configure time.
+    
+message("PACKAGE_PREFIX_DIR=${PACKAGE_PREFIX_DIR}")
 
-set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_BINDIR}")
-set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}")
-set(_wx_inc_dir "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+set(_wx_bin_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@")
+set(_wx_lib_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@")
+set(_wx_inc_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
 
+message("_wx_inc_dir=${_wx_inc_dir}")
+message("globbing for wx* in ${_wx_inc_dir}")    
 file(GLOB _wx_incs LIST_DIRECTORIES true "${_wx_inc_dir}/wx*")
 message("_wx_incs=${_wx_incs}")
 foreach(inc IN LISTS _wx_incs)

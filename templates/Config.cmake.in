@@ -5,6 +5,7 @@ include(CMakeFindDependencyMacro)
 
 get_filename_component(_ppdir "${PACKAGE_PREFIX_DIR}/.." ABSOLUTE)
 message("PACKAGE_PREFIX_DIR=${PACKAGE_PREFIX_DIR}, _ppdir=${_ppdir}")
+set(PACKAGE_PREFIX_DIR "${PACKAGE_PREFIX_DIR}" CACHE INTERNAL "DocString")
 
 if ("@LINUX@" EQUAL 1)
     find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
@@ -202,6 +203,9 @@ if (NOT "@APP_SUPPLIES_RESOURCES@" STREQUAL "" OR NOT "@APP_INCLUDES_RESOURCES@"
     set(RESOURCE_DIR "${PACKAGE_PREFIX_DIR}/share/@APP_VENDOR@/Resources/@APP_NAME@")
     set(@APP_NAME@_RESOURCE_DIR "${RESOURCE_DIR}")
 endif()
+
+unset(PACKAGE_PREFIX_DIR CACHE)
+
 unset(_incdir)
 unset(_libdir)
 unset(_cmakedir)
