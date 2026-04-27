@@ -112,6 +112,17 @@ function(project_install _Folder)
         list(APPEND _hs_install_targets ${_t})
     endforeach()
 
+    # Skip targets already claimed by another HoffSoft library in this CMake run.
+    # When Core and Gfx are built together, Core claims yaml-cpp, cpptrace, soci etc.;
+    # Gfx must not re-export them — doing so causes double-definition when a consumer
+    # uses both packages in the same CMake project.
+    get_property(_hs_claimed GLOBAL PROPERTY HS_INSTALLED_TARGETS)
+    if(_hs_claimed)
+        list(REMOVE_ITEM _hs_install_targets ${_hs_claimed})
+    endif()
+    unset(_hs_claimed)
+    set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${_hs_install_targets})
+
     message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
 
     # On macOS app bundles, route built libraries and resources inside the bundle.
@@ -341,14 +352,12 @@ function(project_install _Folder)
     unset(_ns)
     unset(_nsep)
 
-    # LIBRARY-kind peer deps (e.g. HoffSoft::Core when building Gfx) live in
-    # DependenciesList but not LibrariesList.  Emit find_dependency() for each so
-    # consumers load the peer's Config.cmake before *Target.cmake references it.
+    # HoffSoft peer packages (e.g. HoffSoft::Core when building Gfx) need a
+    # find_dependency() in the generated Config.cmake so consumers pre-load the peer
+    # before *Target.cmake validates its targets.  Process ALL HoffSoft:: deps from
+    # DependenciesList regardless of whether they also appear in LibrariesList.
     set(_hs_peer_seen "")
     foreach(_dep IN LISTS HS_DependenciesList)
-        if(_dep IN_LIST HS_LibrariesList)
-            continue()
-        endif()
         string(FIND "${_dep}" "::" _nsep)
         if(_nsep LESS 0)
             continue()
