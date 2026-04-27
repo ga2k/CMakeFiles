@@ -102,9 +102,9 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
         set(outvar "${firstBit}\n${finally}")
     endif()
     # Strip any FetchContent-only deps that are statically embedded in the shared library
-    # and have no corresponding installed target (yaml-cpp is statically linked into the
-    # dylib; its symbols are absorbed so consumers must not re-link it).
-    foreach(_fc_dep "yaml-cpp::yaml-cpp")
+    # and have no corresponding installed target.
+    # Also strip any targets that might have been defined by a previous HoffSoft package (like Core).
+    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3" "HoffSoft::wxWidgets" "HoffSoft::wxmono")
         string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
         string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
         string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
@@ -125,7 +125,18 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
 
     file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
-    include("${_libdir}/cmake/@APP_NAME@Target.cmake")
+    # Wrap the entire Target.cmake content in a check to see if our PRIMARY target is already defined.
+    # If HoffSoft::Core or HoffSoft::Gfx is already defined, we don't want to redefine ANY of the
+    # targets in the Target.cmake file.
+    set(target_file "${_libdir}/cmake/@APP_NAME@Target.cmake")
+    file(READ "${target_file}" target_content)
+    set(target_content "
+if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+${target_content}
+endif()
+")
+    file(WRITE "${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake" "${target_content}")
+    include("${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake")
 endif()
 
 if(WIN32)

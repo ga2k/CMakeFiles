@@ -28,12 +28,16 @@ foreach(inc IN LISTS _wx_incs)
 endforeach ()
 set(_wx_inc_dir "${incs}")
 
-file(GLOB_RECURSE SETUP_H     LIST_DIRECTORIES false "${_wx_lib_dir}/wx/include/*/wx/setup.h")
-list(LENGTH SETUP_H howMany)
-if (howMany GREATER 1)
-    list(GET SETUP_H 0 SETUP_H)
-endif ()
-get_filename_component(WX_DIR "${SETUP_H}" DIRECTORY)
+    file(GLOB_RECURSE SETUP_H     LIST_DIRECTORIES false 
+            "${_wx_lib_dir}/wx/include/*/wx/setup.h"
+            "${_wx_inc_dir}/wx/setup.h"
+            "${_wx_inc_dir}/*/wx/setup.h"
+    )
+    list(LENGTH SETUP_H howMany)
+    if (howMany GREATER 0)
+        list(GET SETUP_H 0 SETUP_H)
+    endif ()
+    get_filename_component(WX_DIR "${SETUP_H}" DIRECTORY)
 
 if (EXISTS "${SETUP_H}")
     if (WIN32)
