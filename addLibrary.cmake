@@ -271,14 +271,14 @@ function(addLibrary)
     #   ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch (the stable
     #   stage path) and injected into every compilation — including .ixx — via an
     #   explicit -include-pch flag.  Because all Gfx BMIs are compiled with the
-    #   same binary, and downstream consumers (MyCare) use that same binary, the
+    #   same binary, and downstream consumers (HealthCanvas) use that same binary, the
     #   SLOC entries for wx / Windows SDK headers are loaded ONCE rather than once
     #   per BMI.  Without this, loading 60+ Gfx BMIs exhausts Clang's 2 GB SLOC
     #   address-space limit.
     # ────────────────────────────────────────────────────────────────────────────
 
     if (WIN32 AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
-        # All WIN32 GUI targets (Gfx main library, Gfx plugins, MyCare) must use
+        # All WIN32 GUI targets (Gfx main library, Gfx plugins, HealthCanvas) must use
         # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
         # include the same PCH so Clang's module ODR checker sees consistent wx
         # class definitions across all translation units and BMIs.

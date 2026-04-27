@@ -2,12 +2,13 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 # Per-project setup. This file MUST NOT use include_guard(GLOBAL).
-# It is intended to be included once for each subproject (Core, Gfx, MyCare).
+# It is intended to be included once for each subproject (Core, Gfx, HealthCanvas).
 
-macro(project_setup _Target)
+macro(project_setup _Folder)
 
+    get_filename_component(_Target "${Folder}" NAME)
     msg(NOTICE "Processing project: ${_Target}")
-    include("${_Target}/AppSpecific.cmake")
+    include("${_Folder}/AppSpecific.cmake")
 
 
     math(EXPR _w "${_term_cols} - 2")
@@ -56,12 +57,6 @@ macro(project_setup _Target)
         set(extra_wxLibraryPaths)
     endif ()
 
-    ## Base header dirs and include per-project BaseDirs.cmake
-    #list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-    #if (NOT DEFINED MONOBUILD)
-    #    include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
-    #endif ()
-
     # Reset HS_* lists for this project to avoid cross-project leakage
     set(HS_CompileOptionsList "")
     set(HS_DefinesList "")
@@ -103,6 +98,6 @@ macro(project_setup _Target)
             FEATURES ${APP_FEATURES}
     )
 
-    project_install(${_Target})
+    project_install(${_Folder})
 
 endmacro()

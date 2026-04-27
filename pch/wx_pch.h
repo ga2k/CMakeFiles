@@ -1,17 +1,17 @@
 #pragma once
 //
-// wx_pch.h — Precompiled header for Gfx / MyCare GUI targets (wx portion)
+// wx_pch.h — Precompiled header for Gfx / HealthCanvas GUI targets (wx portion)
 //
 // Contains only wxWidgets headers and STL headers — no project-specific paths.
 //
 // This file is built ONCE at the stable stage path and shared across all
-// consumers (Gfx module BMIs + MyCare compilations).  All includes must use
+// consumers (Gfx module BMIs + HealthCanvas compilations).  All includes must use
 // angle-bracket paths so the PCH binary is valid regardless of which project's
 // source tree is active.
 //
 // "Gfx/gfx_export.h" and "Gfx/wx.h" are intentionally NOT included here:
 // they use source-relative paths which resolve to different absolute paths
-// in Gfx builds vs MyCare builds, causing Clang PCH path validation failures.
+// in Gfx builds vs HealthCanvas builds, causing Clang PCH path validation failures.
 //
 // Rules:
 //   - Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.

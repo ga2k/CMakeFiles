@@ -7,8 +7,8 @@ message(STATUS "=== Configuring Components ===")
 
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
-function(project_install _Target)
-    add_subdirectory(${_Target})
+function(project_install _Folder)
+    add_subdirectory(${_Folder})
 
     # App configuration (app.yaml) generation paths
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
@@ -485,7 +485,7 @@ function(project_install _Target)
                 set(\${resolved_var} 1 PARENT_SCOPE)
                 return()
               endif()
-              # Derive the Frameworks dir from the executable path (Contents/MacOS/MyCare -> Contents/Frameworks)
+              # Derive the Frameworks dir from the executable path (Contents/MacOS/HealthCanvas -> Contents/Frameworks)
               get_filename_component(_macos_dir \"\${exepath}\" DIRECTORY)
               get_filename_component(_contents_dir \"\${_macos_dir}\" DIRECTORY)
               set(_fw_dir \"\${_contents_dir}/Frameworks\")
