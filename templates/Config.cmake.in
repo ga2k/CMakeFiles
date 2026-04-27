@@ -81,8 +81,8 @@ if (GUI IN_LIST APP_FEATURES)
   include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
 endif()
 
-if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
-    file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
+if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake")
+    file(READ  "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake" outvar)
 
     set(firstBit [=[include("${CMAKE_CURRENT_LIST_DIR}/cxx/]=])
     string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
@@ -111,6 +111,67 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
     endforeach()
     unset(_fc_dep)
 
+    # Use regex to strip the add_library(...) and set_target_properties(...) blocks for the stripped targets.
+    # This is to avoid the "Some (but not all) targets in this export set were already defined" error.
+    # We strip all targets EXCEPT the primary one (@APP_NAME@) and its direct friends.
+    set(_targets_to_strip "yaml-cpp" "eventpp" "magic_enum" "cpptrace" "soci_core" "soci_sqlite3" "wxWidgets" "wxmono")
+    
+    # Also strip "Core" if we are in "Gfx"
+    if("@APP_NAME@" STREQUAL "Gfx")
+        list(APPEND _targets_to_strip "Core")
+    endif()
+
+    foreach(_target IN LISTS _targets_to_strip)
+        # 1. Strip the add_library block
+        string(REGEX REPLACE "\n# Create imported target [^\n]*::${_target}\nadd_library\\([^\n]*::${_target} [^\n]*\\)\n" "\n" outvar "${outvar}")
+
+        # 2. Strip the set_target_properties block (multi-line)
+        string(FIND "${outvar}" "set_target_properties(@APP_VENDOR@::${_target} PROPERTIES" _start)
+        if(NOT _start EQUAL -1)
+            string(FIND "${outvar}" "\n)\n" _end RELATIVE "${_start}")
+            if(NOT _end EQUAL -1)
+                math(EXPR _end "${_start} + ${_end} + 3")
+                string(SUBSTRING "${outvar}" 0 ${_start} _prefix)
+                string(SUBSTRING "${outvar}" ${_end} -1 _suffix)
+                set(outvar "${_prefix}${_suffix}")
+            endif()
+        endif()
+        # Handle cases where it might not have the leading newline or trailing newline exactly as expected
+        string(FIND "${outvar}" "set_target_properties(@APP_VENDOR@::${_target} PROPERTIES" _start)
+        if(NOT _start EQUAL -1)
+             string(FIND "${outvar}" "\n)\n" _end RELATIVE "${_start}")
+             if(NOT _end EQUAL -1)
+                math(EXPR _end "${_start} + ${_end} + 3")
+                string(SUBSTRING "${outvar}" 0 ${_start} _prefix)
+                string(SUBSTRING "${outvar}" ${_end} -1 _suffix)
+                set(outvar "${_prefix}${_suffix}")
+             endif()
+        endif()
+        
+        # 3. Strip target_sources blocks (multi-line)
+        string(FIND "${outvar}" "target_sources(@APP_VENDOR@::${_target}" _sources_start)
+        if(NOT _sources_start EQUAL -1)
+            string(SUBSTRING "${outvar}" 0 ${_sources_start} _prefix_sources)
+            string(FIND "${_prefix_sources}" "if(NOT CMAKE_VERSION" _if_start REVERSE)
+            if(NOT _if_start EQUAL -1)
+                string(FIND "${outvar}" "\nendif()\n" _endif_end RELATIVE "${_sources_start}")
+                if(NOT _endif_end EQUAL -1)
+                    math(EXPR _endif_end "${_sources_start} + ${_endif_end} + 9")
+                    string(SUBSTRING "${outvar}" 0 ${_if_start} _prefix)
+                    string(SUBSTRING "${outvar}" ${_endif_end} -1 _suffix)
+                    set(outvar "${_prefix}${_suffix}")
+                endif()
+            endif()
+        endif()
+
+        # 4. Remove from the _cmake_expected_targets list in the protector block
+        string(REPLACE "@APP_VENDOR@::${_target}" "" outvar "${outvar}")
+    endforeach()
+    # Clean up any double spaces or leading/trailing semicolons in the expected targets list
+    string(REPLACE "  " " " outvar "${outvar}")
+    string(REPLACE "( " "(" outvar "${outvar}")
+    string(REPLACE " )" ")" outvar "${outvar}")
+
     # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
     # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
     # don't also link the static wx archive, which would duplicate every wx symbol.
@@ -123,20 +184,20 @@ if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
         unset(_win_dep)
     endif()
 
-    file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
+    file(WRITE "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
     # Wrap the entire Target.cmake content in a check to see if our PRIMARY target is already defined.
     # If HoffSoft::Core or HoffSoft::Gfx is already defined, we don't want to redefine ANY of the
     # targets in the Target.cmake file.
-    set(target_file "${_libdir}/cmake/@APP_NAME@Target.cmake")
+    set(target_file "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake")
     file(READ "${target_file}" target_content)
     set(target_content "
 if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
 ${target_content}
 endif()
 ")
-    file(WRITE "${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake" "${target_content}")
-    include("${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake")
+    file(WRITE "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.wrapped.cmake" "${target_content}")
+    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.wrapped.cmake")
 endif()
 
 if(WIN32)
