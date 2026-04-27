@@ -101,8 +101,6 @@ macro(check_environment PROJECT_ROOT)
         endmacro()
         ceUnset()
 
-        string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
-        string(TOLOWER ${APP_NAME} APP_NAME_LC)
 
         # Specify build type
         forceSet(CMAKE_BUILD_TYPE buildType Debug STRING)
@@ -342,34 +340,6 @@ macro(check_environment PROJECT_ROOT)
 
             message("Colour ${BOLD}${GREEN}disabled :(${NC}")
         endif ()
-
-        # @formatter:off
-        # set(APP_VENDOR_LC       ${APP_VENDOR_LC}        PARENT_SCOPE)
-        # set(APP_NAME_LC         ${APP_NAME_LC}          PARENT_SCOPE)
-        # set(BUILDING            ${BUILDING}             PARENT_SCOPE)
-        # set(BUILD_DEBUG         ${BUILD_DEBUG}          PARENT_SCOPE)
-        # set(BUILD_RELEASE       ${BUILD_RELEASE}        PARENT_SCOPE)
-        # set(BUILD_TYPE          ${BUILD_TYPE}           PARENT_SCOPE)
-        # set(BUILD_TYPE_LC       ${BUILD_TYPE_LC}        PARENT_SCOPE)
-        # set(BUILD_TYPE_UC       ${BUILD_TYPE_UC}        PARENT_SCOPE)
-        # set(BUILD_FLAG          ${BUILD_FLAG}           PARENT_SCOPE)
-        # set(CMAKE_CXX_STANDARD  ${CMAKE_CXX_STANDARD}   PARENT_SCOPE)
-        # set(COMPANY             ${COMPANY}              PARENT_SCOPE)
-        # set(DM_FLAG             ${DM_FLAG}              PARENT_SCOPE)
-        # set(LINK_SHARED         ${LINK_SHARED}          PARENT_SCOPE)
-        # set(LINK_STATIC         ${LINK_STATIC}          PARENT_SCOPE)
-        # set(LINK_TYPE           ${LINK_TYPE}            PARENT_SCOPE)
-        # set(LINK_TYPE_LC        ${LINK_TYPE_LC}         PARENT_SCOPE)
-        # set(LINK_TYPE_UC        ${LINK_TYPE_UC}         PARENT_SCOPE)
-        # set(LINK_FLAG           ${LINK_FLAG}            PARENT_SCOPE)
-        # set(STAGED_DIR          ${STAGED_DIR}           PARENT_SCOPE)
-        # set(SYSTEM_DIR          ${SYSTEM_DIR}           PARENT_SCOPE)
-        # set(SUDO                ${SUDO}                 PARENT_SCOPE)
-        # set(stemPath            ${stemPath}             PARENT_SCOPE)
-        # set(buildType           ${buildType}            PARENT_SCOPE)
-        # set(debugFlags          ${debugFlags}           PARENT_SCOPE)
-        # set(linkType            ${linkType}             PARENT_SCOPE)
-        # @formatter:on
 
         set(checkCompleted ON)
     endif ()

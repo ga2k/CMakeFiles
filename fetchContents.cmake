@@ -670,7 +670,15 @@ function(fetchContents)
                                 endif ()
                             endif ()
 
-                            if (NOT ${this_pkgname}_ALREADY_FOUND)
+                            if (TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                # Target was built by a prior subproject in this same CMake run
+                                # (e.g. cpptrace built while processing Core, now consumed by Gfx).
+                                # FetchContent_Declare was intentionally skipped in Pass 0, so
+                                # calling FetchContent_MakeAvailable here would fail with
+                                # "No content details recorded". Just link the existing target.
+                                msg(STATUS "${this_pkgname} target already exists from a prior subproject. Skipping FetchContent_MakeAvailable.")
+                                handleTarget(${this_pkgname})
+                            elseif (NOT ${this_pkgname}_ALREADY_FOUND)
                                 set(fn "${this_pkgname}_preMakeAvailable")
                                 set(HANDLED OFF)
                                 if (COMMAND "${fn}")

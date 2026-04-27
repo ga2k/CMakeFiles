@@ -1,86 +1,108 @@
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Per-project setup. This file MUST NOT use include_guard(GLOBAL).
 # It is intended to be included once for each subproject (Core, Gfx, MyCare).
 
-# Derive common strings for this project scope
-string(TOUPPER ${APP_NAME} APP_NAME_UC)
-string(TOLOWER ${APP_NAME} APP_NAME_LC)
-string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
-string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
+macro(project_setup _Target)
 
-# Propagate option-derived flags
-if (APP_SHOW_SIZER_INFO_IN_SOURCE)
-    set(SHOW_SIZER_INFO_FLAG "--sizer-info")
-else ()
-    set(SHOW_SIZER_INFO_FLAG "")
-endif ()
+    msg(NOTICE "Processing project: ${_Target}")
+    include("${_Target}/AppSpecific.cmake")
 
-# Feature-scoped extras for this project
-if (GUI IN_LIST APP_FEATURES)
-    set(extra_wxCompilerOptions)
-    set(extra_wxDefines)
-    set(extra_wxFrameworks)
-    set(extra_wxIncludePaths)
-    set(extra_wxLibraries)
-    set(extra_wxLibraryPaths)
-endif ()
 
-# Base header dirs and include per-project BaseDirs.cmake
-list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
-if (NOT DEFINED MONOBUILD)
-    include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
-endif ()
+    math(EXPR _w "${_term_cols} - 2")
+    string(REPEAT "═" ${_w} _li)
+    string(REPEAT " " ${_w} _sp)
 
-# Reset HS_* lists for this project to avoid cross-project leakage
-set(HS_CompileOptionsList "")
-set(HS_DefinesList "")
-set(HS_DependenciesList "")
-set(HS_IncludePathsList "")
-set(HS_LibrariesList "")
-set(HS_LibraryPathsList "")
-set(HS_LinkOptionsList "")
-set(HS_PrefixPathsList "")
+    set(_top "${BOLD}${CYAN}${BLUE_BG}╔${_li}╗${NC}")
+    set(_mid "${BOLD}${CYAN}${BLUE_BG}║${_sp}║${NC}")
+    set(_bot "${BOLD}${CYAN}${BLUE_BG}╚${_li}╝${NC}")
 
-# Platform/environment-driven defines
-if (THEY_ARE_INSTALLED)
-    list(APPEND extra_Definitions INSTALLED)
-endif ()
+    set(_txt "P r o c e s s i n g")
+    string(LENGTH "${_txt}   ${APP_NAME}" _txl)
+    math(EXPR _tel "(${_w} - ${_txl}) / 2")
+    math(EXPR _ter "${_w}  - ${_tel} - ${_txl}")
 
-# Define set: magic_enum override and general include paths
-list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
+    string(REPEAT " " ${_tel} _lil)
+    string(REPEAT " " ${_ter} _lir)
 
-list(APPEND extra_IncludePaths
-        ${HEADER_BASE_DIRS}
-        ${CMAKE_INSTALL_PREFIX}/include
-        ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}
-)
+    set(_txt "${BOLD}${WHITE}${BLUE_BG}${_txt}   ${BOLD}${YELLOW}${APP_NAME}")
+    set(_mod "${BOLD}${CYAN}${BLUE_BG}║${_lil}${_txt}${_lir}${BOLD}${CYAN}║${NC}")
 
-# Consolidate into HS_* used by addLibrary()
-list(PREPEND HS_CompileOptionsList ${extra_CompileOptions})
-list(PREPEND HS_DefinesList ${debugFlags} ${extra_Definitions})
-list(PREPEND HS_IncludePathsList ${extra_IncludePaths})
-list(PREPEND HS_LibrariesList ${extra_LibrariesList})
-list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
-list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
+    msg(ALWAYS " ")
+    msg(ALWAYS "${_top}")
+    msg(ALWAYS "${_mid}")
+    msg(ALWAYS "${_mid}")
+    msg(ALWAYS "${_mod}")
+    msg(ALWAYS "${_mid}")
+    msg(ALWAYS "${_mid}")
+    msg(ALWAYS "${_bot}")
+    msg(ALWAYS " ")
 
-set(CMAKE_INSTALL_PREFIX "${STAGE_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
-msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+    # Propagate option-derived flags
+    if (APP_SHOW_SIZER_INFO_IN_SOURCE)
+        set(SHOW_SIZER_INFO_FLAG "--sizer-info")
+    else ()
+        set(SHOW_SIZER_INFO_FLAG "")
+    endif ()
 
-# Early Christmas present.
-include(CMakePackageConfigHelpers)
-configure_file(
-        ${cmake_root}/templates/WX_Helper.cmake.in
-        "${OUTPUT_DIR}/WX_Helper.cmake"
-)
+    # Feature-scoped extras for this project
+    if (GUI IN_LIST APP_FEATURES)
+        set(extra_wxCompilerOptions)
+        set(extra_wxDefines)
+        set(extra_wxFrameworks)
+        set(extra_wxIncludePaths)
+        set(extra_wxLibraries)
+        set(extra_wxLibraryPaths)
+    endif ()
 
-fetchContents(
-        PREFIX HS
-        FEATURES ${APP_FEATURES}
-)
+    ## Base header dirs and include per-project BaseDirs.cmake
+    #list(APPEND HEADER_BASE_DIRS "${OUTPUT_DIR}/include")
+    #if (NOT DEFINED MONOBUILD)
+    #    include("${CMAKE_CURRENT_SOURCE_DIR}/BaseDirs.cmake")
+    #endif ()
 
-if (MONOREPO)
-    #return()
-endif ()
+    # Reset HS_* lists for this project to avoid cross-project leakage
+    set(HS_CompileOptionsList "")
+    set(HS_DefinesList "")
+    set(HS_DependenciesList "")
+    set(HS_IncludePathsList "")
+    set(HS_LibrariesList "")
+    set(HS_LibraryPathsList "")
+    set(HS_LinkOptionsList "")
+    set(HS_PrefixPathsList "")
 
-include(${cmake_root}/project_install.cmake)
+    # Define set: magic_enum override and general include paths
+    list(APPEND extra_Definitions ${GUI} MAGIC_ENUM_NO_MODULE)
+
+    list(APPEND extra_IncludePaths
+            ${HEADER_BASE_DIRS}
+            ${CMAKE_INSTALL_PREFIX}/include
+            ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}
+    )
+
+    # Consolidate into HS_* used by addLibrary()
+    list(PREPEND HS_CompileOptionsList ${extra_CompileOptions})
+    list(PREPEND HS_DefinesList ${debugFlags} ${extra_Definitions})
+    list(PREPEND HS_IncludePathsList ${extra_IncludePaths})
+    list(PREPEND HS_LibrariesList ${extra_LibrariesList})
+    list(PREPEND HS_LibraryPathsList ${extra_LibraryPaths})
+    list(PREPEND HS_LinkOptionsList ${extra_LinkOptions})
+
+    set(CMAKE_INSTALL_PREFIX "${STAGE_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
+    msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
+    # Early Christmas present.
+    configure_file(
+            ${cmake_root}/templates/WX_Helper.cmake.in
+            "${OUTPUT_DIR}/WX_Helper.cmake"
+    )
+
+    fetchContents(
+            PREFIX HS
+            FEATURES ${APP_FEATURES}
+    )
+
+    project_install(${_Target})
+
+endmacro()

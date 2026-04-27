@@ -17,12 +17,6 @@ else ()
     SplitAt("${APP_VERSION}" "." SO_VERSION dc1)
 endif ()
 
-# Derivations of common metadata (safe globally)
-string(TOUPPER ${APP_NAME} APP_NAME_UC)
-string(TOLOWER ${APP_NAME} APP_NAME_LC)
-string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
-string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
-
 # Capture compiler version information (used for flags below)
 execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} -v
