@@ -82,61 +82,9 @@ if (GUI IN_LIST APP_FEATURES)
 endif()
 
 if(EXISTS "${_libdir}/cmake/@APP_NAME@Target.cmake")
-    file(READ  "${_libdir}/cmake/@APP_NAME@Target.cmake" outvar)
-
-    set(firstBit [=[include("${CMAKE_CURRENT_LIST_DIR}/cxx/]=])
-    string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
-    string(REPLACE "${firstBit}" "# No we don't" outvar "${outvar}")
-
-    # Remove any montion of the module files from the INTERFACE
-    string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] foundAt)
-    if(NOT foundAt EQUAL -1)
-        # Walk back to find the INTERFACE keyword before FILE_SET "CXX_MODULES"
-        string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
-        string(FIND "${firstBit}" "INTERFACE" interfaceAt REVERSE)
-        string(SUBSTRING "${outvar}" 0 ${interfaceAt} firstBit)
-        set(firstBit "${firstBit})")
-        string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
-        string(FIND "${lastBit}" "else()" elseBit)
-        string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
-        set(outvar "${firstBit}\n${finally}")
+    if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
+        include("${_libdir}/cmake/@APP_NAME@Target.cmake")
     endif()
-    # Strip any FetchContent-only deps that are statically embedded in the shared library
-    # and have no corresponding installed target.
-    # Also strip any targets that might have been defined by a previous HoffSoft package (like Core).
-    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3" "HoffSoft::wxWidgets" "HoffSoft::wxmono")
-        string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
-        string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
-        string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
-    endforeach()
-    unset(_fc_dep)
-
-    # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
-    # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
-    # don't also link the static wx archive, which would duplicate every wx symbol.
-    if(WIN32)
-        foreach(_win_dep "wxWidgets::wxWidgets" "OpenGL::GL")
-            string(REPLACE "${_win_dep};" "" outvar "${outvar}")
-            string(REPLACE ";${_win_dep}" "" outvar "${outvar}")
-            string(REPLACE "${_win_dep}"  "" outvar "${outvar}")
-        endforeach()
-        unset(_win_dep)
-    endif()
-
-    file(WRITE "${_libdir}/cmake/@APP_NAME@Target.cmake" "${outvar}")
-
-    # Wrap the entire Target.cmake content in a check to see if our PRIMARY target is already defined.
-    # If HoffSoft::Core or HoffSoft::Gfx is already defined, we don't want to redefine ANY of the
-    # targets in the Target.cmake file.
-    set(target_file "${_libdir}/cmake/@APP_NAME@Target.cmake")
-    file(READ "${target_file}" target_content)
-    set(target_content "
-if(NOT TARGET @APP_VENDOR@::@APP_NAME@)
-${target_content}
-endif()
-")
-    file(WRITE "${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake" "${target_content}")
-    include("${_libdir}/cmake/@APP_NAME@Target.wrapped.cmake")
 endif()
 
 if(WIN32)

@@ -28,11 +28,22 @@ foreach(inc IN LISTS _wx_incs)
 endforeach ()
 set(_wx_inc_dir "${incs}")
 
-    file(GLOB_RECURSE SETUP_H     LIST_DIRECTORIES false 
-            "${_wx_lib_dir}/wx/include/*/wx/setup.h"
-            "${_wx_inc_dir}/wx/setup.h"
-            "${_wx_inc_dir}/*/wx/setup.h"
-    )
+    # Prefer the build-generated setup.h from lib dir, then the top-level wx/setup.h.
+    # Do NOT use ${_wx_inc_dir}/*/wx/setup.h on non-Windows: it matches msvc/wx/setup.h
+    # which file(GLOB_RECURSE) returns alphabetically before gtk3.../wx/setup.h,
+    # causing the MSVC config to overwrite the correct Linux one.
+    if(WIN32)
+        file(GLOB_RECURSE SETUP_H LIST_DIRECTORIES false
+                "${_wx_lib_dir}/wx/include/*/wx/setup.h"
+                "${_wx_inc_dir}/wx/setup.h"
+                "${_wx_inc_dir}/*/wx/setup.h"
+        )
+    else()
+        file(GLOB_RECURSE SETUP_H LIST_DIRECTORIES false
+                "${_wx_lib_dir}/wx/include/*/wx/setup.h"
+                "${_wx_inc_dir}/wx/setup.h"
+        )
+    endif()
     list(LENGTH SETUP_H howMany)
     if (howMany GREATER 0)
         list(GET SETUP_H 0 SETUP_H)
