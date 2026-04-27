@@ -69,7 +69,7 @@ if (EXISTS "${SETUP_H}")
 
     endif ()
 else ()
-    message(STATUS "${SETUP_H} doesn't exist yet")
+    message(STATUS "appropriate setup.h doesn't exist yet")
 endif ()
 
 if (WIN32)
