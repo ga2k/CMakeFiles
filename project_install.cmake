@@ -140,13 +140,12 @@ function(project_install _Folder)
     )
 
     # PCM/PCM-like files (Development only — not needed in runtime packages)
-    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/CMakeFiles/${APP_NAME}.dir/"
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}/CMakeFiles/${APP_NAME}.dir/"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
             COMPONENT Development
             FILES_MATCHING
             PATTERN "*.pcm"
             PATTERN "*.ifc"
-            PATTERN "*.json"
     )
 
     install(EXPORT      ${APP_NAME}Target

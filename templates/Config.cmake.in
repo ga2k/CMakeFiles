@@ -156,6 +156,25 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
         IMPORTED_CXX_MODULES_RELWITHDEBINFO ""
         IMPORTED_CXX_MODULES_MINSIZEREL ""
     )
+    # The target file co-exports peer libs (e.g. GfxTarget.cmake exports Core too).
+    # Clear their synthesis flags so CMake doesn't try to recompile their modules.
+    get_cmake_property(_hs_all_targets TARGETS)
+    foreach(_hs_t IN LISTS _hs_all_targets)
+        if(NOT "${_hs_t}" STREQUAL "@APP_VENDOR@::@APP_NAME@" AND "${_hs_t}" MATCHES "^@APP_VENDOR@::")
+            get_target_property(_hs_t_imp "${_hs_t}" IMPORTED)
+            if(_hs_t_imp)
+                set_target_properties("${_hs_t}" PROPERTIES
+                    IMPORTED_CXX_MODULES_DEBUG   ""
+                    IMPORTED_CXX_MODULES_RELEASE ""
+                    IMPORTED_CXX_MODULES_RELWITHDEBINFO ""
+                    IMPORTED_CXX_MODULES_MINSIZEREL ""
+                )
+            endif()
+        endif()
+    endforeach()
+    unset(_hs_all_targets)
+    unset(_hs_t)
+    unset(_hs_t_imp)
 
     set(_bmiDir "${_libdir}/cmake/bmi/@APP_VENDOR@/@APP_NAME@")
 
@@ -169,6 +188,30 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
         set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
             INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_bmiDir}")
     endif()
+
+    # This library's PCMs may transitively import modules from peer libraries
+    # (e.g. Gfx PCMs import Core modules like Types/SettingsSignals/OrderedMap).
+    # Since those peer deps are PRIVATE to the library's own build, their BMI
+    # paths don't propagate through INTERFACE_LINK_LIBRARIES. Add all sibling
+    # BMI dirs so consumers can resolve transitive peer-library imports.
+    file(GLOB _hs_bmi_peers LIST_DIRECTORIES true
+         "${_libdir}/cmake/bmi/@APP_VENDOR@/*")
+    foreach(_hs_bmi_peer IN LISTS _hs_bmi_peers)
+        if(IS_DIRECTORY "${_hs_bmi_peer}" AND NOT "${_hs_bmi_peer}" STREQUAL "${_bmiDir}")
+            if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+                set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
+                    INTERFACE_COMPILE_OPTIONS "-fprebuilt-module-path=${_hs_bmi_peer}")
+            elseif(CMAKE_CXX_COMPILER_ID MATCHES "GCC")
+                set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
+                    INTERFACE_COMPILE_OPTIONS "-fmodule-mapper=${_hs_bmi_peer}")
+            elseif(MSVC)
+                set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
+                    INTERFACE_COMPILE_OPTIONS "/ifcSearchDir:${_hs_bmi_peer}")
+            endif()
+        endif()
+    endforeach()
+    unset(_hs_bmi_peers)
+    unset(_hs_bmi_peer)
 endif()
 
 # On WIN32, propagate the shared wx PCH to consumers so that all compilations
