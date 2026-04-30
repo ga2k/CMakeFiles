@@ -44,6 +44,11 @@ set(_wx_inc_dir "${incs}")
                 "${_wx_inc_dir}/wx/setup.h"
         )
     endif()
+    # android/ and msvc/ sort before gtk3/ alphabetically — exclude them on non-Windows
+    if(NOT WIN32)
+        list(FILTER SETUP_H EXCLUDE REGEX ".*/android/.*")
+        list(FILTER SETUP_H EXCLUDE REGEX ".*/msvc[^/]*/.*")
+    endif()
     list(LENGTH SETUP_H howMany)
     if (howMany GREATER 0)
         list(GET SETUP_H 0 SETUP_H)

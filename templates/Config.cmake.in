@@ -104,7 +104,7 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # Strip any FetchContent-only deps that are statically embedded in the shared library
     # and have no corresponding installed target.
     # Also strip any targets that might have been defined by a previous HoffSoft package (like Core).
-    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3" "HoffSoft::wxWidgets" "HoffSoft::wxmono")
+    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3")
         string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
         string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
         string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
