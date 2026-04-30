@@ -109,6 +109,30 @@ function(project_install _Folder)
             continue()
         endif()
 
+        # Skip targets that register their own cmake install(EXPORT) set.
+        # Such targets (e.g. cpptrace-lib) produce their own <pkg>/pkg-targets.cmake
+        # at install time; including them in a HoffSoft export set causes CMake to
+        # reject the configuration with "target in multiple export sets".
+        # Detect via the target's binary directory: if its CMakeFiles/Export/ tree
+        # has cmake files, the package self-exports.
+        get_target_property(_t_bindir "${_t}" BINARY_DIR)
+        if(_t_bindir)
+            set(_t_export_dir "${_t_bindir}/CMakeFiles/Export")
+            if(IS_DIRECTORY "${_t_export_dir}")
+                file(GLOB _t_export_files "${_t_export_dir}/*/*.cmake")
+                if(_t_export_files)
+                    message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
+                    unset(_t_export_files)
+                    unset(_t_export_dir)
+                    unset(_t_bindir)
+                    continue()
+                endif()
+                unset(_t_export_files)
+            endif()
+            unset(_t_export_dir)
+        endif()
+        unset(_t_bindir)
+
         list(APPEND _hs_install_targets ${_t})
     endforeach()
 
@@ -294,20 +318,20 @@ function(project_install _Folder)
                 INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         )
     endif ()
-
-    # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
-    # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
-    # scratch in downstream projects (e.g. HealthCanvas).
-    install(CODE "
-        set(_cxx_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}\")
-        file(GLOB_RECURSE _ixx_files \"\${_cxx_dest}/*.ixx\")
-        if(_ixx_files)
-            file(REMOVE \${_ixx_files})
-            message(STATUS \"Removed installed .ixx sources from \${_cxx_dest}\")
-        endif()
-        unset(_ixx_files)
-        unset(_cxx_dest)
-    " COMPONENT Development)
+#
+#    # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
+#    # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
+#    # scratch in downstream projects (e.g. HealthCanvas).
+#    install(CODE "
+#        set(_cxx_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}\")
+#        file(GLOB_RECURSE _ixx_files \"\${_cxx_dest}/*.ixx\")
+#        if(_ixx_files)
+#            file(REMOVE \${_ixx_files})
+#            message(STATUS \"Removed installed .ixx sources from \${_cxx_dest}\")
+#        endif()
+#        unset(_ixx_files)
+#        unset(_cxx_dest)
+#    " COMPONENT Development)
     # @formatting:on
 
     # Static libraries (copy built libs)
