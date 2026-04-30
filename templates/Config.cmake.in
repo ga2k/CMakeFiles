@@ -114,7 +114,7 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # Use regex to strip the add_library(...) and set_target_properties(...) blocks for the stripped targets.
     # This is to avoid the "Some (but not all) targets in this export set were already defined" error.
     # We strip all targets EXCEPT the primary one (@APP_NAME@) and its direct friends.
-    set(_targets_to_strip "yaml-cpp" "eventpp" "magic_enum" "cpptrace" "soci_core" "soci_sqlite3" "wxWidgets" "wxmono")
+    set(_targets_to_strip "yaml-cpp" "eventpp" "magic_enum" "cpptrace" "soci_core" "soci_sqlite3")
     
     # Also strip "Core" if we are in "Gfx"
     if("@APP_NAME@" STREQUAL "Gfx")

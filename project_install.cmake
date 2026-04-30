@@ -135,7 +135,7 @@ function(project_install _Folder)
         list(REMOVE_ITEM _hs_install_targets ${_hs_claimed})
     endif()
     unset(_hs_claimed)
-    set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${_hs_install_targets})
+    set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${APP_NAME} ${_hs_install_targets})
 
     message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
 
