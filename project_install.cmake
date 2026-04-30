@@ -109,29 +109,19 @@ function(project_install _Folder)
             continue()
         endif()
 
-        # Skip targets that register their own cmake install(EXPORT) set.
-        # Such targets (e.g. cpptrace-lib) produce their own <pkg>/pkg-targets.cmake
-        # at install time; including them in a HoffSoft export set causes CMake to
-        # reject the configuration with "target in multiple export sets".
-        # Detect via the target's binary directory: if its CMakeFiles/Export/ tree
-        # has cmake files, the package self-exports.
-        get_target_property(_t_bindir "${_t}" BINARY_DIR)
-        if(_t_bindir)
-            set(_t_export_dir "${_t_bindir}/CMakeFiles/Export")
-            if(IS_DIRECTORY "${_t_export_dir}")
-                file(GLOB _t_export_files "${_t_export_dir}/*/*.cmake")
-                if(_t_export_files)
-                    message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
-                    unset(_t_export_files)
-                    unset(_t_export_dir)
-                    unset(_t_bindir)
-                    continue()
-                endif()
-                unset(_t_export_files)
-            endif()
-            unset(_t_export_dir)
+        # Skip targets that ship their own cmake install(EXPORT) set.
+        # These packages call install(EXPORT <pkg>-targets ...) in their own CMakeLists.txt,
+        # so CMake rejects them appearing in a second export set. The check cannot be done
+        # at configure time via file(GLOB) because CMakeFiles/Export/ is written during the
+        # generate phase — after this code runs — making filesystem-based detection unreliable
+        # on fresh configures. Use a fixed list instead.
+        set(_hs_self_exporting_targets "cpptrace-lib" "fmt")
+        if(_t IN_LIST _hs_self_exporting_targets)
+            message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
+            unset(_hs_self_exporting_targets)
+            continue()
         endif()
-        unset(_t_bindir)
+        unset(_hs_self_exporting_targets)
 
         list(APPEND _hs_install_targets ${_t})
     endforeach()
