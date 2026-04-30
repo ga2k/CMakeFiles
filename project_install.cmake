@@ -308,7 +308,7 @@ function(project_install _Folder)
                 INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         )
     endif ()
-#
+
     # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
     # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
     # scratch in downstream projects (e.g. HealthCanvas).
