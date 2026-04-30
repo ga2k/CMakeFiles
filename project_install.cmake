@@ -280,6 +280,20 @@ function(project_install _Folder)
                 INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         )
     endif ()
+
+    # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
+    # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
+    # scratch in downstream projects (e.g. HealthCanvas).
+    install(CODE "
+        set(_cxx_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}\")
+        file(GLOB_RECURSE _ixx_files \"\${_cxx_dest}/*.ixx\")
+        if(_ixx_files)
+            file(REMOVE \${_ixx_files})
+            message(STATUS \"Removed installed .ixx sources from \${_cxx_dest}\")
+        endif()
+        unset(_ixx_files)
+        unset(_cxx_dest)
+    " COMPONENT Development)
     # @formatting:on
 
     # Static libraries (copy built libs)
