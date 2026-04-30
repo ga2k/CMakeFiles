@@ -1,5 +1,11 @@
 # cmake_language(CALL "${fn}" "${pkg}" "${CMAKE_INSTALL_INCLUDEDIR}" "${EXTERNALS_DIR}" "${BUILD_DIR}")
 
+function(wxmono_installHeaders targetName installIncludeDir sourceDir buildDir)
+    wxWidgets_installHeaders("${targetName}" "${installIncludeDir}"
+        "${ARCHIVE_DIR}/wxWidgets/source"
+        "${ARCHIVE_DIR}/wxWidgets/build")
+endfunction()
+
 function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDir)
 
     # Look in the source directory where FetchContent downloaded them
@@ -19,7 +25,7 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
         install(DIRECTORY "${buildDir}/lib/${WX_SETUP_DIR}/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}/${WX_SETUP_DIR}"
-                COMPONENT Staging)
+                COMPONENT Development)
         # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
         # /home/geoffrey/dev/stage/usr/local/include/wx-3.3
         # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"
