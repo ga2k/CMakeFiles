@@ -208,6 +208,18 @@ if (UNIX AND NOT APPLE)
     unset(_wx_so_candidates)
     unset(_wx_mono_so)
     unset(_wx_lib_dir)
+
+    # Add the staged wx include dirs to wx::wxmono's INTERFACE so that
+    # wxWidgets_export_variables (called from Gfx_postMakeAvailable) can read them.
+    if(TARGET wx::wxmono AND _wx_inc_dir)
+        get_target_property(_old_wx_incs wx::wxmono INTERFACE_INCLUDE_DIRECTORIES)
+        if(NOT _old_wx_incs)
+            set(_old_wx_incs "")
+        endif()
+        set_target_properties(wx::wxmono PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${_wx_inc_dir};${_old_wx_incs}")
+        unset(_old_wx_incs)
+    endif()
 endif ()
 
 list(APPEND _wxIncludePaths "${_wx_inc_dir}")
