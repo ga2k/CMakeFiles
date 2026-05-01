@@ -207,6 +207,47 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
 
     file(WRITE "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake" "${outvar}")
 
+    # Strip the same secondary targets from per-config files (e.g. @APP_NAME@Target-debug.cmake).
+    # Those files set_property/set_target_properties on targets whose add_library was already removed
+    # from the main Target.cmake, causing "could not find TARGET" errors at include time.
+    file(GLOB _perconfig_files
+        "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target-*.cmake")
+    foreach(_perconfig_file IN LISTS _perconfig_files)
+        file(READ "${_perconfig_file}" _pc_content)
+        foreach(_target IN LISTS _targets_to_strip)
+            foreach(_ns "@APP_VENDOR@" "${_target}")
+                string(FIND "${_pc_content}" "\n# Import target \"${_ns}::${_target}\"" _pc_start)
+                if(NOT _pc_start EQUAL -1)
+                    string(SUBSTRING "${_pc_content}" ${_pc_start} -1 _pc_tail)
+                    string(FIND "${_pc_tail}" "\nlist(APPEND _cmake_import_check_files_for_${_ns}::${_target}" _pc_rel)
+                    if(NOT _pc_rel EQUAL -1)
+                        string(SUBSTRING "${_pc_tail}" ${_pc_rel} -1 _pc_eol_tail)
+                        string(FIND "${_pc_eol_tail}" "\n" _pc_eol REVERSE)
+                        # find the FIRST newline, not the last
+                        string(FIND "${_pc_eol_tail}" "\n" _pc_eol)
+                        math(EXPR _pc_end "${_pc_start} + ${_pc_rel} + ${_pc_eol} + 1")
+                        string(SUBSTRING "${_pc_content}" 0 ${_pc_start} _pc_prefix)
+                        string(SUBSTRING "${_pc_content}" ${_pc_end} -1 _pc_suffix)
+                        set(_pc_content "${_pc_prefix}${_pc_suffix}")
+                    endif()
+                    unset(_pc_tail)
+                    unset(_pc_eol_tail)
+                endif()
+            endforeach()
+        endforeach()
+        file(WRITE "${_perconfig_file}" "${_pc_content}")
+        unset(_pc_content)
+    endforeach()
+    unset(_perconfig_files)
+    unset(_perconfig_file)
+    unset(_pc_start)
+    unset(_pc_rel)
+    unset(_pc_eol)
+    unset(_pc_end)
+    unset(_pc_prefix)
+    unset(_pc_suffix)
+    unset(_ns)
+
     # Wrap the entire Target.cmake content in a check to see if our PRIMARY target is already defined.
     # If HoffSoft::Core or HoffSoft::Gfx is already defined, we don't want to redefine ANY of the
     # targets in the Target.cmake file.
