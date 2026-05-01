@@ -101,31 +101,22 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
         string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
         set(outvar "${firstBit}\n${finally}")
     endif()
-    # Strip any FetchContent-only deps that are statically embedded in the shared library
-    # and have no corresponding installed target.
-    # Also strip any targets that might have been defined by a previous HoffSoft package (like Core).
-    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3")
-        string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
-        string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
-        string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
-    endforeach()
-    unset(_fc_dep)
-
     # Use regex to strip the add_library(...) and set_target_properties(...) blocks for the stripped targets.
-    # This is to avoid the "Some (but not all) targets in this export set were already defined" error.
-    # We strip all targets EXCEPT the primary one (@APP_NAME@) and its direct friends.
+    # This MUST run before the bare string(REPLACE) fc_dep loop below, because the bare replacement
+    # removes target names from inside add_library() calls first, leaving "add_library(SHARED IMPORTED)"
+    # which CMake rejects. Strip the full blocks while target names are still intact.
     set(_targets_to_strip "yaml-cpp" "eventpp" "magic_enum" "cpptrace" "soci_core" "soci_sqlite3")
-    
+
     # Also strip "Core" if we are in "Gfx"
     if("@APP_NAME@" STREQUAL "Gfx")
         list(APPEND _targets_to_strip "Core")
     endif()
 
     foreach(_target IN LISTS _targets_to_strip)
-        # 1. Strip the add_library block
+        # 1. Strip the add_library block (matches any namespace, e.g. HoffSoft:: or cpptrace::)
         string(REGEX REPLACE "\n# Create imported target [^\n]*::${_target}\nadd_library\\([^\n]*::${_target} [^\n]*\\)\n" "\n" outvar "${outvar}")
 
-        # 2. Strip the set_target_properties block (multi-line)
+        # 2. Strip the set_target_properties block (multi-line) — vendor-namespaced form
         string(FIND "${outvar}" "set_target_properties(@APP_VENDOR@::${_target} PROPERTIES" _start)
         if(NOT _start EQUAL -1)
             string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
@@ -140,6 +131,19 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
         endif()
         # Handle cases where it might not have the leading newline or trailing newline exactly as expected
         string(FIND "${outvar}" "set_target_properties(@APP_VENDOR@::${_target} PROPERTIES" _start)
+        if(NOT _start EQUAL -1)
+            string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
+            string(FIND "${_remaining}" "\n)\n" _rel_end)
+            if(NOT _rel_end EQUAL -1)
+                math(EXPR _end "${_start} + ${_rel_end} + 3")
+                string(SUBSTRING "${outvar}" 0 ${_start} _prefix)
+                string(SUBSTRING "${outvar}" ${_end} -1 _suffix)
+                set(outvar "${_prefix}${_suffix}")
+            endif()
+            unset(_remaining)
+        endif()
+        # Also strip upstream-namespaced form (e.g. cpptrace::cpptrace)
+        string(FIND "${outvar}" "set_target_properties(${_target}::${_target} PROPERTIES" _start)
         if(NOT _start EQUAL -1)
             string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
             string(FIND "${_remaining}" "\n)\n" _rel_end)
@@ -172,11 +176,22 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
 
         # 4. Remove from the _cmake_expected_targets list in the protector block
         string(REPLACE "@APP_VENDOR@::${_target}" "" outvar "${outvar}")
+        string(REPLACE "${_target}::${_target}" "" outvar "${outvar}")
     endforeach()
     # Clean up any double spaces or leading/trailing semicolons in the expected targets list
     string(REPLACE "  " " " outvar "${outvar}")
     string(REPLACE "( " "(" outvar "${outvar}")
     string(REPLACE " )" ")" outvar "${outvar}")
+
+    # Strip any FetchContent-only deps that are statically embedded in the shared library
+    # and have no corresponding installed target. Runs AFTER the block-stripping loop above
+    # so that bare name replacement cannot corrupt add_library() calls.
+    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "cpptrace::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3")
+        string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
+        string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
+        string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
+    endforeach()
+    unset(_fc_dep)
 
     # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
     # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
