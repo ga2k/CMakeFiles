@@ -7,10 +7,6 @@ get_filename_component(_ppdir "${PACKAGE_PREFIX_DIR}/.." ABSOLUTE)
 message("PACKAGE_PREFIX_DIR=${PACKAGE_PREFIX_DIR}, _ppdir=${_ppdir}")
 set(PACKAGE_PREFIX_DIR "${PACKAGE_PREFIX_DIR}" CACHE INTERNAL "DocString")
 
-if ("@LINUX@" EQUAL 1)
-    find_dependency(Qt6 COMPONENTS Core Widgets Gui OpenGL OpenGLWidgets PrintSupport Test)
-endif()
-
 # Dependencies transitively exposed via @APP_NAME@'s INTERFACE_LINK_LIBRARIES.
 # Generated at configure time from HS_LibrariesList so consumers can resolve
 # those targets before @APP_NAME@Target.cmake validates them.
@@ -105,9 +101,9 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # This MUST run before the bare string(REPLACE) fc_dep loop below, because the bare replacement
     # removes target names from inside add_library() calls first, leaving "add_library(SHARED IMPORTED)"
     # which CMake rejects. Strip the full blocks while target names are still intact.
-    set(_targets_to_strip "yaml-cpp" "eventpp" "magic_enum" "cpptrace" "soci_core" "soci_sqlite3")
+    set(_targets_to_strip "")
 
-    # Also strip "Core" if we are in "Gfx"
+    # Also strip "Core" if we are in "Gfx" (prevents double-definition when find_package(Core) is also called)
     if("@APP_NAME@" STREQUAL "Gfx")
         list(APPEND _targets_to_strip "Core")
     endif()
@@ -186,7 +182,7 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # Strip any FetchContent-only deps that are statically embedded in the shared library
     # and have no corresponding installed target. Runs AFTER the block-stripping loop above
     # so that bare name replacement cannot corrupt add_library() calls.
-    foreach(_fc_dep "yaml-cpp::yaml-cpp" "HoffSoft::yaml-cpp" "HoffSoft::eventpp" "HoffSoft::magic_enum" "HoffSoft::cpptrace" "cpptrace::cpptrace" "HoffSoft::soci_core" "HoffSoft::soci_sqlite3")
+    foreach(_fc_dep "HoffSoft::cpptrace" "cpptrace::cpptrace")
         string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
         string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
         string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")

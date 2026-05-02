@@ -324,6 +324,17 @@ function(project_install _Folder)
     " COMPONENT Development)
     # @formatting:on
 
+    # cpptrace-lib is excluded from the EXPORT set (it ships its own cmake install rules)
+    # but its shared library must still land in the stage so the runtime RPATH resolves.
+    if(TARGET cpptrace-lib)
+        install(TARGETS cpptrace-lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime NAMELINK_SKIP
+        )
+        install(TARGETS cpptrace-lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development NAMELINK_ONLY
+        )
+    endif()
+
     # Static libraries (copy built libs)
     install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
@@ -365,11 +376,11 @@ function(project_install _Folder)
         elseif(_ns STREQUAL "cpptrace")
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(cpptrace CONFIG)\n")
         elseif(_ns STREQUAL "yaml-cpp")
-            # yaml-cpp is statically embedded — consumers must not re-link it (it stays in the strip list)
+            # yaml-cpp is fully defined as HoffSoft::yaml-cpp in CoreTarget.cmake — no find_dependency needed
         elseif(_ns STREQUAL "wxWidgets")
             # wxWidgets is handled separately via WX_Helper.cmake
         elseif(_ns STREQUAL "Qt6")
-            # Qt6 is handled by the LINUX guard above in Config.cmake.in
+            # Qt6 (orphaned — GTK is used instead)
         else()
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_ns})\n")
         endif()
