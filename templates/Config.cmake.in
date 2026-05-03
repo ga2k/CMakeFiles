@@ -188,11 +188,14 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
         string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
     endforeach()
     unset(_fc_dep)
-    # The bare replacement above turns 'foreach(_target "cpptrace::cpptrace")' into
-    # 'foreach(_target "")' — which iterates once with _target="" and always fires
-    # NOT TARGET "", falsely setting _FOUND=FALSE.  Neutralise it: foreach(_target)
-    # with no items iterates zero times so the validation block never runs.
-    string(REPLACE [=[foreach(_target "")]=] "foreach(_target)" outvar "${outvar}")
+    # The bare target-name replacements above (_targets_to_strip step 4 and _fc_dep loop)
+    # leave empty-string artefacts in CMake's cross-export-set validation block, which
+    # has the form: foreach(_target "A" "B" "C"). Stripped names become "", and
+    # 'NOT TARGET ""' is always true, so Core/Gfx_FOUND gets set to FALSE.
+    # Three cases to handle:
+    string(REPLACE [=[ "" "]=] [=[ "]=] outvar "${outvar}")          # middle or first entry
+    string(REPLACE [=[ "")]=] ")" outvar "${outvar}")                # last entry
+    string(REPLACE [=[foreach(_target "")]=] "foreach(_target)" outvar "${outvar}")  # only entry
 
     # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
     # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
