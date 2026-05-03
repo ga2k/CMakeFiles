@@ -324,16 +324,19 @@ function(project_install _Folder)
     " COMPONENT Development)
     # @formatting:on
 
-    # cpptrace-lib is excluded from the EXPORT set (it ships its own cmake install rules)
-    # but its shared library must still land in the stage so the runtime RPATH resolves.
-    if(TARGET cpptrace-lib)
-        install(TARGETS cpptrace-lib
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime NAMELINK_SKIP
-        )
-        install(TARGETS cpptrace-lib
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development NAMELINK_ONLY
-        )
-    endif()
+    # cpptrace-lib and fmt are excluded from the EXPORT set (they ship their own cmake install rules)
+    # but their shared libraries must still land in the stage so runtime RPATH resolves.
+    foreach(_hs_self_lib IN ITEMS cpptrace-lib fmt)
+        if(TARGET ${_hs_self_lib})
+            install(TARGETS ${_hs_self_lib}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime NAMELINK_SKIP
+            )
+            install(TARGETS ${_hs_self_lib}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development NAMELINK_ONLY
+            )
+        endif()
+    endforeach()
+    unset(_hs_self_lib)
 
     # Static libraries (copy built libs)
     install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
