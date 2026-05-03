@@ -8,10 +8,11 @@ message(STATUS "=== Configuring Components ===")
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
 function(project_install _Folder)
-    add_subdirectory(${_Folder})
-
-    # App configuration (app.yaml) generation paths
+    # App configuration (app.yaml) generation paths — must be set BEFORE add_subdirectory
+    # so that CMakeLists.txt files in the subdir can reference APP_YAML_PATH in custom commands.
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
+
+    add_subdirectory(${_Folder})
 
     # Optional resources fetching per project
     # @formatting:off
