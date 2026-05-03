@@ -8,10 +8,11 @@ message(STATUS "=== Configuring Components ===")
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
 function(project_install _Folder)
-    add_subdirectory(${_Folder})
-
-    # App configuration (app.yaml) generation paths
+    # App configuration (app.yaml) generation paths — must be set BEFORE add_subdirectory
+    # so that CMakeLists.txt files in the subdir can reference APP_YAML_PATH in custom commands.
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
+
+    add_subdirectory(${_Folder})
 
     # Optional resources fetching per project
     # @formatting:off
@@ -466,14 +467,14 @@ function(project_install _Folder)
             set(GLOBAL_RES_DEST "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
         endif()
 
-        install(DIRECTORY ${CMAKE_SOURCE_DIR}/global-resources/
+        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/global-resources/
                 DESTINATION ${GLOBAL_RES_DEST}
                 COMPONENT GlobalResources
         )
     endif()
 
     if (APP_LOCAL_RESOURCES)
-        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}/.${APP_LOCAL_RESOURCES}")
+        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_NAME}/${APP_LOCAL_RESOURCES}")
 
         if (APPLE AND "${APP_TYPE}" STREQUAL "Executable")
             # Local resources go inside the bundle's Contents/Resources/
