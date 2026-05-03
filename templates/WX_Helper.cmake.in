@@ -39,9 +39,11 @@ set(_wx_inc_dir "${incs}")
                 "${_wx_inc_dir}/*/wx/setup.h"
         )
     else()
+        # Only search the lib dir: it contains the build-configured setup.h (with all wxUSE_* defines).
+        # Searching the include dir recurses into wx/gtk/, wx/msw/ etc. and picks up source stubs
+        # that lack the wxUSE_* defines, causing chkconf.h errors.
         file(GLOB_RECURSE SETUP_H LIST_DIRECTORIES false
                 "${_wx_lib_dir}/wx/include/*/wx/setup.h"
-                "${_wx_inc_dir}/wx/setup.h"
         )
     endif()
     # android/ and msvc/ sort before gtk3/ alphabetically — exclude them on non-Windows
