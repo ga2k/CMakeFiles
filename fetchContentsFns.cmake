@@ -863,6 +863,12 @@ function(scanLibraryTargets packageData libName packageNames)
                 if ("${clean_lib}" STREQUAL "")
                     continue()
                 endif ()
+                # Skip targets already claimed by an earlier library (e.g. Core claims
+                # yaml-cpp/soci; Gfx must not re-attribute them even though they appear
+                # in Gfx's INTERFACE_LINK_LIBRARIES transitively).
+                if ("${clean_lib}" IN_LIST __alreadyLocated)
+                    continue()
+                endif ()
                 # 2. Extract raw name for matching
                 set(raw_import_name "${clean_lib}")
                 if ("${clean_lib}" MATCHES "::")

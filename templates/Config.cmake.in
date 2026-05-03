@@ -286,12 +286,20 @@ if(NOT DEFINED USE_PREBUILT_MODULES)
 endif()
 
 if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
-    # Stop CMake from re-scanning and recompiling module sources
+    # Stop CMake from re-scanning and recompiling module sources.
+    # Also clear IMPORTED_CXX_MODULES_INCLUDE_DIRECTORIES: it contains build-time source
+    # archive paths (soci/source/include, wxWidgets/source/include, etc.) that CMake passes
+    # as -I flags ahead of the staged -isystem paths, causing wrong wx headers to be found.
     set_target_properties("@APP_VENDOR@::@APP_NAME@" PROPERTIES
-        IMPORTED_CXX_MODULES_DEBUG   ""
-        IMPORTED_CXX_MODULES_RELEASE ""
-        IMPORTED_CXX_MODULES_RELWITHDEBINFO ""
-        IMPORTED_CXX_MODULES_MINSIZEREL ""
+        IMPORTED_CXX_MODULES_DEBUG                ""
+        IMPORTED_CXX_MODULES_RELEASE              ""
+        IMPORTED_CXX_MODULES_RELWITHDEBINFO       ""
+        IMPORTED_CXX_MODULES_MINSIZEREL           ""
+        IMPORTED_CXX_MODULES_INCLUDE_DIRECTORIES  ""
+        IMPORTED_CXX_MODULES_LINK_LIBRARIES       ""
+        IMPORTED_CXX_MODULES_COMPILE_DEFINITIONS  ""
+        IMPORTED_CXX_MODULES_COMPILE_FEATURES     ""
+        IMPORTED_CXX_MODULES_COMPILE_OPTIONS      ""
     )
     # The target file co-exports peer libs (e.g. GfxTarget.cmake exports Core too).
     # Clear their synthesis flags so CMake doesn't try to recompile their modules.
@@ -301,10 +309,15 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
             get_target_property(_hs_t_imp "${_hs_t}" IMPORTED)
             if(_hs_t_imp)
                 set_target_properties("${_hs_t}" PROPERTIES
-                    IMPORTED_CXX_MODULES_DEBUG   ""
-                    IMPORTED_CXX_MODULES_RELEASE ""
-                    IMPORTED_CXX_MODULES_RELWITHDEBINFO ""
-                    IMPORTED_CXX_MODULES_MINSIZEREL ""
+                    IMPORTED_CXX_MODULES_DEBUG                ""
+                    IMPORTED_CXX_MODULES_RELEASE              ""
+                    IMPORTED_CXX_MODULES_RELWITHDEBINFO       ""
+                    IMPORTED_CXX_MODULES_MINSIZEREL           ""
+                    IMPORTED_CXX_MODULES_INCLUDE_DIRECTORIES  ""
+                    IMPORTED_CXX_MODULES_LINK_LIBRARIES       ""
+                    IMPORTED_CXX_MODULES_COMPILE_DEFINITIONS  ""
+                    IMPORTED_CXX_MODULES_COMPILE_FEATURES     ""
+                    IMPORTED_CXX_MODULES_COMPILE_OPTIONS      ""
                 )
             endif()
         endif()
