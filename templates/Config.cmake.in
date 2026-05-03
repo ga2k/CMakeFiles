@@ -192,9 +192,8 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # leave empty-string artefacts in CMake's cross-export-set validation block, which
     # has the form: foreach(_target "A" "B" "C"). Stripped names become "", and
     # 'NOT TARGET ""' is always true, so Core/Gfx_FOUND gets set to FALSE.
-    # Three cases to handle:
-    string(REPLACE [=[ "" "]=] [=[ "]=] outvar "${outvar}")          # middle or first entry
-    string(REPLACE [=[ "")]=] ")" outvar "${outvar}")                # last entry
+    # Two cases to handle (do NOT add a trailing-entry case — ' "")' also matches STREQUAL ""):
+    string(REPLACE [=[ "" "]=] [=[ "]=] outvar "${outvar}")  # middle or first entry
     string(REPLACE [=[foreach(_target "")]=] "foreach(_target)" outvar "${outvar}")  # only entry
 
     # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
