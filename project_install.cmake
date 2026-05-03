@@ -444,6 +444,7 @@ function(project_install _Folder)
             "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
             "${OUTPUT_DIR}/WX_Helper.cmake"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+            COMPONENT Development
     )
 
     # User guide, if present
