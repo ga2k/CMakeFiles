@@ -188,6 +188,11 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
         string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
     endforeach()
     unset(_fc_dep)
+    # The bare replacement above turns 'foreach(_target "cpptrace::cpptrace")' into
+    # 'foreach(_target "")' — which iterates once with _target="" and always fires
+    # NOT TARGET "", falsely setting _FOUND=FALSE.  Neutralise it: foreach(_target)
+    # with no items iterates zero times so the validation block never runs.
+    string(REPLACE [=[foreach(_target "")]=] "foreach(_target)" outvar "${outvar}")
 
     # On WIN32, wx is statically linked into the DLL and ALL its symbols are exported via
     # --export-all-symbols. Strip wxWidgets::wxWidgets from the interface so consumers
