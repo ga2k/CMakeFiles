@@ -469,7 +469,8 @@ function(project_install _Folder)
     endif()
 
     if (APP_LOCAL_RESOURCES)
-        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
+#        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
+        set(LOCAL_RES_SRC "${CMAKE_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
 
         if (APPLE AND "${APP_TYPE}" STREQUAL "Executable")
             # Local resources go inside the bundle's Contents/Resources/
