@@ -91,12 +91,12 @@ macro(project_setup _Folder)
     set(CMAKE_INSTALL_PREFIX "${STAGE_DIR}" CACHE PATH "CMake Install Prefix" FORCE)
     msg(NOTICE "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 
-#    # Early Christmas present.
-#    configure_file(
-#            ${cmake_root}/templates/WX_Helper.cmake.in
-#            "${OUTPUT_DIR}/WX_Helper.cmake"
-#            @ONLY
-#    )
+    # Early Christmas present.
+    configure_file(
+            ${cmake_root}/templates/WX_Helper.cmake.in
+            "${OUTPUT_DIR}/WX_Helper.cmake"
+            @ONLY
+    )
 
     fetchContents(
             PREFIX HS

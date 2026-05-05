@@ -404,13 +404,13 @@ function(project_install _Folder)
     add_custom_target(${APP_NAME}Config SOURCES "${cmake_root}/templates/Config.cmake.in")
     add_dependencies(${APP_NAME} ${APP_NAME}Config)
 
-#    add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")
-#    add_dependencies(${APP_NAME} ${APP_NAME}WX_Helper)
+    add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")
+    add_dependencies(${APP_NAME} ${APP_NAME}WX_Helper)
 
     install(FILES
             "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
             "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
-#            "${OUTPUT_DIR}/WX_Helper.cmake"
+            "${OUTPUT_DIR}/WX_Helper.cmake"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
             COMPONENT ${APP_NAME}Development
     )

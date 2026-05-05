@@ -21,13 +21,6 @@ list(APPEND _searchDirs
     "${_ppdir}@stemPath@/${CMAKE_INSTALL_LIBDIR}"
     "${_ppdir}@stemPath@/${CMAKE_INSTALL_BINDIR}"
 )
-#
-#if (GUI IN_LIST APP_FEATURES)
-#    # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
-#    # before GfxTarget.cmake (or any wx-bearing target file) is included.
-#    find_dependency(OpenGL)
-#    include("${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/WX_Helper.cmake")
-#endif()
 
 set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_IMPORT_LIBRARY_SUFFIX@")
@@ -74,7 +67,7 @@ if (GUI IN_LIST APP_FEATURES)
   # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
   # before GfxTarget.cmake (or any wx-bearing target file) is included.
   find_dependency(OpenGL)
-#  include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
+  include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
 endif()
 
 if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake")
