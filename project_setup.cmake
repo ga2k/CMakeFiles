@@ -1,14 +1,13 @@
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Per-project setup. This file MUST NOT use include_guard(GLOBAL).
-# It is intended to be included once for each subproject (Core, Gfx, HealthCanvas).
-
 macro(project_setup _Folder)
 
-    get_filename_component(_Target "${Folder}" NAME)
-    msg(NOTICE "Processing project: ${_Target}")
-    include("${_Folder}/AppSpecific.cmake")
+    get_filename_component(_Target "${_Folder}" NAME)
+    if(NOT APP_NAME)
+        include("${_Folder}/AppSpecific.cmake")
+    endif ()
+    msg(NOTICE "Processing project: ${APP_NAME}")
 
     string(TOLOWER "${APP_NAME}"    APP_NAME_LC)
     string(TOLOWER "${APP_VENDOR}"  APP_VENDOR_LC)
