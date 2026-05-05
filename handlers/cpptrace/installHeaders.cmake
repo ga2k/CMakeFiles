@@ -10,7 +10,7 @@ function("cpptrace-lib_installHeaders" targetName installIncludeDir sourceDir bu
     if (include_dir)
         install(DIRECTORY "${include_dir}/"
                 DESTINATION "${installIncludeDir}/${APP_VENDOR}"
-                COMPONENT Development)
+                COMPONENT ${APP_NAME}Development)
         set(HANDLED ON PARENT_SCOPE)
     endif ()
 endfunction()

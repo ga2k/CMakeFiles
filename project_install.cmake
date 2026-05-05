@@ -55,7 +55,7 @@ function(project_install _Folder)
     ## App configuration (app.yaml) generation paths
     set(APP_YAML_TEMPLATE_PATH "${cmake_root}/templates/app.yaml.in")
     include(${cmake_root}/generate_app_config.cmake)
-    install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES "${APP_YAML_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${APP_NAME})
 
     # Code generators (optional)
     include(${cmake_root}/generator.cmake)
@@ -153,13 +153,13 @@ function(project_install _Folder)
     install(TARGETS                 ${APP_NAME}
                                     ${_hs_install_targets}
             EXPORT                  ${APP_NAME}Target
-            LIBRARY                 DESTINATION ${_hs_lib_dest}
-            RUNTIME                 DESTINATION ${_hs_bin_dest}
-            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
-            FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
-            FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
-            FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
+            LIBRARY                 DESTINATION ${_hs_lib_dest}                                               COMPONENT ${APP_NAME}
+            RUNTIME                 DESTINATION ${_hs_bin_dest}                                               COMPONENT ${APP_NAME}
+            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}                                       COMPONENT ${APP_NAME}
+            CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+            FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+            FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
+            FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
             INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
             BUNDLE                  DESTINATION .
             RESOURCE                ${resource_list}
@@ -168,7 +168,7 @@ function(project_install _Folder)
     # PCM/PCM-like files (Development only — not needed in runtime packages)
     install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}/CMakeFiles/${APP_NAME}.dir/"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-            COMPONENT Development
+            COMPONENT ${APP_NAME}Development
             FILES_MATCHING
             PATTERN "*.pcm"
             PATTERN "*.ifc"
@@ -178,7 +178,7 @@ function(project_install _Folder)
             FILE        ${APP_NAME}Target.cmake
             NAMESPACE   ${APP_VENDOR}::
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake"
-            COMPONENT   Development
+            COMPONENT   ${APP_NAME}Development
             CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
     )
 
@@ -196,7 +196,7 @@ function(project_install _Folder)
             COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
                     ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
                     --prefix "${OUTPUT_DIR}"
-                    --component Development
+                    --component ${APP_NAME}Development
             COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/cmake/post_process_export.cmake"
                     "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
                     "${APP_VENDOR}"
@@ -231,7 +231,7 @@ function(project_install _Folder)
             if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
                 install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
                         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
-                        COMPONENT Development)
+                        COMPONENT ${APP_NAME}Development)
             endif ()
             if (EXISTS "${${pkglc}_INCLUDE_DIR}")
                 set(include_dir "${${pkglc}_INCLUDE_DIR}")
@@ -250,7 +250,7 @@ function(project_install _Folder)
             if(include_dir)
                 install(DIRECTORY "${include_dir}/"
                            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
-                           COMPONENT Development)
+                           COMPONENT ${APP_NAME}Development)
             endif()
         endif ()
 
@@ -260,7 +260,7 @@ function(project_install _Folder)
             # Install .lib / .a files
             install(DIRECTORY "${${pkglc}_BINARY_DIR}/lib/"
                     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-                    COMPONENT Runtime
+                    COMPONENT ${APP_NAME}Runtime
                     FILES_MATCHING
                         PATTERN "*.lib"
                         PATTERN "*.a"
@@ -274,7 +274,7 @@ function(project_install _Folder)
             if (WIN32)
                 install(DIRECTORY "${${pkglc}_BINARY_DIR}/bin/"
                         DESTINATION "${CMAKE_INSTALL_BINDIR}"
-                        COMPONENT Runtime
+                        COMPONENT ${APP_NAME}Runtime
                         FILES_MATCHING PATTERN "*.dll"
                 )
                 # wxWidgets CMake builds place webp/aux DLLs in lib/ subdirs rather than bin/.
@@ -287,7 +287,7 @@ function(project_install _Folder)
                              TYPE FILE FILES \${_aux_dlls})
                     endif()
                     unset(_aux_dlls)
-                " COMPONENT Runtime)
+                " COMPONENT ${APP_NAME}Runtime)
             endif()
         endif()
     endforeach()
@@ -300,12 +300,12 @@ function(project_install _Folder)
         endif ()
         install(TARGETS                          ${APP_CREATES_PLUGINS}
                 EXPORT                           ${APP_NAME}PluginTarget
-                LIBRARY DESTINATION              ${_plugin_lib_dest}
-                RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}
-                ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}
-                CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
-                FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT Development
-                FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT Development
+                LIBRARY DESTINATION              ${_plugin_lib_dest}                                              COMPONENT ${APP_NAME}
+                RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}                                          COMPONENT ${APP_NAME}
+                ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}                                          COMPONENT ${APP_NAME}
+                CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+                FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+                FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
                 INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         )
     endif ()
@@ -322,25 +322,21 @@ function(project_install _Folder)
         endif()
         unset(_ixx_files)
         unset(_cxx_dest)
-    " COMPONENT Development)
+    " COMPONENT ${APP_NAME}Development)
     # @formatting:on
 
-    # cpptrace-lib and fmt are excluded from the EXPORT set (they ship their own cmake install rules)
-    # but their shared libraries must still land in the stage so runtime RPATH resolves.
-    foreach(_hs_self_lib IN ITEMS cpptrace-lib fmt)
-        if(TARGET ${_hs_self_lib})
-            install(TARGETS ${_hs_self_lib}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime NAMELINK_SKIP
-            )
-            install(TARGETS ${_hs_self_lib}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development NAMELINK_ONLY
-            )
-        endif()
-    endforeach()
-    unset(_hs_self_lib)
+    # cpptrace-lib and fmt ship their own cmake install rules (components cpptrace-runtime,
+    # cpptrace-development, fmt_core) which are assigned to the Core CPack group in
+    # CMakeLists.txt.  Do NOT add a second install() here — it would create duplicate
+    # archive entries (same path, same binary) when CPack bundles the Core group package,
+    # causing "The data in files with the same filename is different" failures.
 
-    # Static libraries (copy built libs)
-    install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    # Static libraries — pick up any *.a files that install(TARGETS) doesn't cover
+    # (e.g. third-party libs built as static in a LINK_TYPE=Static preset).
+    # FILES_MATCHING is required so we don't accidentally dump all shared libs here.
+    install(DIRECTORY ${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/ DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT ${APP_NAME}
+            FILES_MATCHING PATTERN "*.a")
 
     # On WIN32, aux DLLs built by third-party (e.g. wx's webp/sharpyuv) land in
     # OUTPUT_DIR/bin/ alongside our own DLLs but are not CMake install(TARGETS).
@@ -348,7 +344,7 @@ function(project_install _Folder)
     if (WIN32)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/"
                 DESTINATION "${CMAKE_INSTALL_BINDIR}"
-                COMPONENT Runtime
+                COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.dll"
         )
     endif()
@@ -394,38 +390,6 @@ function(project_install _Folder)
     unset(_ns)
     unset(_nsep)
 
-    # HoffSoft peer packages (e.g. HoffSoft::Core when building Gfx) need a
-    # find_dependency() in the generated Config.cmake so consumers pre-load the peer
-    # before *Target.cmake validates its targets.  Process ALL HoffSoft:: deps from
-    # DependenciesList regardless of whether they also appear in LibrariesList.
-    set(_hs_peer_seen "")
-    foreach(_dep IN LISTS HS_DependenciesList)
-        string(FIND "${_dep}" "::" _nsep)
-        if(_nsep LESS 0)
-            continue()
-        endif()
-        string(SUBSTRING "${_dep}" 0 ${_nsep} _dep_ns)
-        if(NOT _dep_ns STREQUAL "${APP_VENDOR}")
-            continue()
-        endif()
-        math(EXPR _dep_start "${_nsep} + 2")
-        string(SUBSTRING "${_dep}" ${_dep_start} -1 _dep_name)
-        if(_dep_name STREQUAL "${APP_NAME}")
-            continue()
-        endif()
-        if(_dep_name IN_LIST _hs_peer_seen)
-            continue()
-        endif()
-        list(APPEND _hs_peer_seen "${_dep_name}")
-        string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_dep_name} CONFIG)\n")
-    endforeach()
-    unset(_hs_peer_seen)
-    unset(_dep)
-    unset(_dep_ns)
-    unset(_dep_name)
-    unset(_dep_start)
-    unset(_nsep)
-
     write_basic_package_version_file(
             "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
             VERSION ${APP_VERSION}
@@ -448,7 +412,7 @@ function(project_install _Folder)
             "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
             "${OUTPUT_DIR}/WX_Helper.cmake"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-            COMPONENT Development
+            COMPONENT ${APP_NAME}Development
     )
 
     # User guide, if present
@@ -469,7 +433,7 @@ function(project_install _Folder)
 
         install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/global-resources/
                 DESTINATION ${GLOBAL_RES_DEST}
-                COMPONENT GlobalResources
+                COMPONENT ${APP_NAME}
         )
     endif()
 
@@ -589,6 +553,6 @@ function(project_install _Folder)
                 \"${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR};\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
                 IGNORE_ITEM \"libunwind.1.dylib\"
             )
-        " COMPONENT Runtime)
+        " COMPONENT ${APP_NAME}Runtime)
     endif()
 endfunction()

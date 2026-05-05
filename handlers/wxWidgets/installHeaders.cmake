@@ -15,7 +15,7 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
 
         install(DIRECTORY "${ARCHIVE_DIR}/wxWidgets/source/include/"
                 DESTINATION "${installIncludeDir}/wx-${vMajor}.${vMinor}"
-                COMPONENT Development)
+                COMPONENT ${APP_NAME}Development)
     endif ()
 
     # Make sure we grab the platform specific setup.h
@@ -25,7 +25,7 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
         get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
         install(DIRECTORY "${buildDir}/lib/${WX_SETUP_DIR}/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}/${WX_SETUP_DIR}"
-                COMPONENT Development)
+                COMPONENT ${APP_NAME}Development)
         # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
         # /home/geoffrey/dev/stage/usr/local/include/wx-3.3
         # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"

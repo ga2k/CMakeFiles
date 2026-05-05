@@ -364,6 +364,23 @@ if(USE_PREBUILT_MODULES AND TARGET "@APP_VENDOR@::@APP_NAME@")
     unset(_hs_bmi_peer)
 endif()
 
+# Re-export wx as a proper transitive dependency (non-WIN32 only).
+# WX_Helper.cmake (included earlier) already created wx::wxmono with its staged .so
+# path and include dirs. Appending it to this library's INTERFACE means consumers
+# that do target_link_libraries(myapp HoffSoft::Gfx) automatically get wx — no
+# separate find_package(wxWidgets) or extra target_link_libraries call needed.
+# WIN32: wx is statically embedded in Gfx.dll via --export-all-symbols; consumers
+# get wx symbols at runtime from the DLL and headers from the msvc include-dir block
+# above. Adding wx::wxmono to the INTERFACE on WIN32 would cause duplicate symbols.
+if(NOT WIN32)
+    set(_hs_app_features_for_wx "@APP_FEATURES@")
+    if("GUI" IN_LIST _hs_app_features_for_wx AND TARGET "@APP_VENDOR@::@APP_NAME@" AND TARGET wx::wxmono)
+        set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
+            INTERFACE_LINK_LIBRARIES "wx::wxmono")
+    endif()
+    unset(_hs_app_features_for_wx)
+endif()
+
 # On WIN32, propagate the shared wx PCH to consumers so that all compilations
 # that import this target's BMIs use the same PCH binary, sharing Clang SLOC.
 # This prevents the "ran out of source locations" error (Clang 2GB SLOC limit).
