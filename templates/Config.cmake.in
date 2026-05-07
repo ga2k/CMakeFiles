@@ -64,9 +64,10 @@ endif()
 set(_cmakedir "${_libdir}/cmake")
 
 if (GUI IN_LIST APP_FEATURES)
-  # wxWidgets exposes OpenGL::GL in its link interface; ensure the target exists
-  # before GfxTarget.cmake (or any wx-bearing target file) is included.
-  find_dependency(OpenGL)
+  # wxWidgets exposes OpenGL::GL/EGL/GLX in its link interface; ensure those targets
+  # exist before GfxTarget.cmake (or any wx-bearing target file) is included.
+  # OPTIONAL_COMPONENTS so this doesn't fail on platforms without EGL/GLX (e.g. macOS).
+  find_dependency(OpenGL OPTIONAL_COMPONENTS OpenGL EGL GLX)
   include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
 endif()
 
