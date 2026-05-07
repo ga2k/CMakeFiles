@@ -349,6 +349,17 @@ function(project_install _Folder)
         )
     endif()
 
+    # On macOS, aux dylibs built by third-party (e.g. wx's webp/webpdemux/sharpyuv) land in
+    # OUTPUT_DIR/lib/ alongside our own dylibs but are not CMake install(TARGETS).
+    # Copy them all flat to lib/ now so fixup_bundle can find and bundle them.
+    if (APPLE)
+        install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
+                DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                COMPONENT ${APP_NAME}Runtime
+                FILES_MATCHING PATTERN "*.dylib"
+        )
+    endif()
+
     # Build the find_dependency block embedded into @APP_NAME@Config.cmake.
     # For every namespace-qualified target in HS_LibrariesList that is NOT our
     # own vendor target, emit a find_dependency() so consumers can resolve those
