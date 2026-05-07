@@ -69,7 +69,14 @@ function(soci_preDownload pkgname url tag srcDir)
         URL https://github.com/fmtlib/fmt/archive/refs/tags/12.1.0.tar.gz
     )
 
-    set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+    # Libraries (Core) must install fmt so it lands in the stage dir.
+    # Consumer apps (Executables) get fmt through the staged HoffSoft::Core — installing it
+    # again would fail because the library was never compiled in the app's build tree.
+    if (APP_TYPE STREQUAL "Library")
+        set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+    else()
+        set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+    endif()
     set(FMT_USE_CONSTEVAL OFF CACHE BOOL "Disable consteval in fmt" FORCE)
 
     message(STATUS "FetchContent_MakeAvailable(fmt)")
