@@ -7,6 +7,21 @@ function(soci_preDownload pkgname url tag srcDir)
         return()
     endif ()
 
+    # CMake 4.0 requires CMAKE_C_COMPILER in cache before SOCI's project(LANGUAGES C CXX)
+    # runs EnableLanguage(C) via FetchContent. It detects the compiler fine but then errors
+    # "CMAKE_C_COMPILER not set, after EnableLanguage" if the cache entry was never written.
+    # Pre-populate it from the CXX compiler (both are Clang on this system).
+    if (NOT CMAKE_C_COMPILER)
+        string(REGEX REPLACE "clang\\+\\+" "clang" _soci_c_compiler "${CMAKE_CXX_COMPILER}")
+        if (NOT EXISTS "${_soci_c_compiler}")
+            find_program(_soci_c_compiler NAMES clang gcc cc)
+        endif ()
+        if (_soci_c_compiler)
+            set(CMAKE_C_COMPILER "${_soci_c_compiler}" CACHE FILEPATH "C compiler (required by SOCI)" FORCE)
+        endif ()
+        unset(_soci_c_compiler)
+    endif ()
+
     # @formatter:off
     set(CMAKE_POLICY_DEFAULT_CMP0077 "NEW")
     # This is the critical fix for the export set error
@@ -47,10 +62,11 @@ function(soci_preDownload pkgname url tag srcDir)
             GIT_REPOSITORY https://github.com/fmtlib/fmt.git
             GIT_TAG 12.1.0
     )]=])
+    # Use tarball URL instead of git to avoid the git ≥2.47 lazy objects/pack/
+    # creation bug (index-pack fails when pack/ dir doesn't exist yet).
     FetchContent_Declare(
         fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG 12.1.0
+        URL https://github.com/fmtlib/fmt/archive/refs/tags/12.1.0.tar.gz
     )
 
     set(FMT_INSTALL ON CACHE BOOL "" FORCE)
@@ -58,8 +74,6 @@ function(soci_preDownload pkgname url tag srcDir)
 
     message(STATUS "FetchContent_MakeAvailable(fmt)")
     FetchContent_MakeAvailable(fmt)
-    # Also add it as a compile definition
-    target_compile_definitions(fmt PUBLIC FMT_USE_CONSTEVAL=0)
 
     # 2. Point SOCI to our fmt installation
     set(fmt_DIR "${fmt_BINARY_DIR}" CACHE PATH "" FORCE)
@@ -83,14 +97,76 @@ function(soci_preDownload pkgname url tag srcDir)
     endif ()
 
     if (NOT EXISTS "${_soci_local_src}/CMakeLists.txt")
-        message(STATUS "Cloning SOCI to ${_soci_local_src} (one-time)...")
-        execute_process(
-                COMMAND git clone --depth=1 --recurse-submodules https://github.com/SOCI/soci.git "${_soci_local_src}"
-                RESULT_VARIABLE _soci_clone_result
+        # Download as a tarball — avoids the git ≥2.47 lazy objects/pack/ bug that
+        # causes index-pack to fail on any fresh git clone on this system.
+        message(STATUS "Downloading SOCI to ${_soci_local_src} (one-time)...")
+        file(MAKE_DIRECTORY "${ARCHIVE_DIR}/soci")
+        set(_soci_tar "${ARCHIVE_DIR}/soci/soci-master.tar.gz")
+        file(DOWNLOAD
+            "https://github.com/SOCI/soci/archive/refs/heads/master.tar.gz"
+            "${_soci_tar}"
+            STATUS _dl_status
         )
-        if (NOT _soci_clone_result EQUAL 0)
-            message(FATAL_ERROR "Failed to clone SOCI to ${_soci_local_src}")
+        list(GET _dl_status 0 _dl_result)
+        if (NOT _dl_result EQUAL 0)
+            message(FATAL_ERROR "Failed to download SOCI: ${_dl_status}")
         endif ()
+        if (NOT EXISTS "${_soci_tar}")
+            message(FATAL_ERROR "SOCI download produced no file (status was ${_dl_status})")
+        endif ()
+        file(SIZE "${_soci_tar}" _soci_tar_size)
+        if (_soci_tar_size LESS 65536)
+            file(READ "${_soci_tar}" _soci_tar_head LIMIT 256 HEX)
+            message(FATAL_ERROR "SOCI download too small (${_soci_tar_size} bytes) — HTTP error or rate-limit? First bytes: ${_soci_tar_head}")
+        endif ()
+        set(_soci_tmp "${ARCHIVE_DIR}/soci/_extract_tmp")
+        file(MAKE_DIRECTORY "${_soci_tmp}")
+        file(ARCHIVE_EXTRACT INPUT "${_soci_tar}" DESTINATION "${_soci_tmp}")
+        file(GLOB _soci_extracted LIST_DIRECTORIES true "${_soci_tmp}/soci-*")
+        if (NOT _soci_extracted)
+            message(FATAL_ERROR "Could not find extracted SOCI dir in ${_soci_tmp}")
+        endif ()
+        list(GET _soci_extracted 0 _soci_extracted)
+        file(RENAME "${_soci_extracted}" "${_soci_local_src}")
+        file(REMOVE_RECURSE "${_soci_tmp}")
+        file(REMOVE "${_soci_tar}")
+    endif ()
+
+    # Populate the sqlite3 amalgamation submodule — GitHub tarballs don't include
+    # submodule content, so 3rdparty/sqlite3/ arrives empty from the archive.
+    set(_sqlite3_dir "${_soci_local_src}/3rdparty/sqlite3")
+    if (NOT EXISTS "${_sqlite3_dir}/sqlite3.c")
+        message(STATUS "Downloading SQLite3 amalgamation for SOCI built-in...")
+        file(MAKE_DIRECTORY "${ARCHIVE_DIR}/soci")
+        set(_sqlite3_tar "${ARCHIVE_DIR}/soci/sqlite3-amalgamation.tar.gz")
+        file(DOWNLOAD
+            "https://github.com/vadz/sqlite-amalgamation/archive/refs/heads/master.tar.gz"
+            "${_sqlite3_tar}"
+            STATUS _dl_status
+        )
+        list(GET _dl_status 0 _dl_result)
+        if (NOT _dl_result EQUAL 0)
+            message(FATAL_ERROR "Failed to download SQLite3 amalgamation: ${_dl_status}")
+        endif ()
+        if (NOT EXISTS "${_sqlite3_tar}")
+            message(FATAL_ERROR "SQLite3 amalgamation download produced no file (status was ${_dl_status})")
+        endif ()
+        file(SIZE "${_sqlite3_tar}" _sqlite3_tar_size)
+        if (_sqlite3_tar_size LESS 4096)
+            file(READ "${_sqlite3_tar}" _sqlite3_tar_head LIMIT 256 HEX)
+            message(FATAL_ERROR "SQLite3 amalgamation download too small (${_sqlite3_tar_size} bytes) — HTTP error or rate-limit? First bytes: ${_sqlite3_tar_head}")
+        endif ()
+        set(_sqlite3_tmp "${ARCHIVE_DIR}/soci/_sqlite3_tmp")
+        file(MAKE_DIRECTORY "${_sqlite3_tmp}")
+        file(ARCHIVE_EXTRACT INPUT "${_sqlite3_tar}" DESTINATION "${_sqlite3_tmp}")
+        file(GLOB _sqlite3_extracted LIST_DIRECTORIES true "${_sqlite3_tmp}/sqlite-amalgamation-*")
+        if (NOT _sqlite3_extracted)
+            message(FATAL_ERROR "Could not find extracted sqlite3 dir in ${_sqlite3_tmp}")
+        endif ()
+        list(GET _sqlite3_extracted 0 _sqlite3_extracted)
+        file(COPY "${_sqlite3_extracted}/" DESTINATION "${_sqlite3_dir}")
+        file(REMOVE_RECURSE "${_sqlite3_tmp}")
+        file(REMOVE "${_sqlite3_tar}")
     endif ()
 
     if (NOT soci_PATCHED)
