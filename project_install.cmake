@@ -8,6 +8,154 @@ message(STATUS "=== Configuring Components ===")
 file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
 function(project_install _Folder)
+
+    # ============================================================
+    # 0. App config generation (build-time only)
+    # ============================================================
+
+    set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
+
+    add_subdirectory(${_Folder})
+
+    include(${cmake_root}/generate_app_config.cmake)
+    include(${cmake_root}/generator.cmake)
+
+    install(FILES
+        "${APP_YAML_PATH}"
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        COMPONENT ${APP_NAME}
+    )
+
+    # ============================================================
+    # 1. Dependency sanitisation (install-time only)
+    # ============================================================
+
+    set(_hs_install_targets "")
+
+    foreach(_t IN LISTS HS_DependenciesList)
+
+        if(NOT TARGET ${_t})
+            continue()
+        endif()
+
+        get_target_property(_t_alias ${_t} ALIASED_TARGET)
+        if(_t_alias)
+            set(_t "${_t_alias}")
+        endif()
+
+        get_target_property(_imported ${_t} IMPORTED)
+        if(_imported)
+            continue()
+        endif()
+
+        list(APPEND _hs_install_targets ${_t})
+
+    endforeach()
+
+    # Remove already claimed targets
+    get_property(_hs_claimed GLOBAL PROPERTY HS_INSTALLED_TARGETS)
+    if(_hs_claimed)
+        list(REMOVE_ITEM _hs_install_targets ${_hs_claimed})
+    endif()
+
+    set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${APP_NAME} ${_hs_install_targets})
+
+    # ============================================================
+    # 2. Platform install layout
+    # ============================================================
+
+    if(APPLE AND APP_TYPE MATCHES "Executable")
+        set(_bundle "${APP_NAME}.app")
+        set(_lib_dest "${_bundle}/Contents/Frameworks")
+        set(_bin_dest "${_bundle}/Contents/MacOS")
+        set(_res_dest "${_bundle}/Contents/Resources")
+    else()
+        set(_lib_dest ${CMAKE_INSTALL_LIBDIR})
+        set(_bin_dest ${CMAKE_INSTALL_BINDIR})
+        set(_res_dest ${CMAKE_INSTALL_DATADIR})
+    endif()
+
+    # ============================================================
+    # 3. Core install rules (single source of truth)
+    # ============================================================
+
+    install(TARGETS ${APP_NAME} ${_hs_install_targets}
+        EXPORT ${APP_NAME}Target
+
+        RUNTIME DESTINATION ${_bin_dest}
+        LIBRARY DESTINATION ${_lib_dest}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+
+        BUNDLE DESTINATION .
+    )
+
+    install(EXPORT ${APP_NAME}Target
+        FILE ${APP_NAME}Target.cmake
+        NAMESPACE ${APP_VENDOR}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+        COMPONENT ${APP_NAME}Development
+    )
+
+    # ============================================================
+    # 4. Extra resources (clean separation)
+    # ============================================================
+
+    if(APP_LOCAL_RESOURCES)
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}/"
+            DESTINATION "${_res_dest}"
+        )
+    endif()
+
+    if(APP_GLOBAL_RESOURCES)
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/global-resources/"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}"
+        )
+    endif()
+
+    # ============================================================
+    # 5. macOS fixup_bundle (ONLY ONCE, INSTALL TREE ONLY)
+    # ============================================================
+
+    if(APPLE AND APP_TYPE MATCHES "Executable")
+
+        install(CODE "
+            include(BundleUtilities)
+
+            set(_bundle \"\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
+
+            file(GLOB_RECURSE _fw_libs
+                \"\${_bundle}/Contents/Frameworks/*.dylib\"
+            )
+
+            # ONLY use install-tree search paths (no OUTPUT_DIR)
+            set(_dirs
+                \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+            )
+
+            fixup_bundle(
+                \"\${_bundle}\"
+                \"\${_fw_libs}\"
+                \"\${_dirs}\"
+                IGNORE_ITEM \"libunwind.1.dylib\"
+            )
+        " COMPONENT ${APP_NAME}Runtime)
+
+    endif()
+
+    # ============================================================
+    # 6. CPack safety (critical)
+    # ============================================================
+
+    # Prevent double fixup_bundle behaviour in CPack pass
+    set(CPACK_BUNDLE_SKIP_FIXUP TRUE CACHE BOOL "Disable CPack bundle fixup duplication")
+
+endfunction()
+
+
+function(project_instoll _Folder)
     # App configuration (app.yaml) generation paths — must be set BEFORE add_subdirectory
     # so that CMakeLists.txt files in the subdir can reference APP_YAML_PATH in custom commands.
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
