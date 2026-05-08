@@ -69,6 +69,8 @@ if (APP_LOCAL_RESOURCES)
 endif ()
 
 # Generate the app.yaml body first (without checksum)
+message(STATUS "APP_YAML_TEMPLATE_PATH = ${APP_YAML_TEMPLATE_PATH}")
+message(STATUS "is file = $<BOOL:$<IS_FILE:${APP_YAML_TEMPLATE_PATH}>>")
 set(_APP_YAML_BODY_PATH "${APP_YAML_PATH}.body")
 configure_file(
         "${APP_YAML_TEMPLATE_PATH}"

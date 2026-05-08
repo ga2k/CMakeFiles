@@ -13,40 +13,56 @@ function(project_install _Folder)
     # 0. App config generation (build-time only)
     # ============================================================
 
+    # App configuration (app.yaml) generation paths
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
-
     add_subdirectory(${_Folder})
 
+    set(APP_YAML_TEMPLATE_PATH "${cmake_root}/templates/app.yaml.in")
     include(${cmake_root}/generate_app_config.cmake)
-    include(${cmake_root}/generator.cmake)
-
     install(FILES
-        "${APP_YAML_PATH}"
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-        COMPONENT ${APP_NAME}
+            "${APP_YAML_PATH}"
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
+            COMPONENT ${APP_NAME}
     )
+    include(${cmake_root}/generator.cmake)
 
     # ============================================================
     # 1. Dependency sanitisation (install-time only)
     # ============================================================
+    message(STATUS "Install(${APP_NAME}): HS_DependenciesList = [${HS_DependenciesList}]")
 
     set(_hs_install_targets "")
-
     foreach(_t IN LISTS HS_DependenciesList)
-
         if(NOT TARGET ${_t})
+            message(STATUS "Install(${APP_NAME}): skipping missing target '${_t}'")
             continue()
         endif()
 
         get_target_property(_t_alias ${_t} ALIASED_TARGET)
         if(_t_alias)
+            message(STATUS "Install(${APP_NAME}): resolving alias '${_t}' -> '${_t_alias}'")
             set(_t "${_t_alias}")
         endif()
 
         get_target_property(_imported ${_t} IMPORTED)
         if(_imported)
+            message(STATUS "Install(${APP_NAME}): skipping IMPORTED target '${_t}'")
             continue()
         endif()
+
+        # Skip targets that ship their own cmake install(EXPORT) set.
+        # These packages call install(EXPORT <pkg>-targets ...) in their own CMakeLists.txt,
+        # so CMake rejects them appearing in a second export set. The check cannot be done
+        # at configure time via file(GLOB) because CMakeFiles/Export/ is written during the
+        # generate phase — after this code runs — making filesystem-based detection unreliable
+        # on fresh configures. Use a fixed list instead.
+        set(_hs_self_exporting_targets "cpptrace-lib" "fmt")
+        if(_t IN_LIST _hs_self_exporting_targets)
+            message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
+            unset(_hs_self_exporting_targets)
+            continue()
+        endif()
+        unset(_hs_self_exporting_targets)
 
         list(APPEND _hs_install_targets ${_t})
 
@@ -57,8 +73,10 @@ function(project_install _Folder)
     if(_hs_claimed)
         list(REMOVE_ITEM _hs_install_targets ${_hs_claimed})
     endif()
-
+    unset(_hs_claimed)
     set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${APP_NAME} ${_hs_install_targets})
+
+    message(STATUS "Install(${APP_NAME}): installable deps = [${_hs_install_targets}]")
 
     # ============================================================
     # 2. Platform install layout
@@ -79,24 +97,36 @@ function(project_install _Folder)
     # 3. Core install rules (single source of truth)
     # ============================================================
 
-    install(TARGETS ${APP_NAME} ${_hs_install_targets}
-        EXPORT ${APP_NAME}Target
-
-        RUNTIME DESTINATION ${_bin_dest}
-        LIBRARY DESTINATION ${_lib_dest}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-
-        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
-
-        BUNDLE DESTINATION .
+    # @formatting:off
+    install(TARGETS                 ${APP_NAME}
+                                    ${_hs_install_targets}
+            EXPORT                  ${APP_NAME}Target
+            LIBRARY                 DESTINATION ${_hs_lib_dest}                                               COMPONENT ${APP_NAME}
+            RUNTIME                 DESTINATION ${_hs_bin_dest}                                               COMPONENT ${APP_NAME}
+            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}                                       COMPONENT ${APP_NAME}
+            CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+            FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
+            FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
+            FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
+            INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+            BUNDLE                  DESTINATION .
+            RESOURCE                ${resource_list}
     )
 
-    install(EXPORT ${APP_NAME}Target
-        FILE ${APP_NAME}Target.cmake
-        NAMESPACE ${APP_VENDOR}::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-        COMPONENT ${APP_NAME}Development
+    install(DIRECTORY       "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}/CMakeFiles/${APP_NAME}.dir/"
+            DESTINATION     ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+            COMPONENT       ${APP_NAME}Development
+            FILES_MATCHING
+            PATTERN         "*.pcm"
+            PATTERN         "*.ifc"
+    )
+
+    install(EXPORT          ${APP_NAME}Target
+            FILE            ${APP_NAME}Target.cmake
+            NAMESPACE       ${APP_VENDOR}::
+            DESTINATION     "${CMAKE_INSTALL_LIBDIR}/cmake"
+            COMPONENT       ${APP_NAME}Development
+            CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
     )
 
     # ============================================================
@@ -159,7 +189,6 @@ function(project_instoll _Folder)
     # App configuration (app.yaml) generation paths — must be set BEFORE add_subdirectory
     # so that CMakeLists.txt files in the subdir can reference APP_YAML_PATH in custom commands.
     set(APP_YAML_PATH "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/${APP_NAME}.yaml")
-
     add_subdirectory(${_Folder})
 
     # Optional resources fetching per project
