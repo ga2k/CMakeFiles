@@ -29,10 +29,6 @@ function(addGfxFeatures dry_run)
             ARGS NO_CMAKE_FIND_ROOT_PATH REQUIRED CONFIG PREREQ CORE DRY_RUN ${dry_run})
     # @formatter:on
 
-    registerPlugin("Appearance" ${dry_run})
-    registerPlugin("Logger" ${dry_run})
-    registerPlugin("Print" ${dry_run})
-
 endfunction()
 
 function(FindGfx_init dry_run)
