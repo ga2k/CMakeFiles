@@ -26,6 +26,30 @@ function(project_install _Folder)
     )
     include(${cmake_root}/generator.cmake)
 
+    if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
+
+        set(GEN_DEST_DIR ${BUILD_DIR}/generated)
+
+        if (APP_GENERATE_RECORDSETS)
+            generateRecordsets(
+                    ${GEN_DEST_DIR}/rs
+                    ${APP_GENERATE_RECORDSETS}
+                    ${APP_NAME})
+        endif ()
+        if("${APP_TYPE}" MATCHES "Executable")
+            set(EXPORTS_VAR "")
+        else ()
+            set(EXPORTS_VAR ${APP_NAME}_EXPORTS)
+        endif ()
+        if (APP_GENERATE_UI_CLASSES)
+            generateUIClasses(
+                    ${GEN_DEST_DIR}/ui
+                    ${APP_GENERATE_UI_CLASSES}
+                    ${APP_NAME}
+                    "${EXPORTS_VAR}")
+        endif ()
+    endif ()
+
     # ============================================================
     # 1. Dependency sanitisation (install-time only)
     # ============================================================
