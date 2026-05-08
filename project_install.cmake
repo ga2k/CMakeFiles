@@ -561,7 +561,7 @@ function(project_install _Folder)
             file(GLOB_RECURSE _fw_libs \"\${_bundle}/Contents/Frameworks/*.dylib\")
             # Search both the build-tree output dir and the staged lib dir for deps
             fixup_bundle(\"\${_bundle}\" \"\${_fw_libs}\"
-                \"${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR};\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+                \"${CMAKE_INSTALL_FULL_LIBDIR};$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
                 IGNORE_ITEM \"libunwind.1.dylib\"
             )
         " COMPONENT ${APP_NAME}Runtime)
