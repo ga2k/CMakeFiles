@@ -52,12 +52,12 @@ function(FindGfx_init dry_run)
     commonInit(Gfx ${dry_run})
 endfunction()
 
-# Called by fetchContents after find_package(Gfx) succeeds. Strips the wxWidgets
-# build-tree setup-header directory (lib64/wx/include/gtk3-unicode-3.3) from
-# HoffSoft::wxmono's INTERFACE_INCLUDE_DIRECTORIES. That directory is generated
-# during wxWidgets' configure step but is not staged to the install prefix.
-# CMake validates transitive include dirs at generate time and errors on the missing path
-# via the chain HoffSoft::Gfx -> HoffSoft::wxWidgets -> HoffSoft::wxmono.
+# Called by fetchContents after find_package(Gfx) succeeds. Removes non-existent
+# paths from HoffSoft::wxmono's INTERFACE_INCLUDE_DIRECTORIES. GfxTarget.cmake
+# bakes wxWidgets build-tree paths (lib64/wx/include/gtk3-unicode-3.3, include/wx-3.3)
+# that are never staged to the install prefix. CMake validates transitive include dirs
+# at generate time and errors on missing paths via HoffSoft::Gfx -> HoffSoft::wxWidgets
+# -> HoffSoft::wxmono. Consumers get wx headers through wx::wxmono (WX_Helper.cmake).
 function(Gfx_postMakeAvailable src build outDir buildType)
     if(APP_NAME STREQUAL "Gfx")
         return()
@@ -65,9 +65,15 @@ function(Gfx_postMakeAvailable src build outDir buildType)
     if(TARGET "HoffSoft::wxmono")
         get_target_property(_wxm_incs "HoffSoft::wxmono" INTERFACE_INCLUDE_DIRECTORIES)
         if(_wxm_incs)
-            list(FILTER _wxm_incs EXCLUDE REGEX ".*/wx/include/")
+            set(_wxm_existing "")
+            foreach(_d IN LISTS _wxm_incs)
+                if(IS_DIRECTORY "${_d}")
+                    list(APPEND _wxm_existing "${_d}")
+                endif()
+            endforeach()
             set_target_properties("HoffSoft::wxmono" PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES "${_wxm_incs}")
+                INTERFACE_INCLUDE_DIRECTORIES "${_wxm_existing}")
+            unset(_wxm_existing)
         endif()
         unset(_wxm_incs)
     endif()
