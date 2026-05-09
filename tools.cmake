@@ -1829,7 +1829,7 @@ function(fittest)
     if(NOT candidates)
         msg(ALWAYS FATAL_ERROR "No Config file found")
     endif ()
-    
+
     # Staged and Source files are the same?
     if (actualSourceFileFound AND actualStagedFileFound)
 

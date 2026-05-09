@@ -1,4 +1,9 @@
 
+# Same as FindCore: GfxConfigVersion.cmake also references cpptrace::cpptrace.
+if(NOT TARGET cpptrace::cpptrace)
+    add_library(cpptrace::cpptrace INTERFACE IMPORTED GLOBAL)
+endif()
+
 function(addGfxFeatures dry_run)
     # @formatter:off
     if(APP_NAME STREQUAL "Gfx")
@@ -27,6 +32,21 @@ endfunction()
 function(Gfx_postMakeAvailable src build outDir buildType)
     if(APP_NAME STREQUAL "Gfx")
         return()  # wx handled by wxWidgets_postMakeAvailable during Gfx's own build
+    endif()
+
+    # GfxConfigVersion.cmake bakes the wxWidgets build-tree setup-header directory
+    # (lib64/wx/include/gtk3-unicode-3.3) into HoffSoft::wxmono. That directory is
+    # generated during wxWidgets' configure step and is not staged to the install
+    # prefix. Strip it so CMake's generate-time include-dir validation passes.
+    # Consumers get the wx setup headers through wx::wxmono set up below.
+    if(TARGET "HoffSoft::wxmono")
+        get_target_property(_wxm_incs "HoffSoft::wxmono" INTERFACE_INCLUDE_DIRECTORIES)
+        if(_wxm_incs)
+            list(FILTER _wxm_incs EXCLUDE REGEX ".*/wx/include/")
+            set_target_properties("HoffSoft::wxmono" PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${_wxm_incs}")
+        endif()
+        unset(_wxm_incs)
     endif()
 
     # Ensure wx::wxmono has INTERFACE_INCLUDE_DIRECTORIES so wxWidgets_export_variables
