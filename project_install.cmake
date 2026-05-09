@@ -345,6 +345,16 @@ function(project_install _Folder)
         )
     endif()
 
+    # Linux: aux shared libs built by third-party (e.g. wx's libwxwebp/libwxsharpyuv) land in
+    # OUTPUT_DIR/lib/ but are not CMake install(TARGETS) — copy them flat to lib/.
+    if (UNIX AND NOT APPLE)
+        install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
+                DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                COMPONENT ${APP_NAME}Runtime
+                FILES_MATCHING PATTERN "*.so*"
+        )
+    endif()
+
     # macOS: aux dylibs built by third-party (e.g. wx's webp/webpdemux/sharpyuv) land in
     # OUTPUT_DIR/lib/ but are not CMake install(TARGETS) — copy them to lib/ for fixup_bundle.
     if (APPLE)
@@ -748,6 +758,16 @@ endfunction()
 #                 DESTINATION "${CMAKE_INSTALL_BINDIR}"
 #                 COMPONENT ${APP_NAME}Runtime
 #                 FILES_MATCHING PATTERN "*.dll"
+#         )
+#     endif()
+#
+#     # On Linux, aux shared libs built by third-party (e.g. wx's libwxwebp/libwxsharpyuv) land in
+#     # OUTPUT_DIR/lib/ alongside our own libs but are not CMake install(TARGETS).
+#     if (UNIX AND NOT APPLE)
+#         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
+#                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+#                 COMPONENT ${APP_NAME}Runtime
+#                 FILES_MATCHING PATTERN "*.so*"
 #         )
 #     endif()
 #
