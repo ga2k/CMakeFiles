@@ -117,6 +117,11 @@ function(project_install _Folder)
         set(_res_dest ${CMAKE_INSTALL_DATADIR})
     endif()
 
+    # Compute early so the desktop-files glob and resources section both have it.
+    if(APP_LOCAL_RESOURCES)
+        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
+    endif()
+
     # ============================================================
     # 3. Core install rules (single source of truth)
     # ============================================================
@@ -370,9 +375,15 @@ function(project_install _Folder)
     # ============================================================
 
     if(APP_LOCAL_RESOURCES)
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}/"
-            DESTINATION "${_res_dest}"
-        )
+        if(APPLE AND APP_TYPE MATCHES "Executable")
+            install(DIRECTORY "${LOCAL_RES_SRC}/"
+                    DESTINATION "${_res_dest}"
+                    COMPONENT ${APP_NAME})
+        else()
+            install(DIRECTORY "${LOCAL_RES_SRC}/"
+                    DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
+                    COMPONENT ${APP_NAME})
+        endif()
     endif()
 
     if(APP_GLOBAL_RESOURCES)
