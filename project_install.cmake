@@ -145,13 +145,55 @@ function(project_install _Folder)
             PATTERN         "*.ifc"
     )
 
-    install(EXPORT          ${APP_NAME}Target
-            FILE            ${APP_NAME}Target.cmake
-            NAMESPACE       ${APP_VENDOR}::
-            DESTINATION     "${CMAKE_INSTALL_LIBDIR}/cmake"
-            COMPONENT       ${APP_NAME}Development
-            CXX_MODULES_DIRECTORY "cxx/${APP_VENDOR}/${APP_NAME}"
+    write_basic_package_version_file(
+            "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
+            VERSION ${APP_VERSION}
+            COMPATIBILITY SameMajorVersion
     )
+
+    configure_package_config_file(
+            ${cmake_root}/templates/Config.cmake.in
+            "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
+            INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+    )
+    add_custom_target(${APP_NAME}Config SOURCES "${cmake_root}/templates/Config.cmake.in")
+    add_dependencies(${APP_NAME} ${APP_NAME}Config)
+
+    add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")
+    add_dependencies(${APP_NAME} ${APP_NAME}WX_Helper)
+
+    install(FILES       "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
+                        "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
+                        "${OUTPUT_DIR}/WX_Helper.cmake"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+            COMPONENT   ${APP_NAME}Development
+    )
+
+    install(EXPORT                  ${APP_NAME}Target
+            FILE                    ${APP_NAME}Target.cmake
+            FILE                    ${APP_NAME}Config.cmake
+            FILE                    ${APP_NAME}ConfigVersion.cmake
+            NAMESPACE               ${APP_VENDOR}::
+            DESTINATION             ${CMAKE_INSTALL_LIBDIR}/cmake
+            COMPONENT               ${APP_NAME}Development
+            CXX_MODULES_DIRECTORY   cxx/${APP_VENDOR}/${APP_NAME}
+    )
+
+    # User guide, if present
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md"
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Docs/${APP_NAME}")
+    endif ()
+
+    # Handle Linux desktop files specifically
+    if (LINUX)
+        file(GLOB _hs_desktop_files "${LOCAL_RES_SRC}/*.desktop")
+        if (_hs_desktop_files)
+            install(FILES ${_hs_desktop_files}
+                    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
+        endif ()
+        unset(_hs_desktop_files)
+    endif()
 
     # ============================================================
     # 4. Extra resources (clean separation)
