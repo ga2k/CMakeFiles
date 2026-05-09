@@ -1,9 +1,4 @@
 
-# Same as FindCore: GfxConfigVersion.cmake also references cpptrace::cpptrace.
-if(NOT TARGET cpptrace::cpptrace)
-    add_library(cpptrace::cpptrace INTERFACE IMPORTED GLOBAL)
-endif()
-
 function(addGfxFeatures dry_run)
     # @formatter:off
     if(APP_NAME STREQUAL "Gfx")

@@ -80,7 +80,7 @@ function(project_install _Folder)
         # at configure time via file(GLOB) because CMakeFiles/Export/ is written during the
         # generate phase — after this code runs — making filesystem-based detection unreliable
         # on fresh configures. Use a fixed list instead.
-        set(_hs_self_exporting_targets "cpptrace-lib" "fmt")
+        set(_hs_self_exporting_targets "fmt")
         if(_t IN_LIST _hs_self_exporting_targets)
             message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
             unset(_hs_self_exporting_targets)
@@ -169,8 +169,6 @@ function(project_install _Folder)
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(SOCI CONFIG COMPONENTS Core SQLite3)\n")
         elseif(_ns STREQUAL "OpenSSL")
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(OpenSSL COMPONENTS SSL Crypto)\n")
-        elseif(_ns STREQUAL "cpptrace")
-            string(APPEND HS_FIND_DEPENDENCIES "find_dependency(cpptrace CONFIG)\n")
         elseif(_ns STREQUAL "yaml-cpp")
             # yaml-cpp is fully defined as HoffSoft::yaml-cpp in CoreTarget.cmake — no find_dependency needed
         elseif(_ns STREQUAL "wxWidgets")
@@ -521,7 +519,7 @@ endfunction()
 #         # at configure time via file(GLOB) because CMakeFiles/Export/ is written during the
 #         # generate phase — after this code runs — making filesystem-based detection unreliable
 #         # on fresh configures. Use a fixed list instead.
-#         set(_hs_self_exporting_targets "cpptrace-lib" "fmt")
+#         set(_hs_self_exporting_targets "fmt")
 #         if(_t IN_LIST _hs_self_exporting_targets)
 #             message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
 #             unset(_hs_self_exporting_targets)
@@ -533,7 +531,7 @@ endfunction()
 #     endforeach()
 #
 #     # Skip targets already claimed by another HoffSoft library in this CMake run.
-#     # When Core and Gfx are built together, Core claims yaml-cpp, cpptrace, soci etc.;
+#     # When Core and Gfx are built together, Core claims yaml-cpp, soci etc.;
 #     # Gfx must not re-export them — doing so causes double-definition when a consumer
 #     # uses both packages in the same CMake project.
 #     get_property(_hs_claimed GLOBAL PROPERTY HS_INSTALLED_TARGETS)
@@ -730,9 +728,8 @@ endfunction()
 #     " COMPONENT ${APP_NAME}Development)
 #     # @formatting:on
 #
-#     # cpptrace-lib and fmt ship their own cmake install rules (components cpptrace-runtime,
-#     # cpptrace-development, fmt_core) which are assigned to the Core CPack group in
-#     # CMakeLists.txt.  Do NOT add a second install() here — it would create duplicate
+#     # fmt ships its own cmake install rules (component fmt_core) which is assigned to
+#     # the Core CPack group in CMakeLists.txt.  Do NOT add a second install() here — it would create duplicate
 #     # archive entries (same path, same binary) when CPack bundles the Core group package,
 #     # causing "The data in files with the same filename is different" failures.
 #
@@ -789,8 +786,6 @@ endfunction()
 #             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(SOCI CONFIG COMPONENTS Core SQLite3)\n")
 #         elseif(_ns STREQUAL "OpenSSL")
 #             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(OpenSSL COMPONENTS SSL Crypto)\n")
-#         elseif(_ns STREQUAL "cpptrace")
-#             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(cpptrace CONFIG)\n")
 #         elseif(_ns STREQUAL "yaml-cpp")
 #             # yaml-cpp is fully defined as HoffSoft::yaml-cpp in CoreTarget.cmake — no find_dependency needed
 #         elseif(_ns STREQUAL "wxWidgets")

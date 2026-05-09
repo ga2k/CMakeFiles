@@ -103,7 +103,7 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     endif()
 
     foreach(_target IN LISTS _targets_to_strip)
-        # 1. Strip the add_library block (matches any namespace, e.g. HoffSoft:: or cpptrace::)
+        # 1. Strip the add_library block (matches any namespace, e.g. HoffSoft::)
         string(REGEX REPLACE "\n# Create imported target [^\n]*::${_target}\nadd_library\\([^\n]*::${_target} [^\n]*\\)\n" "\n" outvar "${outvar}")
 
         # 2. Strip the set_target_properties block (multi-line) — vendor-namespaced form
@@ -132,7 +132,7 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
             endif()
             unset(_remaining)
         endif()
-        # Also strip upstream-namespaced form (e.g. cpptrace::cpptrace)
+        # Also strip upstream-namespaced form (e.g. SomeLib::SomeLib)
         string(FIND "${outvar}" "set_target_properties(${_target}::${_target} PROPERTIES" _start)
         if(NOT _start EQUAL -1)
             string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
@@ -173,14 +173,6 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     string(REPLACE "( " "(" outvar "${outvar}")
     string(REPLACE " )" ")" outvar "${outvar}")
 
-    # Strip any FetchContent-only deps that are statically embedded in the shared library
-    # and have no corresponding installed target. Runs AFTER the block-stripping loop above
-    # so that bare name replacement cannot corrupt add_library() calls.
-    foreach(_fc_dep "HoffSoft::cpptrace" "cpptrace::cpptrace")
-        string(REPLACE "${_fc_dep};" "" outvar "${outvar}")
-        string(REPLACE ";${_fc_dep}" "" outvar "${outvar}")
-        string(REPLACE "${_fc_dep}"  "" outvar "${outvar}")
-    endforeach()
     unset(_fc_dep)
     # The bare target-name replacements above (_targets_to_strip step 4 and _fc_dep loop)
     # leave empty-string artefacts in CMake's cross-export-set validation block, which

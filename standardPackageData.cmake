@@ -34,10 +34,6 @@ function(createStandardPackageData dryRun)
     #   [, ...] More packages in the same feature, if any
     #
 
-    addPackageData(SYSTEM FEATURE "STACKTRACE" PKGNAME "cpptrace" NAMESPACE "cpptrace" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/jeremy-rifkin/cpptrace.git" GIT_TAG "v0.7.3"
-            COMPONENT "cpptrace" ARG REQUIRED DRY_RUN ${dryRun})
-
     addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
             ARG REQUIRED DRY_RUN ${dryRun})

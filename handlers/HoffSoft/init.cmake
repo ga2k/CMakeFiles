@@ -1,15 +1,5 @@
 include_guard(GLOBAL)
 
-# cpptrace is statically embedded in libhoffsoft_core.so; no installed target.
-# CoreConfigVersion.cmake (an old-format targets file loaded by CMake 3.31+ during
-# find_package version-checking) references cpptrace::cpptrace in
-# IMPORTED_CXX_MODULES_LINK_LIBRARIES and validates it immediately. The stub
-# satisfies that check. The if(NOT TARGET) guard in fetchContents also sees this
-# stub and skips fetching cpptrace from source.
-if(NOT TARGET cpptrace::cpptrace)
-    add_library(cpptrace::cpptrace INTERFACE IMPORTED GLOBAL)
-endif()
-
 # GfxTarget.cmake references OpenSSL::SSL/Crypto in INTERFACE_LINK_LIBRARIES.
 # GfxConfig.cmake validates these immediately when it includes GfxTarget.wrapped.cmake.
 # The SSL feature (METHOD "PROCESS") is listed after GFX in APP_FEATURES, so OpenSSL

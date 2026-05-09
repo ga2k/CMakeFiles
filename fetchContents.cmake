@@ -672,7 +672,7 @@ function(fetchContents)
 
                             if (TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
                                 # Target was built by a prior subproject in this same CMake run
-                                # (e.g. cpptrace built while processing Core, now consumed by Gfx).
+                                # (e.g. a dep built while processing Core, now consumed by Gfx).
                                 # FetchContent_Declare was intentionally skipped in Pass 0, so
                                 # calling FetchContent_MakeAvailable here would fail with
                                 # "No content details recorded". Just link the existing target.
