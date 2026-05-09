@@ -125,9 +125,9 @@ function(project_install _Folder)
     install(TARGETS                 ${APP_NAME}
                                     ${_hs_install_targets}
             EXPORT                  ${APP_NAME}Target
-            LIBRARY                 DESTINATION ${_hs_lib_dest}                                               COMPONENT ${APP_NAME}
-            RUNTIME                 DESTINATION ${_hs_bin_dest}                                               COMPONENT ${APP_NAME}
-            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}                                       COMPONENT ${APP_NAME}
+            LIBRARY                 DESTINATION ${_hs_lib_dest}                                              COMPONENT ${APP_NAME}
+            RUNTIME                 DESTINATION ${_hs_bin_dest}                                              COMPONENT ${APP_NAME}
+            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}                                      COMPONENT ${APP_NAME}
             CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
             FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
             FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
