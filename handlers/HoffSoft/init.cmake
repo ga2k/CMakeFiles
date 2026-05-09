@@ -17,6 +17,41 @@ endif()
 # OpenSSL::SSL/Crypto exist before GfxConfig.cmake executes.
 find_package(OpenSSL QUIET COMPONENTS SSL Crypto)
 
+# CoreConfigVersion.cmake is an old-format targets file CMake 3.31+ loads during
+# find_package version-checking. It calls target_sources(HoffSoft::Core INTERFACE
+# FILE_SET "CXX_MODULES") referencing .ixx files not staged under
+# lib64/cmake/cxx/HoffSoft/Core/src/. Strip the CXX_MODULES file set before
+# find_package(Core) runs. Idempotent: if already patched, string(FIND) returns -1.
+find_file(_hs_core_cv
+    NAMES "CoreConfigVersion.cmake"
+    PATHS ${CMAKE_PREFIX_PATH}
+    PATH_SUFFIXES "lib64/cmake" "lib/cmake" "cmake"
+    NO_DEFAULT_PATH
+    NO_CACHE
+)
+if(_hs_core_cv)
+    file(READ "${_hs_core_cv}" _hs_cvc)
+    string(FIND "${_hs_cvc}" [=[FILE_SET "CXX_MODULES"]=] _hs_at)
+    if(NOT _hs_at EQUAL -1)
+        string(SUBSTRING "${_hs_cvc}" 0 ${_hs_at} _hs_pre)
+        string(FIND "${_hs_pre}" "INTERFACE" _hs_iface REVERSE)
+        string(SUBSTRING "${_hs_cvc}" 0 ${_hs_iface} _hs_pre)
+        set(_hs_pre "${_hs_pre})")
+        string(SUBSTRING "${_hs_cvc}" ${_hs_at} -1 _hs_post)
+        string(FIND "${_hs_post}" "else()" _hs_else)
+        string(SUBSTRING "${_hs_post}" ${_hs_else} -1 _hs_post)
+        set(_hs_cvc "${_hs_pre}\n${_hs_post}")
+        file(WRITE "${_hs_core_cv}" "${_hs_cvc}")
+    endif()
+    unset(_hs_cvc)
+    unset(_hs_at)
+    unset(_hs_pre)
+    unset(_hs_iface)
+    unset(_hs_post)
+    unset(_hs_else)
+endif()
+unset(_hs_core_cv)
+
 function (HoffSoft_init dry_run)
     FindCore_init(${dry_run})
     FindGfx_init(${dry_run})
