@@ -18,11 +18,14 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
 
     unset(_soci_targets)
 
-    # Prefer real build targets when present; fall back to imported targets from find_package().
+    # Prefer real build targets when present; fall back to IMPORTED targets from staged Core,
+    # then IMPORTED targets from find_package.
     if (TARGET soci_core)
         list(APPEND _soci_targets soci_core)
     elseif (TARGET soci_core_static)
         list(APPEND _soci_targets soci_core_static)
+    elseif (TARGET HoffSoft::soci_core)
+        list(APPEND _soci_targets HoffSoft::soci_core)
     elseif (TARGET SOCI::Core)
         list(APPEND _soci_targets SOCI::Core)
     endif ()
@@ -31,6 +34,8 @@ function(soci_postMakeAvailable sourceDir buildDir outDir buildType)
         list(APPEND _soci_targets soci_sqlite3)
     elseif (TARGET soci_sqlite3_static)
         list(APPEND _soci_targets soci_sqlite3_static)
+    elseif (TARGET HoffSoft::soci_sqlite3)
+        list(APPEND _soci_targets HoffSoft::soci_sqlite3)
     elseif (TARGET SOCI::SQLite3)
         list(APPEND _soci_targets SOCI::SQLite3)
     endif ()

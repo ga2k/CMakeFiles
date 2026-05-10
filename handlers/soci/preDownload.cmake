@@ -7,6 +7,22 @@ function(soci_preDownload pkgname url tag srcDir)
         return()
     endif ()
 
+    # If soci is already available as an IMPORTED target from a staged HoffSoft::Core,
+    # skip fetching fmt and soci entirely. The app links to those IMPORTED targets.
+    # This avoids building soci (and fmt) in the app's tree, which on Windows would
+    # create a non-IMPORTED fmt target with no export set — triggering the
+    # "requires target fmt that is not in any export set" CMake generate error.
+    if (TARGET HoffSoft::soci_core)
+        get_target_property(_hs_soci_imp HoffSoft::soci_core IMPORTED)
+        if (_hs_soci_imp)
+            message(STATUS "soci: HoffSoft::soci_core already imported from staged Core. Skipping fetch.")
+            set(soci_ALREADY_FOUND ON PARENT_SCOPE)
+            unset(_hs_soci_imp)
+            return()
+        endif ()
+        unset(_hs_soci_imp)
+    endif ()
+
     # CMake 4.0 requires CMAKE_C_COMPILER in cache before SOCI's project(LANGUAGES C CXX)
     # runs EnableLanguage(C) via FetchContent. It detects the compiler fine but then errors
     # "CMAKE_C_COMPILER not set, after EnableLanguage" if the cache entry was never written.
