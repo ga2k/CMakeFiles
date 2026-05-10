@@ -122,6 +122,43 @@ function(project_install _Folder)
         set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
     endif()
 
+     # @formatting:off
+     if (APP_GLOBAL_RESOURCES)
+         set(_global_resources_src "${CMAKE_SOURCE_DIR}/global_resources")
+         file(MAKE_DIRECTORY "${_global_resources_src}")
+
+         # Prefix-relative path embedded in app.yaml — resolved at runtime from the
+         # inferred install prefix (exe dir parent, or bundle parent on macOS).
+         if(APPLE)
+             set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+         else()
+             # Linux / Windows: CMAKE_INSTALL_DATADIR is already prefix-relative (e.g. "share")
+             set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+         endif()
+
+         if (NOT TARGET GlobalResourcesRepo)
+             ExternalProject_Add(GlobalResourcesRepo
+                     GIT_REPOSITORY      "${APP_GLOBAL_RESOURCES}"
+                     GIT_TAG             master
+                     GIT_SHALLOW         TRUE
+                     UPDATE_DISCONNECTED TRUE
+                     CONFIGURE_COMMAND   ""
+                     BUILD_COMMAND       ""
+                     INSTALL_COMMAND     ""
+                     TEST_COMMAND        ""
+                     SOURCE_DIR          "${_global_resources_src}"
+                     BUILD_BYPRODUCTS    "${_global_resources_src}/.fetched"
+                     COMMAND             ${CMAKE_COMMAND} -E touch "${_global_resources_src}/.fetched"
+             )
+         endif ()
+
+         add_custom_target(${APP_NAME}fetch_resources DEPENDS GlobalResourcesRepo)
+         if (TARGET ${APP_NAME})
+             add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
+         endif ()
+     endif ()
+     # @formatting:on
+
     # ============================================================
     # 3. Core install rules (single source of truth)
     # ============================================================
