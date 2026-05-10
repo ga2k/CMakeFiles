@@ -303,7 +303,9 @@ function(addLibrary)
             if (NOT TARGET _hs_wx_pch)
                 set(_hs_wx_I "")
                 foreach(_inc IN LISTS HS_wxIncludePaths)
-                    list(APPEND _hs_wx_I "-I${_inc}")
+                    if(_inc)
+                        list(APPEND _hs_wx_I "-I${_inc}")
+                    endif()
                 endforeach()
                 set(_hs_wx_D "")
                 foreach(_def IN LISTS HS_wxDefines)
@@ -313,15 +315,23 @@ function(addLibrary)
                         list(APPEND _hs_wx_D "${_def}")
                     endif()
                 endforeach()
+                # Target triple for cross-compile (empty on native builds)
+                set(_hs_pch_target_flag "")
+                if(CMAKE_CXX_COMPILER_TARGET)
+                    set(_hs_pch_target_flag "--target=${CMAKE_CXX_COMPILER_TARGET}")
+                endif()
+                # Toolchain-provided sysroot/system-include flags (e.g. -nostdinc + -isystem)
+                separate_arguments(_hs_pch_cxx_flags UNIX_COMMAND "${CMAKE_CXX_FLAGS}")
                 file(MAKE_DIRECTORY "${_hs_pch_dir}")
                 add_custom_command(
                     OUTPUT  "${_hs_pch_bin}"
                     COMMAND ${CMAKE_COMMAND} -E make_directory "${_hs_pch_dir}"
                     COMMAND ${CMAKE_CXX_COMPILER}
+                            ${_hs_pch_target_flag}
+                            ${_hs_pch_cxx_flags}
                             "-std=c++23"
                             "$<IF:$<CONFIG:Debug>,-O0,-O2>"
-                            "$<$<CONFIG:Debug>:-D_DEBUG>"
-                            "$<$<NOT:$<CONFIG:Debug>>:-DNDEBUG>"
+                            "-D$<IF:$<CONFIG:Debug>,_DEBUG,NDEBUG>"
                             "-D_DLL" "-D_MT"
                             "-Xclang"
                             "$<IF:$<CONFIG:Debug>,--dependent-lib=msvcrtd,--dependent-lib=msvcrt>"
@@ -339,6 +349,8 @@ function(addLibrary)
                     COMMENT "Building shared wx PCH -> ${_hs_pch_bin}"
                     VERBATIM
                 )
+                unset(_hs_pch_target_flag)
+                unset(_hs_pch_cxx_flags)
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
                 install(FILES "${_hs_pch_bin}" DESTINATION "lib/cmake/pch/${APP_VENDOR}")
             endif()
