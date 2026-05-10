@@ -408,12 +408,26 @@ function(fetchContents)
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
                                 endif ()
                             else ()
-                                # Try to find the package first before declaring FetchContent
-                                # This allows Gfx to see what Core already fetched/built
-                                msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
-                                set(temporary_args ${this_find_package_args})
-                                list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
-                                find_package(${this_pkgname} QUIET ${temporary_args})
+                                # SYSTEM packages always build from source so they enter the
+                                # HoffSoft:: install export set consistently on all platforms
+                                # (e.g. yaml-cpp must not resolve to an IMPORTED sysroot target
+                                # on WinX — it must be built and exported as HoffSoft::yaml-cpp).
+                                # Inter-subproject reuse (Core built yaml-cpp, now Gfx sees it)
+                                # is caught by the TARGET check in the enclosing if-block above,
+                                # so no find_package probe is needed for SYSTEM packages.
+                                if (NOT this_kind STREQUAL "SYSTEM")
+                                    # Try to find the package first before declaring FetchContent
+                                    # This allows Gfx to see what Core already fetched/built
+                                    msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
+                                    set(temporary_args ${this_find_package_args})
+                                    list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
+                                    find_package(${this_pkgname} QUIET ${temporary_args})
+                                else ()
+                                    # Clear any stale _FOUND cache from a prior configure so that
+                                    # Pass 1's "already found" check does not skip MakeAvailable.
+                                    unset(${this_pkgname}_FOUND)
+                                    unset(${this_pkgname}_FOUND CACHE)
+                                endif ()
 
                                 if (${this_pkgname}_FOUND)
                                     msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (${this_pkgname}_FOUND is ON) Skipping FetchContent.\n")
