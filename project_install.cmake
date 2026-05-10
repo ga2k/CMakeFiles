@@ -377,42 +377,45 @@ function(project_install _Folder)
             COMPONENT ${APP_NAME}
             FILES_MATCHING PATTERN "*.a")
 
-    # Win32: aux DLLs built by third-party (e.g. wx's webp/sharpyuv) land in
-    # OUTPUT_DIR/bin/ but are not CMake install(TARGETS) — copy them flat to bin/.
-    # When cross-compiling, dependency DLLs are staged to STAGE_DIR/bin/ by their
-    # own builds (Core, Gfx), so scan both locations.
+    # Aux shared libs/DLLs from third-party builds (e.g. wx's webp/sharpyuv) land in
+    # OUTPUT_DIR/{bin,lib}/ without a CMake install(TARGETS) rule — copy them flat.
+    # libhoffsoft_* are excluded here: they are handled by install(TARGETS) above,
+    # which also performs RPATH processing; a raw directory copy would produce
+    # different byte content and cause CPack duplicate-file errors.
+    # When cross-compiling for Windows, dependency DLLs are staged to STAGE_DIR/bin/
+    # by the Core/Gfx builds, so scan both locations.
     if (WIN32)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/"
                 DESTINATION "${CMAKE_INSTALL_BINDIR}"
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.dll"
+                REGEX "libhoffsoft_" EXCLUDE
         )
         if (CMAKE_CROSSCOMPILING AND DEFINED STAGE_DIR)
             install(DIRECTORY "${STAGE_DIR}/${CMAKE_INSTALL_BINDIR}/"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                     COMPONENT ${APP_NAME}Runtime
                     FILES_MATCHING PATTERN "*.dll"
+                    REGEX "libhoffsoft_" EXCLUDE
             )
         endif()
     endif()
 
-    # Linux: aux shared libs built by third-party (e.g. wx's libwxwebp/libwxsharpyuv) land in
-    # OUTPUT_DIR/lib/ but are not CMake install(TARGETS) — copy them flat to lib/.
     if (UNIX AND NOT APPLE)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.so*"
+                REGEX "libhoffsoft_" EXCLUDE
         )
     endif()
 
-    # macOS: aux dylibs built by third-party (e.g. wx's webp/webpdemux/sharpyuv) land in
-    # OUTPUT_DIR/lib/ but are not CMake install(TARGETS) — copy them to lib/ for fixup_bundle.
     if (APPLE)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.dylib"
+                REGEX "libhoffsoft_" EXCLUDE
         )
     endif()
 
