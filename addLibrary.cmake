@@ -267,14 +267,20 @@ function(addLibrary)
     #
     # WIN32 (native Windows or cross-compile targeting Windows):
     #   MSVC STL and MinGW libstdc++ do NOT have the libc++ abi_tag problem, so
-    #   PCH CAN be applied to .ixx files.  A SHARED binary is compiled once to
-    #   ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch (the stable
-    #   stage path) and injected into every compilation — including .ixx — via an
-    #   explicit -include-pch flag.  Because all Gfx BMIs are compiled with the
-    #   same binary, and downstream consumers (HealthCanvas) use that same binary, the
-    #   SLOC entries for wx / Windows SDK headers are loaded ONCE rather than once
-    #   per BMI.  Without this, loading 60+ Gfx BMIs exhausts Clang's 2 GB SLOC
-    #   address-space limit.
+    #   PCH CAN be applied to .ixx files.  A SHARED binary is compiled once and
+    #   injected into every compilation — including .ixx — via an explicit
+    #   -include-pch flag.  Because all Gfx BMIs are compiled with the same binary,
+    #   and downstream consumers (HealthCanvas) use that same binary, the SLOC entries
+    #   for wx / Windows SDK headers are loaded ONCE rather than once per BMI.
+    #   Without this, loading 60+ Gfx BMIs exhausts Clang's 2 GB SLOC limit.
+    #
+    #   PCH binary location depends on role:
+    #     Builder (Gfx main lib / Gfx internal plugins): ${CMAKE_BINARY_DIR}/pch/
+    #       — lives in the build tree, isolated per preset; promoted to staging by
+    #         the install step.
+    #     Consumer (HealthCanvas, targets with GFX in arg_USES): staged path
+    #       ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/ — the binary must
+    #         have been deployed there by a prior Gfx install step.
     # ────────────────────────────────────────────────────────────────────────────
 
     if (WIN32 AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
@@ -282,7 +288,13 @@ function(addLibrary)
         # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
         # include the same PCH so Clang's module ODR checker sees consistent wx
         # class definitions across all translation units and BMIs.
-        set(_hs_pch_dir "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}")
+        if (GFX IN_LIST arg_USES)
+            # Consumer (HealthCanvas / external plugins): find PCH staged by Gfx install
+            set(_hs_pch_dir "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}")
+        else()
+            # Builder (Gfx main library / Gfx internal plugins): build artifact → build tree
+            set(_hs_pch_dir "${CMAKE_BINARY_DIR}/pch")
+        endif()
         set(_hs_pch_bin "${_hs_pch_dir}/wx_pch.gch")
 
         if (NOT GFX IN_LIST arg_USES)
@@ -328,6 +340,7 @@ function(addLibrary)
                     VERBATIM
                 )
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
+                install(FILES "${_hs_pch_bin}" DESTINATION "lib/cmake/pch/${APP_VENDOR}")
             endif()
         endif()
 
