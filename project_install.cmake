@@ -387,7 +387,7 @@ function(project_install _Folder)
     endif()
 
     if(APP_GLOBAL_RESOURCES)
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/global-resources/"
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/global_resources/"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}"
         )
     endif()
@@ -441,7 +441,7 @@ endfunction()
 #     # Optional resources fetching per project
 #     # @formatting:off
 #     if (APP_GLOBAL_RESOURCES)
-#         set(_global_resources_src "${CMAKE_SOURCE_DIR}/global-resources")
+#         set(_global_resources_src "${CMAKE_SOURCE_DIR}/global_resources")
 #         file(MAKE_DIRECTORY "${_global_resources_src}")
 #
 #         # Prefix-relative path embedded in app.yaml — resolved at runtime from the
@@ -873,7 +873,7 @@ endfunction()
 #             set(GLOBAL_RES_DEST "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
 #         endif()
 #
-#         install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/global-resources/
+#         install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/global_resources/
 #                 DESTINATION ${GLOBAL_RES_DEST}
 #                 COMPONENT ${APP_NAME}
 #         )

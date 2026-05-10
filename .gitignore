@@ -24,7 +24,7 @@ utils/
 .makefile_update_check
 .makefile_status
 .modules
-**/global-resources
+**/global_resources
 **/archive
 
 
