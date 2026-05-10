@@ -68,6 +68,16 @@ if (APP_LOCAL_RESOURCES)
     endif ()
 endif ()
 
+if (APP_GLOBAL_RESOURCES)
+    if (APPLE AND APP_TYPE MATCHES "Executable")
+        # macOS bundle: resources live inside Contents/Resources
+        set(GLOBAL_RESOURCES_DIR "${APP_NAME}.app/Contents/Resources")
+    else ()
+        # Linux / Windows: standard share layout (CMAKE_INSTALL_DATADIR is already relative)
+        set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    endif ()
+endif ()
+
 # Generate the app.yaml body first (without checksum)
 message(STATUS "APP_YAML_TEMPLATE_PATH = ${APP_YAML_TEMPLATE_PATH}")
 message(STATUS "is file = $<BOOL:$<IS_FILE:${APP_YAML_TEMPLATE_PATH}>>")
