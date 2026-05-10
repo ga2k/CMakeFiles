@@ -322,6 +322,20 @@ function(addLibrary)
                 endif()
                 # Toolchain-provided sysroot/system-include flags (e.g. -nostdinc + -isystem)
                 separate_arguments(_hs_pch_cxx_flags UNIX_COMMAND "${CMAKE_CXX_FLAGS}")
+                # Directory-level compile definitions (e.g. _UCRT, _WIN32_WINNT from toolchain
+                # add_compile_definitions — not in CMAKE_CXX_FLAGS)
+                get_directory_property(_hs_pch_dir_defs COMPILE_DEFINITIONS)
+                set(_hs_pch_dir_D "")
+                foreach(_def IN LISTS _hs_pch_dir_defs)
+                    if(_def)
+                        if(NOT "${_def}" MATCHES "^-D")
+                            list(APPEND _hs_pch_dir_D "-D${_def}")
+                        else()
+                            list(APPEND _hs_pch_dir_D "${_def}")
+                        endif()
+                    endif()
+                endforeach()
+                unset(_hs_pch_dir_defs)
                 file(MAKE_DIRECTORY "${_hs_pch_dir}")
                 add_custom_command(
                     OUTPUT  "${_hs_pch_bin}"
@@ -335,6 +349,7 @@ function(addLibrary)
                             "-D_DLL" "-D_MT"
                             "-Xclang"
                             "$<IF:$<CONFIG:Debug>,--dependent-lib=msvcrtd,--dependent-lib=msvcrt>"
+                            ${_hs_pch_dir_D}
                             ${_hs_wx_D}
                             ${_hs_wx_I}
                             ${HS_wxCompilerOptions}
@@ -351,6 +366,7 @@ function(addLibrary)
                 )
                 unset(_hs_pch_target_flag)
                 unset(_hs_pch_cxx_flags)
+                unset(_hs_pch_dir_D)
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
                 install(FILES "${_hs_pch_bin}" DESTINATION "lib/cmake/pch/${APP_VENDOR}")
             endif()
