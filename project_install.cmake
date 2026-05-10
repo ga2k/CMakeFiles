@@ -379,12 +379,21 @@ function(project_install _Folder)
 
     # Win32: aux DLLs built by third-party (e.g. wx's webp/sharpyuv) land in
     # OUTPUT_DIR/bin/ but are not CMake install(TARGETS) — copy them flat to bin/.
+    # When cross-compiling, dependency DLLs are staged to STAGE_DIR/bin/ by their
+    # own builds (Core, Gfx), so scan both locations.
     if (WIN32)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/"
                 DESTINATION "${CMAKE_INSTALL_BINDIR}"
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.dll"
         )
+        if (CMAKE_CROSSCOMPILING AND DEFINED STAGE_DIR)
+            install(DIRECTORY "${STAGE_DIR}/${CMAKE_INSTALL_BINDIR}/"
+                    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                    COMPONENT ${APP_NAME}Runtime
+                    FILES_MATCHING PATTERN "*.dll"
+            )
+        endif()
     endif()
 
     # Linux: aux shared libs built by third-party (e.g. wx's libwxwebp/libwxsharpyuv) land in
