@@ -514,18 +514,25 @@ class CppGroupGenerator:
         for fname, fdef in functions_all.items():
             args = fdef['args']
             ret = fdef['return']
-            body = fdef['body'].replace('\r\n', '\n').replace('\r', '\n')
-            body_lines = body.split('\n')
-            indented_body = '\n'.join(f"      {line}" if line else "" for line in body_lines)
+            body = fdef['body']
             const_suffix = " const" if fdef['const'] else ""
             static_prefix = "static " if fdef['static'] else ""
             override_suffix = " override" if fdef['override'] else ""
             noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
-            fn_text = (
-                f"   {static_prefix}auto {fname} ({args}){const_suffix}{noexcept_suffix} -> {ret}{override_suffix} {{\n"
-                f"{indented_body}"
-                f"   }}"
-            )
+            if body is None:
+                fn_text = (
+                    f"   {static_prefix}auto {fname} ({args})"
+                    f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix};"
+                )
+            else:
+                body = body.replace('\r\n', '\n').replace('\r', '\n')
+                body_lines = body.split('\n')
+                indented_body = '\n'.join(f"      {line}" if line else "" for line in body_lines)
+                fn_text = (
+                    f"   {static_prefix}auto {fname} ({args}){const_suffix}{noexcept_suffix} -> {ret}{override_suffix} {{\n"
+                    f"{indented_body}"
+                    f"   }}"
+                )
             access_groups[fdef['access']].append(fn_text)
 
         def format_access_block(access_name: str, fns: List[str]) -> str:
@@ -673,6 +680,12 @@ class CppGroupGenerator:
                 code.append(f"}}")
 
         code.append(f"}} // namespace {ns}")
+
+        # Write _impl.cpp stub for any declaration-only functions (no body: key in YAML)
+        stub_fns = {n: d for n, d in functions_all.items() if d['body'] is None}
+        if stub_fns:
+            self._write_impl_stub(yaml_file, cpp_class, export_module, ns, stub_fns)
+
         return "\n".join(code)
 
     def generate_control_creation(self, group_name: str, elements: Any, layout_path: str, yaml_file: Path,
@@ -2064,7 +2077,8 @@ class CppGroupGenerator:
             fdef.setdefault('args', '')
             fdef.setdefault('return', 'void')
             fdef.setdefault('override', False)
-            fdef.setdefault('body', '')
+            if 'body' not in fdef:
+                fdef['body'] = None   # sentinel: declaration-only, stub needed
             fdef.setdefault('const', False)
             fdef.setdefault('static', False)
             fdef['access'] = access
@@ -2072,6 +2086,45 @@ class CppGroupGenerator:
             normalized[fname] = fdef
 
         return normalized
+
+    def _write_impl_stub(self, yaml_file: Path, class_name: str, module_name: str,
+                         ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
+        """Write a module implementation unit stub — only if it does not already exist."""
+        impl_dir = yaml_file.parent / "impl"
+        impl_dir.mkdir(exist_ok=True)
+        stub_path = impl_dir / f"{class_name}_impl.cpp"
+        if stub_path.exists():
+            return  # never overwrite hand-edited stubs
+
+        lines = [
+            "module;",
+            "// Module implementation unit — add includes your implementation needs.",
+            '#include "Core/Core.h"',
+            "#include <wx/wx.h>",
+            "",
+            f"module {module_name};",
+            "",
+            f"namespace {ns} {{",
+            "",
+        ]
+        for fname, fdef in stub_fns.items():
+            args            = fdef['args']
+            ret             = fdef['return']
+            const_suffix    = " const"    if fdef['const']    else ""
+            override_suffix = " override" if fdef['override'] else ""
+            noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
+            lines.append(
+                f"auto {class_name}::{fname} ({args})"
+                f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix} {{"
+            )
+            lines.append("    // TODO: implement")
+            lines.append("}")
+            lines.append("")
+        lines.append(f"}} // namespace {ns}")
+        lines.append("")
+
+        stub_path.write_text("\n".join(lines), encoding="utf-8")
+        print(f"{stub_path} : Created (stub)")
 
     def _format_noexcept(self, spec: Any) -> str:
         if spec is True:
