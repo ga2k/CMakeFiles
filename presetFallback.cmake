@@ -17,10 +17,10 @@
 macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
 
     # --- Validate arguments ---
-    if(NOT ${ARG_HOST_TYPE} MATCHES "Linux" AND NOT ${ARG_HOST_TYPE} MATCHES "MacOS"
+    if(NOT ${ARG_HOST_TYPE} MATCHES "Linux" AND NOT ${ARG_HOST_TYPE} MATCHES "macOS"
         AND NOT ${ARG_HOST_TYPE} MATCHES "Windows" AND NOT ${ARG_HOST_TYPE} MATCHES "WinX"
     )
-        message(FATAL_ERROR "fixPresetMess: \"ARG_HOST_TYPE\" must be 'Linux', ''MacOS', ''Windows', or ''WinX', got '${ARG_BUILD_TYPE}'")
+        message(FATAL_ERROR "fixPresetMess: \"ARG_HOST_TYPE\" must be 'Linux', ''macOS', ''Windows', or ''WinX', got '${ARG_BUILD_TYPE}'")
     endif()
     if(NOT ${ARG_BUILD_TYPE} MATCHES "Debug" AND NOT ${ARG_BUILD_TYPE} MATCHES "Release")
         message(FATAL_ERROR "fixPresetMess: \"ARG_BUILD_TYPE\" must be 'Debug' or 'Release', got '${ARG_BUILD_TYPE}'")
@@ -83,13 +83,13 @@ macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
         # --- CACHE vars (macOS base) ---
         set(CMAKE_C_COMPILER        "/opt/homebrew/opt/llvm/bin/clang"   CACHE STRING "" FORCE)
         set(CMAKE_CXX_COMPILER      "/opt/homebrew/opt/llvm/bin/clang++" CACHE STRING "" FORCE)
-        set(CMAKE_OSX_SYSROOT       "macosx"                             CACHE STRING "" FORCE)
+        set(CMAKE_OSX_SYSROOT       "macOSx"                             CACHE STRING "" FORCE)
         set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0"                           CACHE STRING "" FORCE)
         set(CMAKE_SHARED_LINKER_FLAGS
-            "-L/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++abi.dylib"
+            "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib"
             CACHE STRING "" FORCE)
         set(CMAKE_EXE_LINKER_FLAGS
-            "-L/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/21.1.5/lib/c++ /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/21.1.5/lib/c++/libc++abi.dylib"
+            "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib"
             CACHE STRING "" FORCE)
         set(BUILD_WX_FROM_SOURCE    "ON"                                 CACHE BOOL   "" FORCE)
 
