@@ -7,7 +7,7 @@
 #
 # REQUIRES: global.cmake must be included before this file.
 #
-# FUNCTIONS:
+#   globalInit([namespace])             — initialize a namespace for globals (uses UUID if none provided)
 #   globalInspect([varName...])          — pretty-print one or more named globals
 #   globalDumpAll([FILTER <regex>])      — dump every HS_OBJ:: global currently registered
 #   globalSnapshot(<label>)             — save the current state of all globals
@@ -381,6 +381,30 @@ endfunction()
 
 
 # ==================================================================================================
+# globalInit([namespace])
+#
+#   Initializes the current namespace for HS_OBJ globals.
+#   If [namespace] is omitted, a random UUID is generated.
+# ==================================================================================================
+function(globalInit)
+    if (ARGC GREATER 0)
+        set(_ns "${ARGV0}")
+    else ()
+        # Generate a UUID. string(UUID) requires a namespace UUID.
+        # Using a fixed DNS namespace UUID: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+        string(TIMESTAMP _ts "%Y%m%d%H%M%S%f")
+        string(UUID _ns
+                NAMESPACE 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+                NAME "${_ts}"
+                TYPE SHA1
+        )
+    endif ()
+    set_property(GLOBAL PROPERTY HS_OBJ_CURRENT_NAMESPACE "${_ns}")
+    message(STATUS "[HS_OBJ] Global namespace initialized: ${_ns}")
+endfunction()
+
+
+# ==================================================================================================
 # Global object store
 #   - One object (string) per handle (variable name)
 #   - Backed by GLOBAL properties, not cache, so no scoping headaches
@@ -389,8 +413,12 @@ function(globalObjKey varName outKey)
     if (NOT varName OR "${varName}" STREQUAL "")
         message(FATAL_ERROR "globalObjKey: varName is required")
     endif ()
+
+    get_property(_ns GLOBAL PROPERTY HS_OBJ_CURRENT_NAMESPACE)
     if ("${varName}" MATCHES "^HS_OBJ::.*")
         set(${outKey} "${varName}" PARENT_SCOPE)
+    elseif (_ns AND NOT "${varName}" MATCHES "^HS_(ABS|HNDL)_")
+        set(${outKey} "HS_OBJ::${_ns}::${varName}" PARENT_SCOPE)
     else ()
         set(${outKey} "HS_OBJ::${varName}" PARENT_SCOPE)
     endif ()
