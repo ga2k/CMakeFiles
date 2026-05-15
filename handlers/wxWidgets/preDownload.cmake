@@ -58,7 +58,7 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
         "src/jpeg|libjpeg-turbo|jconfig.h"
         "3rdparty/pcre|pcre|CMakeLists.txt"
         "3rdparty/nanosvg|nanosvg|CMakeLists.txt"
-        "3rdparty/libwebp|libwebp|CMakeLists.txt"
+        #    "3rdparty/libwebp|libwebp|CMakeLists.txt"
         "3rdparty/lunasvg|lunasvg|CMakeLists.txt"
     )
     foreach (_wx_sub IN LISTS _wx_submodules)
