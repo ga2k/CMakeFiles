@@ -161,11 +161,6 @@
         "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
         "CMAKE_SHARED_LINKER_FLAGS": "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
         "CMAKE_EXE_LINKER_FLAGS":    "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
-        "OPENSSL_ROOT_DIR": "/opt/local",
-        "OPENSSL_PATH": "/opt/local/libexec/openssl3/lib/cmake/OpenSSL",
-        "OPENSSL_INCLUDE_DIR": "/opt/local/include/openssl-3",
-        "OPENSSL_CRYPTO_LIBRARY": "/opt/local/lib/openssl-3/libcrypto.dylib",
-        "OPENSSL_SSL_LIBRARY": "/opt/local/lib/openssl-3/libssl.dylib",
         "BUILD_WX_FROM_SOURCE": "ON"
       }
     },
