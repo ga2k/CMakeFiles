@@ -100,14 +100,19 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     # Also strip "Core" if we are in "Gfx" (prevents double-definition when find_package(Core) is also called)
     if("@APP_NAME@" STREQUAL "Gfx")
         list(APPEND _targets_to_strip "Core")
+        list(APPEND _targets_to_strip "WebP::sharpyuv" "WebP::webp" "WebP::webpdemux")
     endif()
 
     foreach(_target IN LISTS _targets_to_strip)
         # 1. Strip the add_library block (matches any namespace, e.g. HoffSoft::)
-        string(REGEX REPLACE "\n# Create imported target [^\n]*::${_target}\nadd_library\\([^\n]*::${_target} [^\n]*\\)\n" "\n" outvar "${outvar}")
+        # Use a more flexible regex that handles both "::Target" and "Target"
+        string(REGEX REPLACE "\n# Create imported target ([^\n]*::)?${_target}\nadd_library\\(([^\n]*::)?${_target} [^\n]*\\)\n" "\n" outvar "${outvar}")
 
         # 2. Strip the set_target_properties block (multi-line) — vendor-namespaced form
         string(FIND "${outvar}" "set_target_properties(@APP_VENDOR@::${_target} PROPERTIES" _start)
+        if(_start EQUAL -1)
+            string(FIND "${outvar}" "set_target_properties(${_target} PROPERTIES" _start)
+        endif()
         if(NOT _start EQUAL -1)
             string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
             string(FIND "${_remaining}" "\n)\n" _rel_end)
@@ -146,8 +151,25 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
             unset(_remaining)
         endif()
 
+        # Handle simple name form for 3rd-party targets like WebP::webp
+        string(FIND "${outvar}" "set_target_properties(${_target} PROPERTIES" _start)
+        if(NOT _start EQUAL -1)
+            string(SUBSTRING "${outvar}" ${_start} -1 _remaining)
+            string(FIND "${_remaining}" "\n)\n" _rel_end)
+            if(NOT _rel_end EQUAL -1)
+                math(EXPR _end "${_start} + ${_rel_end} + 3")
+                string(SUBSTRING "${outvar}" 0 ${_start} _prefix)
+                string(SUBSTRING "${outvar}" ${_end} -1 _suffix)
+                set(outvar "${_prefix}${_suffix}")
+            endif()
+            unset(_remaining)
+        endif()
+
         # 3. Strip target_sources blocks (multi-line)
         string(FIND "${outvar}" "target_sources(@APP_VENDOR@::${_target}" _sources_start)
+        if(_sources_start EQUAL -1)
+            string(FIND "${outvar}" "target_sources(${_target}" _sources_start)
+        endif()
         if(NOT _sources_start EQUAL -1)
             string(SUBSTRING "${outvar}" 0 ${_sources_start} _prefix_sources)
             string(FIND "${_prefix_sources}" "if(NOT CMAKE_VERSION" _if_start REVERSE)
@@ -167,6 +189,10 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
         # 4. Remove from the _cmake_expected_targets list in the protector block
         string(REPLACE "@APP_VENDOR@::${_target}" "" outvar "${outvar}")
         string(REPLACE "${_target}::${_target}" "" outvar "${outvar}")
+        string(REPLACE "\"${_target}\"" "" outvar "${outvar}")
+        # Handle cases where the target is in a semicolon-separated list in set_target_properties
+        string(REPLACE "${_target};" "" outvar "${outvar}")
+        string(REPLACE ";${_target}" "" outvar "${outvar}")
     endforeach()
     # Clean up any double spaces or leading/trailing semicolons in the expected targets list
     string(REPLACE "  " " " outvar "${outvar}")
