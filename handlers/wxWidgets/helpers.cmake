@@ -13,7 +13,9 @@ function(wxWidgets_set_build_options)
     set(wxUSE_LEXILLA      OFF CACHE BOOL "" FORCE)
     set(wxUSE_SCINTILLA    OFF CACHE BOOL "" FORCE)
     set(wxUSE_STC          OFF CACHE BOOL "" FORCE)
+    set(wxUSE_LIBWEBP      OFF CACHE BOOL "" FORCE)
     set(wxUSE_UNICODE       ON CACHE BOOL "" FORCE)
+
     # @formatter:on
     if (LINUX)
         set(wxBUILD_TOOLKIT "gtk3" CACHE STRING "" FORCE)
