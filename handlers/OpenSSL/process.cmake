@@ -26,7 +26,7 @@ function(OpenSSL_process incs libs defs)
 #                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
 #        )
 
-        set(librariesList     ${_LibrariesList}     OpenSSL::SSL OpenSSL::Crypto)
+        set(librariesList     ${_LibrariesList}     ${OPENSSL_LIBRARIES})
         set(includePathsList  ${_IncludePathsList}  ${OPENSSL_INCLUDE_DIR})
         set(_LibrariesList    ${librariesList}      PARENT_SCOPE)
         set(_IncludePathsList ${includePathsList}   PARENT_SCOPE)
