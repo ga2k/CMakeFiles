@@ -4,36 +4,35 @@ function(OpenSSL_process incs libs defs)
         return()
     endif ()
 
-    find_package(OpenSSL)
+    # Try to find OpenSSL, prioritizing common macOS locations if on Apple
+    if (APPLE)
+        # Prefer Homebrew paths
+        list(APPEND OPENSSL_HINTS 
+            /opt/homebrew 
+            /usr/local/opt/openssl 
+            /usr/local
+        )
+    endif()
+
+    find_package(OpenSSL CONFIG HINTS ${OPENSSL_HINTS})
     if (OpenSSL_FOUND)
+        include("${OpenSSL_CONFIG}")
         msg("OpenSSL was found : OPENSSL_LIBRARIES=${OPENSSL_LIBRARIES}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}")
+        message("Using installed system OpenSSL libraries")
 
-#        get_cmake_property(_vars VARIABLES)
-#        foreach(_v ${_vars})
-#            if(_v MATCHES "^[Oo][Pp].*")
-#                message(STATUS "${_v} = ${${_v}}")
-#            endif()
-#        endforeach()
+        # Use targets for better portability and to trigger find_dependency in exported config
+        if (TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
+            set(librariesList     ${_LibrariesList}     OpenSSL::SSL OpenSSL::Crypto)
+        else()
+            # Fallback to absolute paths if targets are not available
+            set(librariesList     ${_LibrariesList}     ${OPENSSL_LIBRARIES})
+        endif()
 
-#        set_target_properties(OpenSSL::SSL PROPERTIES
-#                IMPORTED_LOCATION ${installDir}/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
-#                IMPORTED_IMPLIB ${installDir}/lib/libssl${CMAKE_LINK_LIBRARY_SUFFIX}
-#                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
-#        )
-#        set_target_properties(OpenSSL::Crypto PROPERTIES
-#                IMPORTED_LOCATION ${installDir}/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
-#                IMPORTED_IMPLIB ${installDir}/lib/libcrypto${CMAKE_LINK_LIBRARY_SUFFIX}
-#                INTERFACE_INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR}
-#        )
-
-        set(librariesList     ${_LibrariesList}     ${OPENSSL_LIBRARIES})
         set(includePathsList  ${_IncludePathsList}  ${OPENSSL_INCLUDE_DIR})
         set(_LibrariesList    ${librariesList}      PARENT_SCOPE)
         set(_IncludePathsList ${includePathsList}   PARENT_SCOPE)
         set(HANDLED           ON                    PARENT_SCOPE)
-
-
-
+        return()
     else ()
         msg("OpenSSL was NOT found")
     endif ()
@@ -72,16 +71,6 @@ function(OpenSSL_process incs libs defs)
             set (_LibrariesList    "${libs}"    PARENT_SCOPE)
             set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
             set (_IncludePathsList "${incs}"    config-Gfx PARENT_SCOPE)
-            set(HANDLED ON PARENT_SCOPE)
-            return()
-        endif ()
-    elseif (APPLE OR LINUX)
-        set(ENV{OPENSSL_DIR} "${OPENSSL_PATH}")
-        find_package(OpenSSL)
-        if(OpenSSL_FOUND)
-            message("Using installed system OpenSSL libraries")
-#            list(APPEND libs OpenSSL::SSL OpenSSL::Crypto)
-#            set (_LibrariesList "${libs}" PARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
             return()
         endif ()
