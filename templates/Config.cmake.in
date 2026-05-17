@@ -63,7 +63,23 @@ endif()
 
 set(_cmakedir "${_libdir}/cmake")
 
-if (GUI IN_LIST @APP_FEATURES@)
+set(_hs_available_features "@APP_FEATURES@")
+set(_hs_want_gui OFF)
+if(NOT @APP_NAME@_FIND_COMPONENTS)
+    if("GUI" IN_LIST _hs_available_features)
+        set(_hs_want_gui ON)
+    endif()
+elseif("GUI" IN_LIST @APP_NAME@_FIND_COMPONENTS)
+    if("GUI" IN_LIST _hs_available_features)
+        set(_hs_want_gui ON)
+    else()
+        set(@APP_NAME@_FOUND FALSE)
+        set(@APP_NAME@_NOT_FOUND_MESSAGE "@APP_NAME@ was built without GUI support")
+    endif()
+endif()
+unset(_hs_available_features)
+
+if (_hs_want_gui)
   # wxWidgets exposes OpenGL::GL/EGL/GLX in its link interface; ensure those targets
   # exist before GfxTarget.cmake (or any wx-bearing target file) is included.
   # OPTIONAL_COMPONENTS so this doesn't fail on platforms without EGL/GLX (e.g. macOS).
@@ -359,20 +375,17 @@ endif()
 # get wx symbols at runtime from the DLL and headers from the msvc include-dir block
 # above. Adding wx::wxmono to the INTERFACE on WIN32 would cause duplicate symbols.
 if(NOT WIN32)
-    set(_hs_app_features_for_wx "@APP_FEATURES@")
-    if("GUI" IN_LIST _hs_app_features_for_wx AND TARGET "@APP_VENDOR@::@APP_NAME@" AND TARGET wx::wxmono)
+    if(_hs_want_gui AND TARGET "@APP_VENDOR@::@APP_NAME@" AND TARGET wx::wxmono)
         set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
             INTERFACE_LINK_LIBRARIES "wx::wxmono")
     endif()
-    unset(_hs_app_features_for_wx)
 endif()
 
 # On WIN32, propagate the shared wx PCH to consumers so that all compilations
 # that import this target's BMIs use the same PCH binary, sharing Clang SLOC.
 # This prevents the "ran out of source locations" error (Clang 2GB SLOC limit).
 if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND TARGET "@APP_VENDOR@::@APP_NAME@")
-    set(_app_features "@APP_FEATURES@")
-    if("GUI" IN_LIST _app_features)
+    if(_hs_want_gui)
         set(_hs_pch_bin "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/pch/@APP_VENDOR@/wx_pch.gch")
         if(EXISTS "${_hs_pch_bin}")
             set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
@@ -380,7 +393,6 @@ if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND TARGET "@APP_VENDOR@::@AP
         endif()
         unset(_hs_pch_bin)
     endif()
-    unset(_app_features)
 endif()
 
 # Convenience variables
@@ -412,4 +424,5 @@ unset(_DEV_MODULE_EXPORT)
 unset(_DEV_MODULE_EXPORT_FILE)
 unset(_searchDirs)
 unset(_actualLibName)
+unset(_hs_want_gui)
 # @formatter:on
