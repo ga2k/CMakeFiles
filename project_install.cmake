@@ -452,6 +452,15 @@ function(project_install _Folder)
     if(APPLE AND APP_TYPE MATCHES "Executable")
 
         install(CODE "
+            # Helper to treat specific problematic libraries as system libraries so BundleUtilities
+            # doesn't fail when it can't resolve them (e.g. @rpath references to system-provided libs).
+            function(gp_resolved_file_type_override resolved_file type_var)
+                if(resolved_file MATCHES \"libunwind\\\\.1\\\\.dylib\")
+                    set(\${type_var} \"system\" PARENT_SCOPE)
+                    message(STATUS \"FixupBundle: treating ${resolved_file} as system library\")
+                endif()
+            endfunction()
+
             include(BundleUtilities)
 
             set(_bundle \"\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
@@ -460,9 +469,10 @@ function(project_install _Folder)
                 \"\${_bundle}/Contents/Frameworks/*.dylib\"
             )
 
-            # ONLY use install-tree search paths (no OUTPUT_DIR)
+            # Use install-tree search paths and include the bundle's own Frameworks dir
             set(_dirs
                 \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+                \"\${_bundle}/Contents/Frameworks\"
             )
 
             fixup_bundle(
