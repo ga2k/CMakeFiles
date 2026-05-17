@@ -5,7 +5,11 @@ include_guard(GLOBAL)
 # The SSL feature (METHOD "PROCESS") is listed after GFX in APP_FEATURES, so OpenSSL
 # is not yet found when find_package(Gfx) runs. Probe early with QUIET so that
 # OpenSSL::SSL/Crypto exist before GfxConfig.cmake executes.
-find_package(OpenSSL QUIET COMPONENTS SSL Crypto)
+if(APPLE)
+    find_package(OpenSSL QUIET COMPONENTS SSL Crypto HINTS /opt/homebrew /usr/local/opt/openssl /usr/local)
+else()
+    find_package(OpenSSL QUIET COMPONENTS SSL Crypto)
+endif()
 
 # CoreConfigVersion.cmake is an old-format targets file CMake 3.31+ loads during
 # find_package version-checking. It calls target_sources(HoffSoft::Core INTERFACE
