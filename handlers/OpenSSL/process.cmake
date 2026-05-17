@@ -17,7 +17,7 @@ function(OpenSSL_process incs libs defs)
     find_package(OpenSSL CONFIG HINTS ${OPENSSL_HINTS})
     if (OpenSSL_FOUND)
         include("${OpenSSL_CONFIG}")
-        msg("OpenSSL was found : OPENSSL_LIBRARIES=${OPENSSL_LIBRARIES}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}")
+        msg("OpenSSL was found : OPENSSL_LIBRARIES=${OpenSSL_LIBRARIES}, OPENSSL_INCLUDE_DIR=${OpenSSL_INCLUDE_DIR}")
         message("Using installed system OpenSSL libraries")
 
         # Use targets for better portability and to trigger find_dependency in exported config
