@@ -452,26 +452,71 @@ function(project_install _Folder)
     if(APPLE AND APP_TYPE MATCHES "Executable")
 
         install(CODE "
-            # Helper to treat specific problematic libraries as system libraries so BundleUtilities
-            # doesn't fail when it can't resolve them (e.g. @rpath references to system-provided libs).
+            # 1. Helper to treat specific problematic libraries as system libraries
             function(gp_resolved_file_type_override resolved_file type_var)
                 if(resolved_file MATCHES \"libunwind\\\\.1\\\\.dylib\")
                     set(\${type_var} \"system\" PARENT_SCOPE)
-                    message(STATUS \"FixupBundle: treating ${resolved_file} as system library\")
+                endif()
+            endfunction()
+
+            # 2. Override item resolution for problematic cases (libunwind, versioned dylibs)
+            function(gp_resolve_item_override context item exepath dirs resolved_item_var resolved_var)
+                if(item MATCHES \"libunwind\")
+                    set(\${resolved_item_var} \"/usr/lib/libunwind.1.dylib\" PARENT_SCOPE)
+                    set(\${resolved_var} 1 PARENT_SCOPE)
+                    return()
+                endif()
+
+                # Handle unversioned dylib references when only versioned ones are staged
+                get_filename_component(_macos_dir \"\${exepath}\" DIRECTORY)
+                get_filename_component(_contents_dir \"\${_macos_dir}\" DIRECTORY)
+                set(_fw_dir \"\${_contents_dir}/Frameworks\")
+                get_filename_component(_item_name \"\${item}\" NAME)
+                if(NOT EXISTS \"\${_fw_dir}/\${_item_name}\")
+                    string(REGEX REPLACE \"\\\\.dylib$\" \"\" _stem \"\${_item_name}\")
+                    file(GLOB _versioned \"\${_fw_dir}/\${_stem}.*.dylib\")
+                    if(_versioned)
+                        list(SORT _versioned)
+                        list(GET _versioned 0 _first)
+                        set(\${resolved_item_var} \"\${_first}\" PARENT_SCOPE)
+                        set(\${resolved_var} 1 PARENT_SCOPE)
+                    endif()
                 endif()
             endfunction()
 
             include(BundleUtilities)
 
-            set(_bundle \"\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
+            # Determine absolute bundle path, respecting DESTDIR
+            set(_bundle \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
 
-            file(GLOB_RECURSE _fw_libs
-                \"\${_bundle}/Contents/Frameworks/*.dylib\"
-            )
+            # 3. Pre-strip non-system absolute rpaths (silently)
+            # fixup_bundle calls install_name_tool -delete_rpath for every rpath found via otool.
+            # If an rpath was already removed but is still cached or reported, fixup_bundle fails.
+            # Doing it here with ERROR_QUIET ensures a clean state for fixup_bundle.
+            file(GLOB_RECURSE _all_staged
+                \"\${_bundle}/Contents/MacOS/*\"
+                \"\${_bundle}/Contents/Frameworks/*.dylib\")
+            foreach(_bin IN LISTS _all_staged)
+                if(NOT IS_SYMLINK \"\${_bin}\" AND NOT IS_DIRECTORY \"\${_bin}\")
+                    execute_process(COMMAND otool -l \"\${_bin}\"
+                        OUTPUT_VARIABLE _otool RESULT_VARIABLE _r ERROR_QUIET)
+                    if(_r EQUAL 0)
+                        string(REGEX MATCHALL \"path ([^\t\n ]+) \\\\(offset\" _matches \"\${_otool}\")
+                        foreach(_m IN LISTS _matches)
+                            string(REGEX REPLACE \"path ([^\t\n ]+) \\\\(offset\" \"\\\\1\" _rp \"\${_m}\")
+                            if(NOT _rp MATCHES \"^@\" AND NOT _rp MATCHES \"^/usr/lib\" AND NOT _rp MATCHES \"^/System\")
+                                execute_process(COMMAND install_name_tool -delete_rpath \"\${_rp}\" \"\${_bin}\"
+                                    ERROR_QUIET)
+                            endif()
+                        endforeach()
+                    endif()
+                endif()
+            endforeach()
 
-            # Use install-tree search paths and include the bundle's own Frameworks dir
+            file(GLOB_RECURSE _fw_libs \"\${_bundle}/Contents/Frameworks/*.dylib\")
             set(_dirs
                 \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
+                \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
                 \"\${_bundle}/Contents/Frameworks\"
             )
 
