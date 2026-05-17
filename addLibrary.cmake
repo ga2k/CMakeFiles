@@ -209,6 +209,14 @@ function(addLibrary)
         set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
     endif ()
 
+    # SO_VERSION may be empty if framework.cmake ran before AppSpecific.cmake set APP_VERSION
+    # (include_guard fires before per-library setup). Derive from arg_VERSION as a fallback.
+    set(_hs_so_ver "${SO_VERSION}")
+    if(NOT _hs_so_ver AND arg_VERSION)
+        SplitAt("${arg_VERSION}" "." _hs_so_ver _hs_so_dc)
+        unset(_hs_so_dc)
+    endif()
+
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
             CXX_EXTENSIONS              OFF
@@ -218,9 +226,10 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
-            SOVERSION                   "${SO_VERSION}"
+            SOVERSION                   "${_hs_so_ver}"
             VERSION                     "${arg_VERSION}"
     )
+    unset(_hs_so_ver)
 
     if (APP_TYPE STREQUAL Executable)
         set_target_properties(${arg_NAME} PROPERTIES NO_SONAME ON)
