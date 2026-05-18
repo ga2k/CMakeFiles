@@ -432,12 +432,16 @@ function(project_install _Folder)
             # Copy resources into the build-tree bundle at build time so the
             # complete .app (binary + resources) is staged as a unit by
             # install(TARGETS ... BUNDLE DESTINATION .).
-            add_custom_command(TARGET ${APP_NAME} POST_BUILD
+            # add_custom_command(TARGET) requires the same directory as the
+            # target, so use add_custom_target + add_dependencies instead.
+            add_custom_target(${APP_NAME}_copy_resources ALL
                 COMMAND ${CMAKE_COMMAND} -E copy_directory
                         "${LOCAL_RES_SRC}"
                         "$<TARGET_BUNDLE_CONTENT_DIR:${APP_NAME}>/Resources"
                 COMMENT "Copying resources into ${APP_NAME}.app"
+                VERBATIM
             )
+            add_dependencies(${APP_NAME}_copy_resources ${APP_NAME})
         else()
             install(DIRECTORY "${LOCAL_RES_SRC}/"
                     DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
