@@ -440,8 +440,8 @@ function(project_install _Folder)
     endif()
 
     if(APP_GLOBAL_RESOURCES)
-        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/global_resources/"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}"
+        install(DIRECTORY "${_global_resources_src}/"
+            DESTINATION "${GLOBAL_RESOURCES_DIR}"
         )
     endif()
 

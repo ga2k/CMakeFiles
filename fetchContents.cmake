@@ -9,6 +9,13 @@ macro(_initializeVars)
     # @formatter:off
     set(FETCHCONTENT_QUIET OFF)
 
+    # __alreadyLocated is CACHE INTERNAL so it persists across reconfigures.
+    # Clear it here so each configure session starts fresh — stale entries would
+    # cause scanLibraryTargets to skip libs already seen in a prior configure,
+    # leaving yaml-cpp / magic_enum / eventpp / wxWidgets out of
+    # combinedLibraryComponents and triggering unnecessary FetchContent rebuilds.
+    set(__alreadyLocated "" CACHE INTERNAL "" FORCE)
+
     set(_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList})
     set(_DefinesList        ${${AUE_PREFIX}_DefinesList})
     set(_DependenciesList   ${${AUE_PREFIX}_DependenciesList})
