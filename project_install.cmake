@@ -429,9 +429,15 @@ function(project_install _Folder)
 
     if(APP_LOCAL_RESOURCES)
         if(APPLE AND APP_TYPE MATCHES "Executable")
-            install(DIRECTORY "${LOCAL_RES_SRC}/"
-                    DESTINATION "${_res_dest}"
-                    COMPONENT ${APP_NAME})
+            # Copy resources into the build-tree bundle at build time so the
+            # complete .app (binary + resources) is staged as a unit by
+            # install(TARGETS ... BUNDLE DESTINATION .).
+            add_custom_command(TARGET ${APP_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        "${LOCAL_RES_SRC}"
+                        "$<TARGET_BUNDLE_CONTENT_DIR:${APP_NAME}>/Resources"
+                COMMENT "Copying resources into ${APP_NAME}.app"
+            )
         else()
             install(DIRECTORY "${LOCAL_RES_SRC}/"
                     DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
