@@ -71,7 +71,7 @@ endif ()
 if (APP_GLOBAL_RESOURCES)
     if (APPLE AND APP_TYPE MATCHES "Executable")
         # macOS bundle: resources live inside Contents/Resources
-        set(GLOBAL_RESOURCES_DIR "${APP_NAME}.app/Contents/Resources")
+        set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
     else ()
         # Linux / Windows: standard share layout (CMAKE_INSTALL_DATADIR is already relative)
         set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
