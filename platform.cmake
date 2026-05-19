@@ -43,7 +43,7 @@ if (APPLE)
         list(APPEND extra_LibrariesList ${OBJC_LIBRARY})
     endif ()
 
-    add_compile_options(-gline-tables-only)
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:-gline-tables-only>)
 
 elseif (LINUX)
 
