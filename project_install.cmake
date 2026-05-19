@@ -509,7 +509,11 @@ function(project_install _Folder)
                 list(GET _unwind_candidates -1 _unwind_src)
                 set(_unwind_dst \"\${_fw_dir}/libunwind.1.dylib\")
                 if(NOT EXISTS \"\${_unwind_dst}\")
-                    file(COPY \"\${_unwind_src}\" DESTINATION \"\${_fw_dir}\")
+                    # Resolve the symlink (libunwind.1.dylib -> libunwind.1.0.dylib)
+                    # before copying — file(COPY) would copy the symlink itself,
+                    # leaving a dangling relative target in the bundle.
+                    file(REAL_PATH \"\${_unwind_src}\" _unwind_real)
+                    configure_file(\"\${_unwind_real}\" \"\${_unwind_dst}\" COPYONLY)
                 endif()
                 # Give it a proper @executable_path install name
                 execute_process(COMMAND install_name_tool -id
