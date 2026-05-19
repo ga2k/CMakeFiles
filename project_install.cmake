@@ -36,7 +36,7 @@ function(project_install _Folder)
                     ${APP_GENERATE_RECORDSETS}
                     ${APP_NAME})
         endif ()
-        if("${APP_TYPE}" MATCHES "Executable")
+        if ("${APP_TYPE}" MATCHES "Executable")
             set(EXPORTS_VAR "")
         else ()
             set(EXPORTS_VAR ${APP_NAME}_EXPORTS)
@@ -56,23 +56,23 @@ function(project_install _Folder)
     message(STATUS "Install(${APP_NAME}): HS_DependenciesList = [${HS_DependenciesList}]")
 
     set(_hs_install_targets "")
-    foreach(_t IN LISTS HS_DependenciesList)
-        if(NOT TARGET ${_t})
+    foreach (_t IN LISTS HS_DependenciesList)
+        if (NOT TARGET ${_t})
             message(STATUS "Install(${APP_NAME}): skipping missing target '${_t}'")
             continue()
-        endif()
+        endif ()
 
         get_target_property(_t_alias ${_t} ALIASED_TARGET)
-        if(_t_alias)
+        if (_t_alias)
             message(STATUS "Install(${APP_NAME}): resolving alias '${_t}' -> '${_t_alias}'")
             set(_t "${_t_alias}")
-        endif()
+        endif ()
 
         get_target_property(_imported ${_t} IMPORTED)
-        if(_imported)
+        if (_imported)
             message(STATUS "Install(${APP_NAME}): skipping IMPORTED target '${_t}'")
             continue()
-        endif()
+        endif ()
 
         # Skip targets that ship their own cmake install(EXPORT) set.
         # These packages call install(EXPORT <pkg>-targets ...) in their own CMakeLists.txt,
@@ -81,22 +81,22 @@ function(project_install _Folder)
         # generate phase — after this code runs — making filesystem-based detection unreliable
         # on fresh configures. Use a fixed list instead.
         set(_hs_self_exporting_targets "fmt")
-        if(_t IN_LIST _hs_self_exporting_targets)
+        if (_t IN_LIST _hs_self_exporting_targets)
             message(STATUS "Install(${APP_NAME}): skipping self-exporting target '${_t}'")
             unset(_hs_self_exporting_targets)
             continue()
-        endif()
+        endif ()
         unset(_hs_self_exporting_targets)
 
         list(APPEND _hs_install_targets ${_t})
 
-    endforeach()
+    endforeach ()
 
     # Remove already claimed targets
     get_property(_hs_claimed GLOBAL PROPERTY HS_INSTALLED_TARGETS)
-    if(_hs_claimed)
+    if (_hs_claimed)
         list(REMOVE_ITEM _hs_install_targets ${_hs_claimed})
-    endif()
+    endif ()
     unset(_hs_claimed)
     set_property(GLOBAL APPEND PROPERTY HS_INSTALLED_TARGETS ${APP_NAME} ${_hs_install_targets})
 
@@ -106,85 +106,85 @@ function(project_install _Folder)
     # 2. Platform install layout
     # ============================================================
 
-    if(APPLE AND APP_TYPE MATCHES "Executable")
+    if (APPLE AND APP_TYPE MATCHES "Executable")
         set(_bundle "${APP_NAME}.app")
         set(_hs_lib_dest "${_bundle}/Contents/Frameworks")
         set(_hs_bin_dest "${_bundle}/Contents/MacOS")
         set(_res_dest "${_bundle}/Contents/Resources")
-    else()
+    else ()
         set(_hs_lib_dest ${CMAKE_INSTALL_LIBDIR})
         set(_hs_bin_dest ${CMAKE_INSTALL_BINDIR})
         set(_res_dest ${CMAKE_INSTALL_DATADIR})
-    endif()
+    endif ()
 
     # Compute early so the desktop-files glob and resources section both have it.
-    if(APP_LOCAL_RESOURCES)
+    if (APP_LOCAL_RESOURCES)
         set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${APP_LOCAL_RESOURCES}")
-    endif()
+    endif ()
 
-     # @formatting:off
-     if (APP_GLOBAL_RESOURCES)
-         set(_global_resources_src "${CMAKE_SOURCE_DIR}/global_resources")
-         file(MAKE_DIRECTORY "${_global_resources_src}")
+    # @formatting:off
+    if (APP_GLOBAL_RESOURCES)
+        set(_global_resources_src "${CMAKE_SOURCE_DIR}/global_resources")
+        file(MAKE_DIRECTORY "${_global_resources_src}")
 
-         # Prefix-relative path embedded in app.yaml — resolved at runtime from the
-         # inferred install prefix (exe dir parent, or bundle parent on macOS).
-         if(APPLE)
-             set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
-         else()
-             # Linux / Windows: CMAKE_INSTALL_DATADIR is already prefix-relative (e.g. "share")
-             set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
-         endif()
+        # Prefix-relative path embedded in app.yaml — resolved at runtime from the
+        # inferred install prefix (exe dir parent, or bundle parent on macOS).
+        if (APPLE)
+            set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+        else ()
+            # Linux / Windows: CMAKE_INSTALL_DATADIR is already prefix-relative (e.g. "share")
+            set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+        endif ()
 
-         if (NOT TARGET GlobalResourcesRepo)
-             ExternalProject_Add(GlobalResourcesRepo
-                     GIT_REPOSITORY      "${APP_GLOBAL_RESOURCES}"
-                     GIT_TAG             master
-                     GIT_SHALLOW         TRUE
-                     UPDATE_DISCONNECTED TRUE
-                     CONFIGURE_COMMAND   ""
-                     BUILD_COMMAND       ""
-                     INSTALL_COMMAND     ""
-                     TEST_COMMAND        ""
-                     SOURCE_DIR          "${_global_resources_src}"
-                     BUILD_BYPRODUCTS    "${_global_resources_src}/.fetched"
-                     COMMAND             ${CMAKE_COMMAND} -E touch "${_global_resources_src}/.fetched"
-             )
-         endif ()
+        if (NOT TARGET GlobalResourcesRepo)
+            ExternalProject_Add(GlobalResourcesRepo
+                    GIT_REPOSITORY "${APP_GLOBAL_RESOURCES}"
+                    GIT_TAG master
+                    GIT_SHALLOW TRUE
+                    UPDATE_DISCONNECTED TRUE
+                    CONFIGURE_COMMAND ""
+                    BUILD_COMMAND ""
+                    INSTALL_COMMAND ""
+                    TEST_COMMAND ""
+                    SOURCE_DIR "${_global_resources_src}"
+                    BUILD_BYPRODUCTS "${_global_resources_src}/.fetched"
+                    COMMAND ${CMAKE_COMMAND} -E touch "${_global_resources_src}/.fetched"
+            )
+        endif ()
 
-         add_custom_target(${APP_NAME}fetch_resources DEPENDS GlobalResourcesRepo)
-         if (TARGET ${APP_NAME})
-             add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
-         endif ()
-     endif ()
-     # @formatting:on
+        add_custom_target(${APP_NAME}fetch_resources DEPENDS GlobalResourcesRepo)
+        if (TARGET ${APP_NAME})
+            add_dependencies(${APP_NAME} ${APP_NAME}fetch_resources)
+        endif ()
+    endif ()
+    # @formatting:on
 
     # ============================================================
     # 3. Core install rules (single source of truth)
     # ============================================================
 
     # @formatting:off
-    install(TARGETS                 ${APP_NAME}
-                                    ${_hs_install_targets}
-            EXPORT                  ${APP_NAME}Target
-            LIBRARY                 DESTINATION ${_hs_lib_dest}                                              COMPONENT ${APP_NAME}
-            RUNTIME                 DESTINATION ${_hs_bin_dest}                                              COMPONENT ${APP_NAME}
-            ARCHIVE                 DESTINATION ${CMAKE_INSTALL_LIBDIR}                                      COMPONENT ${APP_NAME}
-            CXX_MODULES_BMI         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
-            FILE_SET CXX_MODULES    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}  COMPONENT ${APP_NAME}Development
-            FILE_SET HEADERS        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
-            FILE_SET headers        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                    COMPONENT ${APP_NAME}Development
-            INCLUDES                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
-            BUNDLE                  DESTINATION .
-            RESOURCE                ${resource_list}
+    install(TARGETS ${APP_NAME}
+            ${_hs_install_targets}
+            EXPORT ${APP_NAME}Target
+            LIBRARY DESTINATION ${_hs_lib_dest} COMPONENT ${APP_NAME}
+            RUNTIME DESTINATION ${_hs_bin_dest} COMPONENT ${APP_NAME}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${APP_NAME}
+            CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME} COMPONENT ${APP_NAME}Development
+            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME} COMPONENT ${APP_NAME}Development
+            FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR} COMPONENT ${APP_NAME}Development
+            FILE_SET headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR} COMPONENT ${APP_NAME}Development
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+            BUNDLE DESTINATION .
+            RESOURCE ${resource_list}
     )
 
-    install(DIRECTORY       "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}/CMakeFiles/${APP_NAME}.dir/"
-            DESTINATION     ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
-            COMPONENT       ${APP_NAME}Development
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${APP_NAME}/CMakeFiles/${APP_NAME}.dir/"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}
+            COMPONENT ${APP_NAME}Development
             FILES_MATCHING
-            PATTERN         "*.pcm"
-            PATTERN         "*.ifc"
+            PATTERN "*.pcm"
+            PATTERN "*.ifc"
     )
 
     # Build the find_dependency() block embedded into @APP_NAME@Config.cmake.
@@ -193,38 +193,38 @@ function(project_install _Folder)
     # targets when they include @APP_NAME@Target.cmake.
     set(_hs_fd_seen "")
     set(HS_FIND_DEPENDENCIES "")
-    foreach(_lib IN LISTS HS_LibrariesList)
+    foreach (_lib IN LISTS HS_LibrariesList)
         string(FIND "${_lib}" "::" _nsep)
-        if(_nsep LESS 0)
+        if (_nsep LESS 0)
             continue()
-        endif()
+        endif ()
         string(SUBSTRING "${_lib}" 0 ${_nsep} _ns)
-        if(_ns STREQUAL "${APP_VENDOR}")
+        if (_ns STREQUAL "${APP_VENDOR}")
             continue()
-        endif()
-        if(_ns IN_LIST _hs_fd_seen)
+        endif ()
+        if (_ns IN_LIST _hs_fd_seen)
             continue()
-        endif()
+        endif ()
         list(APPEND _hs_fd_seen "${_ns}")
 
-        if(_ns STREQUAL "SOCI")
+        if (_ns STREQUAL "SOCI")
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(SOCI CONFIG COMPONENTS Core SQLite3)\n")
-        elseif(_ns STREQUAL "OpenSSL")
+        elseif (_ns STREQUAL "OpenSSL")
             string(APPEND HS_FIND_DEPENDENCIES "if(APPLE)\n")
             string(APPEND HS_FIND_DEPENDENCIES "    find_dependency(OpenSSL COMPONENTS SSL Crypto HINTS /opt/homebrew /usr/local/opt/openssl /usr/local)\n")
             string(APPEND HS_FIND_DEPENDENCIES "else()\n")
             string(APPEND HS_FIND_DEPENDENCIES "    find_dependency(OpenSSL COMPONENTS SSL Crypto)\n")
             string(APPEND HS_FIND_DEPENDENCIES "endif()\n")
-        elseif(_ns STREQUAL "yaml-cpp")
+        elseif (_ns STREQUAL "yaml-cpp")
             # yaml-cpp is fully defined as HoffSoft::yaml-cpp in CoreTarget.cmake — no find_dependency needed
-        elseif(_ns STREQUAL "wxWidgets")
+        elseif (_ns STREQUAL "wxWidgets")
             # wxWidgets is handled separately via WX_Helper.cmake
-        elseif(_ns STREQUAL "Qt6")
+        elseif (_ns STREQUAL "Qt6")
             # Qt6 (orphaned — GTK is used instead)
-        else()
+        else ()
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_ns})\n")
-        endif()
-    endforeach()
+        endif ()
+    endforeach ()
     unset(_hs_fd_seen)
     unset(_lib)
     unset(_ns)
@@ -247,19 +247,19 @@ function(project_install _Folder)
     add_custom_target(${APP_NAME}WX_Helper SOURCES "${cmake_root}/templates/WX_Helper.cmake.in")
     add_dependencies(${APP_NAME} ${APP_NAME}WX_Helper)
 
-    install(FILES       "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
-                        "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
-                        "${OUTPUT_DIR}/WX_Helper.cmake"
+    install(FILES "${OUTPUT_DIR}/${APP_NAME}Config.cmake"
+            "${OUTPUT_DIR}/${APP_NAME}ConfigVersion.cmake"
+            "${OUTPUT_DIR}/WX_Helper.cmake"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
-            COMPONENT   ${APP_NAME}Development
+            COMPONENT ${APP_NAME}Development
     )
 
-    install(EXPORT                  ${APP_NAME}Target
-            FILE                    ${APP_NAME}Target.cmake
-            NAMESPACE               ${APP_VENDOR}::
-            DESTINATION             ${CMAKE_INSTALL_LIBDIR}/cmake
-            COMPONENT               ${APP_NAME}Development
-            CXX_MODULES_DIRECTORY   cxx/${APP_VENDOR}/${APP_NAME}
+    install(EXPORT ${APP_NAME}Target
+            FILE ${APP_NAME}Target.cmake
+            NAMESPACE ${APP_VENDOR}::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+            COMPONENT ${APP_NAME}Development
+            CXX_MODULES_DIRECTORY cxx/${APP_VENDOR}/${APP_NAME}
     )
 
     # Build-tree export: after each library build, install the Development component
@@ -268,20 +268,20 @@ function(project_install _Folder)
     # Uses cmake --install (which drives install(EXPORT)) rather than export(EXPORT)
     # because export(EXPORT) errors on transitive deps not in the export set
     # (e.g. wx sub-targets webp/webpdemux/sharpyuv), while install(EXPORT) is lenient.
-    if(APP_TYPE MATCHES "Library")
+    if (APP_TYPE MATCHES "Library")
         add_custom_target(${APP_NAME}_build_tree_export ALL
-            COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
-                    ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
-                    --prefix "${OUTPUT_DIR}"
-                    --component ${APP_NAME}Development
-            COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/cmake/post_process_export.cmake"
-                    "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
-                    "${APP_VENDOR}"
-            COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
-            VERBATIM
+                COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
+                ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
+                --prefix "${OUTPUT_DIR}"
+                --component ${APP_NAME}Development
+                COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/cmake/post_process_export.cmake"
+                "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
+                "${APP_VENDOR}"
+                COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
+                VERBATIM
         )
         add_dependencies(${APP_NAME}_build_tree_export ${APP_NAME})
-    endif()
+    endif ()
 
     # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
     # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
@@ -298,7 +298,7 @@ function(project_install _Folder)
     " COMPONENT ${APP_NAME}Development)
 
     # Install headers from 3rd-party libraries
-    foreach(pkg IN LISTS _hs_install_targets)
+    foreach (pkg IN LISTS _hs_install_targets)
         string(TOLOWER "${pkg}" pkglc)
 
         set(HANDLED OFF)
@@ -306,16 +306,16 @@ function(project_install _Folder)
         if (COMMAND "${fn}")
             SELECT(SrcDir AS S BuildDir AS B FROM unifiedFeatures WHERE PackageName = ${pkg})
             _hs_sql_field_to_user(S SRC_DIR)
-            if(NOT SRC_DIR)
+            if (NOT SRC_DIR)
                 set(SRC_DIR "${EXTERNALS_DIR}/${pkg}")
             endif ()
             _hs_sql_field_to_user(B BLD_DIR)
-            if(NOT BLD_DIR)
+            if (NOT BLD_DIR)
                 set(BLD_DIR "${BUILD_DIR}/${pkglc}-build")
             endif ()
             cmake_language(CALL "${fn}" "${pkg}" "${CMAKE_INSTALL_INCLUDEDIR}" "${SRC_DIR}" "${BLD_DIR}")
         endif ()
-        if(NOT HANDLED)
+        if (NOT HANDLED)
             if (EXISTS "${EXTERNALS_DIR}/${pkg}/include")
                 install(DIRECTORY "${EXTERNALS_DIR}/${pkg}/include/"
                         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
@@ -333,13 +333,13 @@ function(project_install _Folder)
                 unset(include_dir)
             endif ()
 
-            if(include_dir)
+            if (include_dir)
                 install(DIRECTORY "${include_dir}/"
                         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}"
                         COMPONENT ${APP_NAME}Development)
-            endif()
+            endif ()
         endif ()
-    endforeach()
+    endforeach ()
 
     if (APP_CREATES_PLUGINS)
         if (APPLE AND APP_TYPE MATCHES "Executable")
@@ -347,15 +347,15 @@ function(project_install _Folder)
         else ()
             set(_plugin_lib_dest "${CMAKE_INSTALL_LIBDIR}")
         endif ()
-        install(TARGETS                          ${APP_CREATES_PLUGINS}
-                EXPORT                           ${APP_NAME}PluginTarget
-                LIBRARY DESTINATION              ${_plugin_lib_dest}                                              COMPONENT ${APP_NAME}
-                RUNTIME DESTINATION              ${CMAKE_INSTALL_BINDIR}                                          COMPONENT ${APP_NAME}
-                ARCHIVE DESTINATION              ${CMAKE_INSTALL_LIBDIR}                                          COMPONENT ${APP_NAME}
-                CXX_MODULES_BMI DESTINATION      ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}      COMPONENT ${APP_NAME}Development
-                FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}      COMPONENT ${APP_NAME}Development
-                FILE_SET HEADERS DESTINATION     ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}                        COMPONENT ${APP_NAME}Development
-                INCLUDES DESTINATION             ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
+        install(TARGETS ${APP_CREATES_PLUGINS}
+                EXPORT ${APP_NAME}PluginTarget
+                LIBRARY DESTINATION ${_plugin_lib_dest} COMPONENT ${APP_NAME}
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${APP_NAME}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${APP_NAME}
+                CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME} COMPONENT ${APP_NAME}Development
+                FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME} COMPONENT ${APP_NAME}Development
+                FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR} COMPONENT ${APP_NAME}Development
+                INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${APP_VENDOR}
         )
     endif ()
 
@@ -373,7 +373,7 @@ function(project_install _Folder)
                     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
         endif ()
         unset(_hs_desktop_files)
-    endif()
+    endif ()
 
     # Static libraries — pick up any *.a files install(TARGETS) doesn't cover
     # (e.g. third-party libs built as static in a LINK_TYPE=Static preset).
@@ -402,8 +402,8 @@ function(project_install _Folder)
                     FILES_MATCHING PATTERN "*.dll"
                     REGEX "libhoffsoft_" EXCLUDE
             )
-        endif()
-    endif()
+        endif ()
+    endif ()
 
     if (UNIX AND NOT APPLE)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
@@ -412,7 +412,7 @@ function(project_install _Folder)
                 FILES_MATCHING PATTERN "*.so*"
                 REGEX "libhoffsoft_" EXCLUDE
         )
-    endif()
+    endif ()
 
     if (APPLE)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
@@ -421,7 +421,7 @@ function(project_install _Folder)
                 FILES_MATCHING PATTERN "*.dylib"
                 REGEX "libhoffsoft_" EXCLUDE
         )
-    endif()
+    endif ()
 
     if (APPLE AND BUILD_DEBUG)
         set(_hs_dsym_src "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}")
@@ -432,62 +432,49 @@ function(project_install _Folder)
                 file(COPY \"\${_hs_d}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_hs_dsym_dst}\")
             endforeach()
         " COMPONENT ${APP_NAME}Development)
-    endif()
+    endif ()
 
     # ============================================================
     # 4. Extra resources (clean separation)
     # ============================================================
 
-    if(APP_LOCAL_RESOURCES)
-        if(APPLE AND APP_TYPE MATCHES "Executable")
+    if (APP_LOCAL_RESOURCES)
+        if (APPLE AND APP_TYPE MATCHES "Executable")
             # Copy resources into the build-tree bundle at build time so the
             # complete .app (binary + resources) is staged as a unit by
             # install(TARGETS ... BUNDLE DESTINATION .).
             # add_custom_command(TARGET) requires the same directory as the
             # target, so use add_custom_target + add_dependencies instead.
             add_custom_target(${APP_NAME}_copy_resources ALL
-                COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        "${LOCAL_RES_SRC}"
-                        "$<TARGET_BUNDLE_CONTENT_DIR:${APP_NAME}>/Resources"
-                COMMENT "Copying resources into ${APP_NAME}.app"
-                VERBATIM
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${LOCAL_RES_SRC}"
+                    "$<TARGET_BUNDLE_CONTENT_DIR:${APP_NAME}>/Resources"
+                    COMMENT "Copying resources into ${APP_NAME}.app"
+                    VERBATIM
             )
             add_dependencies(${APP_NAME}_copy_resources ${APP_NAME})
-        else()
+        else ()
             install(DIRECTORY "${LOCAL_RES_SRC}/"
                     DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
                     COMPONENT ${APP_NAME})
-        endif()
-    endif()
+        endif ()
+    endif ()
 
-    if(APP_GLOBAL_RESOURCES)
+    if (APP_GLOBAL_RESOURCES)
         install(DIRECTORY "${_global_resources_src}/"
-            DESTINATION "${GLOBAL_RESOURCES_DIR}"
+                DESTINATION "${GLOBAL_RESOURCES_DIR}"
         )
-    endif()
+    endif ()
 
     # ============================================================
     # 5. macOS fixup_bundle (ONLY ONCE, INSTALL TREE ONLY)
     # ============================================================
 
-    if(APPLE AND APP_TYPE MATCHES "Executable")
+    if (APPLE AND APP_TYPE MATCHES "Executable")
 
         install(CODE "
-            # 1. Helper to treat specific problematic libraries as system libraries
-            function(gp_resolved_file_type_override resolved_file type_var)
-                if(resolved_file MATCHES \"libunwind\\\\.1\\\\.dylib\")
-                    set(\${type_var} \"system\" PARENT_SCOPE)
-                endif()
-            endfunction()
-
-            # 2. Override item resolution for problematic cases (libunwind, versioned dylibs)
+            # Override item resolution for versioned dylib references
             function(gp_resolve_item_override context item exepath dirs resolved_item_var resolved_var)
-                if(item MATCHES \"libunwind\")
-                    set(\${resolved_item_var} \"/usr/lib/libunwind.1.dylib\" PARENT_SCOPE)
-                    set(\${resolved_var} 1 PARENT_SCOPE)
-                    return()
-                endif()
-
                 # Handle unversioned dylib references when only versioned ones are staged
                 get_filename_component(_macos_dir \"\${exepath}\" DIRECTORY)
                 get_filename_component(_contents_dir \"\${_macos_dir}\" DIRECTORY)
@@ -509,10 +496,42 @@ function(project_install _Folder)
 
             # Determine absolute bundle path, respecting DESTDIR
             set(_bundle \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
+            set(_fw_dir \"\${_bundle}/Contents/Frameworks\")
+
+            # Pre-copy libunwind from Homebrew LLVM before fixup_bundle runs.
+            # fixup_bundle cannot copy-then-fixup a transitive dependency it resolves
+            # to an external path — it must already be inside the bundle.
+            file(GLOB _unwind_candidates
+                \"/opt/homebrew/opt/llvm/lib/unwind/libunwind.1.dylib\"
+                \"/opt/homebrew/Cellar/llvm/*/lib/unwind/libunwind.1.dylib\")
+            if(_unwind_candidates)
+                list(SORT _unwind_candidates)
+                list(GET _unwind_candidates -1 _unwind_src)
+                set(_unwind_dst \"\${_fw_dir}/libunwind.1.dylib\")
+                if(NOT EXISTS \"\${_unwind_dst}\")
+                    file(COPY \"\${_unwind_src}\" DESTINATION \"\${_fw_dir}\")
+                endif()
+                # Give it a proper @executable_path install name
+                execute_process(COMMAND install_name_tool -id
+                    \"@executable_path/../Frameworks/libunwind.1.dylib\"
+                    \"\${_unwind_dst}\" ERROR_QUIET OUTPUT_QUIET)
+                # Rewrite every @rpath/libunwind reference in the bundle to the embedded copy
+                file(GLOB_RECURSE _all_bins
+                    \"\${_bundle}/Contents/MacOS/*\"
+                    \"\${_fw_dir}/*.dylib\")
+                foreach(_bin IN LISTS _all_bins)
+                    if(NOT IS_SYMLINK \"\${_bin}\")
+                        execute_process(COMMAND install_name_tool -change
+                            \"@rpath/libunwind.1.dylib\"
+                            \"@executable_path/../Frameworks/libunwind.1.dylib\"
+                            \"\${_bin}\" ERROR_QUIET OUTPUT_QUIET)
+                    endif()
+                endforeach()
+            endif()
 
             file(GLOB_RECURSE _all_staged
                 \"\${_bundle}/Contents/MacOS/*\"
-                \"\${_bundle}/Contents/Frameworks/*.dylib\")
+                \"\${_fw_dir}/*.dylib\")
             foreach(_bin IN LISTS _all_staged)
                 if(NOT IS_SYMLINK \"\${_bin}\" AND NOT IS_DIRECTORY \"\${_bin}\")
                     execute_process(COMMAND otool -l \"\${_bin}\"
@@ -530,22 +549,31 @@ function(project_install _Folder)
                 endif()
             endforeach()
 
-            file(GLOB_RECURSE _fw_libs \"\${_bundle}/Contents/Frameworks/*.dylib\")
+            file(GLOB_RECURSE _fw_libs \"\${_fw_dir}/*.dylib\")
             set(_dirs
                 \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
                 \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\"
-                \"\${_bundle}/Contents/Frameworks\"
+                \"\${_fw_dir}\"
             )
 
             fixup_bundle(
                 \"\${_bundle}\"
                 \"\${_fw_libs}\"
                 \"\${_dirs}\"
-                IGNORE_ITEM \"libunwind.1.dylib\"
             )
         " COMPONENT ${APP_NAME}Runtime)
 
-    endif()
+        # After fixup_bundle():
+        install(CODE [[
+      file(GLOB_RECURSE _dylibs
+          "${CMAKE_INSTALL_PREFIX}/MyHealthGuru.app/Contents/Frameworks/*.dylib")
+      foreach(_lib IN LISTS _dylibs)
+          execute_process(COMMAND codesign --force --sign - "${_lib}")
+      endforeach()
+      execute_process(COMMAND codesign --force --sign -
+          "${CMAKE_INSTALL_PREFIX}/MyHealthGuru.app")
+  ]] COMPONENT Unspecified)
+    endif ()
 
     # ============================================================
     # 6. CPack safety (critical)
