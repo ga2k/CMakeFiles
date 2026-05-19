@@ -432,6 +432,14 @@ function(addLibrary)
     endif ()
     # @formatter:on
 
+    if (APPLE AND BUILD_DEBUG)
+        add_custom_command(TARGET ${arg_NAME} POST_BUILD
+            COMMAND dsymutil "$<TARGET_FILE:${arg_NAME}>"
+            COMMENT "Generating ${arg_NAME}.dSYM"
+            VERBATIM
+        )
+    endif ()
+
     unset(arg_NAME_UC)
     unset(arg_NAME_LC)
 

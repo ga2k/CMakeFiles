@@ -423,6 +423,17 @@ function(project_install _Folder)
         )
     endif()
 
+    if (APPLE AND BUILD_DEBUG)
+        set(_hs_dsym_src "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}")
+        set(_hs_dsym_dst "${CMAKE_INSTALL_LIBDIR}")
+        install(CODE "
+            file(GLOB _hs_dsyms LIST_DIRECTORIES true \"${_hs_dsym_src}/*.dSYM\")
+            foreach(_hs_d IN LISTS _hs_dsyms)
+                file(COPY \"\${_hs_d}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_hs_dsym_dst}\")
+            endforeach()
+        " COMPONENT ${APP_NAME}Development)
+    endif()
+
     # ============================================================
     # 4. Extra resources (clean separation)
     # ============================================================
