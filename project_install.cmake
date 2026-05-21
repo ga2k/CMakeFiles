@@ -533,7 +533,7 @@ function(project_install _Folder)
                 endforeach()
             endif()
 
-            # CFBundleIconFile = "wxmac.icns" expects the file at Resources/ root,
+            # CFBundleIconFile = \"wxmac.icns\" expects the file at Resources/ root,
             # but CMake (non-Xcode) places it at Resources/appicons/wxmac.icns.
             # Copy it to the right place unconditionally so every install is correct.
             set(_icns_src \"\${_bundle}/Contents/Resources/appicons/wxmac.icns\")
