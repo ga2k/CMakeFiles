@@ -75,7 +75,6 @@
 #include <wx/fs_inet.h>
 #include <wx/gauge.h>
 #include <wx/gbsizer.h>
-#include <wx/generic/splash.h>
 #include <wx/generic/stattextg.h>
 #include <wx/grid.h>
 #include <wx/image.h>
