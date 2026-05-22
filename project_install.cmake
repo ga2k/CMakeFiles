@@ -577,15 +577,15 @@ function(project_install _Folder)
         " COMPONENT ${APP_NAME}Runtime)
 
         # After fixup_bundle():
-        install(CODE [[
+        install(CODE "
       file(GLOB_RECURSE _dylibs
-          "${CMAKE_INSTALL_PREFIX}/MyHealthGuru.app/Contents/Frameworks/*.dylib")
+          \"\${CMAKE_INSTALL_PREFIX}/${APP_NAME}.app/Contents/Frameworks/*.dylib\")
       foreach(_lib IN LISTS _dylibs)
-          execute_process(COMMAND codesign --force --sign - "${_lib}")
+          execute_process(COMMAND codesign --force --sign - \"\${_lib}\")
       endforeach()
       execute_process(COMMAND codesign --force --sign -
-          "${CMAKE_INSTALL_PREFIX}/MyHealthGuru.app")
-  ]] COMPONENT Unspecified)
+          \"\${CMAKE_INSTALL_PREFIX}/${APP_NAME}.app\")
+  " COMPONENT Unspecified)
     endif ()
 
     # ============================================================
