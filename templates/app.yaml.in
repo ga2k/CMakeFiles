@@ -23,6 +23,8 @@ consumes:
   features:         @FEATURES_YAML_LIST@
 
 supplies:
-  plugins:          @CREATES_PLUGINS_YAML_LIST@
-  app_resources:    @YAML_LOCAL_RESOURCES@
-  global_resources: @GLOBAL_RESOURCES_DIR@
+  plugins:                @CREATES_PLUGINS_YAML_LIST@
+  app_resources:          @YAML_LOCAL_RESOURCES@
+  app_resources_uuid:     @YAML_LOCAL_RESOURCES_UUID@
+  global_resources:       @GLOBAL_RESOURCES_DIR@
+  global_resources_uuid:  @YAML_GLOBAL_RESOURCES_UUID@

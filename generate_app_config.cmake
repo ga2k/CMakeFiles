@@ -59,6 +59,8 @@ else ()
 endif ()
 
 if (APP_LOCAL_RESOURCES)
+    SplitAt("${APP_LOCAL_RESOURCES}" _lrFolder, _lrUUID)
+    set(YAML_LOCAL_RESOURCES_UUID "${_lrUUID}")
     if (APPLE AND APP_TYPE MATCHES "Executable")
         # macOS bundle: resources live inside Contents/Resources
         set(YAML_LOCAL_RESOURCES "${APP_NAME}.app/Contents/Resources")
@@ -69,6 +71,8 @@ if (APP_LOCAL_RESOURCES)
 endif ()
 
 if (APP_GLOBAL_RESOURCES)
+    SplitAt("${APP_GLOBAL_RESOURCES}" _grFolder, _grUUID)
+    set(YAML_GLOBAL_RESOURCES_UUID "${_grUUID}")
     if (APPLE AND APP_TYPE MATCHES "Executable")
         # macOS bundle: resources live inside Contents/Resources
         set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
