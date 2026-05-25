@@ -119,13 +119,13 @@ function(project_install _Folder)
 
     # Compute early so the desktop-files glob and resources section both have it.
     if (APP_LOCAL_RESOURCES)
-        SplitAt("${APP_LOCAL_RESOURCES}" "," YAML_LOCAL_RESOURCES_UUID _DC)
-        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${_LOCAL_RESOURCES}")
+        SplitAt("${APP_LOCAL_RESOURCES}" "," YAML_LOCAL_RESOURCES YAML_LOCAL_RESOURCES_UUID)
+        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${YAML_LOCAL_RESOURCES}")
     endif ()
 
     # @formatting:off
     if (APP_GLOBAL_RESOURCES)
-        SplitAt("${APP_GLOBAL_RESOURCES}" "," YAML_GLOBAL_RESOURCES_UUID _DC)
+        SplitAt("${APP_GLOBAL_RESOURCES}" "," YAML_GLOBAL_RESOURCES_URL YAML_GLOBAL_RESOURCES_UUID)
         set(_global_resources_src "${CMAKE_SOURCE_DIR}/global_resources")
         file(MAKE_DIRECTORY "${_global_resources_src}")
 
@@ -140,7 +140,7 @@ function(project_install _Folder)
 
         if (NOT TARGET GlobalResourcesRepo)
             ExternalProject_Add(GlobalResourcesRepo
-                    GIT_REPOSITORY "${YAML_GLOBAL_RESOURCES_UUID}"
+                    GIT_REPOSITORY "${YAML_GLOBAL_RESOURCES_URL}"
                     GIT_TAG master
                     GIT_SHALLOW TRUE
                     UPDATE_DISCONNECTED TRUE
@@ -456,14 +456,14 @@ function(project_install _Folder)
             )
             add_dependencies(${APP_NAME}_copy_resources ${APP_NAME})
         else ()
-            install(DIRECTORY "${LOCAL_RES_SRC}/"
+            install(DIRECTORY "${LOCAL_RES_SRC}"
                     DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
                     COMPONENT ${APP_NAME})
         endif ()
     endif ()
 
     if (APP_GLOBAL_RESOURCES)
-        install(DIRECTORY "${_global_resources_src}/"
+        install(DIRECTORY "${_global_resources_src}"
                 DESTINATION "${GLOBAL_RESOURCES_DIR}"
         )
     endif ()
