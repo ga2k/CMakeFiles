@@ -1,4 +1,4 @@
-for mmm in HoffSoft Gfx HealthCanvas
+for mmm in Libs HealthCanvas
 do 
     cd "$mmm/cmake" 2>/dev/null
     echo -e "\C-[[32;1m$(pwd)\C-[[0m"
