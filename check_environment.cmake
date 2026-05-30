@@ -68,7 +68,7 @@ macro(check_environment PROJECT_ROOT)
         include("${cmake_root}/presetFallback.cmake")
         fixPresetMess("Linux" "Debug" "Shared")
     else ()
-        include(cmake/tools.cmake)
+        include(CMakeFiles/tools.cmake)
     endif ()
 
     if (NOT checkCompleted)

@@ -276,7 +276,7 @@ function(project_install _Folder)
                 ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
                 --prefix "${OUTPUT_DIR}"
                 --component ${APP_NAME}Development
-                COMMAND ${CMAKE_COMMAND} -P "${CMAKE_SOURCE_DIR}/cmake/post_process_export.cmake"
+                COMMAND ${CMAKE_COMMAND} -P "${cmake_root}/post_process_export.cmake"
                 "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
                 "${APP_VENDOR}"
                 COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
