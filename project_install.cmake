@@ -287,7 +287,7 @@ function(project_install _Folder)
 
     # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
     # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
-    # scratch in downstream projects (e.g. HealthCanvas).
+    # scratch in downstream projects (e.g. MyHealthGuru).
     install(CODE "
         set(_cxx_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}\")
         file(GLOB_RECURSE _ixx_files \"\${_cxx_dest}/*.ixx\")
