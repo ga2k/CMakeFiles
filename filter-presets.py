@@ -218,7 +218,7 @@ if len(sys.argv) != 3 or sys.argv[1] is None or sys.argv[1] == '' or sys.argv[2]
 if len(sys.argv) >= 2 and not sys.argv[1] is None and not sys.argv[1] == '':
     input_file = sys.argv[1]
 else:
-    input_file = "cmake/templates/CMakePresets.in"
+    input_file = "CMakeFiles/templates/CMakePresets.in"
 
 if len(sys.argv) >= 3 and not sys.argv[2] is None and not sys.argv[2] == '':
     output_file = sys.argv[2]
