@@ -114,7 +114,7 @@ elseif (WIN32)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}    /nologo")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nologo")
         set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /nologo")
-    else ()
+    elseif (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
         # clang++ emits CodeView debug info into .obj files when -g is passed, but
         # lld-link discards it unless told to produce a PDB (/debug).
         add_link_options("$<$<CONFIG:Debug>:-Wl,/debug>")
