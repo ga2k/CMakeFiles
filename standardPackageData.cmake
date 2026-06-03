@@ -88,6 +88,10 @@ function(createStandardPackageData dryRun)
             INCDIR "[SRC]/googletest/include"
             ARGS REQUIRED NAMES GTest googletest DRY_RUN ${dryRun})
 
+    addPackageData(OPTIONAL FEATURE "TRANSPORT" PKGNAME "cpp-httplib" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib.git" GIT_TAG "v0.18.5"
+            ARG REQUIRED DRY_RUN ${dryRun})
+
     addPackageData(OPTIONAL FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
             COMPONENTS system date_time regex url algorithm
