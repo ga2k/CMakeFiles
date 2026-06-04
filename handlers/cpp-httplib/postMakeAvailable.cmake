@@ -1,22 +1,23 @@
 function(cpp-httplib_postMakeAvailable sourceDir buildDir outDir buildType)
 
-    set(librariesList    ${_LibrariesList})
-    set(dependenciesList ${_DependenciesList})
+    # httplib is header-only. Include path is handled by INCDIR in standardPackageData.cmake.
+    # OpenSSL link libraries are handled by the SSL feature.
+    # We only need to propagate the interface compile definitions (e.g. CPPHTTPLIB_OPENSSL_SUPPORT).
 
-    if (TARGET httplib::httplib)
-        list(APPEND librariesList    httplib::httplib)
-        list(APPEND dependenciesList httplib::httplib)
-    elseif (TARGET httplib)
-        list(APPEND librariesList    httplib)
-        list(APPEND dependenciesList httplib)
-    endif ()
+    set(definesList ${_DefinesList})
 
-    list(APPEND librariesList    ${_LibrariesList})
-    list(REMOVE_DUPLICATES       librariesList)
-    set(_LibrariesList    ${librariesList}    PARENT_SCOPE)
+    foreach (_httplibTarget IN ITEMS httplib::httplib httplib)
+        if (TARGET ${_httplibTarget})
+            get_target_property(_httplibDefs ${_httplibTarget} INTERFACE_COMPILE_DEFINITIONS)
+            if (_httplibDefs)
+                list(APPEND definesList ${_httplibDefs})
+            endif ()
+            break()
+        endif ()
+    endforeach ()
 
-    list(APPEND dependenciesList ${_DependenciesList})
-    list(REMOVE_DUPLICATES       dependenciesList)
-    set(_DependenciesList ${dependenciesList} PARENT_SCOPE)
+    list(APPEND definesList ${_DefinesList})
+    list(REMOVE_DUPLICATES  definesList)
+    set(_DefinesList ${definesList} PARENT_SCOPE)
 
 endfunction()

@@ -65,10 +65,8 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
             ARG CONFIG DRY_RUN ${dryRun})
 
-    addPackageData(SYSTEM FEATURE "TRANSPORT" PKGNAME "cpp-httplib" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib.git" GIT_TAG "v0.18.5"
-            INCDIR "[SRC]/cpp-httplib"
-            ARG REQUIRED DRY_RUN ${dryRun})
+    addPackageData(SYSTEM FEATURE "TRANSPORT" PKGNAME "cpp-httplib" METHOD "PROCESS"
+            DRY_RUN ${dryRun})
 
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "FindCore" NAMESPACE "HoffSoft" METHOD "IGNORE" DRY_RUN ${dryRun} DEFAULT -1)
     addPackageData(LIBRARY FEATURE "GFX"  PKGNAME "FindGfx"  NAMESPACE "HoffSoft" METHOD "IGNORE" DRY_RUN ${dryRun} DEFAULT -1)
