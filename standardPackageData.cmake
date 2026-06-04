@@ -65,6 +65,10 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/fnc12/sqlite_orm.git" GIT_TAG "v1.8.2"
             ARG CONFIG DRY_RUN ${dryRun})
 
+    addPackageData(SYSTEM FEATURE "TRANSPORT" PKGNAME "cpp-httplib" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib.git" GIT_TAG "v0.18.5"
+            ARG REQUIRED DRY_RUN ${dryRun})
+
     addPackageData(LIBRARY FEATURE "CORE" PKGNAME "FindCore" NAMESPACE "HoffSoft" METHOD "IGNORE" DRY_RUN ${dryRun} DEFAULT -1)
     addPackageData(LIBRARY FEATURE "GFX"  PKGNAME "FindGfx"  NAMESPACE "HoffSoft" METHOD "IGNORE" DRY_RUN ${dryRun} DEFAULT -1)
 
@@ -87,10 +91,6 @@ function(createStandardPackageData dryRun)
             GIT_REPOSITORY "https://github.com/google/googletest.git" GIT_TAG "v1.15.2"
             INCDIR "[SRC]/googletest/include"
             ARGS REQUIRED NAMES GTest googletest DRY_RUN ${dryRun})
-
-    addPackageData(OPTIONAL FEATURE "TRANSPORT" PKGNAME "cpp-httplib" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib.git" GIT_TAG "v0.18.5"
-            ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "BOOST" PKGNAME "Boost" NAMESPACE "Boost" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/boostorg/boost.git" GIT_TAG "boost-1.85.0"
