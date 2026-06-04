@@ -456,15 +456,15 @@ function(project_install _Folder)
             )
             add_dependencies(${APP_NAME}_copy_resources ${APP_NAME})
         else ()
-            install(DIRECTORY "${_local_resources_src}"
-                    DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}/"
+            install(DIRECTORY "${_local_resources_src}/"
+                    DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
                     COMPONENT ${APP_NAME})
         endif ()
     endif ()
 
     if (APP_GLOBAL_RESOURCES)
-        install(DIRECTORY "${_global_resources_src}"
-                DESTINATION "${GLOBAL_RESOURCES_DIR}/"
+        install(DIRECTORY "${_global_resources_src}/"
+                DESTINATION "${GLOBAL_RESOURCES_DIR}"
         )
     endif ()
 
