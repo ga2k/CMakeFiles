@@ -51,7 +51,7 @@ function(project_install _Folder)
     endif ()
 
     # ============================================================
-    # 1. Dependency sanitisation (install-time only)
+    # 1. Dependency sanitization (install-time only)
     # ============================================================
     message(STATUS "Install(${APP_NAME}): HS_DependenciesList = [${HS_DependenciesList}]")
 
@@ -120,7 +120,7 @@ function(project_install _Folder)
     # Compute early so the desktop-files glob and resources section both have it.
     if (APP_LOCAL_RESOURCES)
         SplitAt("${APP_LOCAL_RESOURCES}" "," YAML_LOCAL_RESOURCES YAML_LOCAL_RESOURCES_UUID)
-        set(LOCAL_RES_SRC "${CMAKE_CURRENT_SOURCE_DIR}/${YAML_LOCAL_RESOURCES}")
+        set(_local_resources_src "${CMAKE_CURRENT_SOURCE_DIR}/${YAML_LOCAL_RESOURCES}")
     endif ()
 
     # @formatting:off
@@ -369,7 +369,7 @@ function(project_install _Folder)
 
     # Handle Linux desktop files specifically
     if (LINUX)
-        file(GLOB _hs_desktop_files "${LOCAL_RES_SRC}/*.desktop")
+        file(GLOB _hs_desktop_files "${_local_resources_src}/*.desktop")
         if (_hs_desktop_files)
             install(FILES ${_hs_desktop_files}
                     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
@@ -449,22 +449,22 @@ function(project_install _Folder)
             # target, so use add_custom_target + add_dependencies instead.
             add_custom_target(${APP_NAME}_copy_resources ALL
                     COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    "${LOCAL_RES_SRC}"
+                    "${_local_resources_src}"
                     "$<TARGET_BUNDLE_CONTENT_DIR:${APP_NAME}>/Resources"
                     COMMENT "Copying resources into ${APP_NAME}.app"
                     VERBATIM
             )
             add_dependencies(${APP_NAME}_copy_resources ${APP_NAME})
         else ()
-            install(DIRECTORY "${LOCAL_RES_SRC}"
-                    DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}"
+            install(DIRECTORY "${_local_resources_src}"
+                    DESTINATION "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}/"
                     COMPONENT ${APP_NAME})
         endif ()
     endif ()
 
     if (APP_GLOBAL_RESOURCES)
         install(DIRECTORY "${_global_resources_src}"
-                DESTINATION "${GLOBAL_RESOURCES_DIR}"
+                DESTINATION "${GLOBAL_RESOURCES_DIR}/"
         )
     endif ()
 
