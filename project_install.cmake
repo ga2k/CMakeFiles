@@ -513,7 +513,9 @@ function(project_install _Folder)
                     configure_file(\"\${_hs_lib}\" \"\${_fw_dir}/\${_hs_lib_name}\" COPYONLY)
                 endif()
             endforeach()
-            unset(_hs_staged_libs _hs_lib _hs_lib_name)
+            unset(_hs_staged_libs)
+            unset(_hs_lib)
+            unset(_hs_lib_name)
 
             # Pre-copy libunwind from Homebrew LLVM before fixup_bundle runs.
             # fixup_bundle cannot copy-then-fixup a transitive dependency it resolves
