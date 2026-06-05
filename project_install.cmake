@@ -500,6 +500,21 @@ function(project_install _Folder)
             set(_bundle \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_bundle}\")
             set(_fw_dir \"\${_bundle}/Contents/Frameworks\")
 
+            # Refresh libhoffsoft_* dylibs from the current staged lib so that
+            # incremental installs don't reuse stale bundle copies.
+            # file(INSTALL TYPE DIRECTORY) merges into the existing bundle without
+            # removing the old Frameworks content, so fixup_bundle would silently
+            # reuse whatever was already there without this explicit overwrite.
+            file(GLOB _hs_staged_libs
+                \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libhoffsoft_*.dylib\")
+            foreach(_hs_lib IN LISTS _hs_staged_libs)
+                if(NOT IS_SYMLINK \"\${_hs_lib}\")
+                    get_filename_component(_hs_lib_name \"\${_hs_lib}\" NAME)
+                    configure_file(\"\${_hs_lib}\" \"\${_fw_dir}/\${_hs_lib_name}\" COPYONLY)
+                endif()
+            endforeach()
+            unset(_hs_staged_libs _hs_lib _hs_lib_name)
+
             # Pre-copy libunwind from Homebrew LLVM before fixup_bundle runs.
             # fixup_bundle cannot copy-then-fixup a transitive dependency it resolves
             # to an external path — it must already be inside the bundle.
