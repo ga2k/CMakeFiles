@@ -44,37 +44,73 @@ function(OpenSSL_process incs libs defs)
     set(paths       "${_LibraryPathsList}")
 
     if(WIN32)
-        msg("You")
-        msg("YES YOU! LADDIE!")
-        msg("How can you have any pudding if you don't eat your meat?")
-        msg()
+        set(_openssl_root "C:/Program Files/OpenSSL-Win64")
+        set(OPENSSL_ROOT_DIR "${_openssl_root}" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_INCLUDE_DIR "${_openssl_root}/include" CACHE PATH "OpenSSL include dir" FORCE)
 
-        set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
+        if (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
+            set(_vc_rt "MD")
+        else()
+            set(_vc_rt "MT")
+        endif()
 
-        find_library(ssl
-                NAMES ssl
-                PATHS   "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
-        find_library(crypto
-                NAMES crypto
-                PATHS   "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT")
+        unset(OPENSSL_SSL_LIBRARY CACHE)
+        unset(OPENSSL_CRYPTO_LIBRARY CACHE)
+        find_library(OPENSSL_SSL_LIBRARY
+                NAMES libssl ssl
+                PATHS
+                    "${_openssl_root}/lib/VC/x64/${_vc_rt}"
+                    "${_openssl_root}/lib/VC/x64/MD"
+                    "${_openssl_root}/lib/VC/x64/MT"
+                    "${_openssl_root}/lib"
+                NO_DEFAULT_PATH)
+        find_library(OPENSSL_CRYPTO_LIBRARY
+                NAMES libcrypto crypto
+                PATHS
+                    "${_openssl_root}/lib/VC/x64/${_vc_rt}"
+                    "${_openssl_root}/lib/VC/x64/MD"
+                    "${_openssl_root}/lib/VC/x64/MT"
+                    "${_openssl_root}/lib"
+                NO_DEFAULT_PATH)
 
-        if (ssl AND crypto)
-            get_filename_component(ssl_lib      "${ssl}"    NAME)
-            get_filename_component(crypto_lib   "${crypto}" NAME)
-            get_filename_component(lib_dir      "${crypto}" PATH)
+        if (OPENSSL_SSL_LIBRARY AND OPENSSL_CRYPTO_LIBRARY)
+            get_filename_component(lib_dir "${OPENSSL_SSL_LIBRARY}" PATH)
 
-            message("Using installed system OpenSSL libraries")
-            list(APPEND libs    "${_LibrariesList}"      ${ssl_lib} ${crypto_lib})
-            list(APPEND incs    "${_IncludePathsList}" "C:/Program Files/OpenSSL-Win64/include")
-            list(APPEND paths   "${_LibraryPathsList}" "${lib_dir}")
+            message("Using installed system OpenSSL libraries (${_vc_rt})")
 
-            set (_LibrariesList    "${libs}"    PARENT_SCOPE)
-            set (_LibraryPathsList "${paths}"   PARENT_SCOPE)
-            set (_IncludePathsList "${incs}"    config-Gfx PARENT_SCOPE)
+            find_file(_openssl_ssl_dll
+                    NAMES libssl-4-x64.dll libssl-3-x64.dll libssl.dll
+                    PATHS "${_openssl_root}/bin" NO_DEFAULT_PATH)
+            find_file(_openssl_crypto_dll
+                    NAMES libcrypto-4-x64.dll libcrypto-3-x64.dll libcrypto.dll
+                    PATHS "${_openssl_root}/bin" NO_DEFAULT_PATH)
+
+            if (NOT TARGET OpenSSL::SSL)
+                add_library(OpenSSL::SSL SHARED IMPORTED)
+                set_target_properties(OpenSSL::SSL PROPERTIES
+                        IMPORTED_LOCATION "${_openssl_ssl_dll}"
+                        IMPORTED_IMPLIB   "${OPENSSL_SSL_LIBRARY}"
+                        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
+            endif()
+            if (NOT TARGET OpenSSL::Crypto)
+                add_library(OpenSSL::Crypto SHARED IMPORTED)
+                set_target_properties(OpenSSL::Crypto PROPERTIES
+                        IMPORTED_LOCATION "${_openssl_crypto_dll}"
+                        IMPORTED_IMPLIB   "${OPENSSL_CRYPTO_LIBRARY}"
+                        INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
+            endif()
+
+            list(APPEND libs  ${_LibrariesList}    OpenSSL::SSL OpenSSL::Crypto)
+            list(APPEND incs  ${_IncludePathsList} "${OPENSSL_INCLUDE_DIR}")
+            list(APPEND paths ${_LibraryPathsList} "${lib_dir}")
+
+            set(_LibrariesList    "${libs}"  PARENT_SCOPE)
+            set(_LibraryPathsList "${paths}" PARENT_SCOPE)
+            set(_IncludePathsList "${incs}"  PARENT_SCOPE)
             set(HANDLED ON PARENT_SCOPE)
             return()
-        endif ()
-    endif ()
+        endif()
+    endif()
 
     set(OPENSSL_SOURCE_DIR "${sourceDir}" CACHE FILEPATH "OpenSSL Source Directory")
     file(MAKE_DIRECTORY ${outDir}/openssl_install/include)
