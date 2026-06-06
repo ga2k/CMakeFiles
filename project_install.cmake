@@ -271,18 +271,28 @@ function(project_install _Folder)
     # because export(EXPORT) errors on transitive deps not in the export set
     # (e.g. wx sub-targets webp/webpdemux/sharpyuv), while install(EXPORT) is lenient.
     if (APP_TYPE MATCHES "Library")
-        add_custom_target(${APP_NAME}_build_tree_export ALL
+        # Use a stamp file so Ninja only re-runs cmake --install when the library
+        # binary actually changes. Without this, cmake --install runs on every
+        # cmake --build, writes cmake export files to OUTPUT_DIR, which cmake
+        # then detects as newer than its configure stamp → infinite reconfigure loop.
+        set(_export_stamp "${CMAKE_BINARY_DIR}/${APP_NAME}_export.stamp")
+        add_custom_command(
+                OUTPUT "${_export_stamp}"
                 COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
-                ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
-                --prefix "${OUTPUT_DIR}"
-                --component ${APP_NAME}Development
+                    ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
+                    --prefix "${OUTPUT_DIR}"
+                    --component ${APP_NAME}Development
                 COMMAND ${CMAKE_COMMAND} -P "${cmake_root}/post_process_export.cmake"
-                "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
-                "${APP_VENDOR}"
+                    "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/${APP_NAME}Target.cmake"
+                    "${APP_VENDOR}"
+                COMMAND ${CMAKE_COMMAND} -E touch "${_export_stamp}"
+                DEPENDS ${APP_NAME}
                 COMMENT "Writing ${APP_NAME} cmake export files to ${OUTPUT_DIR}"
                 VERBATIM
         )
-        add_dependencies(${APP_NAME}_build_tree_export ${APP_NAME})
+        add_custom_target(${APP_NAME}_build_tree_export ALL
+                DEPENDS "${_export_stamp}"
+        )
     endif ()
 
     # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the

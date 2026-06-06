@@ -54,8 +54,6 @@ function(OpenSSL_process incs libs defs)
             set(_vc_rt "MT")
         endif()
 
-        unset(OPENSSL_SSL_LIBRARY CACHE)
-        unset(OPENSSL_CRYPTO_LIBRARY CACHE)
         find_library(OPENSSL_SSL_LIBRARY
                 NAMES libssl ssl
                 PATHS
@@ -77,6 +75,13 @@ function(OpenSSL_process incs libs defs)
             get_filename_component(lib_dir "${OPENSSL_SSL_LIBRARY}" PATH)
 
             message("Using installed system OpenSSL libraries (${_vc_rt})")
+
+            # Pre-cache the internal variable names used by FindOpenSSL.cmake's non-MSVC
+            # else-branch (Clang on Windows). FindOpenSSL uses LIB_EAY / SSL_EAY internally
+            # and then assigns OPENSSL_CRYPTO_LIBRARY / OPENSSL_SSL_LIBRARY from them.
+            # Pre-setting these skips FindOpenSSL's own find_library search.
+            set(LIB_EAY "${OPENSSL_CRYPTO_LIBRARY}" CACHE FILEPATH "OpenSSL crypto lib (internal)" FORCE)
+            set(SSL_EAY "${OPENSSL_SSL_LIBRARY}"     CACHE FILEPATH "OpenSSL ssl lib (internal)"    FORCE)
 
             find_file(_openssl_ssl_dll
                     NAMES libssl-4-x64.dll libssl-3-x64.dll libssl.dll
