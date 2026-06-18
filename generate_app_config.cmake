@@ -82,6 +82,7 @@ if (APP_GLOBAL_RESOURCES)
     endif ()
 endif ()
 
+<<<<<<< HEAD
 # XOR-encode a string with the given decimal key, output lowercase 2-digit hex per byte.
 # Replicates the hs::ObfuscatedString algorithm so the YAML never contains plaintext.
 # Uses a lookup table to avoid 0x hex literals, which CMake math() does not support.
@@ -118,6 +119,8 @@ obfuscate_string_to_hex("${APP_TRAC_USER}"   ${_TRAC_KEY} APP_TRAC_USER_OBF)
 obfuscate_string_to_hex("${APP_TRAC_PASSWD}" ${_TRAC_KEY} APP_TRAC_PASSWD_OBF)
 obfuscate_string_to_hex("${APP_TRAC_API}"    ${_TRAC_KEY} APP_TRAC_API_OBF)
 
+=======
+>>>>>>> f25e86b322e791ed4453d9228caac1ebe833cda4
 # Generate the app.yaml body first (without checksum)
 message(STATUS "APP_YAML_TEMPLATE_PATH = ${APP_YAML_TEMPLATE_PATH}")
 message(STATUS "is file = $<BOOL:$<IS_FILE:${APP_YAML_TEMPLATE_PATH}>>")
