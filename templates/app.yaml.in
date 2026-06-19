@@ -35,3 +35,11 @@ trac:
   passwd: "@APP_TRAC_PASSWD_OBF@"
   api:    "@APP_TRAC_API_OBF@"
   port:   @APP_TRAC_PORT@
+
+license:
+  url:    "@APP_LIC_URL_OBF@"
+  name:   "@APP_LIC_NAME_OBF@"
+  env:    "@APP_LIC_ENV_OBF@"
+  cli:    "@APP_LIC_CLI_OBF@"
+  key: |
+@APP_LIC_KEY_YAML@

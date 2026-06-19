@@ -113,11 +113,29 @@ function(obfuscate_string_to_hex input key output_var)
     set(${output_var} "${_result}" PARENT_SCOPE)
 endfunction()
 
-set(_TRAC_KEY 90)   # 0x5A — matches kXorKey in LicenseManager.cpp
+set(_TRAC_KEY 90)   # 0x5A — matches kXorKey in TracConfig.cpp
 obfuscate_string_to_hex("${APP_TRAC_URL}"    ${_TRAC_KEY} APP_TRAC_URL_OBF)
 obfuscate_string_to_hex("${APP_TRAC_USER}"   ${_TRAC_KEY} APP_TRAC_USER_OBF)
 obfuscate_string_to_hex("${APP_TRAC_PASSWD}" ${_TRAC_KEY} APP_TRAC_PASSWD_OBF)
 obfuscate_string_to_hex("${APP_TRAC_API}"    ${_TRAC_KEY} APP_TRAC_API_OBF)
+
+# License credentials — XOR key comes from APP_LIC_XOR (default 0 → no obfuscation for empty fields)
+if (DEFINED APP_LIC_XOR AND NOT APP_LIC_XOR STREQUAL "")
+    math(EXPR _LIC_KEY "${APP_LIC_XOR} + 0")
+else()
+    set(_LIC_KEY 0)
+endif()
+obfuscate_string_to_hex("${APP_LIC_URL}"  ${_LIC_KEY} APP_LIC_URL_OBF)
+obfuscate_string_to_hex("${APP_LIC_NAME}" ${_LIC_KEY} APP_LIC_NAME_OBF)
+obfuscate_string_to_hex("${APP_LIC_ENV}"  ${_LIC_KEY} APP_LIC_ENV_OBF)
+obfuscate_string_to_hex("${APP_LIC_CLI}"  ${_LIC_KEY} APP_LIC_CLI_OBF)
+
+string(STRIP "${APP_LIC_KEY}" _LIC_KEY_STRIPPED)
+if (_LIC_KEY_STRIPPED)
+    string(REPLACE "\n" "\n    " APP_LIC_KEY_YAML "    ${_LIC_KEY_STRIPPED}")
+else()
+    set(APP_LIC_KEY_YAML "")
+endif()
 
 # Generate the app.yaml body first (without checksum)
 message(STATUS "APP_YAML_TEMPLATE_PATH = ${APP_YAML_TEMPLATE_PATH}")
