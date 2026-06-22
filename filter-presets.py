@@ -6,7 +6,19 @@ import shutil
 import sys
 
 def find_llvm_bin():
-    """Find the LLVM bin directory on Windows, checking common install locations then PATH."""
+    """Find the LLVM bin directory on Windows, preferring MSYS2 ucrt64 then standalone LLVM.
+
+    MSYS2 ucrt64 is preferred because the Windows Ninja preset uses GNU-style linking
+    (wxWidgets emits --out-implib flags), which requires windres rather than llvm-rc.
+    """
+    # MSYS2 ucrt64 bundles windres and routes clang++ through GNU ld.
+    msys2_candidates = [
+        "C:/msys64/ucrt64/bin",
+    ]
+    for path in msys2_candidates:
+        if os.path.isfile(os.path.join(path, "clang++.exe")):
+            return path.replace("\\", "/")
+    # Fall back to standalone LLVM installs (use lld-link + llvm-rc instead).
     candidates = [
         "C:/LLVM/bin",
         "C:/Program Files/LLVM/bin",
@@ -28,8 +40,17 @@ def patch_windows_compiler_paths(data, llvm_bin):
             cv["CMAKE_CXX_COMPILER"]                 = f"{llvm_bin}/clang++.exe"
             cv["CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS"] = f"{llvm_bin}/clang-scan-deps.exe"
             cv["CMAKE_C_COMPILER"]                   = f"{llvm_bin}/clang.exe"
-            cv["CMAKE_LINKER"]                       = f"{llvm_bin}/lld-link.exe"
-            cv["CMAKE_RC_COMPILER"]                  = f"{llvm_bin}/llvm-rc.exe"
+            # MSYS2/ucrt64 ships windres and uses GNU ld by default; a standalone LLVM
+            # install does not ship windres and instead uses lld-link/llvm-rc.
+            # windres produces COFF objects compatible with GNU ld; llvm-rc produces
+            # PE .res files that only lld-link/MSVC link.exe can consume.
+            windres_path = os.path.join(llvm_bin.replace("/", os.sep), "windres.exe")
+            if os.path.isfile(windres_path):
+                cv["CMAKE_RC_COMPILER"] = f"{llvm_bin}/windres.exe"
+                cv.pop("CMAKE_LINKER", None)
+            else:
+                cv["CMAKE_LINKER"]      = f"{llvm_bin}/lld-link.exe"
+                cv["CMAKE_RC_COMPILER"] = f"{llvm_bin}/llvm-rc.exe"
             break
 
 
