@@ -2,7 +2,82 @@ import json
 import os
 import subprocess
 import platform
+import shutil
 import sys
+
+def find_llvm_bin():
+    """Find the LLVM bin directory on Windows, checking common install locations then PATH."""
+    candidates = [
+        "C:/LLVM/bin",
+        "C:/Program Files/LLVM/bin",
+    ]
+    for path in candidates:
+        if os.path.isfile(os.path.join(path, "clang++.exe")):
+            return path.replace("\\", "/")
+    exe = shutil.which("clang++")
+    if exe:
+        return os.path.dirname(exe).replace("\\", "/")
+    return None
+
+
+def patch_windows_compiler_paths(data, llvm_bin):
+    """Rewrite the Windows hidden preset's compiler cacheVariables to the detected LLVM bin."""
+    for preset in data.get("configurePresets", []):
+        if preset.get("name") == "Windows" and preset.get("hidden"):
+            cv = preset.setdefault("cacheVariables", {})
+            cv["CMAKE_CXX_COMPILER"]                 = f"{llvm_bin}/clang++.exe"
+            cv["CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS"] = f"{llvm_bin}/clang-scan-deps.exe"
+            cv["CMAKE_C_COMPILER"]                   = f"{llvm_bin}/clang.exe"
+            cv["CMAKE_LINKER"]                       = f"{llvm_bin}/lld-link.exe"
+            cv["CMAKE_RC_COMPILER"]                  = f"{llvm_bin}/llvm-rc.exe"
+            break
+
+
+def find_openssl_root():
+    """Find OpenSSL root on Windows, preferring MSYS2 ucrt64 then the Win64 installer."""
+    candidates = [
+        "C:/msys64/ucrt64",
+        "C:/Program Files/OpenSSL-Win64",
+    ]
+    for root in candidates:
+        if os.path.isfile(os.path.join(root, "include", "openssl", "ssl.h")):
+            return root.replace("\\", "/")
+    return None
+
+
+def _openssl_lib_paths(root, link_type, build_type):
+    """Return (ssl_lib, crypto_lib) import-library paths for the given root and preset type."""
+    if root == "C:/msys64/ucrt64":
+        suffix = ".dll.a" if link_type == "Shared" else ".a"
+        return (f"{root}/lib/libssl{suffix}", f"{root}/lib/libcrypto{suffix}")
+    # Win32 OpenSSL installer layout uses MDd/MD sub-directories
+    vc_suffix = "MDd" if build_type == "Debug" else "MD"
+    return (
+        f"{root}/lib/VC/x64/{vc_suffix}/libssl.lib",
+        f"{root}/lib/VC/x64/{vc_suffix}/libcrypto.lib",
+    )
+
+
+def patch_windows_openssl_paths(data, openssl_root):
+    """Set OPENSSL_ROOT_DIR in the hidden Windows preset and SSL_EAY/LIB_EAY in concrete presets."""
+    for preset in data.get("configurePresets", []):
+        if preset.get("name") == "Windows" and preset.get("hidden"):
+            preset.setdefault("cacheVariables", {})["OPENSSL_ROOT_DIR"] = openssl_root
+            break
+
+    for preset in data.get("configurePresets", []):
+        if preset.get("hidden"):
+            continue
+        inherits = preset.get("inherits", [])
+        if "Windows" not in inherits:
+            continue
+        link_type = "Shared" if "Shared" in inherits else "Static"
+        build_type = "Debug" if "Debug" in inherits else "Release"
+        ssl_lib, crypto_lib = _openssl_lib_paths(openssl_root, link_type, build_type)
+        cv = preset.setdefault("cacheVariables", {})
+        cv["SSL_EAY"] = ssl_lib
+        cv["LIB_EAY"] = crypto_lib
+
 
 def read_json(file_path):
     """Reads a JSON file and returns the data."""
@@ -125,6 +200,14 @@ def save_json(file_path, data):
 def main(in_file, out_file):
     """Process the presets from the input file and save to the output file."""
     data = read_json(in_file)
+
+    if platform.system() == "Windows":
+        llvm_bin = find_llvm_bin()
+        if llvm_bin:
+            patch_windows_compiler_paths(data, llvm_bin)
+        openssl_root = find_openssl_root()
+        if openssl_root:
+            patch_windows_openssl_paths(data, openssl_root)
 
     # Process configurePresets
     presets = data.get("configurePresets", [])  # Access the correct section
