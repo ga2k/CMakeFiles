@@ -1,7 +1,26 @@
 # cmake/generate_app_config.cmake
 
-if (${APP_VENDOR}_PLUGIN_DIR)
-    set(PLUGIN_PATH "${${APP_VENDOR}_PLUGIN_DIR}")
+# PLUGIN_PATH is stored in the embedded YAML as a path relative to
+# CMAKE_INSTALL_PREFIX.  At runtime Util.cpp resolves it from the
+# inferred install prefix (exe dir parent, or bundle parent on macOS).
+if (APP_CONSUMES_PLUGINS OR APP_CREATES_PLUGINS)
+    if (${APP_VENDOR}_PLUGIN_DIR)
+        # ${APP_VENDOR}_PLUGIN_DIR is an absolute staging path.
+        # Both it and CMAKE_INSTALL_PREFIX share the staging root, so
+        # file(RELATIVE_PATH) produces the correct prefix-relative fragment.
+        file(RELATIVE_PATH PLUGIN_PATH
+            "${CMAKE_INSTALL_PREFIX}"
+            "${${APP_VENDOR}_PLUGIN_DIR}")
+    elseif (WIN32)
+        # Windows plugins are DLLs: RUNTIME DESTINATION → bin/
+        set(PLUGIN_PATH "${CMAKE_INSTALL_BINDIR}")
+    elseif (APPLE AND APP_TYPE MATCHES "Executable")
+        # macOS bundle: plugins live in Contents/PlugIns inside the bundle
+        set(PLUGIN_PATH "${APP_NAME}.app/Contents/PlugIns")
+    else ()
+        # Linux / macOS non-bundle: LIBRARY DESTINATION → lib[64]/
+        set(PLUGIN_PATH "${CMAKE_INSTALL_LIBDIR}")
+    endif ()
 endif ()
 
 set(PLUGIN_YAML_LIST "")
@@ -28,17 +47,6 @@ else ()
     set(FEATURES_YAML_LIST "[]")
 endif ()
 
-#set(CORE_LIBS_YAML_LIST "")
-#if (REQD_LIBS)
-#    list(REMOVE_DUPLICATES REQD_LIBS)
-#    # Convert semicolon-separated list to individual items
-#    string(REPLACE ";" "\n" CORE_LIBS_ITEMS "${REQD_LIBS}")
-#    string(REPLACE "\n" "\n    - " CORE_LIBS_YAML_LIST "${CORE_LIBS_ITEMS}")
-#    set(CORE_LIBS_YAML_LIST "\n    - ${CORE_LIBS_YAML_LIST}\n")
-#else ()
-#    set(CORE_LIBS_YAML_LIST "[]")
-#endif ()
-
 set(CREATES_PLUGINS_YAML_LIST "")
 if (APP_CREATES_PLUGINS)
     list(REMOVE_DUPLICATES APP_CREATES_PLUGINS)
@@ -50,7 +58,88 @@ else ()
     set(CREATES_PLUGINS_YAML_LIST "[]")
 endif ()
 
+if (APP_LOCAL_RESOURCES)
+    SplitAt("${APP_LOCAL_RESOURCES}" "," _lrFolder, _lrUUID)
+    set(YAML_LOCAL_RESOURCES_UUID "${_lrUUID}")
+    if (APPLE AND APP_TYPE MATCHES "Executable")
+        # macOS bundle: resources live inside Contents/Resources
+        set(YAML_LOCAL_RESOURCES "${APP_NAME}.app/Contents/Resources")
+    else ()
+        # Linux / Windows: standard share layout (CMAKE_INSTALL_DATADIR is already relative)
+        set(YAML_LOCAL_RESOURCES "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_NAME}")
+    endif ()
+endif ()
+
+if (APP_GLOBAL_RESOURCES)
+    SplitAt("${APP_GLOBAL_RESOURCES}" "," _grFolder, _grUUID)
+    set(YAML_GLOBAL_RESOURCES_UUID "${_grUUID}")
+    if (APPLE AND APP_TYPE MATCHES "Executable")
+        # macOS bundle: resources live inside Contents/Resources
+        set(GLOBAL_RESOURCES_DIR "Library/Application Support/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    else ()
+        # Linux / Windows: standard share layout (CMAKE_INSTALL_DATADIR is already relative)
+        set(GLOBAL_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${APP_VENDOR}/Resources/${APP_VENDOR}")
+    endif ()
+endif ()
+
+
+# XOR-encode a string with the given decimal key, output lowercase 2-digit hex per byte.
+# Replicates the hs::ObfuscatedString algorithm so the YAML never contains plaintext.
+# Uses a lookup table to avoid 0x hex literals, which CMake math() does not support.
+function(obfuscate_string_to_hex input key output_var)
+    set(_t "0;1;2;3;4;5;6;7;8;9;a;b;c;d;e;f")
+    string(HEX "${input}" _hex)
+    string(LENGTH "${_hex}" _hlen)
+    math(EXPR _nbytes "${_hlen} / 2")
+    set(_result "")
+    if(_nbytes GREATER 0)
+        math(EXPR _last "${_nbytes} - 1")
+        foreach(i RANGE 0 ${_last})
+            math(EXPR _pos "${i} * 2")
+            string(SUBSTRING "${_hex}" ${_pos} 1 _dhi)
+            math(EXPR _pos1 "${_pos} + 1")
+            string(SUBSTRING "${_hex}" ${_pos1} 1 _dlo)
+            list(FIND _t "${_dhi}" _vhi)
+            list(FIND _t "${_dlo}" _vlo)
+            math(EXPR _byte  "${_vhi} * 16 + ${_vlo}")
+            math(EXPR _xored "${_byte} ^ ${key}")
+            math(EXPR _ohi "${_xored} / 16")
+            math(EXPR _olo "${_xored} % 16")
+            list(GET _t ${_ohi} _hhi)
+            list(GET _t ${_olo} _hlo)
+            string(APPEND _result "${_hhi}${_hlo}")
+        endforeach()
+    endif()
+    set(${output_var} "${_result}" PARENT_SCOPE)
+endfunction()
+
+set(_TRAC_KEY 90)   # 0x5A — matches kXorKey in TracConfig.cpp
+obfuscate_string_to_hex("${APP_TRAC_URL}"    ${_TRAC_KEY} APP_TRAC_URL_OBF)
+obfuscate_string_to_hex("${APP_TRAC_USER}"   ${_TRAC_KEY} APP_TRAC_USER_OBF)
+obfuscate_string_to_hex("${APP_TRAC_PASSWD}" ${_TRAC_KEY} APP_TRAC_PASSWD_OBF)
+obfuscate_string_to_hex("${APP_TRAC_API}"    ${_TRAC_KEY} APP_TRAC_API_OBF)
+
+# License credentials — XOR key comes from APP_LIC_XOR (default 0 → no obfuscation for empty fields)
+if (DEFINED APP_LIC_XOR AND NOT APP_LIC_XOR STREQUAL "")
+    math(EXPR _LIC_KEY "${APP_LIC_XOR} + 0")
+else()
+    set(_LIC_KEY 0)
+endif()
+obfuscate_string_to_hex("${APP_LIC_URL}"  ${_LIC_KEY} APP_LIC_URL_OBF)
+obfuscate_string_to_hex("${APP_LIC_NAME}" ${_LIC_KEY} APP_LIC_NAME_OBF)
+obfuscate_string_to_hex("${APP_LIC_ENV}"  ${_LIC_KEY} APP_LIC_ENV_OBF)
+obfuscate_string_to_hex("${APP_LIC_CLI}"  ${_LIC_KEY} APP_LIC_CLI_OBF)
+
+string(STRIP "${APP_LIC_KEY}" _LIC_KEY_STRIPPED)
+if (_LIC_KEY_STRIPPED)
+    string(REPLACE "\n" "\n    " APP_LIC_KEY_YAML "    ${_LIC_KEY_STRIPPED}")
+else()
+    set(APP_LIC_KEY_YAML "")
+endif()
+
 # Generate the app.yaml body first (without checksum)
+message(STATUS "APP_YAML_TEMPLATE_PATH = ${APP_YAML_TEMPLATE_PATH}")
+message(STATUS "is file = $<BOOL:$<IS_FILE:${APP_YAML_TEMPLATE_PATH}>>")
 set(_APP_YAML_BODY_PATH "${APP_YAML_PATH}.body")
 configure_file(
         "${APP_YAML_TEMPLATE_PATH}"
@@ -66,6 +155,7 @@ file(WRITE "${APP_YAML_PATH}" "checksum_sha256: ${APP_YAML_BODY_SHA256}\n")
 file(READ "${_APP_YAML_BODY_PATH}" _APP_YAML_BODY_CONTENT)
 file(APPEND "${APP_YAML_PATH}" "${_APP_YAML_BODY_CONTENT}")
 
+
 # Clean up temporary body file
 file(REMOVE "${_APP_YAML_BODY_PATH}")
 
@@ -73,3 +163,4 @@ message(STATUS "Generated app configuration with checksum: ${APP_YAML_PATH}")
 if (PLUGIN_PATH)
     message(STATUS "Plugin path: ${PLUGIN_PATH}")
 endif ()
+

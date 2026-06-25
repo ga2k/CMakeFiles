@@ -23,7 +23,7 @@ endif()
 if(NOT TARGET eventpp::eventpp)
     add_library(eventpp INTERFACE)
     add_library(eventpp::eventpp ALIAS eventpp)
-    target_include_directories(magic_enum INTERFACE "${_external_dir}/eventpp/include")
+    target_include_directories(eventpp INTERFACE "${_external_dir}/eventpp/include")
 endif()
 
 # TESTING: GTest (if not pulled in yet)

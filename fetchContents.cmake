@@ -6,24 +6,33 @@ include(${cmake_root}/sqlish.cmake)
 
 macro(_initializeVars)
 
+    # @formatter:off
     set(FETCHCONTENT_QUIET OFF)
 
+    # __alreadyLocated is CACHE INTERNAL so it persists across reconfigures.
+    # Clear it here so each configure session starts fresh — stale entries would
+    # cause scanLibraryTargets to skip libs already seen in a prior configure,
+    # leaving yaml-cpp / magic_enum / eventpp / wxWidgets out of
+    # combinedLibraryComponents and triggering unnecessary FetchContent rebuilds.
+    set(__alreadyLocated "" CACHE INTERNAL "" FORCE)
+
     set(_CompileOptionsList ${${AUE_PREFIX}_CompileOptionsList})
-    set(_DefinesList ${${AUE_PREFIX}_DefinesList})
-    set(_DependenciesList ${${AUE_PREFIX}_DependenciesList})
+    set(_DefinesList        ${${AUE_PREFIX}_DefinesList})
+    set(_DependenciesList   ${${AUE_PREFIX}_DependenciesList})
 
-    set(_IncludePathsList ${${AUE_PREFIX}_IncludePathsList})
-    set(_LibrariesList ${${AUE_PREFIX}_LibrariesList})
-    set(_LibraryPathsList ${${AUE_PREFIX}_LibraryPathsList})
-    set(_LinkOptionsList ${${AUE_PREFIX}_LinkOptionsList})
-    set(_PrefixPathsList ${${AUE_PREFIX}_PrefixPathsList})
+    set(_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList})
+    set(_LibrariesList      ${${AUE_PREFIX}_LibrariesList})
+    set(_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList})
+    set(_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList})
+    set(_PrefixPathsList    ${${AUE_PREFIX}_PrefixPathsList})
 
-    set(_wxCompilerOptions ${${AUE_PREFIX}_wxCompilerOptions})
-    set(_wxDefines ${${AUE_PREFIX}_wxDefines})
-    set(_wxFrameworks ${${AUE_PREFIX}_wxFrameworks})
-    set(_wxIncludePaths ${${AUE_PREFIX}_wxIncludePaths})
-    set(_wxLibraryPaths ${${AUE_PREFIX}_wxLibraryPaths})
-    set(_wxLibraries ${${AUE_PREFIX}_wxLibraries})
+    set(_wxCompilerOptions  ${${AUE_PREFIX}_wxCompilerOptions})
+    set(_wxDefines          ${${AUE_PREFIX}_wxDefines})
+    set(_wxFrameworks       ${${AUE_PREFIX}_wxFrameworks})
+    set(_wxIncludePaths     ${${AUE_PREFIX}_wxIncludePaths})
+    set(_wxLibraryPaths     ${${AUE_PREFIX}_wxLibraryPaths})
+    set(_wxLibraries        ${${AUE_PREFIX}_wxLibraries})
+    # @formatter:on
 
     list(APPEND pseudoFeatures APPEARANCE PRINT LOGGER)
     list(APPEND noLibPackages googletest)
@@ -51,14 +60,14 @@ function(fetchContents)
 
     globalObjSet(GLOBAL_FEATURES "${AUE_FEATURES}")
 
-    CREATE(TABLE allFeatures     COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE initialFeatures COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE unifiedFeatures COLUMNS ( ${PkgColNames} ))
-    CREATE(TABLE resolvedNames   COLUMNS ( FslashP FeatureName PackageName HasPrereqs ))
+    CREATE(TABLE allFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE initialFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE unifiedFeatures COLUMNS (${PkgColNames}))
+    CREATE(TABLE resolvedNames COLUMNS (FslashP FeatureName PackageName HasPrereqs))
 
     msg()
 
-    foreach(DRY_RUN IN ITEMS ON OFF)
+    foreach (DRY_RUN IN ITEMS ON OFF)
         initialiseFeatureHandlers(${DRY_RUN})
         createStandardPackageData(${DRY_RUN})
         runPackageCallbacks(${DRY_RUN})
@@ -78,16 +87,16 @@ function(fetchContents)
         # Get user's selected package
         SELECT(ROW AS _uPackage FROM userPackages WHERE ROWID = ${pkgIndex})
 
-        list(GET _uPackage ${FIXName}       _uFeatureName)
-        list(GET _uPackage ${FIXPkgName}    _uPackageName)
-        list(GET _uPackage ${FIXNamespace}  _uNS)
+        list(GET _uPackage ${FIXName} _uFeatureName)
+        list(GET _uPackage ${FIXPkgName} _uPackageName)
+        list(GET _uPackage ${FIXNamespace} _uNS)
 
         # Get corresponding system package
         SELECT(ROW AS _sPackage FROM allFeatures WHERE "FeatureName" = "${_uFeatureName}" AND "PackageName" = "${_uPackageName}")
 
-        list(GET _sPackage ${FIXName}    _sFeatureName)
+        list(GET _sPackage ${FIXName} _sFeatureName)
         list(GET _sPackage ${FIXPkgName} _sPackageName)
-        list(GET _sPackage ${FIXKind}    _sKind)
+        list(GET _sPackage ${FIXKind} _sKind)
 
         # Integrity check
         if (NOT _uFeatureName STREQUAL "${_sFeatureName}")
@@ -139,11 +148,11 @@ function(fetchContents)
             list(REMOVE_DUPLICATES _sArgs)
             string(JOIN "${_TOK_LIST_SEP}" _args ${_sArgs})
 
-            if(NOT _args)
+            if (NOT _args)
                 set(_args ${_TOK_EMPTY_FIELD})
             endif ()
             list(REMOVE_AT wip ${FIXArgs})
-            list(INSERT    wip ${FIXArgs} "${_args}")
+            list(INSERT wip ${FIXArgs} "${_args}")
         endif ()
 
         # Step 2. Merge Components (FIND_PACKAGE_ARGS COMPONENTS checked later)
@@ -155,18 +164,18 @@ function(fetchContents)
             list(APPEND _sComps ${_uComps})
             list(REMOVE_DUPLICATES _sComps)
             string(JOIN "${_TOK_LIST_SEP}" _comps ${_sComps})
-            if(NOT _comps)
+            if (NOT _comps)
                 set(_comps ${_TOK_EMPTY_FIELD})
             endif ()
             list(REMOVE_AT wip ${FIXComponents})
-            list(INSERT    wip ${FIXComponents} "${_comps}")
+            list(INSERT wip ${FIXComponents} "${_comps}")
         endif ()
 
         # Step 3. Remove prerequisites from libraries (they are not used at link time)
         list(GET wip ${FIXKind} kkk)
         if (kkk STREQUAL "LIBRARY")
             list(REMOVE_AT wip ${FIXPrereqs})
-            list(INSERT    wip ${FIXPrereqs} ${_TOK_EMPTY_FIELD})
+            list(INSERT wip ${FIXPrereqs} ${_TOK_EMPTY_FIELD})
         endif ()
 
         INSERT(INTO initialFeatures VALUES (${wip}))
@@ -181,7 +190,7 @@ function(fetchContents)
         set(haveIt OFF)
 
         SELECT(ROW AS hsf_SysPkg FROM systemPackagesOnly WHERE ROWID = ${_rowID})
-        list(GET hsf_SysPkg ${FIXName}    sys_Feature)
+        list(GET hsf_SysPkg ${FIXName} sys_Feature)
         list(GET hsf_SysPkg ${FIXPkgName} sys_Package)
 
         SELECT(COUNT AS numUserPackages FROM userPackages)
@@ -193,8 +202,8 @@ function(fetchContents)
             set(haveIt OFF)
 
             SELECT(ROW AS hsf_UsrPkg FROM userPackages WHERE ROWID = ${thisIndex})
-            if(hsf_UsrPkg)
-                list(GET hsf_UsrPkg ${FIXName}    usr_Feature)
+            if (hsf_UsrPkg)
+                list(GET hsf_UsrPkg ${FIXName} usr_Feature)
                 list(GET hsf_UsrPkg ${FIXPkgName} usr_Package)
 
                 # Is this exact package already in the user's list?
@@ -204,7 +213,7 @@ function(fetchContents)
                 endif ()
             endif ()
 
-            if(NOT haveIt)
+            if (NOT haveIt)
                 _hs_sql_fields_to_storage(hsf_SysPkg _encodedPkg)
                 INSERT(INTO initialFeatures VALUES (${_encodedPkg}))
             endif ()
@@ -241,14 +250,14 @@ function(fetchContents)
         set(lFName 0)
         set(lPName 0)
         set(prereqs)
-        SELECT(COUNT AS numFeatures FROM ${feature_names} )
+        SELECT(COUNT AS numFeatures FROM ${feature_names})
 
         while (fix LESS numFeatures)
             inc(fix)
             set(row_id ${fix})
 
             SELECT(FeatureName AS f PackageName AS p FROM resolvedNames WHERE ROWID = ${row_id})
-            longest(QUIET CURRENT ${lFName} TEXT  "${f}"  LONGEST lFName)
+            longest(QUIET CURRENT ${lFName} TEXT "${f}" LONGEST lFName)
             longest(QUIET CURRENT ${lPName} TEXT "(${p})" LONGEST lPName)
 
             string(JOIN ", " l ${l} "${YELLOW}${f}${NC} (${GREEN}${p}${NC})")
@@ -257,18 +266,28 @@ function(fetchContents)
         string(REPEAT "─" ${usableCols} divider)
         set(divider "${BOLD}${WHITE}${divider}${NC}")
 
-        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}")
+        msg(CHECK_START "\n${BOLD}Processing ${numFeatures} features${NC} ${l}\n")
         list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
         unset(combinedLibraryComponents)
         set(scannedLibraries)
-        math(EXPR phaseLinePad "${usableCols} - 8")
+
+        string(LENGTH "${APP_NAME}" appNameLen)
+        string(LENGTH "Phase 1" phaseLen)
+        math(EXPR phaseLineInternalPadding "${usableCols} - (${appNameLen} + ${phaseLen} + 2)")
+        string(REPEAT " " ${phaseLineInternalPadding} phasePadding)
+
+        set(itemN 0)
+        set(ofM ${numFeatures})
+        string(LENGTH "${ofM}" howLongIsOfM)
 
         foreach (pass_num RANGE 1)
-            string(REPEAT "─" ${phaseLinePad} line)
             set(phase ${pass_num})
             inc(phase)
-            msg("\n${BOLD}${GREEN}Phase ${phase} ${line}${NC}\n")
+
+            msg("${divider}")
+            msg("${BOLD}${YELLOW_BG}${BLACK} ${APP_NAME}${phasePadding}Phase ${phase} ${NC}")
+            msg("${divider}\n")
 
             set(ixloupe 0)
             while (ixloupe LESS numFeatures)
@@ -313,7 +332,7 @@ function(fetchContents)
                         FEATURE     ${this_feature_name}
                         PACKAGE     ${this_pkgname}
                         ARGS        this_find_package_args
-                        BUILD_DIR   this_build
+                        BIN_DIR     this_bin
                         COMPONENTS  this_find_package_components
                         FETCH_FLAG  this_fetch
                         FLAGS       this_flags
@@ -333,21 +352,24 @@ function(fetchContents)
                 string(TOLOWER "${this_pkgname}" this_pkglc)
                 string(TOUPPER "${this_pkgname}" this_pkguc)
 
-                foreach(flag IN LISTS this_flags)
-                    if(flag STREQUAL "F_EARLY_MAKEAVAILABLE")
-                        set(apf_EARLY_MAKEAVAILABLE ON)
-                        break()
-                    endif ()
+                foreach (flag IN LISTS this_flags)
+                    set(apf_${flag} ON)
                 endforeach ()
+
+                longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
+                longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
+
+                string(LENGTH "${ix}" howLongIsItemN)
+                set(useThisAsItemN "${ix}")
+                if (howLongIsItemN LESS howLongIsOfM)
+                    set(useThisAsItemN " ${useThisAsItemN}")
+                endif ()
 
                 # ==========================================================================================================
                 # PASS 0: DECLARATION & FIND_PACKAGE phase
                 # ==========================================================================================================
                 if (${pass_num} EQUAL 0)
-
-                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName              PADDED dispFeatureName)
-                    longest(LEFT  CURRENT ${lPName} TEXT "(${this_pkgname})"    LONGEST longestPackageName  PADDED dispPackageName)
-                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
+                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} [${BOLD}${BLUE}${ITALICS}${UNDERLINE}${APP_NAME}${NC}${BLUE} Item${BOLD} ${useThisAsItemN}${NC}${BLUE} of ${BOLD}${ofM}${NC}] ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     msg(" ")
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
 
@@ -358,7 +380,9 @@ function(fetchContents)
                         handleTarget(${this_pkgname})
 
                         list(POP_BACK CMAKE_MESSAGE_INDENT)
+                        msg()
                         msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
+                        msg("\n${divider}\n")
                         continue()
                     endif ()
 
@@ -391,15 +415,35 @@ function(fetchContents)
                                     cmake_language(CALL "${fn}" "${this_pkgname}")
                                 endif ()
                             else ()
-                                # Try to find the package first before declaring FetchContent
-                                # This allows Gfx to see what Core already fetched/built
-                                msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
-                                set(temporary_args ${this_find_package_args})
-                                list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
-                                find_package(${this_pkgname} QUIET ${temporary_args})
+                                # SYSTEM packages always build from source so they enter the
+                                # HoffSoft:: install export set consistently on all platforms
+                                # (e.g. yaml-cpp must not resolve to an IMPORTED sysroot target
+                                # on WinX — it must be built and exported as HoffSoft::yaml-cpp).
+                                # Inter-subproject reuse (Core built yaml-cpp, now Gfx sees it)
+                                # is caught by the TARGET check in the enclosing if-block above,
+                                # so no find_package probe is needed for SYSTEM packages.
+                                if (NOT this_kind STREQUAL "SYSTEM")
+                                    # Try to find the package first before declaring FetchContent
+                                    # This allows Gfx to see what Core already fetched/built
+                                    msg(STATUS "Checking if ${BOLD}${this_pkgname}${NC} is already available via find_package...")
+                                    set(temporary_args ${this_find_package_args})
+                                    list(REMOVE_ITEM temporary_args REQUIRED EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
+                                    find_package(${this_pkgname} QUIET ${temporary_args})
+                                else ()
+                                    # Clear any stale _FOUND cache from a prior configure so that
+                                    # Pass 1's "already found" check does not skip MakeAvailable.
+                                    unset(${this_pkgname}_FOUND)
+                                    unset(${this_pkgname}_FOUND CACHE)
+                                endif ()
 
-                                if (${this_pkgname}_FOUND OR TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
-                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} Skipping FetchContent.\n")
+                                if (${this_pkgname}_FOUND)
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (${this_pkgname}_FOUND is ON) Skipping FetchContent.\n")
+                                    # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
+                                elseif (TARGET ${this_pkgname}::${this_pkgname})
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (TARGET ${this_pkgname}::${this_pkgname} exists) Skipping FetchContent.\n")
+                                    # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
+                                elseif (TARGET ${this_pkgname})
+                                    msg(STATUS "${this_pkgname} ${GREEN}found.${NC} (TARGET ${this_pkgname} exists) Skipping FetchContent.\n")
                                     # TODO:                                    set(${this_pkgname}_ALREADY_FOUND ON CACHE  INTERNAL "" FORCE)
                                 else ()
                                     msg(STATUS "${MAGENTA}Nope!${NC} Doing it the hard way...")
@@ -426,16 +470,49 @@ function(fetchContents)
                                         set(COMPONENTS_KEYWORD "COMPONENTS")
                                     endif ()
 
-                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
+                                    if (this_src)
+                                        set(use_src "${this_src}")
+                                    endif ()
 
-                                    FetchContent_Declare(${this_pkgname}
-                                            ${SOURCE_KEYWORD} ${this_git_repo}
-                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
-                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
-                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
-                                            ${GIT_TAG_KEYWORD} ${this_tag})
+                                    set(use_bin)
+                                    if (this_bin)
+                                        set(use_bin "${this_bin}")
+                                        set(use_subbin "${this_bin}-subbuild")
+                                    endif ()
+
+                                    set(outStr)
+                                    list(APPEND outStr "${SOURCE_KEYWORD}" "${this_git_repo}")
+                                    if (use_src)
+                                        list(APPEND outStr "SOURCE_DIR" "${use_src}")
+                                    endif ()
+                                    if (use_bin)
+                                        list(APPEND outStr "BINARY_DIR" "${use_bin}")
+                                        list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
+                                    endif ()
+
+                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" ${this_find_package_args})
+                                    list(APPEND outStr "${COMPONENTS_KEYWORD}" ${this_find_package_components})
+                                    list(APPEND outStr "${GIT_TAG_KEYWORD}" "${this_tag}")
+
+                                    string(REPLACE ";;" ";" outStr "${outStr}")
+                                    string(REPLACE ";" " " output "${outStr}")
+
+                                    msg(" FetchContent_Declare(${this_pkgname} ${output})")
+
+                                    FetchContent_Declare(${this_pkgname} ${outStr})
 
                                     set(fn "${this_pkgname}_postDeclare")
+                                    #                                    msg(STATUS "\nFetchContent_Declare(${this_pkgname} ${SOURCE_KEYWORD} ${this_git_repo} SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname} ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args} ${COMPONENTS_KEYWORD} ${this_find_package_components} ${GIT_TAG_KEYWORD} ${this_tag})")
+                                    #
+                                    #                                    FetchContent_Declare(${this_pkgname}
+                                    #                                            ${SOURCE_KEYWORD} ${this_git_repo}
+                                    #                                            SOURCE_DIR ${EXTERNALS_DIR}/${this_pkgname}
+                                    #                                            ${OVERRIDE_FIND_PACKAGE_KEYWORD} ${this_find_package_args}
+                                    #                                            ${COMPONENTS_KEYWORD} ${this_find_package_components}
+                                    #                                            ${GIT_TAG_KEYWORD} ${this_tag})
+                                    #
+                                    #                                    set(fn "${this_pkgname}_postDeclare")
                                     if (COMMAND "${fn}")
                                         cmake_language(CALL "${fn}" "${this_pkgname}")
                                     endif ()
@@ -450,9 +527,27 @@ function(fetchContents)
                             list(REMOVE_ITEM temporary_args REQUIRED FIND_PACKAGE_ARGS)
 
                             msg("Probing for ${this_pkgname}...")
+
+                            if ("PATHS" IN_LIST this_find_package_args)
+                                msg("BUMP the BUPP (prefix paths preserved)")
+                                set(bump "${CMAKE_MODULE_PATH}")
+                                set(bupp "${CMAKE_PREFIX_PATH}")
+                                # unset(CMAKE_MODULE_PATH)
+                                # unset(CMAKE_PREFIX_PATH)
+                            else ()
+                                msg("Ain't gonna BUMP the BUPP")
+                            endif ()
+
                             msg("find_package(${this_pkgname} ${temporary_args})")
 
                             find_package(${this_pkgname} ${temporary_args})
+
+                            if (bump)
+                                set(CMAKE_MODULE_PATH "${bump}")
+                            endif ()
+                            if (bupp)
+                                set(CMAKE_PREFIX_PATH "${bupp}")
+                            endif ()
 
                             set(scanned${this_pkgname} OFF)
                             if (${this_pkgname}_FOUND)
@@ -468,22 +563,22 @@ function(fetchContents)
                                 # so that we can eventually load it.
                                 if (this_prereqs)
                                     msg(ALWAYS FATAL "Prerequisites not handled yet!!")
-#                                    CREATE(TABLE "${this_pkgname}Prerequisites" COLUMNS (${PkgColNames}))
-#                                    array(CREATE needed_prereqs "${this_pkgname}Prerequisites" RECORDS)
-#                                    record(CREATE needed_prereqFeatureNames "${this_pkgname}PrerequisiteNames")
-#                                    foreach (p IN LISTS this_prereqs)
-#                                        SplitAt("${p}" "=" preFeatName prePkgName)
-#                                        if (prePkg)
-#                                            getFeaturePackageByName("${DATA}" "${preFeatName}" "${prePkgName}" prePkg dc)
-#                                        else ()
-#                                            getFeaturePackageBy("${DATA}" "${preFeatName}" 0 prePkg)
-#                                        endif ()
-#                                        array(APPEND needed_prereqs RECORD "${prePkg}")
-#                                        record(APPEND needed_prereqFeatureNames "${p}")
-#                                    endforeach ()
-#
-#                                    msg(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
-#                                    processFeatures("${needed_prereqs}" "${needed_prereqFeatureNames}")
+                                    #                                    CREATE(TABLE "${this_pkgname}Prerequisites" COLUMNS (${PkgColNames}))
+                                    #                                    array(CREATE needed_prereqs "${this_pkgname}Prerequisites" RECORDS)
+                                    #                                    record(CREATE needed_prereqFeatureNames "${this_pkgname}PrerequisiteNames")
+                                    #                                    foreach (p IN LISTS this_prereqs)
+                                    #                                        SplitAt("${p}" "=" preFeatName prePkgName)
+                                    #                                        if (prePkg)
+                                    #                                            getFeaturePackageByName("${DATA}" "${preFeatName}" "${prePkgName}" prePkg dc)
+                                    #                                        else ()
+                                    #                                            getFeaturePackageBy("${DATA}" "${preFeatName}" 0 prePkg)
+                                    #                                        endif ()
+                                    #                                        array(APPEND needed_prereqs RECORD "${prePkg}")
+                                    #                                        record(APPEND needed_prereqFeatureNames "${p}")
+                                    #                                    endforeach ()
+                                    #
+                                    #                                    msg(STATUS "Library ${this_pkgname} not found. Processing metadata prerequisites: ${needed_prereqs}")
+                                    #                                    processFeatures("${needed_prereqs}" "${needed_prereqFeatureNames}")
                                 endif ()
                             endif ()
                             #                            endif ()
@@ -532,9 +627,7 @@ function(fetchContents)
 
                 if (${pass_num} EQUAL 1 OR apf_IS_A_PREREQ OR apf_EARLY_MAKEAVAILABLE)
 
-                    longest(RIGHT CURRENT ${lFName} TEXT "${this_feature_name}" LONGEST lFName PADDED dispFeatureName)
-                    longest(LEFT CURRENT ${lPName} TEXT "(${this_pkgname})" LONGEST longestPackageName PADDED dispPackageName)
-                    msg(CHECK_START "${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} ${BLUE}Phase ${NC}${BOLD}2${NC}")
+                    msg(CHECK_START "${BOLD}${YELLOW}${dispFeatureName}${NC} ${GREEN}${dispPackageName}${NC} [${BOLD}${BLUE}${ITALICS}${UNDERLINE}${APP_NAME}${NC}${BLUE} Item${BOLD} ${useThisAsItemN}${NC}${BLUE} of ${BOLD}${ofM}${NC}] ${BOLD}${MAGENTA}Phase ${NC}${BOLD}1${NC}")
                     msg(" ")
 
                     list(APPEND CMAKE_MESSAGE_INDENT "\t")
@@ -553,29 +646,60 @@ function(fetchContents)
                             # Still consume it for this app by adding the provided target to our link lists.
                             handleTarget(${this_pkgname})
 
+                            # For FETCH_CONTENTS packages found via find_package (e.g. soci found in
+                            # /usr/local from a prior install), handleTarget may not resolve namespace-
+                            # qualified targets like SOCI::Core. Call postMakeAvailable so the package-
+                            # specific handler can add those targets to _LibrariesList.
+                            if ("${this_method}" STREQUAL "FETCH_CONTENTS")
+                                set(fn "${this_pkgname}_postMakeAvailable")
+                                set(HANDLED OFF)
+                                if (COMMAND "${fn}")
+                                    cmake_language(CALL "${fn}" "${this_src}" "${this_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                endif ()
+                            endif ()
+
                             list(POP_BACK CMAKE_MESSAGE_INDENT)
+                            msg()
                             msg(CHECK_PASS "Feature already available without re-processing: linked to provided target")
+                            msg("\n${divider}\n")
                             continue()
                         endif ()
 
                         if ("${this_method}" STREQUAL "FIND_PACKAGE")
+
                             if (NOT TARGET ${this_namespace}::${this_pkgname})
                                 handleTarget(${this_pkgname})
                             endif ()
+
                         elseif ("${this_method}" STREQUAL "FETCH_CONTENTS" AND this_fetch)
 
-                            if (NOT this_src)
+                            set(use_src)
+                            if (this_src)
+                                set(use_src "${this_src}")
+                            else ()
                                 if (EXISTS "${EXTERNALS_DIR}/${this_pkgname}")
-                                    set(this_src "${EXTERNALS_DIR}/${this_pkgname}")
-                                endif ()
-                            endif ()
-                            if (NOT this_build)
-                                if (EXISTS "${BUILD_DIR}/${this_pkglc}-build")
-                                    set(this_build "${BUILD_DIR}/${this_pkglc}-build")
+                                    set(use_src "${EXTERNALS_DIR}/${this_pkgname}")
                                 endif ()
                             endif ()
 
-                            if (NOT ${this_pkgname}_ALREADY_FOUND)
+                            set(use_bin)
+                            if (this_bin)
+                                set(use_bin "${this_bin}")
+                            else ()
+                                if (EXISTS "${BUILD_DIR}/${this_pkglc}-build")
+                                    set(use_bin "${BUILD_DIR}/${this_pkglc}-build")
+                                endif ()
+                            endif ()
+
+                            if (TARGET ${this_pkgname}::${this_pkgname} OR TARGET ${this_pkgname})
+                                # Target was built by a prior subproject in this same CMake run
+                                # (e.g. a dep built while processing Core, now consumed by Gfx).
+                                # FetchContent_Declare was intentionally skipped in Pass 0, so
+                                # calling FetchContent_MakeAvailable here would fail with
+                                # "No content details recorded". Just link the existing target.
+                                msg(STATUS "${this_pkgname} target already exists from a prior subproject. Skipping FetchContent_MakeAvailable.")
+                                handleTarget(${this_pkgname})
+                            elseif (NOT ${this_pkgname}_ALREADY_FOUND)
                                 set(fn "${this_pkgname}_preMakeAvailable")
                                 set(HANDLED OFF)
                                 if (COMMAND "${fn}")
@@ -595,7 +719,7 @@ function(fetchContents)
 
                             set(fn "${this_pkgname}_postMakeAvailable")
                             if (COMMAND "${fn}")
-                                cmake_language(CALL "${fn}" "${this_src}" "${this_build}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
+                                cmake_language(CALL "${fn}" "${use_src}" "${use_bin}" "${OUTPUT_DIR}" "${BUILD_TYPE_LC}")
                             endif ()
 
                             # Auto-include the standard 'include' folder if it exists and wasn't handled
@@ -609,7 +733,7 @@ function(fetchContents)
                         # Final patching/fixing phase
                         set(fn "${this_pkgname}_fix")
                         if (COMMAND "${fn}")
-                            cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${EXTERNALS_DIR}/${this_pkgname}")
+                            cmake_language(CALL "${fn}" "${this_pkgname}" "${this_tag}" "${this_src}")
                         elseif (NOT ${this_pkgname}_PATCHED AND EXISTS "${cmake_root}/patches/${this_pkgname}")
                             unset(patches)
                             list(APPEND patches "${this_pkgname}|${EXTERNALS_DIR}/${this_pkgname}")
@@ -625,7 +749,7 @@ function(fetchContents)
 
                 inc(ix)
 
-            msg("\n${divider}\n")
+                msg("\n${divider}\n")
 
             endwhile () # this_feature_name
 
@@ -637,8 +761,9 @@ function(fetchContents)
 
     endfunction()
 
-    processFeatures(unifiedFeatures resolvedNames )
-    propegateUpwards("Finally" ON)
+    processFeatures(unifiedFeatures resolvedNames)
+    propegateUpwards("Finally" OFF)
+
 endfunction()
 
 macro(propegateUpwards whereWeAre REPORT)

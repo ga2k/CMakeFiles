@@ -62,14 +62,31 @@ function(generateUIClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
     # Ensure your target waits for the generation step
     add_dependencies(${TRRGET} generate_ui)
 
-    # Add generated sources
     target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
             BASE_DIRS "${OUT_DIR}"
             FILES ${UI_CLASS_FILES}
     )
+    set_source_files_properties(${UI_CLASS_FILES} PROPERTIES
+            SKIP_PRECOMPILE_HEADERS ON
+            CXX_SCAN_FOR_MODULES ON
+    )
 
     target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
+
+    # Hand-written module implementation stubs (created once by generator, never overwritten)
+    file(GLOB_RECURSE UI_IMPL_FILES
+            CONFIGURE_DEPENDS
+            LIST_DIRECTORIES false
+            "${SRCDIR}/impl/*_impl.cpp"
+    )
+    if (UI_IMPL_FILES)
+        target_sources(${TRRGET} PRIVATE ${UI_IMPL_FILES})
+        set_source_files_properties(${UI_IMPL_FILES} PROPERTIES
+                CXX_SCAN_FOR_MODULES ON
+                SKIP_PRECOMPILE_HEADERS ON
+        )
+    endif()
 
 endfunction()
 
@@ -122,10 +139,12 @@ function(generateRecordsets OUT_DIR SRCDIR TRRGET)
     # Ensure your target waits for the generation step
     add_dependencies(${TRRGET} generate_rs)
 
-    # Add generated sources
     target_sources(${TRRGET}
             PUBLIC FILE_SET CXX_MODULES
             BASE_DIRS "${OUT_DIR}"
             FILES ${RS_CLASS_FILES}
+    )
+    set_source_files_properties(${RS_CLASS_FILES} PROPERTIES
+            CXX_SCAN_FOR_MODULES ON
     )
 endfunction()

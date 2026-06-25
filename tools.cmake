@@ -280,8 +280,35 @@ function(resolve IN OUT_NAME OUT_VALUE)
 
     if (NOT "${NEXT_NAME}" STREQUAL "")
         resolve(${THIS_VALUE} ${OUT_NAME} ${OUT_VALUE})
+        set(END_IT_RIGHT_HERE -1)
+
+        string(FIND "${OUT_NAME}" "\r" END_IT_HERE)
+        string(FIND "${OUT_NAME}" "\n" HERE)
+
+        if (END_IT_HERE GREATER_EQUAL 0 OR HERE GREATER_EQUAL 0)
+            if (END_IT_HERE GREATER_EQUAL 0)
+                math(EXPR END_IT_RIGHT_HERE "${END_IT_HERE} - 1")
+            else ()
+                math(EXPR END_IT_RIGHT_HERE "${HERE} - 1")
+            endif ()
+        endif ()
+        string(SUBSTRING "${OUT_NAME}" 0 ${END_IT_RIGHT_HERE} OUT_NAME)
         return()
     endif ()
+
+    set(END_IT_RIGHT_HERE -1)
+
+    string(FIND "${OUT_NAME}" "\r" END_IT_HERE)
+    string(FIND "${OUT_NAME}" "\n" HERE)
+
+    if (END_IT_HERE GREATER_EQUAL 0 OR HERE GREATER_EQUAL 0)
+        if (END_IT_HERE GREATER_EQUAL 0)
+            math(EXPR END_IT_RIGHT_HERE "${END_IT_HERE} - 1")
+        else ()
+            math(EXPR END_IT_RIGHT_HERE "${HERE} - 1")
+        endif ()
+    endif ()
+    string(SUBSTRING "${OUT_NAME}" 0 ${END_IT_RIGHT_HERE} OUT_NAME)
 
     set(${OUT_NAME} ${THIS_NAME} CACHE STRING "" FORCE)
     set(${OUT_VALUE} ${THIS_VALUE} CACHE STRING "" FORCE)
@@ -345,41 +372,12 @@ function(msg)
         set(text " ")
     endif ()
     if (NOT AA_VERBATIM)
-        resolve("${text}" dc text)
+        resolve("${text}" dc2 text)
     endif ()
 
     if (APP_DEBUG OR AA_ALWAYS)
-        if (1)
-            string(REGEX REPLACE ";" " " text "${text}")
-            cmake_language(EVAL CODE [=[message(${node} ${text})]=])
-#            message(${argn})
-        elseif (AA_FATAL_ERROR)
-            message(FATAL_ERROR "${text}")
-        elseif (AA_SEND_ERROR)
-            message(SEND_ERROR "${text}")
-        elseif (AA_WARNING)
-            message(WARNING "${text}")
-        elseif (AA_AUTHOR_WARNING)
-            message(AUTHOR_WARNING "${text}")
-        elseif (AA_DEPRECATION)
-            message(DEPRECATION "${text}")
-        elseif (AA_STATUS)
-            message(STATUS "${text}")
-        elseif (AA_VERBOSE)
-            message(VERBOSE "${text}")
-        elseif (AA_DEBUG)
-            message(DEBUG "${text}")
-        elseif (AA_TRACE)
-            message(TRACE "${text}")
-        elseif (AA_CHECK_START)
-            message(CHECK_START "${text}")
-        elseif (AA_CHECK_PASS)
-            message(CHECK_PASS "${text}")
-        elseif (AA_CHECK_FAIL)
-            message(CHECK_FAIL "${text}")
-        else ()
-            message(NOTICE "${text}")
-        endif ()
+        string(REGEX REPLACE ";" " " text "${text}")
+        cmake_language(EVAL CODE [=[message(${node} ${text})]=])
     endif ()
 
 endfunction()
@@ -475,7 +473,7 @@ function(doDump)
         endif ()
     endmacro()
 
-    if (${dunno})
+    if (dunno)
         mmmChocolate("${dunno}")
         return()
     endif ()
@@ -615,35 +613,7 @@ function(log)
         set(AA_TITLE_USED "${AA_TEMP_TITLE}")
         set(AA_TITLE_USED "${AA_TEMP_TITLE} - Begin")
 
-        if (1)
-            msg(${mode} "${AA_TITLE_USED}")
-        elseif (AA_FATAL_ERROR)
-            msg(FATAL_ERROR "${AA_TITLE_USED}")
-        elseif (AA_SEND_ERROR)
-            msg(SEND_ERROR "${AA_TITLE_USED}")
-        elseif (AA_WARNING)
-            msg(WARNING "${AA_TITLE_USED}")
-        elseif (AA_AUTHOR_WARNING)
-            msg(AUTHOR_WARNING "${AA_TITLE_USED}")
-        elseif (AA_DEPRECATION)
-            msg(DEPRECATION "${AA_TITLE_USED}")
-        elseif (AA_STATUS)
-            msg(STATUS "${AA_TITLE_USED}")
-        elseif (AA_VERBOSE)
-            msg(VERBOSE "${AA_TITLE_USED}")
-        elseif (AA_DEBUG)
-            msg(DEBUG "${AA_TITLE_USED}")
-        elseif (AA_TRACE)
-            msg(TRACE "${AA_TITLE_USED}")
-        elseif (AA_CHECK_START)
-            msg(AA_CHECK_START "${AA_TITLE_USED}")
-        elseif (AA_CHECK_PASS)
-            msg(CHECK_PASS "${AA_TITLE_USED}")
-        elseif (AA_CHECK_FAIL)
-            msg(CHECK_FAIL "${AA_TITLE_USED}")
-        else ()
-            msg(NOTICE "${AA_TITLE_USED}")
-        endif ()
+        msg(${mode} "${AA_TITLE_USED}")
 
         list(APPEND CMAKE_MESSAGE_INDENT "  ")
     endif ()
@@ -651,72 +621,14 @@ function(log)
     foreach (AA_ ${AA_LISTS})
         resolve(${AA_} VVAR VVAL)
         set(AA_TITLE "Contents of $CACHE{VVAR}: ")
-
-        if (1)
-            doDump(${mode} ${VVAR} "${AA_TITLE}")
-        elseif (AA_FATAL_ERROR)
-            doDump(FATAL_ERROR ${VVAR} "${AA_TITLE}")
-        elseif (AA_SEND_ERROR)
-            doDump(SEND_ERROR ${VVAR} "${AA_TITLE}")
-        elseif (AA_WARNING)
-            doDump(WARNING ${VVAR} "${AA_TITLE}")
-        elseif (AA_AUTHOR_WARNING)
-            doDump(AUTHOR_WARNING ${VVAR} "${AA_TITLE}")
-        elseif (AA_DEPRECATION)
-            doDump(DEPRECATION ${VVAR} "${AA_TITLE}")
-        elseif (AA_STATUS)
-            doDump(STATUS ${VVAR} "${AA_TITLE}")
-        elseif (AA_VERBOSE)
-            doDump(VERBOSE ${VVAR} "${AA_TITLE}")
-        elseif (AA_DEBUG)
-            doDump(DEBUG ${VVAR} "${AA_TITLE}")
-        elseif (AA_TRACE)
-            doDump(TRACE ${VVAR} "${AA_TITLE}")
-        elseif (AA_CHECK_START)
-            doDump(AA_CHECK_START ${VVAR} "${AA_TITLE}")
-        elseif (AA_CHECK_PASS)
-            doDump(CHECK_PASS ${VVAR} "${AA_TITLE}")
-        elseif (AA_CHECK_FAIL)
-            doDump(CHECK_FAIL ${VVAR} "${AA_TITLE}")
-        else ()
-            doDump(NOTICE ${VVAR} "${AA_TITLE}")
-        endif ()
+        doDump(${mode} ${VVAR} "${AA_TITLE}")
     endforeach ()
 
     if (AA_TEMP_TITLE)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
         set(AA_TITLE_USED "${AA_TEMP_TITLE}")
         set(AA_TITLE_USED "${AA_TEMP_TITLE} - End")
-
-        if (1)
-            msg(${mode} ${AA_TITLE_USED})
-        elseif (AA_FATAL_ERROR)
-            msg(FATAL_ERROR "${AA_TITLE_USED}")
-        elseif (AA_SEND_ERROR)
-            msg(SEND_ERROR "${AA_TITLE_USED}")
-        elseif (AA_WARNING)
-            msg(WARNING "${AA_TITLE_USED}")
-        elseif (AA_AUTHOR_WARNING)
-            msg(AUTHOR_WARNING "${AA_TITLE_USED}")
-        elseif (AA_DEPRECATION)
-            msg(DEPRECATION "${AA_TITLE_USED}")
-        elseif (AA_STATUS)
-            msg(STATUS "${AA_TITLE_USED}")
-        elseif (AA_VERBOSE)
-            msg(VERBOSE "${AA_TITLE_USED}")
-        elseif (AA_DEBUG)
-            msg(DEBUG "${AA_TITLE_USED}")
-        elseif (AA_TRACE)
-            msg(TRACE "${AA_TITLE_USED}")
-        elseif (AA_CHECK_START)
-            msg(CHECK_START "${AA_TITLE_USED}")
-        elseif (AA_CHECK_PASS)
-            msg(CHECK_PASS "${AA_TITLE_USED}")
-        elseif (AA_CHECK_FAIL)
-            msg(CHECK_FAIL "${AA_TITLE_USED}")
-        else ()
-            m(NOTICE "${AA_TITLE_USED}")
-        endif ()
+        msg(${mode} ${AA_TITLE_USED})
     endif ()
 
     if (AA_INDENT)
@@ -725,73 +637,6 @@ function(log)
 
     brif(_LF)
 
-endfunction()
-
-function(msge)
-    set(modes
-            FATAL_ERROR
-            SEND_ERROR
-            WARNING
-            AUTHOR_WARNING
-            DEPRECATION
-            NOTICE
-            STATUS
-            VERBOSE
-            DEBUG
-            TRACE
-    )
-
-    set(switches
-            ALWAYS
-    )
-    set(options
-            ${modes}
-            ${switches}
-    )
-
-    cmake_parse_arguments(AA "${options}" "" "" ${ARGN})
-    set(AA_message_text "${AA_UNPARSED_ARGUMENTS}")
-
-    set(alreadyHaveOne OFF)
-    foreach (mode IN LISTS modes)
-        if (AA_${mode})
-            if (alreadyHaveOne)
-                unset(AA_${mode})
-            else ()
-                set(alreadyHaveOne ON)
-            endif ()
-        endif ()
-    endforeach ()
-
-    if (AA_ALWAYS OR APP_DEBUG)
-        if (AA_FATAL_ERROR)
-            message(FATAL_ERROR "${AA_message_text}")
-        elseif (AA_SEND_ERROR)
-            message(SEND_ERROR "${AA_message_text}")
-        elseif (AA_WARNING)
-            message(WARNING "${AA_message_text}")
-        elseif (AA_AUTHOR_WARNING)
-            message(AUTHOR_WARNING "${AA_message_text}")
-        elseif (AA_DEPRECATION)
-            message(DEPRECATION "${AA_message_text}")
-        elseif (AA_STATUS)
-            message(STATUS "${AA_message_text}")
-        elseif (AA_VERBOSE)
-            message(VERBOSE "${AA_message_text}")
-        elseif (AA_DEBUG)
-            message(DEBUG "${AA_message_text}")
-        elseif (AA_TRACE)
-            message(TRACE "${AA_message_text}")
-        elseif (AA_CHECK_START)
-            message(CHECK_START "${AA_message_text}")
-        elseif (AA_CHECK_PASS)
-            message(CHECK_PASS "${AA_message_text}")
-        elseif (AA_CHECK_FAIL)
-            message(CHECK_FAIL "${AA_message_text}")
-        else ()
-            message(NOTICE "${AA_message_text}")
-        endif ()
-    endif ()
 endfunction()
 
 function(longest)
@@ -1392,13 +1237,8 @@ macro(generateExportHeader)
     endif ()
 
     if (NOT A_GEH_DESTDIR)
-        if (MONOREPO)
-            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/include/${_target}")
-            message(AUTHOR_WARNING "MONOREPO: Setting A_GEH_DESTDIR to '${A_GEH_DESTDIR}'")
-        else ()
-            set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
-            message(AUTHOR_WARNING "Setting A_GEH_DESTDIR to '${A_GEH_DESTDIR}'")
-        endif ()
+        set(A_GEH_DESTDIR "${CMAKE_SOURCE_DIR}/${_target}/include/${_target}")
+        message(AUTHOR_WARNING "Setting A_GEH_DESTDIR to '${A_GEH_DESTDIR}'")
     endif ()
 
     get_filename_component(A_GEH_DESTDIR "${A_GEH_DESTDIR}" ABSOLUTE)
@@ -1663,6 +1503,285 @@ function(replaceFile target patchList)
 
 endfunction()
 
+function(replaceFiles target patchList)
+
+    if(NOT DEFINED BOLD)
+        string(ASCII 27 ESC)
+        set(BOLD "${ESC}[1m")
+        set(RED "${ESC}[31m${BOLD}")
+        set(GREEN "${ESC}[32m${BOLD}")
+        set(ORANGE "${ESC}[33m")
+        set(YELLOW "${ESC}[33m${BOLD}")
+        set(NC "${ESC}[0m")
+    endif ()
+
+    # Format of each entry in patchList
+    # patch_descriptor | source_descriptor
+    #
+    # patch_descriptor:
+    #
+    #       Note: "${cmake_root}/patches/" is prepended to every patch_descriptor before further processing
+    #
+    #   ${target}/folder            The patch source dir will be - each leaf file in
+    #                               "${cmake_root}/patches/${target}/folder/*"
+    #                               Each variable "LEAF" will be set to the path to the leaf AFTER the specified path.
+    #                               ie the resolved value of the assumed "*" in ${target}/folder/*
+    #
+    #   ${target}/folder/file.h     The variable LEAF will be set to "file.h"
+    #
+    # source_descriptor:
+    #
+    #       Note: "${sourceDir}" is the true source dir for this target (usually "${EXTERNALS_DIR}/${target}-build")
+    #
+    #   ${source_dir}/some/path     The value ${LEAF} will appended to the supplied path
+    #
+    # If the literal token "LEAF" appears in source_descriptor, it is replaced in-place.
+    # Otherwise, LEAF is appended to source_descriptor.
+    #
+    # =================================================================================================================
+    # Examples  Let ${sourceDir}  be ~/dev/MyProject/external/${target}-build)
+    #
+    #   ~/dev/MyProject/cmake/patches
+    #   ├── magic-enum
+    #   │   └── include
+    #   │       └── magic_enum
+    #   │           └── algorithms.hpp
+    #   └── wxWidgets
+    #       ├── include
+    #       │   └── wx
+    #       │        └── deps.h
+    #       ├── lib
+    #       │   └── wx
+    #       │       └── include
+    #       │           └── wxqt-unicode-3.3
+    #       └── src
+    #           └── qt
+    #               └── utils.cpp
+    #
+    # Let target be "magic-enum"
+    #
+    # ${target} | ${sourceDir}
+    #
+    # patch_descriptor will effectively be ${target}/*
+    # LEAF will be set to "include/magic_enum/algorithms.hpp" by file system inspection
+    # source_descriptor will effectively be ${sourceDir}/${LEAF}
+    #
+    # Let target be "wxWidgets"
+    #
+    # ${target}/include | ${sourceDir}/include
+    #
+    # patch_descriptor will effectively be ${target}/include/*
+    # LEAF will be "wx/deps.h" by file system inspection
+    # source_descriptor will effectively be ${sourceDir}/include/${LEAF}
+    #
+    # ${target}/lib/wx/include/wxqt-unicode-3.3/include/wx/setup.h | ${sourceDir}/include/wx-3.3/wx
+    #
+    # patch_descriptor will effectively be ${target}/lib/wx/include/wxqt-unicode-3.3/include/wx/setup.h
+    # LEAF will be "setup.h" by path extraction
+    # source_descriptor will effectively be ${sourceDir}/include/wx-3.3/wx/setup.h
+
+    unset(visited)
+
+    msg(" ")
+    set(any_errored OFF)
+    set(errored OFF)
+    set(error_msg)
+
+    msg(CHECK_START "Replacing files for target ${YELLOW}${target}${NC}")
+    list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+    if (${target}_ALREADY_FOUND)
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        msg(CHECK_PASS "Not required for ${BOLD}imported libraries${NC}")
+        return()
+    endif ()
+
+    foreach (patch IN LISTS patchList)
+
+        set(errored OFF)
+        set(error_msg)
+
+        SplitAt("${patch}" "|" patchBranch externalTrunk)
+
+        if (NOT patchBranch OR NOT externalTrunk)
+            msg(CHECK_FAIL "${RED}[FAILED]${NC} Invalid patch descriptor '${patch}'")
+            set(any_errored ON)
+            continue()
+        endif ()
+
+        msg(CHECK_START "Replacement pattern is ${YELLOW}${patchBranch}${NC}")
+        list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+        set(patch_path "${cmake_root}/patches/${patchBranch}")
+        unset(from_path)
+        unset(file_pattern)
+        set(single_file_mode OFF)
+
+        if (EXISTS "${patch_path}" AND NOT IS_DIRECTORY "${patch_path}")
+            get_filename_component(from_path "${patch_path}" DIRECTORY)
+            get_filename_component(file_pattern "${patch_path}" NAME)
+            set(single_file_mode ON)
+        elseif (EXISTS "${patch_path}" AND IS_DIRECTORY "${patch_path}")
+            set(from_path "${patch_path}")
+            set(file_pattern "*")
+        else ()
+            msg("${RED}[FAILED]${NC} ${patch_path} doesn't exist.")
+            set(any_errored ON)
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+            if(any_errored)
+                msg(CHECK_FAIL "${RED}[FAILED]${NC}")
+            else ()
+                msg(CHECK_PASS "${GREEN}OK.${NC}")
+            endif ()
+            continue()
+        endif ()
+
+        unset(override_files)
+        if (single_file_mode)
+            list(APPEND override_files "${file_pattern}")
+        else ()
+            file(GLOB_RECURSE override_files RELATIVE "${from_path}" "${from_path}/${file_pattern}")
+        endif ()
+
+        unset(any_errored_this_patch)
+
+        foreach (file_rel_path IN LISTS override_files)
+
+            set(errored OFF)
+            set(error_msg)
+            unset(source)
+            unset(destination)
+
+
+            get_filename_component(extn "${file_rel_path}" LAST_EXT)
+            if ("${extn}" STREQUAL ".check")
+                continue()
+            endif ()
+
+            if (single_file_mode)
+                get_filename_component(leaf "${file_rel_path}" NAME)
+            else ()
+                set(leaf "${file_rel_path}")
+            endif ()
+
+            if ("${externalTrunk}" MATCHES "(^|/)LEAF($|/)")
+                string(REPLACE "LEAF" "${leaf}" system_file_path "${externalTrunk}")
+            else ()
+                string(REGEX REPLACE "/$" "" destination_base "${externalTrunk}")
+                set(system_file_path "${destination_base}/${leaf}")
+            endif ()
+
+            get_filename_component(system_file_path "${system_file_path}" ABSOLUTE)
+            set(override_file_path "${from_path}/${file_rel_path}")
+
+            msg(CHECK_START "${BOLD}Replacing${NC} ${file_rel_path}")
+            list(APPEND CMAKE_MESSAGE_INDENT "\t")
+
+            msg(" overwriting ${system_file_path}")
+            msg("        with ${override_file_path}")
+
+            if (EXISTS "${system_file_path}")
+
+                # See if we are attempting to patch again.
+                # visited[Override_1,System_1,Override_2,System_2,...,Override_n,System_n]
+
+                list(FIND visited "${override_file_path}" patchIndex)
+                list(FIND visited "${system_file_path}" sourceIndex)
+
+                if (visited)
+                    if (${patchIndex} GREATER_EQUAL 0)
+                        math(EXPR six "${patchIndex} + 1")
+                        list(GET visited ${six} destination)
+                    endif ()
+
+                    if (${sourceIndex} GREATER 0)
+                        math(EXPR pix "${sourceIndex} - 1")
+                        list(GET visited ${pix} source)
+                    endif ()
+
+                    if ("${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
+                        set(errored OFF)
+                        set(error_msg "Replaced in previous iteration of loop")
+                    elseif ("${source}" STREQUAL "${override_file_path}" AND NOT "${destination}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(any_errored_this_patch ON)
+                        set(error_msg "source file has been used to replace ${destination}")
+                    elseif (NOT "${source}" STREQUAL "${override_file_path}" AND "${destination}" STREQUAL "${system_file_path}")
+                        set(errored ON)
+                        set(any_errored_this_patch ON)
+                        set(error_msg "destination has already been replaced by ${source}")
+                    endif ()
+                endif ()
+
+                if (NOT error_msg)
+
+                    list(APPEND visited "${override_file_path}" "${system_file_path}")
+
+                    set(check_file_path "${override_file_path}.check")
+                    if (EXISTS "${check_file_path}")
+                        file(READ "${check_file_path}" check_contents)
+                        file(READ "${override_file_path}" override_contents)
+                        file(READ "${system_file_path}" source_contents)
+
+                        if (NOT "${check_contents}" STREQUAL "${source_contents}")
+                            if ("${source_contents}" STREQUAL "${override_contents}")
+                                set(error_msg "Replacement has already been made.")
+                                set(errored OFF)
+                            else ()
+                                set(error_msg "Original destination file differs from expected. Replacement aborted.")
+                                set(errored ON)
+                            endif ()
+                        endif ()
+                    endif ()
+                endif ()
+
+                if (NOT error_msg)
+                    file(COPY_FILE "${override_file_path}" "${system_file_path}")
+                endif ()
+
+            else ()
+                set(errored ON)
+                set(error_msg "destination file doesn't exist.")
+            endif ()
+
+            list(POP_BACK CMAKE_MESSAGE_INDENT)
+
+            if (errored)
+                set(any_errored_this_patch ON)
+
+                msg(CHECK_FAIL "${RED}[FAILED]${NC} ${BOLD}${error_msg}${NC}")
+                set(any_errored ON)
+                set(errored OFF)
+                set(error_msg)
+            else ()
+                if (NOT error_msg)
+                    set(temp_error_msg "OK.")
+                else ()
+                    set(temp_error_msg "${error_msg}")
+                endif ()
+                msg(CHECK_PASS "${GREEN}${temp_error_msg}${NC}")
+            endif ()
+
+        endforeach ()
+
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        if(any_errored_this_patch)
+            msg(CHECK_FAIL "${RED}[FAILED]${NC}")
+        else ()
+            msg(CHECK_PASS "${GREEN}OK.${NC}")
+        endif ()
+
+    endforeach ()
+
+    list(POP_BACK CMAKE_MESSAGE_INDENT)
+    if (any_errored)
+        msg(CHECK_FAIL "${BOLD}${MAGENTA}[FAILED] Some patches failed.${NC}")
+    else ()
+        msg(CHECK_PASS "${GREEN}OK.${NC}")
+    endif ()
+
+endfunction()
+
 function(inc var)
     set(_ ${${var}})
     math(EXPR _ "${_} + 1")
@@ -1707,6 +1826,10 @@ function(fittest)
         endif ()
     endforeach ()
 
+    if(NOT candidates)
+        msg(ALWAYS FATAL_ERROR "No Config file found")
+    endif ()
+
     # Staged and Source files are the same?
     if (actualSourceFileFound AND actualStagedFileFound)
 
@@ -1729,6 +1852,28 @@ function(fittest)
             list(INSERT candidates 0 "${actualStagedFile}")
             list(REMOVE_ITEM candidates "${actualSourceFile}")
         endif ()
+
+    elseif (actualStagedFileFound)
+
+        msg("Stage exists but Source does not. We'll use Stage.")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
+        list(INSERT candidates 0 "${actualStagedFile}")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+
+    elseif (actualSourceFileFound)
+
+        msg("Source exists but Staged does not. We'll use Source.")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+        list(INSERT candidates 0 "${actualSourceFile}")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
+
+    elseif (actualSystemFile)
+
+        msg("Neither Stage nor Source exists but System does. We'll use System.")
+        list(REMOVE_ITEM candidates "${actualSystemFile}")
+        list(INSERT candidates 0 "${actualSystemFile}")
+        list(REMOVE_ITEM candidates "${actualSourceFile}")
+        list(REMOVE_ITEM candidates "${actualStagedFile}")
 
     endif ()
 

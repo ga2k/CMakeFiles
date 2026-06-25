@@ -14,14 +14,8 @@ check_environment("${CMAKE_SOURCE_DIR}")
 if(APP_SOVERSION)
     set(SO_VERSION "${APP_SOVERSION}")
 else ()
-    SplitAt("${APP_VERSION}" "." SO_VERSION dc)
+    SplitAt("${APP_VERSION}" "." SO_VERSION dc1)
 endif ()
-
-# Derivations of common metadata (safe globally)
-string(TOUPPER ${APP_NAME} APP_NAME_UC)
-string(TOLOWER ${APP_NAME} APP_NAME_LC)
-string(TOUPPER ${APP_VENDOR} APP_VENDOR_UC)
-string(TOLOWER ${APP_VENDOR} APP_VENDOR_LC)
 
 # Capture compiler version information (used for flags below)
 execute_process(
@@ -41,7 +35,13 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 # Set explicit RPATH for build and install
 set(CMAKE_BUILD_RPATH "${OUTPUT_DIR}/bin;${OUTPUT_DIR}/lib;${OUTPUT_DIR}/dll")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+if (LINUX)
+    # Use $ORIGIN so staged libs find their siblings regardless of install prefix.
+    # Executables override this per-target (e.g. $ORIGIN/../lib64).
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+else()
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
@@ -86,6 +86,7 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-enum-compare-switch>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-declarations>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-lambda-capture>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-enum-enum-conversion>)
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-ignored-attributes>)
 
 include(${cmake_root}/platform.cmake)
 

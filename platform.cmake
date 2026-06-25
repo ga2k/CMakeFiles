@@ -7,7 +7,6 @@ if (APPLE)
         set(CMAKE_INSTALL_LIBDIR "lib")
     endif ()
 
-
     # Run uname -m to determine the architecture
     execute_process(COMMAND uname -m OUTPUT_VARIABLE CMAKE_SYSTEM_PROCESSOR OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -22,11 +21,7 @@ if (APPLE)
     endif ()
     add_definitions("-DPCRE2_CODE_UNIT_WIDTH=32")
     add_definitions("-DMAGIC_ENUM_ENABLE_HASH")
-    #    if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-    #    # If no deployment target has been set default to the minimum supported
-    #    # OS version (this has to be set before the first project() call)
-    #    set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0 CACHE STRING "macOS Deployment Target" FORCE)
-    #endif ()
+
     list(APPEND extra_Definitions BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
     list(APPEND extra_CompileOptions "-fPIC")
     set(DYN_FLAG dl)
@@ -44,28 +39,33 @@ if (APPLE)
 
     # Link Objective-C runtime for macOS-specific code
     find_library(OBJC_LIBRARY objc)
-    if(OBJC_LIBRARY)
+    if (OBJC_LIBRARY)
         list(APPEND extra_LibrariesList ${OBJC_LIBRARY})
-    endif()
+    endif ()
 
-    # Shared CMake module paths (stage + repo cmake directory)
-#    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
-#    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
-#    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
-#        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    endif ()
-    
-    add_compile_options(-gline-tables-only)
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:-gline-tables-only>)
 
-elseif(LINUX)
+elseif (LINUX)
+
+    list(APPEND extra_IncludePaths
+            /usr/include/bullshit
+            /usr/include/gtk-4.0
+            /usr/include/glib-2.0
+            /usr/lib64/glib-2.0/include
+            /usr/include/cairo
+            /usr/include/pango-1.0
+            /usr/include/harfbuzz
+            /usr/include/gdk-pixbuf-2.0
+            /usr/include/graphene-1.0
+            /usr/lib64/graphene-1.0/include
+    )
 
     if (NOT CMAKE_INSTALL_LIBDIR)
         set(CMAKE_INSTALL_LIBDIR "lib64")
     endif ()
 
-    list(APPEND extra_Definitions __WXQT__)
-    set(wxBUILD_TOOLKIT qt CACHE STRING "" FORCE)
+    list(APPEND extra_Definitions __WXGTK__ __WXGTK3__)
+    set(wxBUILD_TOOLKIT gtk3 CACHE STRING "" FORCE)
     list(APPEND extra_CompileOptions -fvisibility=default)
 
     set(DYN_FLAG dl)
@@ -78,49 +78,11 @@ elseif(LINUX)
 
     set(gui ${CURRENT_GFX_LIB})
 
-    # Shared CMake module paths (stage + repo cmake directory)
-#    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
-#    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
-#    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
-#        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    endif ()
-
 elseif (WIN32)
 
     if (NOT CMAKE_INSTALL_LIBDIR)
         set(CMAKE_INSTALL_LIBDIR "lib")
     endif ()
-
-#    set(GSASL_ROOT          ${CMAKE_CURRENT_SOURCE_DIR}/windows/GSASL)
-#    set(GSASL_INCLUDE_DIR   ${GSASL_ROOT}/include)
-#    set(GSASL_LIBRARIES     ${GSASL_ROOT}/bin;${GSASL_ROOT}/lib)
-#    set(GNUTLS_ROOT         ${CMAKE_CURRENT_SOURCE_DIR}/windows/GnuTLS)
-#    set(GNUTLS_INCLUDE_DIR  ${GNUTLS_ROOT}include)
-#    set(GNUTLS_LIBRARIES    ${GNUTLS_ROOT}bin;${GNUTLS_ROOT}lib)
-#    set(ICU_ROOT            ${CMAKE_CURRENT_SOURCE_DIR}/windows/ICU)
-#    set(ICU_LIBRARIES       ${ICU_ROOT}/bin64;${ICU_ROOT}/lib64)
-#    set(SQLite3_ROOT        ${CMAKE_CURRENT_SOURCE_DIR}/windows/SQLite3)
-#    set(SQLite3_LIBRARY     ${SQLite3_ROOT})
-#    set(SQLite3_INCLUDE_DIR ${SQLite3_ROOT})
-
-#    set(ENV:OPENSSL_CRYPTO_LIBRARY "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MT/libcrypto.lib")
-#    set(ENV:OPENSSL_INCLUDE_DIR "C:/Program Files/OpenSSL-Win64/include")
-#    set(ENV{OPENSSL_ROOT_DIR} "C:/Program Files/OpenSSL-Win64")
-
-#    if (LINK_SHARED)
-#        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.dll.a)
-#        set(GNUTLS_LIBRARY  ${GNUTLS_ROOT}/lib/libgnutls.dll.a)
-#        set(ICU_LIBRARY     ${ICU_ROOT}/bin64/icuuc75.dll)
-#    else ()
-#        set(GSASL_LIBRARY   ${GSASL_ROOT}/lib/libgsasl.a)
-#        set(GNUTLS_LIBRARY  ${GNUTLS_ROOT}/lib/libgnutls.a)
-#        set(ICU_LIBRARY     ${ICU_ROOT}/bin64/icuuc.lib)
-#    endif ()
-
-    #    message(NOTICE "SQLite3_ROOT=${SQLite3_ROOT}")
-    #    message(NOTICE "SQLite3_LIBRARY=${SQLite3_LIBRARY}")
-    #    message(NOTICE "SQLite3_INCLUDE_DIR=${SQLite3_INCLUDE_DIR}")
 
     set(PlatformFlag "WIN32")
     set(DYN_FLAG ws2_32)
@@ -132,14 +94,6 @@ elseif (WIN32)
     endif ()
 
     set(gui "win")
-
-    # Shared CMake module paths (stage + repo cmake directory)
-#    list(APPEND CMAKE_PREFIX_PATH ${OUTPUT_DIR}/bin)
-#    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake)
-#    list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/dev/stage${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    if(NOT "$ENV{DESTDIR}" AND NOT "$ENV{HOME}/dev/stage" STREQUAL "$ENV{DESTDIR}")
-#        list(APPEND CMAKE_PREFIX_PATH "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/cmake")
-#    endif ()
 
     list(APPEND extra_Definitions __WXMSW__ UNICODE _UNICODE)
 
@@ -157,29 +111,14 @@ elseif (WIN32)
         list(APPEND extra_CompileOptions "/Wv:19.34")
 
         # Suppress nologo for the linker (for executables and shared libraries)
-        set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    /nologo")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}    /nologo")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nologo")
         set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /nologo")
-    else ()
+    elseif (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+        # clang++ emits CodeView debug info into .obj files when -g is passed, but
+        # lld-link discards it unless told to produce a PDB (/debug).
+        add_link_options("$<$<CONFIG:Debug>:-Wl,/debug>")
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
 endif ()
-
-#if defined(__clang__)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wunknown-warning-option"
-#  pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
-#  pragma clang diagnostic ignored "-Wuseless-cast" // suppresses 'static_cast<char_type>('\0')' for char_type = char (common on Linux).
-#elif defined(__GNUC__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wmaybe-uninitialized" // May be used uninitialized 'return {};'.
-#  pragma GCC diagnostic ignored "-Wuseless-cast" // suppresses 'static_cast<char_type>('\0')' for char_type = char (common on Linux).
-#elif defined(_MSC_VER)
-#  pragma warning(push)
-#  pragma warning(disable : 26495) // Variable 'static_str<N>::chars_' is uninitialized.
-#  pragma warning(disable : 28020) // Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value.
-#  pragma warning(disable : 26451) // The expression '0<=_Param_(1)&&_Param_(1)<=1-1' is not true at this call.
-#  pragma warning(disable : 4514) // Unreferenced inline function has been removed.
-#endif
-
