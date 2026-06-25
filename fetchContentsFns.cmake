@@ -1,0 +1,1290 @@
+include_guard(GLOBAL)
+
+include(${cmake_root}/tools.cmake)
+include(${cmake_root}/sqlish.cmake)
+include (${cmake_root}/global.cmake)
+
+# @formatter:off
+set(PkgColNames FeatureName PackageName IsDefault Namespace Kind Method Url GitRepository GitTag SrcDir BuildDir IncDir Components Args Prereq Flags)
+set(FIXName          0)
+set(FIXPkgName       1)
+set(FIXIsDefault     2)
+set(FIXNamespace     3)
+set(FIXKind          4)
+set(FIXMethod        5)
+set(FIXUrl           6)
+set(FIXGitRepository 7)
+set(FIXGitTag        8)
+set(FIXSrcDir        9)
+set(FIXBuildDir     10)
+set(FIXIncDir       11)
+set(FIXComponents   12)
+set(FIXArgs         13)
+set(FIXPrereqs      14)
+set(FIXFlags        15)
+math(EXPR FIXLength "${FIXFlags} + 1")
+
+set(APD_ALLOWABLE_FLAGS "F_EARLY_MAKEAVAILABLE")
+
+CREATE(TABLE tbl_LongestStrings
+    COLUMNS (longest)
+)
+#INSERT(INTO tbl_LongestStrings VALUES (0 0 0 0 0 0 0))
+include(FetchContent)
+
+function(addTargetProperties target pkgname addToLists)
+
+    unset(at_LibrariesList)
+    unset(at_DependenciesList)
+    unset(at_LibraryPathsList)
+    unset(at_IncludePathsList)
+
+    msg(" ")
+    msg("addTargetProperties called for '${target}'")
+    get_target_property(_aliasTarget ${target} ALIASED_TARGET)
+
+    if (NOT ${_aliasTarget} STREQUAL "_aliasTarget-NOTFOUND")
+        msg("Target ${target} is an alias. Retargeting target to target target ${_aliasTarget}")
+        addTargetProperties(${_aliasTarget} "${pkgname}" ${addToLists})
+        if (addToLists)
+            # @formatter:off
+            set(_LibrariesList      ${_LibrariesList}    PARENT_SCOPE)
+            set(_DependenciesList   ${_DependenciesList} PARENT_SCOPE)
+            set(at_LibraryPathsList ${_LibraryPathsList} PARENT_SCOPE)
+            set(at_IncludePathsList ${_IncludePathsList} PARENT_SCOPE)
+            # @formatter:on
+        endif ()
+        return()
+    endif ()
+
+    get_target_property(_targetType ${target} TYPE)
+
+    if (${_targetType} STREQUAL "INTERFACE_LIBRARY")
+        set(LIB_TYPE "INTERFACE")
+    else ()
+        get_property(is_imported TARGET ${target} PROPERTY IMPORTED)
+        if (is_imported)
+            set(LIB_TYPE "INTERFACE")
+        else ()
+            set(LIB_TYPE "PUBLIC")
+        endif ()
+    endif ()
+
+    # @formatter:off
+    target_compile_options(     "${target}" ${LIB_TYPE} "${_CompileOptionsList}")
+    target_compile_definitions( "${target}" ${LIB_TYPE} "${_DefinesList}")
+    target_link_options(        "${target}" ${LIB_TYPE} "${_LinkOptionsList}")
+#    target_include_directories( "${target}" ${LIB_TYPE} "${_IncludePathsList}")
+    # @formatter:on
+
+    if (WIN32)
+        set_target_properties("${target}" PROPERTIES DEBUG_POSTFIX "")
+    endif ()
+
+    if (addToLists)
+        list(APPEND at_LibrariesList    ${target})
+        list(APPEND at_DependenciesList ${target})
+        list(APPEND at_LibraryPathsList ${OUTPUT_DIR}/lib)
+        list(APPEND at_IncludePathsList ${_IncludePathsList})
+
+    endif ()
+
+    set_target_properties("${target}" PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}/bin
+            LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
+            ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/lib
+            INCLUDE_OUTPUT_DIRECTORY ${OUTPUT_DIR}/include
+    )
+
+    ####################################################################################################################
+    ####################################################################################################################
+    set(fn "${pkgname}_postAddTarget") #################################################################################
+    if (COMMAND "${fn}") ###############################################################################################
+        cmake_language(CALL "${fn}" "${target}") #######################################################################
+    endif () ###########################################################################################################
+    ####################################################################################################################
+    ####################################################################################################################
+
+    list(APPEND at_LibrariesList    ${_LibrariesList})
+    list(APPEND at_LibraryPathsList ${_LibraryPathsList})
+    list(APPEND at_DependenciesList ${_DependenciesList})
+    list(APPEND at_IncludePathsList ${_IncludePathsList})
+
+    set(_LibrariesList        ${at_LibrariesList}        PARENT_SCOPE)
+    set(_LibraryPathsList     ${at_LibraryPathsList}     PARENT_SCOPE)
+    set(_DependenciesList     ${at_DependenciesList}     PARENT_SCOPE)
+    set(_IncludePathsListList ${at_IncludePathsListList} PARENT_SCOPE)
+
+endfunction()
+
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+function(initialiseFeatureHandlers DRY_RUN)
+    file(GLOB_RECURSE handlers "${cmake_root}/handlers/*.cmake")
+
+    foreach (handler IN LISTS handlers)
+        get_filename_component(handlerName "${handler}" NAME_WE)
+        get_filename_component(_path "${handler}" DIRECTORY)
+        get_filename_component(packageName "${_path}" NAME_WE)
+
+        columnarTextOut("default" "added handler" "${handlerName}" "for package" "${packageName}" "" ""
+                "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
+
+        include("${handler}")
+        if ("${handlerName}" STREQUAL "init")
+            columnarTextOut("default" "calling handler" "${handlerName}" "for package" "${packageName}" "" ""
+                    "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${DRY_RUN})
+            ########################################################################################################
+            ########################################################################################################
+            set(fn "${packageName}_init") ##########################################################################
+            if (COMMAND "${fn}") ###################################################################################
+                cmake_language(CALL "${fn}" "${DRY_RUN}") ##########################################################
+            endif () ###############################################################################################
+            ########################################################################################################
+            ########################################################################################################
+        endif ()
+    endforeach ()
+endfunction()
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+function(addPackageData)
+
+    # During a DRY_RUN, all data is checked, and field sized for tabulated output are computed,
+    # but no data is actually stored.
+
+    set(switches SYSTEM LIBRARY OPTIONAL PLUGIN CUSTOM)
+    set(args METHOD FEATURE PKGNAME NAMESPACE URL GIT_REPOSITORY SRCDIR
+            GIT_TAG BINDIR INCDIR COMPONENT ARG PREREQ DRY_RUN DEFAULT)
+    set(arrays COMPONENTS ARGS FIND_PACKAGE_ARGS PREREQS FLAGS)
+
+    cmake_parse_arguments("APD" "${switches}" "${args}" "${arrays}" ${ARGN})
+
+    set(methods FIND_PACKAGE FETCH_CONTENTS PROCESS IGNORE)
+    if (NOT APD_METHOD IN_LIST methods)
+        msg(ALWAYS FATAL_ERROR "addPackageData: One of METHOD ${BOLD}${methods}${NC} required for ${APD_FEATURE}")
+    endif ()
+
+    set(types_of_thing 0)
+    foreach (thing SYSTEM OPTIONAL LIBRARY PLUGIN CUSTOM)
+        if (APD_${thing})
+            inc(types_of_thing)
+            set(APD_KIND ${thing})
+        endif ()
+    endforeach ()
+
+    if (types_of_thing EQUAL 0)
+        set(APD_OPTIONAL ON)
+        set(APD_KIND OPTIONAL)
+    elseif (types_of_thing GREATER 1)
+        msg(ALWAYS FATAL_ERROR "addPackageData: Zero or one of SYSTEM/OPTIONAL/LIBRARY/PLUGIN/CUSTOM allowed")
+    endif ()
+
+    if (NOT APD_PKGNAME AND NOT APD_PLUGIN)
+        msg(ALWAYS FATAL_ERROR "addPackageData: PKGNAME required")
+    endif ()
+    if (
+    (APD_URL AND APD_GIT_REPOSITORY) OR
+    (APD_URL AND APD_SRCDIR) OR
+    (APD_GIT_REPOSITORY AND APD_SRCDIR)
+    )
+        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of URL/GIT_REPOSITORY/SRCDIR allowed")
+    endif ()
+
+    if (NOT APD_URL AND NOT APD_GIT_REPOSITORY AND NOT APD_SRCDIR AND APD_METHOD STREQUAL "FETCH_CONTENTS")
+        msg(ALWAYS FATAL_ERROR "addPackageData: One of URL/GIT_REPOSITORY/SRCDIR required")
+    endif ()
+
+    if ((APD_GIT_REPOSITORY AND NOT APD_GIT_TAG) OR (NOT APD_GIT_REPOSITORY AND APD_GIT_TAG))
+        msg(ALWAYS FATAL_ERROR "addPackageData: Neither or both GIT_REPOSITORY/GIT_TAG allowed")
+    endif ()
+
+    if ((APD_URL AND APD_GIT_TAG) OR (APD_SRCDIR AND APD_GIT_TAG))
+        msg(ALWAYS FATAL_ERROR "addPackageData: GIT_TAG only allowed with GIT_REPOSITORY")
+    endif ()
+
+    if (APD_GIT_TAG AND APD_BINDIR)
+        msg(ALWAYS FATAL_ERROR "addPackageData: Only one of GIT_TAG or BINDIR allowed")
+    endif ()
+
+    if (APD_COMPONENT)
+        list(APPEND APD_COMPONENTS ${APD_COMPONENT})
+    endif ()
+
+    if (APD_ARG)
+        list(APPEND APD_ARGS ${APD_ARG})
+    endif ()
+
+    if (APD_PREREQ)
+        list(APPEND APD_PREREQS ${APD_PREREQ})
+    endif ()
+
+    foreach (flag IN LISTS APD_FLAGS)
+        if (NOT flag IN_LIST APD_ALLOWABLE_FLAGS)
+            msg(ALWAYS WARNING "addPackageData(${flag}): Unknown FLAG value \"${flag}\" removed from ${APD_FEATURE}/${APD_PKGNAME}")
+        elseif (flags)
+            string(JOIN "${_TOK_LIST_SEP}" flags "${flags}" "${flag}")
+        else ()
+            set(flags "${flag}")
+        endif ()
+    endforeach ()
+    set(APD_FLAGS "${flags}")
+
+    set(APD_NEED_DEFAULT OFF)
+
+    if ("${APD_DEFAULT}" STREQUAL "")
+        set(APD_DEFAULT "O")
+        set(APD_NEED_DEFAULT ON)
+    endif ()
+
+    string(REPLACE ";" "${_TOK_LIST_SEP}" APD_COMPONENTS "${APD_COMPONENTS}")
+    string(JOIN "${_TOK_LIST_SEP}" APD_ARGS ${APD_ARGS} ${APD_FIND_PACKAGE_ARGS})
+    string(REPLACE ";" "${_TOK_LIST_SEP}" APD_PREREQS "${APD_PREREQS}")
+
+    #
+    #    if (APD_PREREQS)
+    #        string(REPLACE ";" "${_TOK_LIST_SEP}" APD_PREREQS "${APD_PREREQS}")
+    #    endif ()
+
+    if (NOT APD_DRY_RUN)
+        DROP(TABLE newRecord QUIET UNRESOLVED)
+        CREATE(TABLE newRecord COLUMNS (${PkgColNames}))
+        INSERT(INTO newRecord VALUES (
+                "${APD_FEATURE}"
+                "${APD_PKGNAME}"
+                "${APD_DEFAULT}"
+                "${APD_NAMESPACE}"
+                "${APD_KIND}"
+                "${APD_METHOD}"
+                "${APD_URL}"
+                "${APD_GIT_REPOSITORY}"
+                "${APD_GIT_TAG}"
+                "${APD_SRCDIR}"
+                "${APD_BINDIR}"
+                "${APD_INCDIR}"
+                "${APD_COMPONENTS}"
+                "${APD_ARGS}"
+                "${APD_PREREQS}"
+                "${APD_FLAGS}"
+        )
+        )
+
+    endif ()
+    function(insertFeature)
+
+
+        set(switches QUIET QUITE)
+        set(args TARGET KIND FEATURE PACKAGE RECORD TEMPLATE)
+
+        cmake_parse_arguments("CAT" "${switches}" "${args}" "${lists}" ${ARGN})
+
+        if (NOT CAT_TARGET OR "${CAT_TARGET}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no TARGET in call to insertFeature()")
+        endif ()
+
+        if (NOT CAT_FEATURE OR "${CAT_FEATURE}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no FEATURE in call to insertFeature()")
+        endif ()
+
+        if (NOT CAT_PACKAGE OR "${CAT_PACKAGE}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no PACKAGE in call to insertFeature()")
+        endif ()
+
+        if (NOT CAT_RECORD OR "${CAT_RECORD}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no RECORD in call to insertFeature()")
+        endif ()
+
+        if (NOT CAT_KIND OR "${CAT_KIND}" STREQUAL "")
+            msg(ALWAYS FATAL_ERROR "no KIND in call to insertFeature()")
+        endif ()
+
+        set(out_verb)
+        set(out_object)
+        set(out_subject_prep)
+        set(out_subject)
+        set(out_item_prep)
+        set(out_item "${CAT_KIND}")
+        set(out_template "${CAT_TEMPLATE}")
+
+        if (NOT APD_DRY_RUN)
+            globalObjGet("_HS_APD_SETVARS" _yetToUnset)
+            if (_yetToUnset)
+                foreach (var IN LISTS _yetToUnset)
+                    globalObjUnset(${var})
+                endforeach ()
+                globalObjUnset("_HS_APD_SETVARS")
+            endif ()
+        endif ()
+
+        globalObjGet("_HS_APD_${CAT_FEATURE}" _FeatureExists)
+        if (_FeatureExists)
+            globalObjGet("${CAT_FEATURE}_${CAT_PACKAGE}" _PackageExists)
+            if (_PackageExists)
+                set(out_verb "skipped package")
+                set(out_object "${CAT_PACKAGE}")
+                set(out_subject_prep "in feature")
+                set(out_subject "${CAT_FEATURE}")
+                set(out_item_prep "")
+                set(out_item "")
+                set(out_template "${cat_template} : ${GREEN}already added${NC}")
+
+                set(insertRow OFF)
+            else ()
+                set(out_verb "added package")
+                set(out_object "${CAT_PACKAGE}")
+                set(out_subject_prep "to feature")
+                set(out_subject "${CAT_FEATURE}")
+                set(out_item_prep "in collection")
+
+                globalObjSet("_HS_APD_${CAT_FEATURE}_${CAT_PACKAGE}" ON)
+                set(insertRow ON)
+                set(isDefault 0)
+            endif ()
+        else ()
+            set(out_verb "created feature")
+            set(out_object "${CAT_FEATURE}")
+            set(out_subject_prep "for package")
+            set(out_subject "${CAT_PACKAGE}")
+            set(out_item_prep "in collection")
+
+            globalObjSet("_HS_APD_${CAT_FEATURE}" ON)
+            globalObjSet("_HS_APD_${CAT_FEATURE}_${CAT_PACKAGE}" ON)
+            set(insertRow ON)
+            set(isDefault 1)
+        endif ()
+
+        if (APD_DRY_RUN)
+            globalObjAppendUnique("_HS_APD_SETVARS" "_HS_APD_${CAT_FEATURE}")
+            globalObjAppendUnique("_HS_APD_SETVARS" "_HS_APD_${CAT_FEATURE}_${CAT_PACKAGE}")
+        else ()
+            if (insertRow)
+                SELECT(ROW AS newData FROM ${CAT_RECORD} WHERE ROWID = 1)
+                if (APD_NEED_DEFAULT)
+                    list(REMOVE_AT newData ${FIXIsDefault})
+                    list(INSERT newData ${FIXIsDefault} "${isDefault}")
+                endif ()
+                _hs_sql_fields_to_storage(newData _1)
+                INSERT(INTO ${CAT_TARGET} VALUES (${_1}))
+            endif ()
+        endif ()
+
+        columnarTextOut("default"
+                "${out_verb}"
+                "${out_object}"
+                "${out_subject_prep}" "${out_subject}"
+                "${out_item_prep}" "${out_item}"
+                "${out_template}" ${APD_DRY_RUN})
+
+    endfunction()
+
+    insertFeature(TARGET "allFeatures"
+            FEATURE "${APD_FEATURE}"
+            PACKAGE "${APD_PKGNAME}"
+            KIND "${APD_KIND}"
+            RECORD newRecord
+            TEMPLATE "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]"
+#            TEMPLATE "[VERB:R][OBJECT:L][SUBJECT_PREP:R][SUBJECT:L][ITEM_PREP:R][ITEM:L]"
+    )
+
+endfunction()
+
+########################################################################################################################
+##
+## parsePackage can be called with a    * A table of features, or
+##                                      * A single row represnting a feature/package
+##
+## If INPUT_TYPE is provided, we'll verify that
+## If INPUT_TYPE is not provided, we'll work it out
+##
+function(parsePackage)
+    set(options)
+    set(one_value_args
+            # @formatter:off
+#           Keyword         Type        Direction   Description
+            INPUT_TYPE  #   STRING      IN          Type of list supplied in inputListName
+                        #                           One of (TABLE ROW).
+                        #                           If omitted, an attempt to determine it will be made
+            FEATURE     #   STRING      IN          Feature to select from inputList
+                        #                           If INPUT_TYPE is ROW, FEATURE is ignored
+            PACKAGE     #   STRING      IN          Package to select by name from Feature
+                        #                           If INPUT_TYPE is ROW, PKG_NAME is ignored
+            ARGS        #   VARNAME     OUT         Receive a copy of the ARG attribute in CMake LIST format
+            BUILD_DIR   #   VARNAME     OUT         Receive a copy of the BUILDDIR attribute (if applicable)
+            COMPONENTS  #   VARNAME     OUT         Receive a copy of the COMPONENT attribute in CMake LIST format
+            FLAGS       #   VARNAME     OUT         Receive a copy of the FLAGS attribute (if applicable)
+            GIT_REPO    #   VARNAME     OUT         Receive a copy of the GIT_REPOSITORY attribute (if applicable)
+            GIT_TAG     #   VARNAME     OUT         Receive a copy of the GIT_TAG attribute (if applicable)
+            INC_DIR     #   VARNAME     OUT         Receive a copy of the INCDIR attribute (if applicable)
+            IS_DEFAULT  #   VARNAME     OUT         Receive a copy of the IS_DEFAULT attribute (if applicable)
+            KIND        #   VARNAME     OUT         Receive a copy of the KIND attribute (SYSTEM/LIBRARY/OPTIONAL/PLUGIN/CUSTOM)
+            METHOD      #   VARNAME     OUT         Receive a copy of the METHOD attribute (FETCH_CONTENT/FIND_PACKAGE/PROCESS)
+            NAME        #   VARNAME     OUT         Receive a copy of the package name
+            NAMESPACE   #   VARNAME     OUT         Receive a copy of the NAMESPACE attribute (if applicable)
+            OUTPUT      #   VARNAME     OUT         Receive a copy of the entire PACKAGE
+            PREREQS     #   VARNAME     OUT         Receive a copy of the PREREQ attribute in CMake LIST format
+            SRC_DIR     #   VARNAME     OUT         Receive a copy of the SRCDIR attribute (if applicable)
+            URL         #   VARNAME     OUT         Receive a copy of the URL attribute (if applicable)
+            FETCH_FLAG  #   VARNAME     OUT         Indication that this PACKAGE needs to be downloaded somehow
+    )
+    # @formatter:on
+
+    set(multi_value_args)
+    unset(A_PP_UNDEFINED_ARGUMENTS)
+
+    # Parse the arguments
+    cmake_parse_arguments(A_PP "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+    if (NOT DEFINED A_PP_UNPARSED_ARGUMENTS)
+        msg(ALWAYS FATAL_ERROR "NO inputListName found in call to parsePackage()")
+    endif ()
+
+    list(POP_FRONT A_PP_UNPARSED_ARGUMENTS inputListName)
+
+    if (NOT DEFINED ${inputListName})
+        msg(ALWAYS FATAL_ERROR "NO input list called \"${inputListName}\" exists in call to parsePackage()")
+    endif ()
+
+    unset(inputListVerifyFailed)
+
+    set(aTable)
+    set(aRow)
+    set(aDeducedType)
+
+    set(local)
+
+    macro(deduceType QUIET)
+        SELECT(COUNT AS __rows FROM ${inputListName})
+        if (__rows GREATER 1)
+            # Looking like a table... There is more than one row. Let's check some more
+            set(aDeducedType "TABLE")
+            set(aTable ON)
+            SELECT(ROW AS __temp_row FROM ${inputListName} WHERE ROWID = 1)
+        else ()
+            # Probably a row... Time will tell
+            set(aDeducedType "ROW")
+            set(aRow ON)
+            set(__temp_row ${inputListName})
+        endif ()
+        # We "have" a "ROW" in "__temp_row", either the first row of the "TABLE", or the supplied "ROW" from the caller
+        list(LENGTH __temp_row __fields)
+        if (NOT __fields EQUAL ${FIXLength})
+            if (NOT QUIET)
+                set(inputListVerifyFailed "INPUT_TYPE needed, I can't determine if ${inputListName} is a TABLE or a ROW")
+            endif ()
+            set(aDeductedType "MYSTERY")
+            set(aTable OFF)
+            set(aRow OFF)
+
+        endif ()
+        unset(__rows)
+        unset(__temp_row)
+        unset(__fields)
+    endmacro()
+    macro(inputTypeToObjectType)
+        if (A_PP_INPUT_TYPE MATCHES "TABLE")
+            deduceType(ON)
+            if (aDeducedType STREQUAL "TABLE")
+                set(aTable ON)
+            else ()
+                set(inputListVerifyFailed "You say \"${inputListName}\" is a \"${A_PP_INPUT_TYPE}\", I think it is a ${aDeducedType}. One of us is wrong")
+            endif ()
+        elseif (A_PP_INPUT_TYPE MATCHES "ROW")
+            deduceType(ON)
+            if (aDeducedType STREQUAL "ROW")
+                set(aRow ON)
+            else ()
+                set(inputListVerifyFailed "You say \"${inputListName}\" is a \"${A_PP_INPUT_TYPE}\", I think it is a ${aDeducedType}. One of us is wrong")
+            endif ()
+        elseif (NOT aDeductedType)
+            deduceType(OFF)
+            if (aDeductedType STREQUAL "TABLE")
+                set(aRow OFF)
+                set(aTable ON)
+            elseif (aDeductedType STREQUAL "ROW")
+                set(aRow ON)
+                set(aTable OFF)
+            endif ()
+        else ()
+            set(inputListVerifyFailed "INPUT_TYPE of \"${A_PP_INPUT_TYPE}\" unknown - needs to be TABLE, ROW, or left out and I'll work it out myself")
+        endif ()
+    endmacro()
+
+    inputTypeToObjectType()
+
+    if (aTable AND NOT A_PP_FEATURE)
+        list(APPEND inputListVerifyFailed "parsePackage() needs FEATURE parameter")
+    endif ()
+
+    if (aTable AND NOT A_PP_PACKAGE)
+        list(APPEND inputListVerifyFailed "parsePackage() needs PACKAGE or PKG_INDEX parameter")
+    endif ()
+
+    if (inputListVerifyFailed)
+        list(PREPEND inputListVerifyFailed "${RED}${BOLD}parsePackage() FAIL:${NC}")
+        string(JOIN "\n\n" __error_string ${inputListVerifyFailed})
+
+        msg(ALWAYS FATAL_ERROR "${inputListVerifyFailed}")
+    endif ()
+
+    if (aTable)
+        SELECT(ROW AS local
+                FROM ${features}
+                WHERE FeatureName = ${A_PP_FEATURE}
+                AND PackageName = ${A_PP_PACKAGE}
+        )
+    else ()
+        set(local ${${inputListName}})
+    endif ()
+
+    # @formatter:off
+    list(GET local ${FIXName}           localFeatureName)
+    list(GET local ${FIXPkgName}        localPackageName)
+    list(GET local ${FIXIsDefault}      localIsDefault)
+    list(GET local ${FIXNamespace}      localNS)
+    list(GET local ${FIXKind}           localKind)
+    list(GET local ${FIXMethod}         localMethod)
+    list(GET local ${FIXUrl}            localURL)
+    list(GET local ${FIXGitRepository}  localGitRepo)
+    list(GET local ${FIXGitTag}         localGitTag)
+    list(GET local ${FIXSrcDir}         localSrcDir)
+    list(GET local ${FIXBuildDir}       localBuildDir)
+    list(GET local ${FIXIncDir}         localIncDir)
+    list(GET local ${FIXComponents}     localComponents)
+    list(GET local ${FIXArgs}           localArgs)
+    list(GET local ${FIXPrereqs}        localPrereqs)
+    list(GET local ${FIXFlags}          localFlags)
+    set(localFetchFlag ON)
+    # Initialize output variables
+    if (DEFINED A_PP_OUTPUT)
+        set(${A_PP_OUTPUT}      "${local}"          PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_NAME)
+        set(${A_PP_NAME}        ${localName}        PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_NAME)
+        set(${A_PP_NAME}        ${localName}        PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_IS_DEFAULT)
+        set(${A_PP_IS_DEFAULT}  ${localIsDefault}   PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_INDEX)
+        set(${A_PP_INDEX}       ${localIndex}       PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_NAMESPACE)
+        set(${A_PP_NAMESPACE}   ${localNS}          PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_KIND)
+        set(${A_PP_KIND}        ${localKind}        PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_METHOD)
+        set(${A_PP_METHOD}      ${localMethod}      PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_FLAGS)
+        set(${A_PP_FLAGS}       ${localFlags}       PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_URL)
+        set(${A_PP_URL}         ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_GIT_REPO)
+        set(${A_PP_GIT_REPO}    ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_GIT_TAG)
+        set(${A_PP_GIT_TAG}     ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_SRC_DIR)
+        set(${A_PP_SRC_DIR}     ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_BUILD_DIR)
+        set(${A_PP_BUILD_DIR}   ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_INC_DIR)
+        set(${A_PP_INC_DIR}     ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_COMPONENTS)
+        set(${A_PP_COMPONENTS}  ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_ARGS)
+        set(${A_PP_ARGS}        ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_PREREQS)
+        set(${A_PP_PREREQS}     ""                  PARENT_SCOPE)
+    endif ()
+    if (DEFINED A_PP_FETCH_FLAG)
+        set(${A_PP_FETCH_FLAG}  ON                  PARENT_SCOPE)
+    endif ()
+    # @formatter:on
+
+    set(is_git_repo OFF)
+    set(is_git_tag OFF)
+    set(is_zip_file OFF)
+    set(is_src_dir OFF)
+    set(is_build_dir OFF)
+    set(is_fetched ON)
+
+    if (localURL)
+        if ("${localURL}" MATCHES ".*\.zip$" OR "${localURL}" MATCHES ".*\.tar$" OR "${localURL}" MATCHES ".*\.gz$")
+            if ("${localURL}" MATCHES "^http.*")
+                set(is_fetched ON)
+            else ()
+                set(is_fetched OFF)
+            endif ()
+            set(is_zip_file ON)
+        else ()
+            set(is_zip_file OFF)
+        endif ()
+        set(is_url ON)
+        set(${A_PP_URL} "${localURL}" PARENT_SCOPE)
+        set(${A_PP_FETCH_FLAG} "${is_fetched}" PARENT_SCOPE)
+    endif ()
+
+    if (localGitRepo)
+        if ("${localGitRepo}" MATCHES "^http.*")
+            set(is_fetched ON)
+        else ()
+            set(is_fetched OFF)
+        endif ()
+        set(is_git_repo ON)
+        set(is_git_tag ON)
+        set(is_build_dir OFF)
+
+        set(${A_PP_GIT_REPO} "${localGitRepo}" PARENT_SCOPE)
+        set(${A_PP_FETCH_FLAG} "${is_fetched}" PARENT_SCOPE)
+    endif ()
+
+    if (localGitTag AND is_git_tag)
+        set(${A_PP_GIT_TAG} "${localGitTag}" PARENT_SCOPE)
+    endif ()
+
+    if (A_PP_SRC_DIR AND localSrcDir)
+        string(FIND "${localSrcDir}" "[" open_bracket)
+        string(FIND "${localSrcDir}" "]" close_bracket)
+        if (open_bracket GREATER_EQUAL 0 AND close_bracket GREATER ${open_bracket})
+            math(EXPR one_past_open_bracket "${open_bracket} + 1")
+            math(EXPR one_before_close_bracket "${close_bracket} - 1")
+            math(EXPR one_past_close_bracket "${close_bracket} + 1")
+            math(EXPR dirroot_length "${one_before_close_bracket} - ${one_past_open_bracket} + 1")
+            string(SUBSTRING "${localSrcDir}" ${one_past_open_bracket} ${dirroot_length} dirroot)
+            string(SUBSTRING "${localSrcDir}" ${one_past_close_bracket} -1 src_folder)
+
+            if (${dirroot} STREQUAL "SRC")
+                set(${A_PP_SRC_DIR} ${EXTERNALS_DIR}/${src_folder} PARENT_SCOPE)
+                set(src_ok ON)
+            elseif (${dirroot} STREQUAL "BUILD")
+                set(${A_PP_SRC_DIR} ${BUILD_DIR}/_deps/${src_folder} PARENT_SCOPE)
+                set(src_ok ON)
+            else ()
+                msg(ALWAYS FATAL_ERROR "Bad SRCDIR for ${this_pkgname} (${localSrcDir}): Must start with \"[SRC]\" or \"[BUILD]\"")
+            endif ()
+        else ()
+            set(src_ok ON)
+        endif ()
+    else ()
+        set(src_ok OFF)
+    endif ()
+
+    if (A_PP_BUILD_DIR AND localBuildDir)
+        string(FIND "${localBuildDir}" "[" open_bracket)
+        string(FIND "${localBuildDir}" "]" close_bracket)
+        if (open_bracket GREATER_EQUAL 0 AND close_bracket GREATER ${open_bracket})
+            math(EXPR one_past_open_bracket "${open_bracket} + 1")
+            math(EXPR one_before_close_bracket "${close_bracket} - 1")
+            math(EXPR one_past_close_bracket "${close_bracket} + 1")
+            math(EXPR dirroot_length "${one_before_close_bracket} - ${one_past_open_bracket} + 1")
+            string(SUBSTRING "${localBuildDir}" ${one_past_open_bracket} ${dirroot_length} dirroot)
+            string(SUBSTRING "${localBuildDir}" ${one_past_close_bracket} -1 src_folder)
+
+            if (${dirroot} STREQUAL "SRC")
+                set(${A_PP_BUILD_DIR} ${EXTERNALS_DIR}/${build_folder} PARENT_SCOPE)
+                set(build_ok ON)
+            elseif (${dirroot} STREQUAL "BUILD")
+                set(${A_PP_BUILD_DIR} ${BUILD_DIR}/_deps/${build_folder} PARENT_SCOPE)
+                set(build_ok ON)
+            else ()
+                msg(ALWAYS FATAL_ERROR "Bad BINDIR for ${this_pkgname} (${localBuildDir}): Must start with \"[SRC]\" or \"[BUILD]\"")
+            endif ()
+        else ()
+            set(build_ok ON)
+        endif ()
+    endif ()
+
+    if (src_ok) # Was AND build_ok) # But I think the existence of the build folder shouldn't have any effect here
+        set(${A_PP_FETCH_FLAG} OFF PARENT_SCOPE)
+    endif ()
+
+    if (A_PP_INC_DIR)
+        string(FIND "${localIncDir}" "[" open_bracket)
+        string(FIND "${localIncDir}" "]" close_bracket)
+        if (open_bracket GREATER_EQUAL 0 AND close_bracket GREATER ${open_bracket})
+            math(EXPR one_past_open_bracket "${open_bracket} + 1")
+            math(EXPR one_before_close_bracket "${close_bracket} - 1")
+            math(EXPR one_past_close_bracket "${close_bracket} + 1")
+            math(EXPR dirroot_length "${one_before_close_bracket} - ${one_past_open_bracket} + 1")
+            string(SUBSTRING "${localIncDir}" ${one_past_open_bracket} ${dirroot_length} dirroot)
+            string(SUBSTRING "${localIncDir}" ${one_past_close_bracket} -1 src_folder)
+
+            if (${dirroot} STREQUAL "SRC")
+                set(${A_PP_INC_DIR} ${EXTERNALS_DIR}/${folder} PARENT_SCOPE)
+                set(inc_ok ON)
+            elseif (${dirroot} STREQUAL "BUILD")
+                set(${A_PP_INC_DIR} ${BUILD_DIR}/_deps/${folder} PARENT_SCOPE)
+                set(inc_ok ON)
+            else ()
+                msg(ALWAYS FATAL_ERROR "Bad INCDIR for ${this_pkgname} (${localIncDir}): Must start with \"[SRC]\" or \"[BUILD]\"")
+            endif ()
+        else ()
+            set(inc_ok ON)
+        endif ()
+    endif ()
+
+    if (A_PP_COMPONENTS)
+        if (NOT "${localComponents}" STREQUAL "")
+            string(REPLACE "${_TOK_LIST_SEP}" ";" localComponents ${localComponents})
+            set(${A_PP_COMPONENTS} ${localComponents} PARENT_SCOPE)
+        endif ()
+    endif ()
+
+    if (A_PP_ARGS)
+        if (NOT "${localArgs}" STREQUAL "")
+            string(REPLACE "${_TOK_LIST_SEP}" ";" localArgs ${localArgs})
+            set(${A_PP_ARGS} ${localArgs} PARENT_SCOPE)
+        endif ()
+    endif ()
+
+    if (A_PP_PREREQS)
+        if (NOT "${localPrereqs}" STREQUAL "")
+            string(REPLACE "${_TOK_LIST_SEP}" ";" localPrereqs ${localPrereqs})
+            set(${A_PP_PREREQS} ${localPrereqs} PARENT_SCOPE)
+        endif ()
+    endif ()
+
+endfunction()
+##
+########################################################################################################################
+##
+function(resolveDependencies featureDict resolveThese resolvedFeaturesTbl resolvedNamesTbl)
+
+    set(visited)
+
+    # Internal helper to walk dependencies
+    function(visit lol feat_ is_a_prereq)
+
+        list(GET feat_ ${FIXName} feature_name_)
+        list(GET feat_ ${FIXPkgName} package_name_)
+        list(GET feat_ ${FIXKind} kind_)
+        list(GET feat_ ${FIXPrereqs} pre_)
+
+        if (NOT "${feature_name_}/${package_name_}" IN_LIST visited)
+            list(APPEND visited "${feature_name_}/${package_name_}")
+            set(visited ${visited} PARENT_SCOPE)
+
+            foreach (pr_entry_ IN LISTS pre_)
+                SplitAt("${pr_entry_}" "=" pr_feat_ pr_pkgname_)
+                if (pr_pkgname_)
+                    SELECT(ROW AS local_ FROM ${lol} WHERE FeatureName = "${pr_feat_}" AND PackageName = "${pr_pkgname_}")
+                else ()
+                    SELECT(ROW AS local_ FROM ${lol} WHERE FeatureName = "${pr_feat_}" AND IsDefault = 1)
+                endif ()
+                visit(${lol} "${local_}" ON)
+            endforeach ()
+
+            if (${is_a_prereq})
+                INSERT(INTO ${resolvedNamesTbl} VALUES ("${feature_name_}.*/${package_name_}" "${feature_name_}" "${package_name_}" 1))
+            else ()
+                INSERT(INTO ${resolvedNamesTbl} VALUES ("${feature_name_}/${package_name_}" "${feature_name_}" "${package_name_}" 0))
+            endif ()
+
+            separate_arguments(out_ NATIVE_COMMAND "${feat_}")
+            INSERT(INTO ${resolvedFeaturesTbl} VALUES (${out_}))
+            set(visited ${visited} PARENT_SCOPE)
+
+        endif ()
+
+    endfunction()
+
+    # Pass 1: Handle LIBRARIES and their deep prerequisites first
+
+    SELECT(COUNT AS numberToResolve FROM ${resolveThese})
+
+    foreach (rdPass RANGE 1 2)
+        set(loop_index 0)
+        while (loop_index LESS numberToResolve)
+            inc(loop_index)
+            set(row_id ${loop_index})
+            SELECT(ROW AS _feature FROM ${resolveThese} WHERE ROWID = ${row_id})
+            list(GET _feature ${FIXKind} _kind)
+            if ((rdPass EQUAL 1 AND "${_kind}" STREQUAL "LIBRARY") OR (rdPass EQUAL 2 AND NOT "${_kind}" STREQUAL "LIBRARY"))
+                visit(featureDict_ "${_feature}" OFF)
+            endif ()
+        endwhile ()
+    endforeach ()
+
+endfunction()
+##
+########################################################################################################################
+##
+function(scanLibraryTargets packageData libName packageNames)
+
+    set(${libName}_COMPONENTS)
+    set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
+    set(sctLongestFeatureName 0 CACHE INTERNAL "" FORCE)
+    set(sctLongestPackageName 0 CACHE INTERNAL "" FORCE)
+
+    # Check common target name patterns
+    set(targetName "")
+    if (TARGET ${APP_VENDOR}::${libName})
+        set(targetName "${APP_VENDOR}::${libName}")
+    elseif (TARGET ${libName}::${libName})
+        set(targetName "${libName}::${libName}")
+    elseif (TARGET ${libName})
+        set(targetName "${libName}")
+    endif ()
+
+    if ("${targetName}" STREQUAL "")
+        msg("  scanLibraryTargets: Could not find target for ${libName}")
+        return()
+    endif ()
+
+    msg("Scanning ${targetName} for provided imports...")
+
+    get_target_property(libs ${targetName} INTERFACE_LINK_LIBRARIES)
+    if (libs)
+        set(slib ${libs})
+        string(REPLACE ";" "\n" slib "${slib}")
+        msg("INTERFACE_LINK_LIBRARIES found in ${targetName} : \n\n${slib}\n")
+        foreach (pass RANGE 1 2)
+            foreach (lib IN LISTS libs)
+                # 1. Clean up target name (remove generator expressions)
+                string(REGEX REPLACE "\\$<.*>" "" clean_lib "${lib}")
+                if ("${clean_lib}" STREQUAL "")
+                    continue()
+                endif ()
+                # 2. Extract raw name for matching
+                set(raw_import_name "${clean_lib}")
+                if ("${clean_lib}" MATCHES "::")
+                    # Handle ${APP_VENDOR}::name or Namespace::name
+                    string(REGEX REPLACE ".*::" "" raw_import_name "${clean_lib}")
+                endif ()
+
+                # 3. Cross-reference against packageData
+                set(s_loop_counter 0)
+                SELECT(COUNT AS s_max FROM packageNames)
+                while (s_loop_counter LESS s_max)
+                    inc(s_loop_counter)
+                    set(s_ix ${s_loop_counter})
+                    SELECT(FeatureName AS feat_name PackageName AS pkg_name FROM packageNames WHERE ROWID = ${s_ix})
+                    if (NOT SELECT_OK)
+                        msg(ALWAYS FATAL_ERROR "PANIC!")
+                    endif ()
+                    SELECT(ROW AS feature_line FROM packageData WHERE FeatureName = ${feat_name} AND PackageName = ${pkg_name})
+                    if (NOT SELECT_OK)
+                        msg(ALWAYS FATAL_ERROR "PANIC!")
+                    endif ()
+                    list(GET feature_line ${FIXNamespace} ns)
+                    list(GET feature_line ${FIXComponents} components)
+
+                    # Does the library link to this package?
+                    set(MATCHED OFF)
+                    if (ns STREQUAL "")
+                        set(smoochie "Matching ${raw_import_name} to ${pkg_name} ")
+                    else ()
+                        set(smoochie "Matching ${raw_import_name} to ${ns}::${pkg_name} ")
+                    endif ()
+                    set(matching_component)
+                    if ("${raw_import_name}" STREQUAL "${pkg_name}" OR "${raw_import_name}" STREQUAL "${ns}")
+                        set(smoochie "${smoochie} ✔️")
+                        set(MATCHED ON)
+                    elseif (components)
+                        string(REPLACE "${_TOK_LIST_SEP}" ";" components ${components})
+                        set(smoochie "${smoochie} Nope ❌ Checking component ")
+                        # Check components
+                        foreach (comp IN LISTS components)
+                            set(smoochie "${smoochie} ${comp} ")
+
+                            # Match against component name (e.g. Core) or ns_component (e.g. SOCI_Core)
+                            # or common variations like pkg_component (e.g. soci_core)
+                            string(TOLOWER "${pkg_name}" pkg_lc)
+                            string(TOLOWER "${comp}" comp_lc)
+
+                            if ("${raw_import_name}" STREQUAL "${comp}" OR
+                                    "${raw_import_name}" STREQUAL "${ns}_${comp}" OR
+                                    "${raw_import_name}" STREQUAL "${pkg_name}_${comp}" OR
+                                    "${raw_import_name}" STREQUAL "${pkg_lc}_${comp_lc}")
+                                set(MATCHED ON)
+                                set(matching_component ${comp})
+                                set(smoochie "${smoochie} ✔️")
+                                break()
+                            else ()
+                                set(smoochie "${smoochie} ❌ ")
+                            endif ()
+                        endforeach ()
+                    else ()
+                        set(smoochie "${smoochie} Nope ❌")
+                    endif ()
+                    #                msg("${smoochie}")
+
+                    set(dispFeatureName "\"${feat_name}\"")
+
+                    if (ns STREQUAL "")
+                        if (matching_component)
+                            set(dispPackageName "(${pkg_name}::${matching_component})")
+                        else ()
+                            set(dispPackageName "(${pkg_name})")
+                        endif ()
+                    else ()
+                        if (matching_component)
+                            set(dispPackageName "(${ns}::${matching_component})")
+                        else ()
+                            set(dispPackageName "(${pkg_name})")
+                        endif ()
+                    endif ()
+
+                    if (pass EQUAL 1)
+
+                        longest(RIGHT CURRENT ${sctLongestFeatureName} TEXT "${dispFeatureName}" LONGEST sctLongestFeatureName)
+                        longest(LEFT CURRENT ${sctLongestPackageName} TEXT "${dispPackageName}" LONGEST sctLongestPackageName)
+
+                        continue()
+                    else ()
+
+                        longest(RIGHT CURRENT ${sctLongestFeatureName} TEXT "${dispFeatureName}" LONGEST sctLongestFeatureName PADDED dispFeatureName)
+                        longest(LEFT CURRENT ${sctLongestPackageName} TEXT "${dispPackageName}" LONGEST sctLongestPackageName PADDED dispPackageName)
+
+                        set(sctLongestFeatureName ${sctLongestFeatureName} CACHE INTERNAL "" FORCE)
+                        set(sctLongestPackageName ${sctLongestPackageName} CACHE INTERNAL "" FORCE)
+
+                    endif ()
+                    if (MATCHED)
+                        msg("o   Feature ${dispFeatureName} ${dispPackageName} is provided by ${targetName} as ${clean_lib}")
+
+                        list(APPEND ${libName}_COMPONENTS ${pkg_name})
+                        set(${pkg_name}_PROVIDED_TARGET "${clean_lib}" CACHE INTERNAL "" FORCE)
+                        list(APPEND __alreadyLocated "${clean_lib}")
+                        set(__alreadyLocated "${__alreadyLocated}" CACHE INTERNAL "" FORCE)
+                        break()
+                    endif ()
+                endwhile ()
+            endforeach ()
+        endforeach ()
+    endif ()
+    set(${libName}_COMPONENTS ${${libName}_COMPONENTS} PARENT_SCOPE)
+
+endfunction()
+##
+########################################################################################################################
+##
+macro(handleTarget _pkgname)
+    string(TOLOWER "${_pkgname}" pkgnamelc)
+    if (this_incdir)
+        if (EXISTS "${this_incdir}")
+            target_include_directories(${_pkgname} PUBLIC ${this_incdir})
+            list(APPEND _IncludePathsList ${this_incdir})
+        endif ()
+    else ()
+        if (EXISTS ${${pkgnamelc}_SOURCE_DIR}/include)
+            list(APPEND _IncludePathsList ${${pkgnamelc}_SOURCE_DIR}/include)
+        endif ()
+    endif ()
+
+    set(_anyTargetFound OFF)
+    if (NOT ${_pkgname} IN_LIST NoLibPackages)
+        list(APPEND _DefinesList USING_${this_feature})
+
+        # 1. Check for the specific target cached by scanLibraryTargets
+        # This is the "Magic" that links you to ${APP_VENDOR}::magic_enum instead of fetching a new one
+        if (${_pkgname}_PROVIDED_TARGET AND TARGET ${${_pkgname}_PROVIDED_TARGET})
+            set(_actualTarget ${${_pkgname}_PROVIDED_TARGET})
+            msg("  Linking ${_pkgname} to existing target: ${_actualTarget}")
+
+            addTargetProperties(${_actualTarget} ${_pkgname} ON)
+
+            # Ensure the include directories from the existing target are propagated
+            get_target_property(_target_incs ${_actualTarget} INTERFACE_INCLUDE_DIRECTORIES)
+            if (_target_incs)
+                list(APPEND _IncludePathsList ${_target_incs})
+            endif ()
+            set(_anyTargetFound ON)
+        endif ()
+
+        # 2. Standard component check
+        if (_anyTargetFound)
+            foreach (_component IN LISTS this_find_package_components)
+                if (TARGET ${_component})
+                    addTargetProperties(${_component} ${_pkgname} ON)
+                    set(_anyTargetFound ON)
+                endif ()
+            endforeach ()
+        endif ()
+
+        # 3. Standard naming fallback
+        if (NOT _anyTargetFound)
+            if (TARGET ${_pkgname}::${_pkgname})
+                addTargetProperties(${_pkgname}::${_pkgname} ${_pkgname} ON)
+                set(_anyTargetFound ON)
+            elseif (TARGET ${_pkgname})
+                addTargetProperties(${_pkgname} ${_pkgname} ON)
+                set(_anyTargetFound ON)
+            elseif (TARGET ${APP_VENDOR}::${_pkgname})
+                addTargetProperties(${APP_VENDOR}::${_pkgname} ${_pkgname} ON)
+                set(_anyTargetFound ON)
+            endif ()
+        endif ()
+    endif ()
+
+    # Setup source/build paths for handlers
+    if (NOT this_src)
+        set(this_src "${EXTERNALS_DIR}/${pkg}")
+    endif ()
+    if (NOT this_build)
+        set(this_build "${BUILD_DIR}/_deps/${_pkglc}-build")
+    endif ()
+
+    unset(_component)
+    unset(_anyTargetFound)
+    unset(_pkglc)
+
+endmacro()
+##
+########################################################################################################################
+##
+function(preProcessFeatures featureList hDataSource outVar)
+
+    function(replacePositionalParameters tokenString outputVar addAllRegardless)
+
+        set(hints)
+
+        # Define the paths to the two configuration files
+        foreach (hint IN LISTS tokenString)
+            string(FIND "${hint}" "{" openBrace)
+            string(FIND "${hint}" "}" closeBrace)
+            if (${openBrace} LESS 0 AND ${closeBrace} LESS 0)
+                list(APPEND hints "${hint}")
+                continue()
+            endif ()
+
+            math(EXPR firstCharOfPkg "${openBrace} + 1")
+            math(EXPR pkgNameLen "${closeBrace} - ${openBrace} - 1")
+            string(SUBSTRING "${hint}" ${firstCharOfPkg} ${pkgNameLen} pkgName)
+
+            if (MONOREPO)
+                set(SOURCE_PATH "${OUTPUT_DIR}")
+            else ()
+                string(REGEX REPLACE "${APP_NAME}/" "${pkgName}/" SOURCE_PATH "${OUTPUT_DIR}")
+            endif ()
+            set(actualSourcePath "${SOURCE_PATH}")
+            set(actualStagedPath "${STAGED_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
+            set(actualSystemPath "${SYSTEM_PATH}/${CMAKE_INSTALL_LIBDIR}/cmake")
+
+            fittest(PACKAGE "${pkgName}"
+                    FILENAME "${pkgName}Config.cmake"
+                    ADD_REGARDLESS "${addAllRegardless})"
+
+                    OUTPUT listOfFolders
+
+                    SOURCE_DIR "${actualSourcePath}"
+                    STAGED_DIR "${actualStagedPath}"
+                    SYSTEM_DIR "${actualSystemPath}"
+            )
+            list(APPEND hints "${listOfFolders}")
+
+        endforeach ()
+
+        list(REMOVE_DUPLICATES hints)
+        set(${outputVar} ${hints} PARENT_SCOPE)
+    endfunction()
+    macro(_)
+
+        # @formatter:off
+        set(_pkg            ${_TOK_EMPTY_FIELD})
+        set(_feature        ${_TOK_EMPTY_FIELD})
+        set(_package        ${_TOK_EMPTY_FIELD})
+        set(_is_default     ${_TOK_EMPTY_FIELD})
+        set(_ns             ${_TOK_EMPTY_FIELD})
+        set(_kind           ${_TOK_EMPTY_FIELD})
+        set(_method         ${_TOK_EMPTY_FIELD})
+        set(_url            ${_TOK_EMPTY_FIELD})
+        set(_git_repo       ${_TOK_EMPTY_FIELD})
+        set(_tag            ${_TOK_EMPTY_FIELD})
+        set(_srcdir         ${_TOK_EMPTY_FIELD})
+        set(_builddir       ${_TOK_EMPTY_FIELD})
+        set(_incdir         ${_TOK_EMPTY_FIELD})
+        set(_components     ${_TOK_EMPTY_FIELD})
+        set(_args           ${_TOK_EMPTY_FIELD})
+        set(_prerequisites  ${_TOK_EMPTY_FIELD})
+        set(_flags          ${_TOK_EMPTY_FIELD})
+        # @formatter:on
+
+        set(_hints)
+        set(_required)
+        set(_paths)
+        set(_first_hint)
+        set(_first_path)
+        set(_first_component)
+
+        foreach (_item IN LISTS _switches _single_args _multi_args)
+            unset(${_prefix}_${_item})
+            unset(${_prefix}_${_item} CACHE)
+        endforeach ()
+
+    endmacro()
+    function(subProcess subArgs retVar)
+        set(featureless ${subArgs})
+        list(REMOVE_ITEM featureless "FIND_PACKAGE_ARGS")
+        cmake_parse_arguments("AA1" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${featureless}) #${AA_FIND_PACKAGE_ARGS})
+
+        if (AA1_HINTS OR "HINTS" IN_LIST AA1_KEYWORDS_MISSING_VALUES)
+            if (NOT "${AA1_HINTS}" STREQUAL "")
+                replacePositionalParameters("${AA1_HINTS}" _hints OFF)
+                if (_hints)
+                    string(JOIN "${_TOK_LIST_SEP}" _hints "HINTS" ${_hints})
+                else ()
+                    msg(ALWAYS "APP_FEATURES: No files found for HINTS")
+                endif ()
+            else ()
+                msg(ALWAYS WARNING "APP_FEATURES: HINTS has no hints")
+                set(_hints)
+                list(REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "HINTS")
+            endif ()
+        endif ()
+
+        if (AA1_PATHS OR "PATHS" IN_LIST AA1_KEYWORDS_MISSING_VALUES)
+            if (NOT "${AA1_PATHS}" STREQUAL "")
+                replacePositionalParameters("${AA1_PATHS}" _paths ON)
+                if (_paths)
+                    string(JOIN "${_TOK_LIST_SEP}" _paths "PATHS" ${_paths})
+                else ()
+                    msg(ALWAYS "APP_FEATURES: No files found for PATHS")
+                endif ()
+            else ()
+                msg(ALWAYS WARNING "APP_FEATURES: PATHS has no paths")
+                set(_paths)
+                list(REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "PATHS")
+            endif ()
+        endif ()
+
+        if (AA1_REQUIRED AND AA1_OPTIONAL)
+            msg(ALWAYS FATAL_ERROR "APP_FEATURES: cannot contain both REQUIRED,OPTIONAL")
+        endif ()
+
+        if (AA1_REQUIRED)
+            set(_required "REQUIRED")
+        endif ()
+
+        if (AA1_OPTIONAL)
+            set(_required "OPTIONAL")
+        endif ()
+        list(REMOVE_ITEM AA1_UNPARSED_ARGUMENTS "FIND_PACKAGE_ARGS" "ARGS")
+        string(JOIN "${_TOK_LIST_SEP}" _retargs ${_required} ${_hints} ${_paths} ${AA1_UNPARSED_ARGUMENTS})
+        set(${retVar} ${_retargs} PARENT_SCOPE)
+    endfunction()
+
+    CREATE(TABLE tblRevisedFeatures COLUMNS (${PkgColNames}) INTO hRevisedFeatures)
+
+    set(_switches OVERRIDE_FIND_PACKAGE)
+    set(_single_args PACKAGE NAMESPACE)
+    set(_multi_args FIND_PACKAGE_ARGS ARGS COMPONENTS)
+    set(_prefix PPF)
+
+    foreach (feature IN LISTS featureList)
+
+        _()
+
+        separate_arguments(feature NATIVE_COMMAND "${feature}")
+        cmake_parse_arguments(${_prefix} "${_switches}" "${_single_args}" "${_multi_args}" ${feature})
+        list(POP_FRONT PPF_UNPARSED_ARGUMENTS PPF_FEATURE)
+
+        if(PPF_FEATURE MATCHES APPEARANCE)
+            msg("They're here...")
+        endif ()
+        # Sanity checks
+
+        if (NOT PPF_FEATURE)
+            msg(ALWAYS FATAL_ERROR "APP_FEATURES: No FEATURE name")
+        endif ()
+
+        if (NOT DEFINED PPF_PACKAGE OR PPF_PACKAGE STREQUAL "")
+            set(PPF_PACKAGE)
+            set(wantDefault ON)
+        elseif ("PACKAGE" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            msg(ALWAYS FATAL_ERROR "APP_FEATURES: PACKAGE keyword given with no package name")
+            set(PPF_PACKAGE)
+            set(wantDefault ON)
+        else ()
+            set(wantDefault OFF)
+        endif ()
+
+        if (PPF_OVERRIDE_FIND_PACKAGE AND (PPF_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES))
+            msg(ALWAYS FATAL_ERROR "APP_FEATURES: Cannot combine OVERRIDE_FIND_PACKAGE with FIND_PACKAGE_ARGS")
+        endif ()
+
+        if (PPF_NAMESPACE OR "NAMESPACE" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            if (NOT "${PPF_NAMESPACE}" STREQUAL "")
+                set(_ns "${PPF_NAMESPACE}")
+            else ()
+                msg(ALWAYS WARNING "APP_FEATURES: NAMESPACE keyword given with no package name")
+                list(REMOVE_ITEM PPF_UNPARSED_ARGUMENTS "NAMESPACE")
+            endif ()
+        endif ()
+
+        if (PPF_OVERRIDE_FIND_PACKAGE)
+            set(_args "OVERRIDE_FIND_PACKAGE")
+        elseif (PPF_FIND_PACKAGE_ARGS OR "FIND_PACKAGE_ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            set(_args "FIND_PACKAGE_ARGS")
+            if (NOT "${PPF_FIND_PACKAGE_ARGS}" STREQUAL "")
+                subProcess("${PPF_FIND_PACKAGE_ARGS}" retVar)
+                string(JOIN "${_TOK_LIST_SEP}" _args "${retVar}")
+            endif ()
+        endif ()
+
+        if (PPF_COMPONENTS OR "COMPONENTS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            if (NOT "${PPF_COMPONENTS}" STREQUAL "")
+                string(JOIN "${_TOK_LIST_SEP}" _components ${PPF_COMPONENTS})
+            else ()
+                msg(ALWAYS WARNING "APP_FEATURES: COMPONENTS keyword given with no components")
+            endif ()
+        endif ()
+
+        if (PPF_ARGS OR "ARGS" IN_LIST PPF_KEYWORDS_MISSING_VALUES)
+            subProcess("${PPF_ARGS}" retVar)
+            string(JOIN "${_TOK_LIST_SEP}" _args "${retVar}")
+        endif ()
+
+        if (wantDefault)
+            SELECT(FeatureName AS PPF_FEATURE PackageName AS PPF_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${PPF_FEATURE}" AND IsDefault = 1)
+        else ()
+            SELECT(FeatureName AS PPF_FEATURE PackageName AS _PPF_PACKAGE IsDefault FROM ${hDataSource} WHERE "FeatureName" = "${PPF_FEATURE}" AND "PackageName" = "${PPF_PACKAGE}")
+            set(PPF_PACKAGE "${_PPF_PACKAGE}")
+        endif ()
+
+        if (IsDefault STREQUAL "")
+            if (PPF_PACKAGE)
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature/Package \"${PPF_FEATURE}/${PPF_PACKAGE}\" does not exist")
+            else ()
+                msg(ALWAYS FATAL_ERROR "preProcessFeatures: Feature \"${PPF_FEATURE}\" does not exist")
+            endif ()
+        endif ()
+
+        #        _hs_sql_field_to_storage()
+        INSERT(INTO hRevisedFeatures VALUES (
+                "${PPF_FEATURE}"
+                "${PPF_PACKAGE}"
+                "${IsDefault}"
+                "${_ns}"
+                "${_kind}"
+                "${_method}"
+                "${_url}"
+                "${_git_repo}"
+                "${_tag}"
+                "${_srcdir}"
+                "${_builddir}"
+                "${_incdir}"
+                "${_components}"
+                "${_args}"
+                "${_prerequisites}"
+                "${_flags}")
+        )
+
+    endforeach ()
+
+    set(${outVar} ${hRevisedFeatures} PARENT_SCOPE)
+endfunction()
