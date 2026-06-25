@@ -406,7 +406,11 @@ class CppGroupGenerator:
         code.append('#include "Core/CoreData.h"')
         code.append('#include "Core/Util.h"')
         code.append('')
-        code.append('#include <wx/wx.h>')
+        # wx/wx.h omitted intentionally: including it in every generated module's
+        # global fragment multiplies its SLoc entries by the number of BMIs, exhausting
+        # Clang's 2.1 GB source-location budget.  wx types (wxWindowIDRef, etc.) are
+        # reachable via `import SplitterPage;` in the module body, so they don't need
+        # to be re-declared here.  See commit 8c24e32 for the Windows precedent.
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         code.append('')
