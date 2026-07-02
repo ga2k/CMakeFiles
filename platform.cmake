@@ -84,9 +84,22 @@ elseif (WIN32)
         set(CMAKE_INSTALL_LIBDIR "lib")
     endif ()
 
-    set(PlatformFlag "WIN32")
+#    set(PlatformFlag "WIN32")
+#    set(DYN_FLAG ws2_32)
+
+    # Build Windows executables as console-subsystem apps for developer/debug configs,
+    # so std::cout/std::cerr are visible in CLion and launching terminals.
+    #
+    # Build Release/MinSizeRel as GUI-subsystem apps, avoiding an extra console
+    # window for end users.
+    set(PlatformFlag "$<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:WIN32>")
     set(DYN_FLAG ws2_32)
 
+    if (${LINK_TYPE_UC} STREQUAL "SHARED")
+        set(APP_DYN_FLAG ${DYN_FLAG})
+    else ()
+        set(APP_DYN_FLAG)
+    endif ()
     if (${LINK_TYPE_UC} STREQUAL "SHARED")
         set(APP_DYN_FLAG ${DYN_FLAG})
     else ()
