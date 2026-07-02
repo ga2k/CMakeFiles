@@ -9,11 +9,11 @@ function(addLibrary)
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
 
     if (NOT arg_HEADERS_FILE_SET)
-        set (arg_HEADERS_FILE_SET "HEADERS")
+        set(arg_HEADERS_FILE_SET "HEADERS")
     endif ()
 
     if (NOT arg_CXX_MODULES_FILE_SET)
-        set (arg_CXX_MODULES_FILE_SET "CXX_MODULES")
+        set(arg_CXX_MODULES_FILE_SET "CXX_MODULES")
     endif ()
 
     if (NOT arg_HEADER_VISIBILITY)
@@ -64,7 +64,7 @@ function(addLibrary)
 
     string(TOUPPER "${arg_USES}" arg_USES)
 
-    if(NOT arg_EXECUTABLE)
+    if (NOT arg_EXECUTABLE)
         if (arg_LINK MATCHES SHARED)
             set(arg_SHARED ON)
             set(arg_STATIC OFF)
@@ -115,7 +115,7 @@ function(addLibrary)
 
     if (arg_PLUGIN)
         set(PLUGIN_ENNUCIATOR "plug-in")
-    elseif(arg_EXECUTABLE)
+    elseif (arg_EXECUTABLE)
         set(PLUGIN_ENNUCIATOR "executable app")
     else ()
         set(PLUGIN_ENNUCIATOR "library")
@@ -212,10 +212,10 @@ function(addLibrary)
     # SO_VERSION may be empty if framework.cmake ran before AppSpecific.cmake set APP_VERSION
     # (include_guard fires before per-library setup). Derive from arg_VERSION as a fallback.
     set(_hs_so_ver "${SO_VERSION}")
-    if(NOT _hs_so_ver AND arg_VERSION)
+    if (NOT _hs_so_ver AND arg_VERSION)
         SplitAt("${arg_VERSION}" "." _hs_so_ver _hs_so_dc)
         unset(_hs_so_dc)
-    endif()
+    endif ()
 
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
@@ -253,6 +253,23 @@ function(addLibrary)
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
+
+    # Windows wx GUI apps usually provide WinMain, not main.
+    # Therefore keep add_executable(... WIN32), but ask the linker to use the
+    # console subsystem for developer configs so stdout/stderr are visible.
+    if (WIN32 AND arg_EXECUTABLE)
+        if (MSVC)
+            target_link_options(${arg_NAME} PRIVATE
+                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:/SUBSYSTEM:CONSOLE>"
+                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:/ENTRY:WinMainCRTStartup>"
+            )
+        else ()
+            target_link_options(${arg_NAME} PRIVATE
+                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,/subsystem:console>"
+                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,/entry:WinMainCRTStartup>"
+            )
+        endif ()
+    endif ()
 
     # Link Core
     if (CORE IN_LIST arg_USES)
@@ -434,9 +451,9 @@ function(addLibrary)
 
     if (APPLE AND BUILD_DEBUG)
         add_custom_command(TARGET ${arg_NAME} POST_BUILD
-            COMMAND dsymutil "$<TARGET_FILE:${arg_NAME}>"
-            COMMENT "Generating ${arg_NAME}.dSYM"
-            VERBATIM
+                COMMAND dsymutil "$<TARGET_FILE:${arg_NAME}>"
+                COMMENT "Generating ${arg_NAME}.dSYM"
+                VERBATIM
         )
     endif ()
 
