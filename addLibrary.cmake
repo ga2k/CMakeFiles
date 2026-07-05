@@ -254,21 +254,13 @@ function(addLibrary)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
 
-    # Windows wx GUI apps usually provide WinMain, not main.
-    # Therefore keep add_executable(... WIN32), but ask the linker to use the
-    # console subsystem for developer configs so stdout/stderr are visible.
+    # WIN32 adds -mwindows (GUI subsystem); override to console in dev configs so
+    # stdout/stderr are visible. GNU ld / lld (GNU compat) require GNU PE flags.
     if (WIN32 AND arg_EXECUTABLE)
-        if (MSVC)
-            target_link_options(${arg_NAME} PRIVATE
-                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:/SUBSYSTEM:CONSOLE>"
-                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:/ENTRY:WinMainCRTStartup>"
-            )
-        else ()
-            target_link_options(${arg_NAME} PRIVATE
-                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,/subsystem:console>"
-                    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,/entry:WinMainCRTStartup>"
-            )
-        endif ()
+        target_link_options(${arg_NAME} PRIVATE
+                "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,--subsystem,console>"
+                "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:-Wl,--entry,WinMainCRTStartup>"
+        )
     endif ()
 
     # Link Core
