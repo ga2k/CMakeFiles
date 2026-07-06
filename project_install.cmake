@@ -46,7 +46,8 @@ function(project_install _Folder)
                     ${GEN_DEST_DIR}/ui
                     ${APP_GENERATE_UI_CLASSES}
                     ${APP_NAME}
-                    "${EXPORTS_VAR}")
+                    "${EXPORTS_VAR}"
+                    "${APP_UI_IMPL_DIR}")
         endif ()
     endif ()
 

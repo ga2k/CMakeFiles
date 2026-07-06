@@ -5,14 +5,24 @@ function(generateUIClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
 
     set (generator "yaml2ui.py")
 
+    # Optional 5th arg: where hand-editable _impl.cpp stubs get written.
+    # Defaults to alongside the generated .ixx output if the caller doesn't opt in
+    # to a committed location (see APP_UI_IMPL_DIR in AppSpecific.cmake).
+    set(IMPL_DIR "${OUT_DIR}/impl")
+    if (ARGN)
+        list(GET ARGN 0 IMPL_DIR)
+    endif ()
+
     # 1) Configure-time generation so CMake can glob and add sources
     file(MAKE_DIRECTORY "${OUT_DIR}")
+    file(MAKE_DIRECTORY "${IMPL_DIR}")
     execute_process(
             COMMAND "${Python3_EXECUTABLE}"
                 "${cmake_root}/${generator}"
                     --quiet ${SHOW_SIZER_INFO_FLAG}
                     --scan "${SRCDIR}"
                     --output "${OUT_DIR}"
+                    --impl-dir "${IMPL_DIR}"
                     --app-target "${APP_NAME}"
                     --export-var "${EXPORT_VAR}"
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -36,11 +46,13 @@ function(generateUIClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
             OUTPUT "${UI_CLASSES_STAMP}"
             BYPRODUCTS ${UI_CLASS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUT_DIR}"
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${IMPL_DIR}"
             COMMAND "${Python3_EXECUTABLE}"
                         "${cmake_root}/${generator}"
                         --quiet ${SHOW_SIZER_INFO_FLAG}
                         --scan "${SRCDIR}"
                         --output "${OUT_DIR}"
+                        --impl-dir "${IMPL_DIR}"
                         --app-target "${APP_NAME}"
                         --export-var "${EXPORT_VAR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${UI_CLASSES_STAMP}"
@@ -74,11 +86,12 @@ function(generateUIClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
 
     target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
 
-    # Hand-written module implementation stubs (created once by generator, never overwritten)
+    # Hand-written module implementation stubs (created by generator; existing
+    # function bodies are never overwritten, only missing functions get appended)
     file(GLOB_RECURSE UI_IMPL_FILES
             CONFIGURE_DEPENDS
             LIST_DIRECTORIES false
-            "${SRCDIR}/impl/*_impl.cpp"
+            "${IMPL_DIR}/*_impl.cpp"
     )
     if (UI_IMPL_FILES)
         target_sources(${TRRGET} PRIVATE ${UI_IMPL_FILES})

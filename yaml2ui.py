@@ -7,6 +7,7 @@ Generates C++ Group module files from YAML form definitions.
 import sys
 import subprocess
 import argparse
+import re
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 import datetime
@@ -41,6 +42,7 @@ class CppGroupGenerator:
     now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")
     next_PageType: int = 1000
     export_var: str = "GFX_EXPORT"
+    impl_dir: Optional[Path] = None
 
     @dataclass(frozen=True)
     class SizerProperties:
@@ -383,7 +385,8 @@ class CppGroupGenerator:
         else:
             raise ValueError(f"Unknown target '{_targets}'")
 
-    def generate_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str) -> str:
+    def generate_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
+                         output_dir: Optional[Path] = None) -> str:
         """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
         allow = self._allowed_sets()
         self._warn_unknown_keys(class_def, allow["class_def"], f"widget class_def '{target_name}'", yaml_file)
@@ -496,16 +499,28 @@ class CppGroupGenerator:
                 # callers can still override via custom anymap arguments.
                 parent_args_var_for_children = "args"
 
-        on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
-        on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
-        if on_kill_active is not None or on_set_active is not None:
+        # Impl dir/stub path determined early: both the on_set_active/on_kill_active
+        # overrides and 'functions:' entries may need to be stubbed out here.
+        if self.impl_dir is not None:
+            impl_dir = self.impl_dir
+        elif output_dir is not None:
+            impl_dir = output_dir / "impl"
+        else:
+            impl_dir = yaml_file.parent / "impl"
+        stub_path = impl_dir / f"{cpp_class}_impl.cpp"
+
+        kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
+        set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
+        if kill_declared or set_declared:
             code.append("")
             code.append("protected:")
             code.append("   // OnKillActive/SetActive overrides")
-            if on_kill_active is not None:
-                code.append(f"   auto onKillActive(bool autoDisable) -> void override;")
-            if on_set_active is not None:
-                code.append(f"   auto onSetActive(bool autoEnable) -> void override;")
+            if kill_declared:
+                note = "" if on_kill_active is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onKillActive(bool autoDisable) -> void override;{note}")
+            if set_declared:
+                note = "" if on_set_active is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onSetActive(bool autoEnable) -> void override;{note}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -527,6 +542,7 @@ class CppGroupGenerator:
                 fn_text = (
                     f"   {static_prefix}auto {fname} ({args})"
                     f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix};"
+                    f"  // Implemented in file://{stub_path}"
                 )
             else:
                 body = body.replace('\r\n', '\n').replace('\r', '\n')
@@ -542,7 +558,7 @@ class CppGroupGenerator:
         def format_access_block(access_name: str, fns: List[str]) -> str:
             if not fns:
                 return ""
-            return f"\n{access_name}:\n" + ''.join(fns)
+            return f"\n{access_name}:\n" + '\n'.join(fns)
 
         public_access_block = format_access_block('public', access_groups['public'])
         protected_access_block = format_access_block('protected', access_groups['protected'])
@@ -687,8 +703,24 @@ class CppGroupGenerator:
 
         # Write _impl.cpp stub for any declaration-only functions (no body: key in YAML)
         stub_fns = {n: d for n, d in functions_all.items() if d['body'] is None}
+        if kill_declared and on_kill_active is None:
+            stub_fns['onKillActive'] = {
+                'args': 'bool autoDisable', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    // Interface::onKillActive(autoDisable); must be called at some point",
+                    "    Interface::onKillActive(autoDisable);",
+                ],
+            }
+        if set_declared and on_set_active is None:
+            stub_fns['onSetActive'] = {
+                'args': 'bool autoEnable', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    // Interface::onSetActive(autoEnable); must be called at some point",
+                    "    Interface::onSetActive(autoEnable);",
+                ],
+            }
         if stub_fns:
-            self._write_impl_stub(yaml_file, cpp_class, export_module, ns, stub_fns)
+            self._write_impl_stub(impl_dir, cpp_class, export_module, ns, stub_fns)
 
         return "\n".join(code)
 
@@ -1332,26 +1364,37 @@ class CppGroupGenerator:
         return export_module
 
     def extract_group_method_body(self, tag: str, element_name: str, elements: Dict[str, Any],
-                                  yaml_file: Path) -> str | None:
-        """Extracts a group-level method body (onSetActive/onKillActive) as literal block text."""
+                                  yaml_file: Path) -> Tuple[bool, Optional[str]]:
+        """Extracts a group-level method body (onSetActive/onKillActive).
 
-        if tag in elements:
-            ablk = elements.get(tag)
-            if isinstance(ablk, dict):
-                body = ablk.get("body")
-                if isinstance(body, str):
-                    # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
-                    if tag == "on_set_active" and "Interface::onSetActive" not in body:
-                        raise ValueError(
-                            f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
-                    if tag == "on_kill_active" and "Interface::onKillActive" not in body:
-                        raise ValueError(
-                            f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
-                    return body.rstrip("\n")
-                if body is not None:
-                    print(f"Warning: '{tag}.body' must be a string; ignoring ({yaml_file})", file=sys.stderr)
+        Returns (declared, body). `declared` is True whenever the tag key
+        (e.g. 'on_set_active') is present in the YAML, regardless of whether it
+        carries a body. `body` is the literal block text when a 'body:' key was
+        supplied, or None when the method should instead be stubbed out in the
+        impl file (mirrors how 'functions:' entries without a 'body:' behave).
+        """
 
-        return None
+        if tag not in elements:
+            return False, None
+
+        ablk = elements.get(tag)
+        if not isinstance(ablk, dict):
+            return True, None
+
+        body = ablk.get("body")
+        if isinstance(body, str):
+            # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
+            if tag == "on_set_active" and "Interface::onSetActive" not in body:
+                raise ValueError(
+                    f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
+            if tag == "on_kill_active" and "Interface::onKillActive" not in body:
+                raise ValueError(
+                    f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
+            return True, body.rstrip("\n")
+        if body is not None:
+            print(f"Warning: '{tag}.body' must be a string; ignoring ({yaml_file})", file=sys.stderr)
+
+        return True, None
         #
         # if isinstance(val, str) and val.strip():
         #     # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
@@ -2091,44 +2134,79 @@ class CppGroupGenerator:
 
         return normalized
 
-    def _write_impl_stub(self, yaml_file: Path, class_name: str, module_name: str,
-                         ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
-        """Write a module implementation unit stub — only if it does not already exist."""
-        impl_dir = yaml_file.parent / "impl"
-        impl_dir.mkdir(exist_ok=True)
-        stub_path = impl_dir / f"{class_name}_impl.cpp"
-        if stub_path.exists():
-            return  # never overwrite hand-edited stubs
-
-        lines = [
-            "module;",
-            "// Module implementation unit — add includes your implementation needs.",
-            '#include "Core/Core.h"',
-            "#include <wx/wx.h>",
-            "",
-            f"module {module_name};",
-            "",
-            f"namespace {ns} {{",
+    def _render_impl_fn(self, class_name: str, fname: str, fdef: Dict[str, Any]) -> List[str]:
+        args            = fdef['args']
+        ret             = fdef['return']
+        const_suffix    = " const"    if fdef['const']    else ""
+        noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
+        # 'override' is a virt-specifier: valid on the in-class declaration, but a
+        # compile error on an out-of-line definition — never emit it here.
+        body_lines = fdef.get('stub_body') or ["    // TODO: implement"]
+        return [
+            f"auto {class_name}::{fname} ({args})"
+            f"{const_suffix}{noexcept_suffix} -> {ret} {{",
+            *body_lines,
+            "}",
             "",
         ]
-        for fname, fdef in stub_fns.items():
-            args            = fdef['args']
-            ret             = fdef['return']
-            const_suffix    = " const"    if fdef['const']    else ""
-            override_suffix = " override" if fdef['override'] else ""
-            noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
-            lines.append(
-                f"auto {class_name}::{fname} ({args})"
-                f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix} {{"
-            )
-            lines.append("    // TODO: implement")
-            lines.append("}")
-            lines.append("")
-        lines.append(f"}} // namespace {ns}")
-        lines.append("")
 
-        stub_path.write_text("\n".join(lines), encoding="utf-8")
-        print(f"{stub_path} : Created (stub)")
+    def _write_impl_stub(self, impl_dir: Path, class_name: str, module_name: str,
+                         ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
+        """Write (or incrementally extend) a module implementation unit stub.
+
+        Hand-written function bodies are never touched: each function in stub_fns
+        is checked for an existing 'ClassName::fname (' definition anywhere in the
+        file, and only the functions not yet present get a new TODO stub appended —
+        this lets a new function be added to a YAML that already has a hand-edited
+        impl file without clobbering the existing implementations.
+        """
+        impl_dir.mkdir(parents=True, exist_ok=True)
+        stub_path = impl_dir / f"{class_name}_impl.cpp"
+
+        if not stub_path.exists():
+            lines = [
+                "module;",
+                "// Module implementation unit — add includes your implementation needs.",
+                '#include "Core/Core.h"',
+                "#include <wx/wx.h>",
+                "",
+                f"module {module_name};",
+                "",
+                f"namespace {ns} {{",
+                "",
+            ]
+            for fname, fdef in stub_fns.items():
+                lines.extend(self._render_impl_fn(class_name, fname, fdef))
+            lines.append(f"}} // namespace {ns}")
+            lines.append("")
+
+            stub_path.write_text("\n".join(lines), encoding="utf-8")
+            print(f"{stub_path} : Created (stub)")
+            return
+
+        existing = stub_path.read_text(encoding="utf-8")
+        missing_fns = {
+            fname: fdef for fname, fdef in stub_fns.items()
+            if not re.search(rf"{re.escape(class_name)}\s*::\s*{re.escape(fname)}\s*\(", existing)
+        }
+        if not missing_fns:
+            return  # every declared function already has a definition in the file
+
+        new_lines: List[str] = []
+        for fname, fdef in missing_fns.items():
+            new_lines.extend(self._render_impl_fn(class_name, fname, fdef))
+
+        closing = f"}} // namespace {ns}"
+        trimmed = existing.rstrip("\n")
+        if trimmed.endswith(closing):
+            body = trimmed[: -len(closing)].rstrip("\n")
+            updated = body + "\n\n" + "\n".join(new_lines) + "\n" + closing + "\n"
+        else:
+            # Closing namespace brace wasn't found verbatim (file hand-edited) — append at the end.
+            updated = trimmed + "\n\n" + "\n".join(new_lines)
+
+        stub_path.write_text(updated, encoding="utf-8")
+        print(f"{stub_path} : Updated (added stub(s) for {', '.join(missing_fns.keys())})")
 
     def _format_noexcept(self, spec: Any) -> str:
         if spec is True:
@@ -2185,7 +2263,7 @@ class CppGroupGenerator:
                     print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section",
                           file=sys.stderr)
 
-            module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim)
+            module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim, output_file)
 
             generated.append((target_name, module_content))
 
@@ -2304,6 +2382,9 @@ def main():
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     parser.add_argument('-s', '--sizer-info', action='store_true', help='Show sizer info in the generated UI classes')
+    parser.add_argument('--impl-dir', type=Path,
+                        help='Directory to write hand-editable _impl.cpp stubs to '
+                             '(default: alongside --output, or next to the source YAML)')
 
     args = parser.parse_args()
     generator = CppGroupGenerator()
@@ -2311,6 +2392,9 @@ def main():
     generator.be_verbose(args.verbose)
     generator.show_sizer_info(args.sizer_info)
     generator.export_var = args.export_var
+
+    if args.impl_dir is not None:
+        generator.impl_dir = args.impl_dir
 
     if not args.first_pagetype is None:
         generator.next_PageType = args.first_pagetype
