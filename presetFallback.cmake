@@ -115,12 +115,34 @@ macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
             "C:/Program Files/LLVM/bin/clang-scan-deps.exe"  CACHE FILEPATH "" FORCE)
         set(CMAKE_C_COMPILER
             "C:/Program Files/LLVM/bin/clang.exe"            CACHE FILEPATH "" FORCE)
-        set(CMAKE_LINKER
-            "C:/Program Files/LLVM/bin/lld-link.exe"         CACHE FILEPATH "" FORCE)
-        set(CMAKE_RC_COMPILER
-            "C:/Program Files/LLVM/bin/llvm-rc.exe"          CACHE FILEPATH "" FORCE)
         set(CMAKE_SYSTEM_NAME      "Windows" CACHE STRING "" FORCE)
         set(CMAKE_SYSTEM_PROCESSOR "AMD64"   CACHE STRING "" FORCE)
+
+        # Prefer GNU-style linking (ld.lld + windres) when windres is available from
+        # MSYS2; fall back to lld-link + llvm-rc when it is not.
+        set(_hs_windres_candidates
+            "C:/msys64/ucrt64/bin/windres.exe"
+            "C:/msys64/mingw64/bin/windres.exe"
+            "C:/msys64/clang64/bin/windres.exe"
+        )
+        set(_hs_windres "")
+        foreach(_hs_wr IN LISTS _hs_windres_candidates)
+            if(EXISTS "${_hs_wr}")
+                set(_hs_windres "${_hs_wr}")
+                break()
+            endif()
+        endforeach()
+
+        if(_hs_windres)
+            set(CMAKE_LINKER      "C:/Program Files/LLVM/bin/ld.lld.exe" CACHE FILEPATH "" FORCE)
+            set(CMAKE_RC_COMPILER "${_hs_windres}"                        CACHE FILEPATH "" FORCE)
+        else()
+            set(CMAKE_LINKER      "C:/Program Files/LLVM/bin/lld-link.exe" CACHE FILEPATH "" FORCE)
+            set(CMAKE_RC_COMPILER "C:/Program Files/LLVM/bin/llvm-rc.exe"  CACHE FILEPATH "" FORCE)
+        endif()
+        unset(_hs_windres)
+        unset(_hs_windres_candidates)
+        unset(_hs_wr)
 
         set(archType   "x64" )
         set(archPath   "/x64")

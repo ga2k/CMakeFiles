@@ -18,7 +18,7 @@ def find_llvm_bin():
     for path in msys2_candidates:
         if os.path.isfile(os.path.join(path, "clang++.exe")):
             return path.replace("\\", "/")
-    # Fall back to standalone LLVM installs (use lld-link + llvm-rc instead).
+    # Standalone LLVM installs.
     candidates = [
         "C:/LLVM/bin",
         "C:/Program Files/LLVM/bin",
@@ -32,6 +32,22 @@ def find_llvm_bin():
     return None
 
 
+def find_windres():
+    """Find windres on Windows, checking MSYS2 environments."""
+    candidates = [
+        "C:/msys64/ucrt64/bin/windres.exe",
+        "C:/msys64/mingw64/bin/windres.exe",
+        "C:/msys64/clang64/bin/windres.exe",
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path.replace("\\", "/")
+    exe = shutil.which("windres")
+    if exe:
+        return exe.replace("\\", "/")
+    return None
+
+
 def patch_windows_compiler_paths(data, llvm_bin):
     """Rewrite the Windows hidden preset's compiler cacheVariables to the detected LLVM bin."""
     for preset in data.get("configurePresets", []):
@@ -40,17 +56,25 @@ def patch_windows_compiler_paths(data, llvm_bin):
             cv["CMAKE_CXX_COMPILER"]                 = f"{llvm_bin}/clang++.exe"
             cv["CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS"] = f"{llvm_bin}/clang-scan-deps.exe"
             cv["CMAKE_C_COMPILER"]                   = f"{llvm_bin}/clang.exe"
-            # MSYS2/ucrt64 ships windres and uses GNU ld by default; a standalone LLVM
-            # install does not ship windres and instead uses lld-link/llvm-rc.
-            # windres produces COFF objects compatible with GNU ld; llvm-rc produces
-            # PE .res files that only lld-link/MSVC link.exe can consume.
+            # GNU-style linking requires windres (produces COFF objects) rather than
+            # llvm-rc (produces PE .res files that only lld-link/MSVC can consume).
+            # Prefer windres co-located with clang++ (MSYS2 ucrt64), then search
+            # MSYS2 environments when using a standalone LLVM install.
             windres_path = os.path.join(llvm_bin.replace("/", os.sep), "windres.exe")
             if os.path.isfile(windres_path):
+                # MSYS2 ucrt64 clang++ — windres and GNU ld are co-located.
                 cv["CMAKE_RC_COMPILER"] = f"{llvm_bin}/windres.exe"
                 cv.pop("CMAKE_LINKER", None)
             else:
-                cv["CMAKE_LINKER"]      = f"{llvm_bin}/lld-link.exe"
-                cv["CMAKE_RC_COMPILER"] = f"{llvm_bin}/llvm-rc.exe"
+                external_windres = find_windres()
+                if external_windres:
+                    # Standalone LLVM clang++ + MSYS2 windres: use ld.lld with windres.
+                    cv["CMAKE_RC_COMPILER"] = external_windres
+                    cv["CMAKE_LINKER"]      = f"{llvm_bin}/ld.lld.exe"
+                else:
+                    # No windres available — fall back to lld-link + llvm-rc.
+                    cv["CMAKE_LINKER"]      = f"{llvm_bin}/lld-link.exe"
+                    cv["CMAKE_RC_COMPILER"] = f"{llvm_bin}/llvm-rc.exe"
             break
 
 
