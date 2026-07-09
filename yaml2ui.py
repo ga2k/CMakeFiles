@@ -799,6 +799,24 @@ class CppGroupGenerator:
                         controlset_verbatim=controlset_verbatim
                     ))
 
+                # Spacers carry no C++ object - just placement, resolved at runtime by
+                # Interface::loadLayout. Only validate the schema and (optionally) trace it.
+                elif "spacer" in item and isinstance(item["spacer"], dict):
+                    spacer_def = item["spacer"]
+                    self._warn_unknown_keys(spacer_def, {"sizer"}, f"spacer '{identity}'", yaml_file)
+                    if self.sizer_info and spacer_def.get('sizer'):
+                        sp = self.extract_sizer(spacer_def['sizer'])
+                        creation_code.append(
+                            f'      // Spacer: Position: {sp.position}, Border: {sp.border}')
+
+                elif "expanding-spacer" in item and isinstance(item["expanding-spacer"], dict):
+                    spacer_def = item["expanding-spacer"]
+                    self._warn_unknown_keys(spacer_def, {"sizer"}, f"expanding-spacer '{identity}'", yaml_file)
+                    if self.sizer_info and spacer_def.get('sizer'):
+                        sp = self.extract_sizer(spacer_def['sizer'])
+                        creation_code.append(
+                            f'      // Expanding spacer: Position: {sp.position}, Proportion: {sp.proportion}')
+
         return creation_code, target_parent
 
     def _generate_single_control(self, member_name: str, member_def: Dict[str, Any],
@@ -1100,6 +1118,8 @@ class CppGroupGenerator:
             "item_entry": {
                 "labels",
                 "widget",
+                "spacer",
+                "expanding-spacer",
             },
             "control_member_def": {
                 "alt_data_source",
@@ -1909,6 +1929,10 @@ class CppGroupGenerator:
                 flags = entry.get('style', [])
                 flags_str = ' | '.join(flags) if flags else 'wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL'
 
+                # NOTE: 'size' and 'style' on label entries are parsed above (size_str,
+                # flags_str) but are NOT valid for createLabel() and must not be emitted —
+                # see docs/yaml-ui-reference.md "Known limitations". Do not wire these back
+                # in without confirming why they were dropped.
                 # Size
                 if 'size' in entry and isinstance(entry['size'], list):
                     size_a = entry['size']
@@ -2168,7 +2192,7 @@ class CppGroupGenerator:
                 "module;",
                 "// Module implementation unit — add includes your implementation needs.",
                 '#include "Core/Core.h"',
-                "#include <wx/wx.h>",
+                '#include "Gfx/WidgetsFwd.h"',
                 "",
                 f"module {module_name};",
                 "",
