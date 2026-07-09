@@ -121,4 +121,8 @@ elseif (WIN32)
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
+    # windres and llvm-rc don't support GCC-style dep tracking (-MD -MF);
+    # clear the flags so CMake/Ninja doesn't append them to the RC compile rule.
+    set(CMAKE_DEPFILE_FLAGS_RC "")
+
 endif ()
