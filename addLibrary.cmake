@@ -277,20 +277,23 @@ function(addLibrary)
 
     # ── Precompile Headers ──────────────────────────────────────────────────────
     #
-    # Non-WIN32 (Linux / macOS — libc++ / libstdc++):
+    # macOS (libc++):
     #   core_pch.h   : STL headers, applied to all targets via per-target PCH.
-    #   wx_pch.h     : wx + Windows SDK headers, added on top for GUI targets.
+    #   wx_pch.h     : wx headers, added on top for GUI targets.
     #   .ixx files   : SKIP_PRECOMPILE_HEADERS ON (see MODULES block above) to
     #                  avoid the libc++ 21 abi_tag double-definition hard error.
     #
-    # WIN32 (native Windows or cross-compile targeting Windows):
-    #   MSVC STL and MinGW libstdc++ do NOT have the libc++ abi_tag problem, so
+    # WIN32 and LINUX (MSVC STL / MinGW libstdc++ / GNU libstdc++):
+    #   These stdlibs do NOT have the libc++ abi_tag problem, so
     #   PCH CAN be applied to .ixx files.  A SHARED binary is compiled once and
     #   injected into every compilation — including .ixx — via an explicit
     #   -include-pch flag.  Because all Gfx BMIs are compiled with the same binary,
     #   and downstream consumers (MyHealthGuru) use that same binary, the SLOC entries
-    #   for wx / Windows SDK headers are loaded ONCE rather than once per BMI.
+    #   for wx / SDK / STL headers are loaded ONCE rather than once per BMI.
     #   Without this, loading 60+ Gfx BMIs exhausts Clang's 2 GB SLOC limit.
+    #   (Linux joined this scheme when the toolchain moved from libc++ to
+    #   libstdc++ 15 — GCC 15's larger headers pushed per-BMI duplication over
+    #   the SLoc ceiling, and libstdc++ has no abi_tag obstacle.)
     #
     #   PCH binary location depends on role:
     #     Builder (Gfx main lib / Gfx internal plugins): ${CMAKE_BINARY_DIR}/pch/
@@ -301,8 +304,8 @@ function(addLibrary)
     #         have been deployed there by a prior Gfx install step.
     # ────────────────────────────────────────────────────────────────────────────
 
-    if (WIN32 AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
-        # All WIN32 GUI targets (Gfx main library, Gfx plugins, MyHealthGuru) must use
+    if ((WIN32 OR LINUX) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
+        # All WIN32/Linux GUI targets (Gfx main library, Gfx plugins, MyHealthGuru) must use
         # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
         # include the same PCH so Clang's module ODR checker sees consistent wx
         # class definitions across all translation units and BMIs.
@@ -354,6 +357,18 @@ function(addLibrary)
                     endif()
                 endforeach()
                 unset(_hs_pch_dir_defs)
+                # Platform-specific CRT/codegen flags: MSVC runtime selection on
+                # Windows; PIC + the DEBUG define GUI targets carry on Linux.
+                if (WIN32)
+                    set(_hs_pch_crt_flags
+                        "-D_DLL" "-D_MT"
+                        "-Xclang"
+                        "$<IF:$<CONFIG:Debug>,--dependent-lib=msvcrtd,--dependent-lib=msvcrt>")
+                else()
+                    set(_hs_pch_crt_flags
+                        "$<IF:$<CONFIG:Debug>,-DDEBUG,-DNDEBUG>"
+                        "-fPIC")
+                endif()
                 file(MAKE_DIRECTORY "${_hs_pch_dir}")
                 add_custom_command(
                     OUTPUT  "${_hs_pch_bin}"
@@ -364,9 +379,7 @@ function(addLibrary)
                             "-std=c++23"
                             "$<IF:$<CONFIG:Debug>,-O0,-O2>"
                             "-D$<IF:$<CONFIG:Debug>,_DEBUG,NDEBUG>"
-                            "-D_DLL" "-D_MT"
-                            "-Xclang"
-                            "$<IF:$<CONFIG:Debug>,--dependent-lib=msvcrtd,--dependent-lib=msvcrt>"
+                            ${_hs_pch_crt_flags}
                             ${_hs_pch_dir_D}
                             ${_hs_wx_D}
                             ${_hs_wx_I}
@@ -385,14 +398,24 @@ function(addLibrary)
                 unset(_hs_pch_target_flag)
                 unset(_hs_pch_cxx_flags)
                 unset(_hs_pch_dir_D)
+                unset(_hs_pch_crt_flags)
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
                 install(FILES "${_hs_pch_bin}" DESTINATION "lib/cmake/pch/${APP_VENDOR}")
             endif()
         endif()
 
-        # Apply shared PCH to ALL WIN32 GUI targets via target_compile_options
+        # Apply shared PCH to ALL WIN32/Linux GUI targets via target_compile_options
         # (bypasses SKIP_PRECOMPILE_HEADERS, reaches .ixx files too).
         target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
+        if (LINUX)
+            # The shared PCH is built -fPIC (Gfx is a shared library). Executable
+            # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
+            # LangOpts mismatch ("is pie differs").  Appending -fPIC here (after
+            # CMake's -fPIE, so it wins) normalizes every PCH consumer to PIC;
+            # the executable is still linked -pie, and PIC objects link fine
+            # into a PIE binary.
+            target_compile_options(${arg_NAME} PRIVATE "-fPIC")
+        endif()
         if (TARGET _hs_wx_pch)
             add_dependencies(${arg_NAME} _hs_wx_pch)
         endif()
@@ -414,9 +437,9 @@ function(addLibrary)
             USING_wxWidgets
             _FILE_OFFSET_BITS=64
         )
-        if (NOT WIN32)
-            # wx PCH (non-WIN32 GUI targets only).
-            # On WIN32 the shared wx_pch.gch built above covers these headers.
+        if (NOT WIN32 AND NOT LINUX)
+            # wx PCH (macOS GUI targets only).
+            # On WIN32/Linux the shared wx_pch.gch built above covers these headers.
             # Do NOT define WX_PRECOMP — that activates wx's own PCH mechanism and conflicts.
             target_precompile_headers(${arg_NAME} PRIVATE
                 "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/wx_pch.h"
