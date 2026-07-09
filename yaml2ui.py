@@ -2192,7 +2192,7 @@ class CppGroupGenerator:
                 "module;",
                 "// Module implementation unit — add includes your implementation needs.",
                 '#include "Core/Core.h"',
-                '#include "Gfx/WidgetsFwd.h"',
+                '#include <wx/event.h>',
                 "",
                 f"module {module_name};",
                 "",
