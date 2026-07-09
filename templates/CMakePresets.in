@@ -119,7 +119,7 @@
         "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
         "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe",
         "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
-        "CMAKE_LINKER": "C:/Program Files/LLVM/bin/lld-link.exe",
+        "CMAKE_LINKER": "C:/Program Files/LLVM/bin/ld.lld.exe",
         "CMAKE_RC_COMPILER": "C:/Program Files/LLVM/bin/llvm-rc.exe",
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_SYSTEM_PROCESSOR": "AMD64",
@@ -328,53 +328,6 @@
       ]
     },
     {
-      "name": "WinX",
-      "hidden": true,
-      "description": "Windows x64 cross-compile from Linux via Clang/MinGW-w64",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
-      "generator": "Ninja",
-      "toolchainFile": "${sourceDir}/cmake/toolchains/windows-mingw.cmake",
-      "environment": {
-        "hostType": "WindowsCross",
-        "hostPath": "/winx",
-        "archType": "x64",
-        "archPath": "/x64",
-        "CMAKE_NINJA_FLAGS": "-k 0"
-      },
-      "cacheVariables": {
-        "BUILD_WX_FROM_SOURCE": "ON",
-        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
-      }
-    },
-    {
-      "name": "WinX (Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "WinX",
-        "Debug",
-        "Shared"
-      ]
-    },
-    {
-      "name": "WinX (Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "WinX",
-        "Release",
-        "Shared"
-      ]
-    },
-    {
       "name": "Linux (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
@@ -439,14 +392,6 @@
     {
       "name": "macOS (Release Shared)",
       "configurePreset": "macOS (Release Shared)"
-    },
-    {
-      "name": "WinX (Debug Shared)",
-      "configurePreset": "WinX (Debug Shared)"
-    },
-    {
-      "name": "WinX (Release Shared)",
-      "configurePreset": "WinX (Release Shared)"
     },
     {
       "name": "Linux (Debug Shared)",
