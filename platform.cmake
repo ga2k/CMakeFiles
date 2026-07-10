@@ -125,4 +125,31 @@ elseif (WIN32)
     # clear the flags so CMake/Ninja doesn't append them to the RC compile rule.
     set(CMAKE_DEPFILE_FLAGS_RC "")
 
+    # CMake 4.x Platform/Windows-Clang.cmake hardcodes -fuse-ld=lld-link and
+    # MSVC-PE link rule templates for the clang++-simulate-MSVC configuration.
+    # When CMAKE_LINKER is ld.lld, replace them with GNU-PE equivalents so that
+    # --subsystem/--entry flags (and windres COFF objects) reach ld.lld correctly.
+    if(CMAKE_LINKER MATCHES "ld[.]lld")
+        set(CMAKE_CXX_USING_LINKER_DEFAULT "-fuse-ld=ld.lld")
+        set(CMAKE_C_USING_LINKER_DEFAULT   "-fuse-ld=ld.lld")
+
+        set(CMAKE_CXX_CREATE_SHARED_LIBRARY
+            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
+        set(CMAKE_C_CREATE_SHARED_LIBRARY
+            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
+        set(CMAKE_CXX_CREATE_SHARED_MODULE
+            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
+        set(CMAKE_C_CREATE_SHARED_MODULE
+            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
+        set(CMAKE_CXX_LINK_EXECUTABLE
+            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+        set(CMAKE_C_LINK_EXECUTABLE
+            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
+        set(CMAKE_CXX_CREATE_WIN32_EXE   "-Wl,--subsystem,windows")
+        set(CMAKE_C_CREATE_WIN32_EXE     "-Wl,--subsystem,windows")
+        set(CMAKE_CXX_CREATE_CONSOLE_EXE "-Wl,--subsystem,console")
+        set(CMAKE_C_CREATE_CONSOLE_EXE   "-Wl,--subsystem,console")
+    endif()
+
 endif ()
