@@ -114,42 +114,20 @@ elseif (WIN32)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}    /nologo")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /nologo")
         set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /nologo")
-    elseif (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC" AND CMAKE_LINKER MATCHES "lld-link")
-        # clang++ emits CodeView debug info into .obj files when -g is passed, but
-        # lld-link discards it unless told to produce a PDB (/debug).
-        add_link_options("$<$<CONFIG:Debug>:-Wl,/debug>")
     endif ()
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 
-    # windres and llvm-rc don't support GCC-style dep tracking (-MD -MF);
+    # windres doesn't support GCC-style dep tracking (-MD -MF);
     # clear the flags so CMake/Ninja doesn't append them to the RC compile rule.
     set(CMAKE_DEPFILE_FLAGS_RC "")
 
-    # CMake 4.x Platform/Windows-Clang.cmake hardcodes -fuse-ld=lld-link and
-    # MSVC-PE link rule templates for the clang++-simulate-MSVC configuration.
-    # When CMAKE_LINKER is ld.lld, replace them with GNU-PE equivalents so that
-    # --subsystem/--entry flags (and windres COFF objects) reach ld.lld correctly.
-    if(CMAKE_LINKER MATCHES "ld[.]lld")
-        set(CMAKE_CXX_USING_LINKER_DEFAULT "-fuse-ld=ld.lld")
-        set(CMAKE_C_USING_LINKER_DEFAULT   "-fuse-ld=ld.lld")
-
-        set(CMAKE_CXX_CREATE_SHARED_LIBRARY
-            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
-        set(CMAKE_C_CREATE_SHARED_LIBRARY
-            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
-        set(CMAKE_CXX_CREATE_SHARED_MODULE
-            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
-        set(CMAKE_C_CREATE_SHARED_MODULE
-            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> <OBJECTS> <LINK_LIBRARIES>")
-        set(CMAKE_CXX_LINK_EXECUTABLE
-            "<CMAKE_CXX_COMPILER> -nostartfiles -nostdlib <FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-        set(CMAKE_C_LINK_EXECUTABLE
-            "<CMAKE_C_COMPILER> -nostartfiles -nostdlib <FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-
-        set(CMAKE_CXX_CREATE_WIN32_EXE   "-Wl,--subsystem,windows")
-        set(CMAKE_C_CREATE_WIN32_EXE     "-Wl,--subsystem,windows")
-        set(CMAKE_CXX_CREATE_CONSOLE_EXE "-Wl,--subsystem,console")
-        set(CMAKE_C_CREATE_CONSOLE_EXE   "-Wl,--subsystem,console")
+    # CMake 4.x detects the linker binary as "ld.lld.exe" and derives
+    # -fuse-ld=ld.lld from its basename, which GNU-mode clang++ rejects
+    # (only the short form "lld" is valid for MinGW targets).
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
+       NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+        set(CMAKE_CXX_USING_LINKER_DEFAULT "-fuse-ld=lld")
+        set(CMAKE_C_USING_LINKER_DEFAULT   "-fuse-ld=lld")
     endif()
 
 endif ()
