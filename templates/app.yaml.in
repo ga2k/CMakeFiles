@@ -43,3 +43,6 @@ license:
   cli:    "@APP_LIC_CLI_OBF@"
   key: |
 @APP_LIC_KEY_YAML@
+
+pushover:
+  api_key: "@APP_PUSHOVER_API_KEY@"
