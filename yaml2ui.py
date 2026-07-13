@@ -511,16 +511,21 @@ class CppGroupGenerator:
 
         kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
         set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
-        if kill_declared or set_declared:
+        event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
+
+        if kill_declared or set_declared or event_declared:
             code.append("")
             code.append("protected:")
-            code.append("   // OnKillActive/SetActive overrides")
+            code.append("   // onKillActive/onSetActive/onEvent overrides")
             if kill_declared:
                 note = "" if on_kill_active is not None else f"  // Implemented in file://{stub_path}"
                 code.append(f"   auto onKillActive(bool autoDisable) -> void override;{note}")
             if set_declared:
                 note = "" if on_set_active is not None else f"  // Implemented in file://{stub_path}"
                 code.append(f"   auto onSetActive(bool autoEnable) -> void override;{note}")
+            if event_declared:
+                note = "" if on_event is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onEvent(db::RecordSetEvent event) -> void override;{note}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -688,7 +693,7 @@ class CppGroupGenerator:
         code.append("   }")
         code.append("};")
 
-        if on_kill_active is not None or on_set_active is not None:
+        if on_kill_active is not None or on_set_active is not None or on_event is not None:
             code.append("")
             if on_kill_active is not None:
                 code.append(f"auto {cpp_class}::onKillActive(bool autoDisable) -> void {{")
@@ -697,6 +702,10 @@ class CppGroupGenerator:
             if on_set_active is not None:
                 code.append(f"auto {cpp_class}::onSetActive(bool autoEnable) -> void {{")
                 code.append(f"{on_set_active}")
+                code.append(f"}}")
+            if on_event is not None:
+                code.append(f"auto {cpp_class}::onEvent(db::RecordSetEvent event) -> void {{")
+                code.append(f"{on_event}")
                 code.append(f"}}")
 
         code.append(f"}} // namespace {ns}")
@@ -719,6 +728,20 @@ class CppGroupGenerator:
                     "    Interface::onSetActive(autoEnable);",
                 ],
             }
+        if event_declared and on_event is None:
+            if self.target_class != "Group":
+                stub_fns['onEvent'] = {
+                    'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
+                    'stub_body': [
+                        "    // Interface::onEvent(event); must be called at some point",
+                        "    Interface::onEvent(event);",
+                    ],
+                }
+            else:
+                stub_fns['onEvent'] = {
+                    'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
+                    'stub_body': [ "" ],
+                }
         if stub_fns:
             self._write_impl_stub(impl_dir, cpp_class, export_module, ns, stub_fns)
 
@@ -1069,6 +1092,7 @@ class CppGroupGenerator:
                 "layout",
                 "module",
                 "modules",
+                "on_event",
                 "on_kill_active",
                 "on_set_active",
                 "pos",
@@ -1408,6 +1432,9 @@ class CppGroupGenerator:
                 raise ValueError(
                     f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
             if tag == "on_kill_active" and "Interface::onKillActive" not in body:
+                raise ValueError(
+                    f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
+            if tag == "on_event" and "Interface::onEvent" not in body and target_class != "Group":
                 raise ValueError(
                     f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
             return True, body.rstrip("\n")
