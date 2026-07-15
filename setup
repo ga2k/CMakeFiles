@@ -2,4 +2,19 @@
 
 # Run the Python script to update CMakePresets.json
 python3 CMakeFiles/filter-presets.py CMakeFiles/templates/CMakePresets.in CMakePresets.json
-(( $? == 0 )) && echo "CMake presets have been set UP!"
+status=$?
+
+# Tripwire: on Windows (including MSYS2/Git-Bash/Cygwin shells), make sure at
+# least one Windows configure preset actually made it into the output. A
+# clean exit code from the python script only means it didn't crash -- it
+# doesn't mean the presets it wrote are sane.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    if ! grep -q '"Windows' CMakePresets.json; then
+      echo "WARNING: CMakePresets.json has no Windows presets -- setup likely failed silently" >&2
+      status=1
+    fi
+    ;;
+esac
+
+(( status == 0 )) && echo "CMake presets have been set UP!"

@@ -188,6 +188,12 @@ def evaluate_expression(expression):
     """
     if expression == "${hostSystemName}":
         this_platform = platform.system()  # Returns "Windows", "Linux", "Darwin", etc.
+        # MSYS2/Git-Bash/Cygwin Python builds report their POSIX layer's uname
+        # (e.g. "MINGW64_NT-10.0-26200", "MSYS_NT-...", "CYGWIN_NT-...") rather
+        # than "Windows", even though the underlying OS is Windows. Normalize
+        # so "${hostSystemName}" == "Windows" conditions still match.
+        if this_platform.startswith(("MINGW", "MSYS", "CYGWIN")):
+            return "Windows"
         return this_platform
 
     # Check for environment variable patterns like $env{VAR_NAME}
@@ -261,7 +267,27 @@ def main(in_file, out_file):
     hidden_presets, presets, conditional_presets = process_presets(presets)
 
     # Step 3: Filter presets based on their conditions
+    unfiltered_count = len(presets)
     presets = filter_presets_by_conditions(presets)
+
+    # Sanity check: if we resolved to a known host platform but ended up with
+    # zero presets whose name mentions that platform, conditions are almost
+    # certainly evaluating against the wrong hostSystemName (e.g. a Python
+    # build reporting "MINGW64_NT-..." instead of "Windows") and everything
+    # got silently filtered out. Warn loudly instead of writing an empty set.
+    host = evaluate_expression("${hostSystemName}")
+    if unfiltered_count > 0 and host in ("Windows", "Linux", "Darwin"):
+        host_matches = [p for p in presets if host in p.get("name", "")]
+        if not host_matches:
+            print(
+                f"WARNING: detected host platform '{host}' but no configure "
+                f"presets for it survived condition filtering (started with "
+                f"{unfiltered_count} candidate presets, kept {len(presets)} "
+                f"total). This usually means platform.system() is reporting "
+                f"an unexpected value — check with: "
+                f"python3 -c \"import platform; print(platform.system())\"",
+                file=sys.stderr,
+            )
 
     # Step 3.5: Rename visible configure presets to readable names that retain
     # the platform prefix, replacing "Platform (Variant)" with "Platform Variant".
