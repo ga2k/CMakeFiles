@@ -436,6 +436,12 @@ class CppGroupGenerator:
 
         # Required imports
         required_imports = self.get_required_imports(elements, yaml_file)
+
+        # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
+        recordset = self.extract_recordset(target_name, class_def, yaml_file) \
+            if self.target_type in ("pages", "groups") else None
+        if recordset and recordset['module'] not in required_imports:
+            required_imports.append(recordset['module'])
         module_name = self.extract_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         module_list = self.extract_needed_modules(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         export_module = self.extract_export_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
@@ -512,11 +518,10 @@ class CppGroupGenerator:
         kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
         set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
         event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
-
         if kill_declared or set_declared or event_declared:
             code.append("")
             code.append("protected:")
-            code.append("   // onKillActive/onSetActive/onEvent overrides")
+            code.append("   // OnKillActive/SetActive/onEvent overrides")
             if kill_declared:
                 note = "" if on_kill_active is not None else f"  // Implemented in file://{stub_path}"
                 code.append(f"   auto onKillActive(bool autoDisable) -> void override;{note}")
@@ -531,6 +536,14 @@ class CppGroupGenerator:
         control_decls = self.generate_control_declarations(elements, yaml_file)
         code.append("")
         code.append('\n'.join(control_decls) if control_decls else '   // No elements defined')
+
+        # RecordSet members (pages own the shared_ptr and the Move* subscription)
+        if recordset and self.target_type == "pages":
+            if not (kill_declared or set_declared):
+                code.append("")
+                code.append("protected:")
+            code.append(f"   std::shared_ptr<{recordset['class']}> m_rs;")
+            code.append("   size_t m_moveHandle{};")
 
         # Functions (group/page level) inside class
         functions_all = self._validate_functions(class_def.get('functions'))
@@ -560,6 +573,33 @@ class CppGroupGenerator:
                 )
             access_groups[fdef['access']].append(fn_text)
 
+        # Generated refreshFromCurrent(): pages read the current record from m_rs and fan
+        # out; groups receive the record and initialize their field-bound controls.
+        if recordset:
+            bound_controls, group_members = self.collect_refresh_targets(elements, yaml_file)
+            record = recordset['record']
+            rfc: List[str] = []
+            if self.target_type == "pages":
+                rfc.append("   auto refreshFromCurrent () -> void {")
+                rfc.append(f"      const {record} *rec = m_rs ? m_rs->current() : nullptr;")
+                rfc.append("      if (!rec)")
+                rfc.append("         return;")
+            else:  # groups
+                rfc.append(f"   auto refreshFromCurrent (const {record} *rec) -> void {{")
+                rfc.append("      if (!rec)")
+                rfc.append("         return;")
+            for var, fld in bound_controls:
+                rfc.append(f"      wx::initFromField({var}, rec->{fld});")
+                # Retarget the control's commit() UPDATE at the current record
+                rfc.append(f'      {var}->where("id = " + std::to_string(rec->id));')
+            for var in group_members:
+                # Guarded: a nested group without its own recordset: (or typed on a
+                # different record) is skipped instead of breaking the build.
+                rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                rfc.append(f"         {var}->refreshFromCurrent(rec);")
+            rfc.append("   }")
+            access_groups['public'].append('\n'.join(rfc))
+
         def format_access_block(access_name: str, fns: List[str]) -> str:
             if not fns:
                 return ""
@@ -575,7 +615,11 @@ class CppGroupGenerator:
 
         code.append("")
         code.append("public:")
-        code.append(f"   ~{cpp_class}() override = default;")
+        if recordset and self.target_type == "pages":
+            # The Subscribe lambda in the ctor captures 'this' — must unsubscribe.
+            code.append(f"   ~{cpp_class}() override {{ db::recordSetSignal().Unsubscribe(m_moveHandle); }}")
+        else:
+            code.append(f"   ~{cpp_class}() override = default;")
         code.append("")
 
         # Constructor signature and base ctor call.
@@ -674,6 +718,16 @@ class CppGroupGenerator:
         else:
             code.append('      // No control creation code\n')
 
+        # RecordSet Move* subscription: refresh the page when the RecordSetInterface
+        # navigates. Suspended until onSetActive resumes it (per-subscription).
+        if recordset and self.target_type == "pages":
+            code.append("")
+            code.append("      m_moveHandle = db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
+            code.append("                                                     db::RecordSetEvent::MoveFirst, db::RecordSetEvent::MovePrevious,")
+            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast);")
+            code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
+            code.append("")
+
         code.append(
             '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource file://" + layoutPath.string());')
 
@@ -729,19 +783,12 @@ class CppGroupGenerator:
                 ],
             }
         if event_declared and on_event is None:
-            if self.target_class != "Group":
-                stub_fns['onEvent'] = {
-                    'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
-                    'stub_body': [
-                        "    // Interface::onEvent(event); must be called at some point",
-                        "    Interface::onEvent(event);",
-                    ],
-                }
-            else:
-                stub_fns['onEvent'] = {
-                    'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
-                    'stub_body': [ "" ],
-                }
+            stub_fns['onEvent'] = {
+                'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    Interface::onEvent(event);",
+                ],
+            }
         if stub_fns:
             self._write_impl_stub(impl_dir, cpp_class, export_module, ns, stub_fns)
 
@@ -1096,6 +1143,7 @@ class CppGroupGenerator:
                 "on_kill_active",
                 "on_set_active",
                 "pos",
+                "recordset",
                 "run_generator",
                 "size",
                 "sizer",
@@ -1127,6 +1175,11 @@ class CppGroupGenerator:
                 "arg_name",
                 "args_in",
                 "args_out",
+            },
+            "recordset_def": {
+                "class",
+                "module",
+                "record",
             },
             "elements_root": {
                 "verbatim",
@@ -1397,6 +1450,67 @@ class CppGroupGenerator:
 
         return table, field
 
+    def extract_recordset(self, element_name: str, class_def: Dict[str, Any],
+                          yaml_file: Path) -> Optional[Dict[str, str]]:
+        """Extract the 'recordset:' block: {module, class, record}. 'record' is derived
+        by convention (trailing 'RS' -> 'Record') when absent."""
+        rs = class_def.get('recordset')
+        if rs is None:
+            return None
+        if not isinstance(rs, dict):
+            print(f"Error: '{element_name}': 'recordset' must be a mapping ({yaml_file})", file=sys.stderr)
+            return None
+        self._warn_unknown_keys(rs, self._allowed_sets()["recordset_def"],
+                                f"recordset for '{element_name}' {{recordset_def}}", yaml_file)
+        module = rs.get('module')
+        rs_class = rs.get('class')
+        if not (isinstance(module, str) and module.strip() and isinstance(rs_class, str) and rs_class.strip()):
+            print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        module = module.strip()
+        rs_class = rs_class.strip()
+        record = rs.get('record')
+        if isinstance(record, str) and record.strip():
+            record = record.strip()
+        elif rs_class.endswith('RS'):
+            record = rs_class[:-2] + 'Record'
+        else:
+            print(f"Error: '{element_name}': recordset class '{rs_class}' doesn't end in 'RS'; "
+                  f"add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+            return None
+        return {'module': module, 'class': rs_class, 'record': record}
+
+    def collect_refresh_targets(self, elements: Any, yaml_file: Path) -> Tuple[List[Tuple[str, str]], List[str]]:
+        """Walk elements (same shape as generate_control_declarations) and collect
+        (bound_controls [(member, field)], group_members [member]) for refreshFromCurrent()."""
+        bound_controls: List[Tuple[str, str]] = []
+        group_members: List[str] = []
+        if not isinstance(elements, list):
+            return bound_controls, group_members
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                    continue
+                md = item["widget"]
+                var = self.extract_member_variable(md, "refresh target", yaml_file)
+                if not var:
+                    continue
+                cflags_list, _, is_group = self.extract_uicreate_flags(var, md, yaml_file)
+                if is_group or "Group" in cflags_list or md.get('base_class') == 'Group':
+                    group_members.append(var)
+                    continue
+                tbl = md.get('table')
+                fld = md.get('field')
+                if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
+                    bound_controls.append((var, fld.strip()))
+        return bound_controls, group_members
+
     def extract_export_module(self, element_name: str, elements: Dict[str, Any], control_name: str,
                               yaml_file: Path) -> str:
         export_module = elements.get('export_module', f'{element_name}.{self.target_class}')
@@ -1432,9 +1546,6 @@ class CppGroupGenerator:
                 raise ValueError(
                     f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
             if tag == "on_kill_active" and "Interface::onKillActive" not in body:
-                raise ValueError(
-                    f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
-            if tag == "on_event" and "Interface::onEvent" not in body and target_class != "Group":
                 raise ValueError(
                     f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
             return True, body.rstrip("\n")
@@ -2247,14 +2358,26 @@ class CppGroupGenerator:
         for fname, fdef in missing_fns.items():
             new_lines.extend(self._render_impl_fn(class_name, fname, fdef))
 
-        closing = f"}} // namespace {ns}"
-        trimmed = existing.rstrip("\n")
-        if trimmed.endswith(closing):
-            body = trimmed[: -len(closing)].rstrip("\n")
-            updated = body + "\n\n" + "\n".join(new_lines) + "\n" + closing + "\n"
+        # Insert the new stubs INSIDE the namespace: find the trailing
+        # '} // namespace <ns>' line (tolerating whitespace/comment-spacing/CRLF
+        # variations) and splice just above it.
+        existing_lines = existing.splitlines()
+        insert_at = None
+        for i in range(len(existing_lines) - 1, -1, -1):
+            stripped = existing_lines[i].strip()
+            if not stripped:
+                continue
+            if stripped.startswith("}") and "namespace" in stripped:
+                insert_at = i
+            break  # only the last non-blank line is a candidate
+        if insert_at is not None:
+            updated_lines = existing_lines[:insert_at] + [""] + new_lines + existing_lines[insert_at:]
+            updated = "\n".join(updated_lines).rstrip("\n") + "\n"
         else:
-            # Closing namespace brace wasn't found verbatim (file hand-edited) — append at the end.
-            updated = trimmed + "\n\n" + "\n".join(new_lines)
+            # No recognizable namespace close (heavily hand-edited) — reopen the
+            # namespace so the stubs still land inside it.
+            updated = (existing.rstrip("\n") + f"\n\nnamespace {ns} {{\n\n"
+                       + "\n".join(new_lines) + f"\n}} // namespace {ns}\n")
 
         stub_path.write_text(updated, encoding="utf-8")
         print(f"{stub_path} : Updated (added stub(s) for {', '.join(missing_fns.keys())})")
