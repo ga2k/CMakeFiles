@@ -146,3 +146,166 @@ class TestYaml2Group(unittest.TestCase):
                 self.assertIn(exp, str(ctx.exception))
             finally:
                 path.unlink(missing_ok=True)
+
+    def test_impl_stub_appended_inside_namespace(self):
+        import tempfile as _tf
+        stub_fn = {'newFn': {'args': '', 'return': 'void', 'const': False, 'override': False}}
+
+        # 1) canonical close, 2) respaced comment + trailing blank, 3) no namespace close
+        variants = [
+            "module Foo.Group;\n\nnamespace wx {\n\nauto FooGroup::oldFn () -> void {\n}\n} // namespace wx\n",
+            "module Foo.Group;\n\nnamespace wx {\n\nauto FooGroup::oldFn () -> void {\n}\n}  //  namespace wx  \n\n",
+            "module Foo.Group;\n\nnamespace wx {\n\nauto FooGroup::oldFn () -> void {\n}\n",
+        ]
+        for content in variants:
+            with _tf.TemporaryDirectory() as td:
+                impl_dir = Path(td)
+                impl = impl_dir / "FooGroup_impl.cpp"
+                impl.write_text(content, encoding="utf-8")
+                self.gen._write_impl_stub(impl_dir, "FooGroup", "Foo.Group", "wx", dict(stub_fn))
+                out = impl.read_text(encoding="utf-8")
+                self.assertIn("FooGroup::newFn", out)
+                # the stub must sit before a namespace-closing line
+                stub_pos = out.index("FooGroup::newFn")
+                closes = [i for i in (out.find("} // namespace wx", stub_pos),
+                                      out.find("//  namespace wx", stub_pos),
+                                      out.find("} // namespace wx", stub_pos)) if i != -1]
+                self.assertTrue(closes, f"no namespace close after stub in:\n{out}")
+                # hand-written body untouched
+                self.assertIn("FooGroup::oldFn", out)
+
+    def test_recordset_page_scaffolding(self):
+        yaml_content = """
+        pages:
+          alert_settings:
+            title: "Alerts"
+            layout: "AlertSettingsPage"
+            base_class: Page
+            module: Page
+            recordset:
+              module: Settings.RS
+              class:  mc::SettingsRS
+            elements:
+              - identity: "PopupAlerts"
+                items:
+                  - widget:
+                      variable: "m_popupAlerts"
+                      tag: "PopupAlerts"
+                      value: "Popup Alerts"
+                      class: "PopupAlertsGroup"
+                      base_class: "Group"
+                      uicreateflags: "Group"
+                      module: [ "PopupAlerts.Group" ]
+              - identity: "Enabled"
+                items:
+                  - widget:
+                      variable: "m_enabled"
+                      tag: "Enabled"
+                      class: CheckBox
+                      module: CheckBox
+                      contains: bool
+                      table: settings
+                      field: fUseAlerts
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertIn("import Settings.RS;", out)
+            self.assertIn("std::shared_ptr<mc::SettingsRS> m_rs;", out)
+            self.assertIn("size_t m_moveHandle{};", out)
+            self.assertIn("db::recordSetSignal().Unsubscribe(m_moveHandle);", out)
+            # Subscribe block must sit before the loadLayout VERIFY
+            self.assertIn("db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },", out)
+            self.assertIn("db::recordSetSignal().suspendSignals(m_moveHandle);", out)
+            self.assertLess(out.index("db::recordSetSignal().Subscribe"),
+                            out.index("VERIFY_MSG(this->loadLayout"))
+            # refreshFromCurrent: record derived from class, bound control + guarded group call
+            self.assertIn("auto refreshFromCurrent () -> void {", out)
+            self.assertIn("const mc::SettingsRecord *rec = m_rs ? m_rs->current() : nullptr;", out)
+            self.assertIn("wx::initFromField(m_enabled, rec->fUseAlerts);", out)
+            self.assertIn('m_enabled->where("id = " + std::to_string(rec->id));', out)
+            self.assertIn("if constexpr (requires { m_popupAlerts->refreshFromCurrent(rec); })", out)
+            self.assertIn("m_popupAlerts->refreshFromCurrent(rec);", out)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_recordset_group_refresh_from_bindings(self):
+        yaml_content = """
+        groups:
+          popup_alerts:
+            title: "Popup Alerts"
+            layout: PopupAlertsGroup
+            recordset:
+              module: Settings.RS
+              class:  mc::SettingsRS
+            elements:
+              - identity: "Use Popup Alerts"
+                items:
+                  - widget:
+                      variable: m_usePopup
+                      tag: "Use Popup Alerts"
+                      class: CheckBox
+                      module: CheckBox
+                      contains: bool
+                      table: settings
+                      field: fUsePopupAlerts
+              - identity: "Test Popup"
+                items:
+                  - widget:
+                      variable: m_popupTestButton
+                      tag: "Popup Test Button"
+                      class: Button
+                      module: Button
+                      value: "Test"
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertIn("import Settings.RS;", out)
+            self.assertIn("auto refreshFromCurrent (const mc::SettingsRecord *rec) -> void {", out)
+            self.assertIn("wx::initFromField(m_usePopup, rec->fUsePopupAlerts);", out)
+            self.assertIn('m_usePopup->where("id = " + std::to_string(rec->id));', out)
+            # unbound button must not appear in the refresh body
+            self.assertNotIn("initFromField(m_popupTestButton", out)
+            self.assertNotIn("m_popupTestButton->where", out)
+            # groups don't own the recordset or subscription
+            self.assertNotIn("m_rs", out)
+            self.assertNotIn("m_moveHandle", out)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_recordset_record_override_and_bad_class(self):
+        # explicit record: wins over derivation
+        yaml_content = """
+        groups:
+          g:
+            layout: G
+            recordset:
+              module: Foo.RS
+              class:  mc::FooRS
+              record: mc::SpecialRecord
+            elements: []
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertIn("auto refreshFromCurrent (const mc::SpecialRecord *rec) -> void {", out)
+        finally:
+            path.unlink(missing_ok=True)
+
+        # class not ending in RS and no record: -> no scaffolding generated
+        yaml_content = """
+        groups:
+          g:
+            layout: G
+            recordset:
+              module: Foo.RS
+              class:  mc::FooThing
+            elements: []
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertNotIn("refreshFromCurrent", out)
+        finally:
+            path.unlink(missing_ok=True)
