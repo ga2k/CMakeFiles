@@ -46,3 +46,4 @@ license:
 
 pushover:
   api_key: "@APP_PUSHOVER_API_KEY@"
+  api_user_key: "@APP_PUSHOVER_API_KEY@"

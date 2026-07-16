@@ -518,7 +518,10 @@ class CppGroupGenerator:
         kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
         set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
         event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
-        if kill_declared or set_declared or event_declared:
+        # refreshFromCurrent() always hands off to refreshEx() so hand-written
+        # tweaks to freshly-loaded field values have a stable, never-overwritten home.
+        refresh_ex_declared = recordset is not None
+        if kill_declared or set_declared or event_declared or refresh_ex_declared:
             code.append("")
             code.append("protected:")
             code.append("   // OnKillActive/SetActive/onEvent overrides")
@@ -531,6 +534,8 @@ class CppGroupGenerator:
             if event_declared:
                 note = "" if on_event is not None else f"  // Implemented in file://{stub_path}"
                 code.append(f"   auto onEvent(db::RecordSetEvent event) -> void override;{note}")
+            if refresh_ex_declared:
+                code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in file://{stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -597,6 +602,7 @@ class CppGroupGenerator:
                 # different record) is skipped instead of breaking the build.
                 rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
                 rfc.append(f"         {var}->refreshFromCurrent(rec);")
+            rfc.append("      refreshEx(rec);")
             rfc.append("   }")
             access_groups['public'].append('\n'.join(rfc))
 
@@ -787,6 +793,13 @@ class CppGroupGenerator:
                 'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
                 'stub_body': [
                     "    Interface::onEvent(event);",
+                ],
+            }
+        if refresh_ex_declared:
+            stub_fns['refreshEx'] = {
+                'args': f"const {recordset['record']} *rec", 'return': 'void', 'const': False, 'override': False,
+                'stub_body': [
+                    "    // Tweak values set by refreshFromCurrent() here.",
                 ],
             }
         if stub_fns:
