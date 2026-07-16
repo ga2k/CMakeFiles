@@ -46,4 +46,10 @@ license:
 
 pushover:
   api_key: "@APP_PUSHOVER_API_KEY@"
-  api_user_key: "@APP_PUSHOVER_API_KEY@"
+  api_user_key: "@APP_PUSHOVER_USER_KEY@"
+
+twilio:
+  account_sid: "@APP_TWILIO_ACCOUNT_SID@"
+  auth_token: "@APP_TWILIO_AUTH_TOKEN@"
+  from_number: "@APP_TWILIO_FROM_NUMBER@"
+  to_number: "@APP_TWILIO_TO_NUMBER@"
