@@ -17,6 +17,15 @@ function(curl_preMakeAvailable pkgname)
     forceSet(BUILD_CURL_EXE "" OFF BOOL)
     forceSet(BUILD_TESTING "" OFF BOOL)
 
+    # curl's own install(EXPORT "CURLTargets" ...) exports libcurl_shared/libcurl_static
+    # under the CURL:: namespace. Our own Core export set also needs to depend on that same
+    # target (Core links curl PUBLIC), and CMake refuses to let an exported target (Gfx, via
+    # Core) depend on something exported into two different export sets/namespaces at once
+    # ("target ... is not in this export set, but in multiple other export sets"). Same class
+    # of conflict soci hits — see SOCI_INSTALL/SOCI_SKIP_INSTALL below. Disable curl's own
+    # install/export entirely so ours is the only export set that ever mentions it.
+    forceSet(CURL_DISABLE_INSTALL "" ON BOOL)
+
     forceSet(CURL_USE_OPENSSL "" ON BOOL)
     forceSet(CURL_ENABLE_NTLM "" ON BOOL)
 
