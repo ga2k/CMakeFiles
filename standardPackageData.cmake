@@ -96,9 +96,9 @@ function(createStandardPackageData dryRun)
             COMPONENTS system date_time regex url algorithm
             ARGS NAMES Boost DRY_RUN ${dryRun})
 
-    addPackageData(OPTIONAL FEATURE "COMMS" PKGNAME "mailio" NAMESPACE "mailio" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/karastojko/mailio.git" GIT_TAG "master"
-            ARG REQUIRED DRY_RUN ${dryRun})
+    addPackageData(OPTIONAL FEATURE "COMMS" PKGNAME "curl" NAMESPACE "CURL" METHOD "FETCH_CONTENTS"
+            GIT_REPOSITORY "https://github.com/curl/curl.git" GIT_TAG "curl-8_19_0"
+            ARGS REQUIRED EXCLUDE_FROM_ALL DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" NAMESPACE "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"

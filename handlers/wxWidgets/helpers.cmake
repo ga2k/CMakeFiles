@@ -16,6 +16,13 @@ function(wxWidgets_set_build_options)
     set(wxUSE_LIBWEBP      OFF CACHE BOOL "" FORCE)
     set(wxUSE_UNICODE       ON CACHE BOOL "" FORCE)
 
+    # Core's COMMS feature now fetches curl for hs::SmtpClient. Once curl is discoverable,
+    # wx's own build (build/cmake/init.cmake) auto-enables wxUSE_WEBREQUEST_CURL via
+    # find_package(CURL), but its utility targets (e.g. wxrc) don't link curl themselves —
+    # that leaves them with undefined curl_* symbols at link time. We don't use wxWebRequest
+    # anywhere (Core talks to curl directly via SmtpClient), so just keep this backend off.
+    set(wxUSE_WEBREQUEST_CURL OFF CACHE BOOL "" FORCE)
+
     # @formatter:on
     if (LINUX)
         set(wxBUILD_TOOLKIT "gtk3" CACHE STRING "" FORCE)
