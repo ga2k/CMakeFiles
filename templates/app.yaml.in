@@ -53,3 +53,8 @@ twilio:
   auth_token: "@APP_TWILIO_AUTH_TOKEN@"
   from_number: "@APP_TWILIO_FROM_NUMBER@"
   to_number: "@APP_TWILIO_TO_NUMBER@"
+
+defaults:
+  email_notice: "@APP_DEFAULT_EMAIL_NOTICE@"
+  popup_notice: "@APP_DEFAULT_POPUP_NOTICE@"
+  push_notice: "@APP_DEFAULT_PUSH_NOTICE@"
