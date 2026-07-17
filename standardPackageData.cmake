@@ -98,10 +98,6 @@ function(createStandardPackageData dryRun)
 
     addPackageData(OPTIONAL FEATURE "COMMS" PKGNAME "curl" NAMESPACE "CURL" METHOD "FETCH_CONTENTS"
             GIT_REPOSITORY "https://github.com/curl/curl.git" GIT_TAG "curl-8_19_0"
-<<<<<<< HEAD
-=======
-            PREREQ SSL
->>>>>>> 699116d9ad28bca49276e96b777cc42180c61918
             ARGS REQUIRED EXCLUDE_FROM_ALL DRY_RUN ${dryRun})
 
     addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" NAMESPACE "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
