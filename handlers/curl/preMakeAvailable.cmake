@@ -29,6 +29,11 @@ function(curl_preMakeAvailable pkgname)
     forceSet(CURL_USE_OPENSSL "" ON BOOL)
     forceSet(CURL_ENABLE_NTLM "" ON BOOL)
 
+    # libpsl (Public Suffix List) is only needed for cookie domain validation —
+    # not required for SMTP. Disable it to avoid a hard find_package(REQUIRED)
+    # failure on macOS where libpsl is not installed by default.
+    forceSet(CURL_USE_LIBPSL "" OFF BOOL)
+
     # GSSAPI/Kerberos needs a system Kerberos install (MIT/Heimdal) that curl's own
     # find_package(GSS) can locate. Not attempted when cross-compiling to Windows -
     # there's no cross Kerberos toolchain wired up yet, so leave it off there.
