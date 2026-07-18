@@ -482,6 +482,22 @@ class CppGroupGenerator:
             for line in top_verbatim.rstrip().splitlines():
                 code.append(f"{line}")
 
+        # alt_data_source: emit each widget's generated DBSource policy struct (namespace
+        # scope, non-exported) before the class that names it as a template argument.
+        for var, tag, alt_ds, data_type in self.collect_alt_data_sources(elements, yaml_file):
+            struct_name = f"{tag}DBSource"
+            value_expr = f"ID::Type(r.{alt_ds['value_field']})" if data_type == "ID::Type" else f"r.{alt_ds['value_field']}"
+            code.append(f"struct {struct_name} {{")
+            code.append(f"   using RS = {alt_ds['class']};")
+            code.append(f"   using Record = {alt_ds['record']};")
+            code.append(f'   static auto table() -> std::string {{ return "{alt_ds["table"]}"; }}')
+            code.append(f"   static auto displayText(const Record &r) -> std::string {{ return r.{alt_ds['display_field']}; }}")
+            code.append(f"   static auto value(const Record &r) -> {data_type} {{ return {value_expr}; }}")
+            code.append(f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
+            code.append(f'   static auto blankText() -> std::string {{ return "{alt_ds["blank_text"]}"; }}')
+            code.append("};")
+            code.append("")
+
         code.append(f"export class {self.export_var} {cpp_class} : public {top_base_class} {{")
         code.append("   std::filesystem::path layoutPath;")
         code.append("   std::string layoutKey;")
@@ -916,7 +932,7 @@ class CppGroupGenerator:
         code.extend(args_lines)
 
         control_class, base_class = self.extract_control_class(member_name, member_def, yaml_file)
-        cpp_class = control_class
+        cpp_class = self.resolve_member_cpp_type(member_name, member_def, yaml_file)
         pos = self.extract_position(member_name, member_def, yaml_file)
         size = self.extract_size(member_name, member_def, control_class, yaml_file)
         style = self.extract_style(member_name, member_def, yaml_file)
@@ -1008,6 +1024,11 @@ class CppGroupGenerator:
         if controlset_verbatim:
             for line in controlset_verbatim.rstrip().splitlines():
                 code.append(f"      {line}")
+
+        # alt_data_source: auto-call the generic DB-backed loadFromDB() right where a
+        # hand-written 'verbatim: body: member->loadFromDB();' would otherwise go.
+        if self.extract_alt_data_source(member_name, member_def, yaml_file) is not None:
+            code.append(f"      {member_name}->loadFromDB();")
 
         # add to map
         if is_group:
@@ -1119,12 +1140,12 @@ class CppGroupGenerator:
                     item["widget"], dict):
                     md = item["widget"]
                     var = self.extract_member_variable(md, "widget declaration", yaml_file)
-                    ctrl_class, base_class = self.extract_control_class(var or "Group", md, yaml_file)
+                    ctrl_class = self.resolve_member_cpp_type(var or "Group", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
                 elif self.target_type == "groups" and "widget" in item and isinstance(item["widget"], dict):
                     md = item["widget"]
                     var = self.extract_member_variable(md, "control declaration", yaml_file)
-                    ctrl_class, base_class = self.extract_control_class(var or "Ctrl", md, yaml_file)
+                    ctrl_class = self.resolve_member_cpp_type(var or "Ctrl", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
         return decls
 
@@ -1193,6 +1214,16 @@ class CppGroupGenerator:
                 "class",
                 "module",
                 "record",
+            },
+            "alt_data_source_def": {
+                "blank_text",
+                "class",
+                "display_field",
+                "include_blank",
+                "module",
+                "record",
+                "table",
+                "value_field",
             },
             "elements_root": {
                 "verbatim",
@@ -1394,6 +1425,12 @@ class CppGroupGenerator:
                             if isinstance(m, str) and m.strip():
                                 used_modules.add(m.strip())
 
+                    # alt_data_source module (control-level DB source for loadFromDB())
+                    if control_map_key == "widget":
+                        alt_ds = self.extract_alt_data_source(md.get('variable', ''), md, yaml_file)
+                        if alt_ds is not None:
+                            used_modules.add(alt_ds['module'])
+
                     # validator modules (controls only)
                     if control_map_key == "widget":
                         validator = md.get('validator', {})
@@ -1493,6 +1530,109 @@ class CppGroupGenerator:
                   f"add an explicit 'record:' ({yaml_file})", file=sys.stderr)
             return None
         return {'module': module, 'class': rs_class, 'record': record}
+
+    def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
+                                yaml_file: Path) -> Optional[Dict[str, Any]]:
+        """Extract a widget's 'alt_data_source:' block: the RecordSet-backed source for
+        a DB-populated Choice/Combo/ListBox's generic loadFromDB(). Returns None when absent."""
+        ads = member_def.get('alt_data_source')
+        if ads is None:
+            return None
+        if not isinstance(ads, dict):
+            print(f"Error: widget '{element_name}': 'alt_data_source' must be a mapping ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        self._warn_unknown_keys(ads, self._allowed_sets()["alt_data_source_def"],
+                                f"alt_data_source for widget '{element_name}' {{alt_data_source_def}}", yaml_file)
+        module = ads.get('module')
+        rs_class = ads.get('class')
+        table = ads.get('table')
+        display_field = ads.get('display_field')
+        value_field = ads.get('value_field')
+        if not (isinstance(module, str) and module.strip() and
+                isinstance(rs_class, str) and rs_class.strip() and
+                isinstance(table, str) and table.strip() and
+                isinstance(display_field, str) and display_field.strip() and
+                isinstance(value_field, str) and value_field.strip()):
+            print(f"Error: widget '{element_name}': 'alt_data_source' needs non-empty "
+                  f"'module', 'class', 'table', 'display_field', and 'value_field' ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        module = module.strip()
+        rs_class = rs_class.strip()
+        table = table.strip()
+        display_field = display_field.strip()
+        value_field = value_field.strip()
+        record = ads.get('record')
+        if isinstance(record, str) and record.strip():
+            record = record.strip()
+        elif rs_class.endswith('RS'):
+            record = rs_class[:-2] + 'Record'
+        else:
+            print(f"Error: widget '{element_name}': alt_data_source class '{rs_class}' doesn't end "
+                  f"in 'RS'; add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+            return None
+        include_blank = ads.get('include_blank', True)
+        if not isinstance(include_blank, bool):
+            print(f"Warning: widget '{element_name}': 'include_blank' must be a bool; "
+                  f"defaulting to true ({yaml_file})", file=sys.stderr)
+            include_blank = True
+        blank_text = ads.get('blank_text', '')
+        if not isinstance(blank_text, str):
+            print(f"Warning: widget '{element_name}': 'blank_text' must be a string; "
+                  f"defaulting to '' ({yaml_file})", file=sys.stderr)
+            blank_text = ''
+        return {
+            'module': module, 'class': rs_class, 'record': record, 'table': table,
+            'display_field': display_field, 'value_field': value_field,
+            'include_blank': include_blank, 'blank_text': blank_text,
+        }
+
+    def resolve_member_cpp_type(self, default_name: str, member_def: Dict[str, Any], yaml_file: Path) -> str:
+        """Returns the C++ type used for a widget's member declaration and construction.
+        Identical to extract_control_class()'s control_class unless 'alt_data_source:' is
+        present, in which case it's synthesized as '{base_class}<{data_type}, {Tag}DBSource>'
+        -- any explicit 'class:' override is ignored (warned) since a generated DBSource
+        struct can only be attached to the template itself, not a hand-written subclass."""
+        control_class, base_class = self.extract_control_class(default_name, member_def, yaml_file)
+        alt_ds = self.extract_alt_data_source(default_name, member_def, yaml_file)
+        if alt_ds is None:
+            return control_class
+        if member_def.get('class'):
+            print(f"Warning: '{default_name}': 'class' override ignored because 'alt_data_source' "
+                  f"is set ({yaml_file})", file=sys.stderr)
+        data_type = self.extract_data_type(default_name, member_def, yaml_file)
+        tag = self.extract_member_tag(member_def, default_name, yaml_file)
+        return f"{base_class}<{data_type}, {tag}DBSource>"
+
+    def collect_alt_data_sources(self, elements: Any, yaml_file: Path) -> List[Tuple[str, str, Dict[str, Any], str]]:
+        """Walk elements (same shape as generate_control_declarations) and collect
+        (var, tag, alt_data_source, data_type) for every widget with an 'alt_data_source:'
+        block, so generate_module can emit the corresponding DBSource policy structs
+        before the class body."""
+        results: List[Tuple[str, str, Dict[str, Any], str]] = []
+        if not isinstance(elements, list):
+            return results
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                    continue
+                md = item["widget"]
+                var = self.extract_member_variable(md, "alt_data_source scan", yaml_file)
+                if not var:
+                    continue
+                alt_ds = self.extract_alt_data_source(var, md, yaml_file)
+                if alt_ds is None:
+                    continue
+                tag = self.extract_member_tag(md, var, yaml_file)
+                data_type = self.extract_data_type(var, md, yaml_file)
+                results.append((var, tag, alt_ds, data_type))
+        return results
 
     def collect_refresh_targets(self, elements: Any, yaml_file: Path) -> Tuple[List[Tuple[str, str]], List[str]]:
         """Walk elements (same shape as generate_control_declarations) and collect

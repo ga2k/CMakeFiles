@@ -309,3 +309,101 @@ class TestYaml2Group(unittest.TestCase):
             self.assertNotIn("refreshFromCurrent", out)
         finally:
             path.unlink(missing_ok=True)
+
+    def test_alt_data_source_generates_dbsource_and_load_call(self):
+        yaml_content = """
+        groups:
+          brief_user:
+            layout: BriefUserGroup
+            elements:
+              - identity: "Title"
+                items:
+                  - widget:
+                      variable: m_title
+                      tag: "Title"
+                      base_class: "Choice"
+                      module: [ "Choice" ]
+                      contains: "ID::Type"
+                      alt_data_source:
+                        module: "Titles.RS"
+                        class: "mc::TitlesRS"
+                        table: "titles"
+                        display_field: "fAbbreviation"
+                        value_field: "id"
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertIn("import Titles.RS;", out)
+            self.assertIn("struct TitleDBSource {", out)
+            self.assertIn("using RS = mc::TitlesRS;", out)
+            self.assertIn("using Record = mc::TitlesRecord;", out)
+            self.assertIn('static auto table() -> std::string { return "titles"; }', out)
+            self.assertIn(
+                "static auto displayText(const Record &r) -> std::string { return r.fAbbreviation; }", out)
+            self.assertIn("static auto value(const Record &r) -> ID::Type { return ID::Type(r.id); }", out)
+            self.assertIn("static constexpr auto includeBlank() -> bool { return true; }", out)
+            self.assertIn('static auto blankText() -> std::string { return ""; }', out)
+            self.assertIn("Choice<ID::Type, TitleDBSource>* m_title {};", out)
+            self.assertIn("new Choice<ID::Type, TitleDBSource>(", out)
+            self.assertIn("m_title->loadFromDB();", out)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_alt_data_source_value_field_not_assumed_to_be_id(self):
+        yaml_content = """
+        groups:
+          email_alerts:
+            layout: EmailAlertsGroup
+            elements:
+              - identity: "Authority"
+                items:
+                  - widget:
+                      variable: m_authority
+                      tag: "Authority"
+                      base_class: "Combo"
+                      module: [ "Combo" ]
+                      contains: "ID::Type"
+                      alt_data_source:
+                        module: "EmailAuthority.RS"
+                        class: "mc::EmailAuthorityRS"
+                        table: "email_authority"
+                        display_field: "fName"
+                        value_field: "fValue"
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertIn("static auto value(const Record &r) -> ID::Type { return ID::Type(r.fValue); }", out)
+            self.assertIn("Combo<ID::Type, AuthorityDBSource>* m_authority {};", out)
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_alt_data_source_missing_required_field_falls_back(self):
+        yaml_content = """
+        groups:
+          brief_user:
+            layout: BriefUserGroup
+            elements:
+              - identity: "Title"
+                items:
+                  - widget:
+                      variable: m_title
+                      tag: "Title"
+                      base_class: "Choice"
+                      module: [ "Choice" ]
+                      contains: "ID::Type"
+                      alt_data_source:
+                        module: "Titles.RS"
+                        class: "mc::TitlesRS"
+                        table: "titles"
+                        display_field: "fAbbreviation"
+        """
+        path = self._write_temp_yaml(yaml_content)
+        try:
+            out = self.gen.generate_from_yaml(path)
+            self.assertNotIn("struct TitleDBSource", out)
+            self.assertIn("Choice* m_title {};", out)
+            self.assertNotIn("m_title->loadFromDB();", out)
+        finally:
+            path.unlink(missing_ok=True)
