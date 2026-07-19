@@ -1208,14 +1208,14 @@ def main():
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
 
     args = parser.parse_args()
-    generator = CppModuleGenerator()
-    generator.set_max_join_depth(args.depth)
-    generator.be_quiet(args.quiet)
+    rsgenerator = CppModuleGenerator()
+    rsgenerator.set_max_join_depth(args.depth)
+    rsgenerator.be_quiet(args.quiet)
 
     # Scan mode (batch)
     if args.scan:
         output_dir = args.output if args.output is not None else None
-        sys.exit(scan_and_generate(generator, args.scan, args.cmake, output_dir))
+        sys.exit(scan_and_generate(rsgenerator, args.scan, args.cmake, output_dir))
 
     # Single-file mode
     if not args.input_yaml:
@@ -1227,7 +1227,7 @@ def main():
         sys.exit(1)
 
     try:
-        result = generator.generate_from_yaml(args.input_yaml, args.output)
+        result = rsgenerator.generate_from_yaml(args.input_yaml, args.output)
 
         if not args.output:
             print(result)

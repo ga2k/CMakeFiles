@@ -1,0 +1,3809 @@
+#!/usr/bin/env python3
+"""
+YAML to C++ Group Generator
+Generates C++ Group module files from YAML form definitions.
+"""
+
+import sys
+import subprocess
+import argparse
+import re
+from pathlib import Path
+from typing import Dict, Any, List, Tuple, Optional
+import datetime
+from dataclasses import dataclass
+
+def ensure_yaml():
+    try:
+        import yaml
+        return yaml
+    except ImportError:
+        print("pyyaml not found, attempting to install...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "--break-system-packages"])
+            import yaml
+            return yaml
+        except Exception as e:
+            print(f"Failed to install pyyaml: {e}")
+            sys.exit(1)
+
+
+yaml = ensure_yaml()
+
+class CppModuleGenerator:
+    now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")
+
+    quiet = False
+
+    def __init__(self):
+        self.type_mapping = {
+            'integer': 'int',
+            'string': 'std::string',
+            'hs_bool': 'hs_bool',
+            'float': 'float',
+            'double': 'double',
+            'text': 'std::string',
+            'datetime': 'std::tm',
+            'date': 'std::tm'
+        }
+        # Two-pass processing: first collect all tables, then resolve relationships
+        self.all_tables: Dict[str, Dict[str, Any]] = {}  # table_name -> table_def
+        self.table_files: Dict[str, Path] = {}  # table_name -> yaml_file_path
+        self.max_join_depth = 3  # Default maximum depth for nested joins
+        self._relationship_cache: Dict[str, List[Tuple[str, str, str]]] = {}  # Cache to prevent infinite recursion
+
+    def be_quiet(self, _quiet: bool) -> None:
+        self.quiet = bool(_quiet)
+
+    def to_pascal_case(self, snake_str: str) -> str:
+        """Convert snake_case to PascalCase, preserving existing capitalization when appropriate."""
+        if not snake_str:
+            return ""
+
+        # If the string doesn't contain underscores, check if it's already in a reasonable format
+        if '_' not in snake_str:
+            # If it's already capitalized (like XMLHttpRequest), return as-is
+            if snake_str[0].isupper():
+                return snake_str
+            # Otherwise, just capitalize the first letter
+            return snake_str[0].upper() + snake_str[1:] if len(snake_str) > 1 else snake_str.upper()
+
+        # Handle underscore-separated words
+        components = snake_str.split('_')
+        return ''.join(word.capitalize() for word in components if word)
+
+    def set_max_join_depth(self, depth: int) -> None:
+        """Set the maximum depth for nested joins (default is 3)."""
+        self.max_join_depth = max(1, depth)  # Minimum depth is 1
+
+    def resolve_relationship_fields(self, relationships: List[Dict[str, Any]],
+                                    current_table_name: str = "",
+                                    prefix: str = "",
+                                    depth: int = 0) -> List[Tuple[str, str, str]]:
+        """
+        Recursively resolve relationship fields using collected table data.
+
+        Args:
+            relationships: List of relationship definitions
+            current_table_name: Name of the current table (for cycle detection)
+            prefix: Current prefix for field names (for nested relationships)
+            depth: Current recursion depth
+
+        Returns:
+            List of (field_name, cpp_type, required) tuples
+        """
+        if depth >= self.max_join_depth:
+            return []
+
+        resolved_fields = []
+
+        for rel in relationships or []:
+            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
+                continue
+
+            ref_table = rel.get("references_table")
+            if not ref_table:
+                continue
+
+            # Normalize referenced table name
+            normalized_ref = ref_table
+            if ref_table.endswith('_table'):
+                normalized_ref = ref_table[:-6]
+
+            # Prevent infinite recursion by checking if we've already processed this table in the current chain
+            cache_key = f"{current_table_name}->{normalized_ref}@{depth}"
+            if cache_key in self._relationship_cache:
+                continue
+
+            # Look up the referenced table in our collected tables
+            if normalized_ref not in self.all_tables:
+                print(f"Warning: Referenced table '{ref_table}' not found at depth {depth}", file=sys.stderr)
+                continue
+
+            ref_table_def = self.all_tables[normalized_ref]
+            ref_fields = ref_table_def.get('fields', {})
+
+            rel_name = rel.get('name', ref_table)
+            current_prefix = f"{prefix}__{rel_name}" if prefix else rel_name
+
+            # Add all direct fields from the referenced table
+            direct_fields = []
+            for field_name, field_def in ref_fields.items():
+                cpp_type = self.map_yaml_type_to_cpp(field_def.get('type', 'string'))
+                prefixed_name = f"{current_prefix}__{field_name}"
+                direct_fields.append((prefixed_name, cpp_type, False))  # All relationship fields are optional
+
+            resolved_fields.extend(direct_fields)
+
+            # Cache this level to prevent cycles
+            self._relationship_cache[cache_key] = direct_fields
+
+            # Recursively process nested relationships
+            nested_relationships = ref_table_def.get('relationships', [])
+            if nested_relationships and depth < self.max_join_depth - 1:
+                nested_fields = self.resolve_relationship_fields(
+                    nested_relationships,
+                    normalized_ref,  # This becomes the current table for the next level
+                    current_prefix,  # Pass down the accumulated prefix
+                    depth + 1
+                )
+                resolved_fields.extend(nested_fields)
+
+        return resolved_fields
+
+    def generate_nested_joins(self, table_name: str, relationships: List[Dict[str, Any]],
+                              base_alias: str = "our", depth: int = 0,
+                              used_aliases: set = None) -> Tuple[List[str], Dict[str, List[str]]]:
+        """
+        Generate nested JOIN clauses and select columns for relationships.
+
+        New behavior:
+          - If a relationship block contains 'as', use it as the SQL alias; otherwise use a unique tN.
+          - Preserve recursion, max depth, alias uniqueness, and nested name prefixing.
+        """
+        if used_aliases is None:
+            used_aliases = {base_alias}
+
+        if depth >= self.max_join_depth:
+            return [], {}
+
+        join_lines = []
+        select_cols_by_alias = {}
+        alias_counter = len(used_aliases)
+
+        def next_auto_alias(counter: int) -> Tuple[str, int]:
+            alias = f"t{counter}"
+            while alias in used_aliases:
+                counter += 1
+                alias = f"t{counter}"
+            return alias, counter + 1
+
+        for rel in relationships or []:
+            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
+                continue
+
+            fk = rel.get("foreign_key")
+            ref_table = rel.get("references_table")
+            ref_field = rel.get("references_field")
+            if not (fk and ref_table and ref_field):
+                continue
+
+            # Determine alias: prefer explicit 'as', else allocate tN
+            explicit_alias = rel.get("as")
+            if explicit_alias:
+                alias = explicit_alias
+                # Ensure global uniqueness; if taken, fall back to auto
+                if alias in used_aliases:
+                    alias, alias_counter = next_auto_alias(alias_counter)
+            else:
+                alias, alias_counter = next_auto_alias(alias_counter)
+
+            used_aliases.add(alias)
+
+            rel_name = rel.get('name', ref_table)
+
+            # Determine JOIN type
+            join_override = (rel.get("join") or "").lower()
+            if join_override in ("inner", "left"):
+                join_kw = "INNER" if join_override == "inner" else "LEFT"
+            else:
+                join_kw = "LEFT"
+
+            # Add this level's JOIN
+            join_lines.append(f"{join_kw} JOIN {ref_table} {alias} ON {base_alias}.{fk} = {alias}.{ref_field}")
+
+            # Get fields from referenced table
+            normalized_ref = ref_table[:-6] if ref_table.endswith('_table') else ref_table
+            if normalized_ref in self.all_tables:
+                ref_fields = self.all_tables[normalized_ref].get('fields', {})
+                select_cols_by_alias[alias] = [
+                    f"{alias}.{col_name} AS {rel_name}__{col_name}"
+                    for col_name in ref_fields.keys()
+                ]
+
+                # Recursively process nested relationships
+                nested_relationships = self.all_tables[normalized_ref].get('relationships', [])
+                if nested_relationships and depth < self.max_join_depth - 1:
+                    nested_joins, nested_cols = self.generate_nested_joins(
+                        ref_table, nested_relationships, alias, depth + 1, used_aliases
+                    )
+                    join_lines.extend(nested_joins)
+
+                    # Merge nested select columns with proper prefixing
+                    for nested_alias, cols in nested_cols.items():
+                        prefixed_cols = []
+                        for col in cols:
+                            if " AS " in col:
+                                select_part, as_part = col.split(" AS ", 1)
+                                prefixed_cols.append(f"{select_part} AS {rel_name}__{as_part}")
+                            else:
+                                prefixed_cols.append(col)
+                        select_cols_by_alias[nested_alias] = prefixed_cols
+
+        return join_lines, select_cols_by_alias
+
+    def generate_select_impl(self, table_name: str, fields: dict, relationships: list, yaml_file: Path) -> str:
+        """
+        Generate a C++ select_impl with support for nested JOINs.
+        """
+        base_alias = "our"
+
+        # Base table columns
+        base_select_cols = [f"{base_alias}.{col} AS {col}" for col in fields.keys()]
+
+        # Generate nested JOINs and select columns
+        join_lines, select_cols_by_alias = self.generate_nested_joins(table_name, relationships, base_alias)
+
+        # Flatten all select columns
+        rel_select_cols = []
+        for cols in select_cols_by_alias.values():
+            rel_select_cols.extend(cols)
+
+        # Compose SQL
+        select_clause = "SELECT " + ", ".join(base_select_cols + rel_select_cols)
+        from_clause = f"FROM {table_name} {base_alias}"
+
+        # Build the method body
+        if join_lines:
+            joins_block = "\\n".join(join_lines)
+            joins_emit = f'        sql.append("{joins_block}\\n");'
+        else:
+            joins_emit = ""
+
+        cpp = f"""
+            std::string selectRecords_impl(std::string where = std::string{{}}, std::string order_by = std::string{{}}, std::string limit_offset = std::string{{}}) {{
+                std::string sql;
+                sql.reserve(2048);  // Larger buffer for nested joins
+                sql.append("{select_clause}\\n");
+                sql.append("{from_clause}\\n");
+        {joins_emit}
+                if (!where.empty()) {{
+                    sql.append("WHERE ");
+                    sql.append(where);
+                    sql.append("\\n");
+                }}
+                if (!order_by.empty()) {{
+                    sql.append("ORDER BY ");
+                    sql.append(order_by);
+                    sql.append("\\n");
+                }}
+                if (!limit_offset.empty()) {{
+                    sql.append(std::string(limit_offset));
+                }}
+                return sql;
+            }}
+        """
+        return cpp
+
+    def _collect_relationship_map(self, relationships: list) -> list:
+        """
+        Normalize relationship entries and extract replace_with/as/replace_as if present.
+        Returns a list of dicts with keys:
+          - name
+          - type
+          - foreign_key
+          - references_table
+          - references_field
+          - replace_with (list[str] or None)
+          - as_alias (str|None)
+          - replace_as (str|None)
+        """
+        rels = []
+        if not relationships:
+            return rels
+        for rel in relationships:
+            rw = rel.get("replace_with")
+            if isinstance(rw, list):
+                rw_list = [str(x) for x in rw]
+            elif isinstance(rw, str):
+                rw_list = [rw]
+            else:
+                rw_list = None
+            rels.append({
+                "name": rel.get("name"),
+                "type": rel.get("type"),
+                "foreign_key": rel.get("foreign_key"),
+                "references_table": rel.get("references_table"),
+                "references_field": rel.get("references_field"),
+                "replace_with": rw_list,
+                "as_alias": rel.get("as"),
+                "replace_as": rel.get("replace_as"),
+            })
+        return rels
+
+    def generate_get_rowset_impl(self, table_name: str, fields: dict, relationships: list) -> str:
+        """
+        Generate Recordset::getRowset_impl SQL that replaces foreign-key fields
+        using 'replace_with'. Supports:
+          - 'as' for join alias name
+          - 'replace_as' to rename the resulting SQL field (alias) instead of the FK name
+        """
+        base_alias = "our"
+
+        # Build join lines with aliasing (uses 'as' if provided)
+        join_lines, _ = self.generate_nested_joins(table_name, relationships, base_alias)
+
+        # Prepare relationship metadata and alias map
+        rel_infos = self._collect_relationship_map(relationships)
+
+        # Build alias map for FK -> alias honoring 'as'; fallback to t1.. if missing
+        used_aliases = set([base_alias])
+        alias_for_fk = {}
+        auto_n = 1
+        def next_auto_alias(n):
+            a = f"t{n}"
+            while a in used_aliases:
+                n += 1
+                a = f"t{n}"
+            return a, n
+
+        for rel in rel_infos:
+            alias = rel["as_alias"]
+            if not alias or alias in used_aliases:
+                alias, auto_n = next_auto_alias(auto_n)
+            used_aliases.add(alias)
+            alias_for_fk[rel["foreign_key"]] = alias
+
+        # Start with the list of base fields in order
+        base_field_order = list(fields.keys())
+
+        # Build projection with replacements
+        projected_cols = []
+        for col in base_field_order:
+            rel = next((r for r in rel_infos if r["foreign_key"] == col and r.get("replace_with")), None)
+            if rel is None:
+                projected_cols.append(f"{base_alias}.{col} AS {col}")
+                continue
+
+            alias = alias_for_fk.get(col)
+            rw_list = rel["replace_with"] or []
+            out_name = rel.get("replace_as") or col
+
+            if not alias or not rw_list:
+                projected_cols.append(f"{base_alias}.{col} AS {out_name}")
+                continue
+
+            if len(rw_list) == 1:
+                repl = rw_list[0]
+                projected_cols.append(f"{alias}.{repl} AS {out_name}")
+            else:
+                concat_expr = " || ' ' || ".join([f"{alias}.{c}" for c in rw_list])
+                projected_cols.append(f"{concat_expr} AS {out_name}")
+
+        select_clause = "SELECT " + ", ".join(projected_cols)
+        from_clause = f"FROM {table_name} {base_alias}"
+
+        if join_lines:
+            joins_block = "\\n".join(join_lines)
+            joins_emit = f'        sql.append("{joins_block}\\n");'
+        else:
+            joins_emit = ""
+
+        cpp = f"""
+            std::string getRowset_impl(std::string where = std::string{{}}, std::string order_by = std::string{{}}, std::string limit_offset = std::string{{}}) {{
+                std::string sql;
+                sql.reserve(2048);
+                sql.append("{select_clause}\\n");
+                sql.append("{from_clause}\\n");
+        {joins_emit}
+                if (!where.empty()) {{
+                    sql.append("WHERE ");
+                    sql.append(where);
+                    sql.append("\\n");
+                }}
+                if (!order_by.empty()) {{
+                    sql.append("ORDER BY ");
+                    sql.append(order_by);
+                    sql.append("\\n");
+                }}
+                if (!limit_offset.empty()) {{
+                    sql.append(std::string(limit_offset));
+                }}
+                return sql;
+            }}
+        """
+        return cpp
+
+    def generate_recordset_impl(self, table_name: str, fields: dict, relationships: list, yaml_file: Path) -> str:
+        """
+        Top-level generator that emits all impl functions for a table.
+        """
+        content = []
+        content.append(self.generate_select_impl(table_name, fields, relationships, yaml_file))
+        content.append(self.generate_get_rowset_impl(table_name, fields, relationships))
+        return "\n".join(content)
+
+    def generate_module(self, table_name: str, fields: Dict[str, Any], yaml_file: Path,
+                        relationships: List[Dict[str, Any]] | None = None) -> str:
+        """Generate the complete C++ module file with nested relationship support."""
+
+        if table_name.endswith('_table'):
+            proposed_name = table_name.replace('_table', '')
+        else:
+            proposed_name = table_name
+
+        pascal = self.to_pascal_case(proposed_name)
+        class_name = f"{pascal}RS"
+        record_name = f"{pascal}Record"
+
+        # Clear relationship cache for each table generation
+        self._relationship_cache.clear()
+
+        field_declarations = self.generate_field_declarations(fields)
+
+        # Use the enhanced nested relationship resolver
+        normalized_table = table_name[:-6] if table_name.endswith('_table') else table_name
+        related_decls, related_reads = self._generate_related_declarations_and_reads_nested(relationships or [],
+                                                                                            normalized_table)
+
+        constructor_params, _constructor_initializers = self.generate_constructor_params(fields)
+        row_assignments = self.generate_row_assignments(fields)
+
+        constructor_params_str = ",\n".join(constructor_params)
+
+        # Build ctor body: copy ctor params into this->in_.*
+        ctor_body_lines: List[str] = []
+        for field_name, field_def in fields.items():
+            if field_def.get('auto_increment', False):
+                continue
+            camel = self.to_camel_case(field_name)
+            ctor_body_lines.append(f"        this->in_.{field_name.ljust(24)} = {camel};")
+        ctor_body = "\n".join(ctor_body_lines)
+
+        # Generate safe insertRecord_impl
+        insert_impl = self.generate_insert_impl(table_name, fields)
+        # Use YAML file modification time for deterministic headers (prevents needless rebuilds)
+        try:
+            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
+            _mts = _mt.isoformat(sep=' ', timespec='seconds')
+        except Exception:
+            _mts = 'unknown'
+
+        module_content = f'''module;
+
+// Auto-generated from
+// file://{yaml_file} (mtime: {_mts})
+
+// Make any changes there. This file will be overwritten.
+
+//
+// Generated from {yaml_file.name} (nested joins: depth {self.max_join_depth})
+//
+
+#include "Core/CoreData.h"
+#include "Core/Core.h"
+
+#include <soci/soci.h>
+#include <string>
+
+export module {pascal}.RS;
+export import DB.RS;
+export import DB.Table;
+
+import Types;
+import Util;
+import DDT;
+
+export namespace mc {{
+using namespace db;
+using namespace std::string_literals;
+
+// clang-format off
+struct {record_name} {{
+{chr(10).join(field_declarations + related_decls)}
+
+   {record_name} () = default;
+   explicit {record_name} (const soci::row &row) {{
+      in (row);
+   }}
+   void in (const soci::row &row) {{
+{chr(10).join(row_assignments + related_reads)}
+   }}
+}};
+
+class {class_name} : public RecordSet<{class_name}, {record_name}> {{
+  public:
+   using Record = {record_name};
+
+    explicit {class_name} (Table &table)
+        : RecordSet<{class_name}, Record> (table)
+        {{}}
+
+    explicit {class_name} (Table &table,
+{constructor_params_str})
+    : RecordSet (table) {{
+{ctor_body}
+    }}
+
+    ~{class_name}() override = default;
+{insert_impl}
+{self.generate_recordset_impl(table_name, fields, relationships or [], yaml_file)}
+}};
+}} // namespace mc
+'''
+        return module_content
+
+    def _generate_related_declarations_and_reads_nested(self, relationships: List[Dict[str, Any]],
+                                                        current_table: str) -> tuple[List[str], List[str]]:
+        """
+        Create declarations and row reads for nested joined columns.
+        """
+        decls: list[str] = []
+        reads: list[str] = []
+
+        # Use the new nested resolution method
+        resolved_fields = self.resolve_relationship_fields(relationships, current_table)
+
+        if not resolved_fields:
+            return decls, reads
+
+        max_name_len = max(len(name) for name, _, _ in resolved_fields)
+        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
+
+        for name, cpp_type, required in resolved_fields:
+            type_str = f"optional<{cpp_type}>"
+            decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
+            reads.append(
+                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
+            )
+
+        return decls, reads
+
+    def collect_all_tables(self, yaml_files: List[Path]) -> None:
+        """First pass: collect all table definitions from all YAML files."""
+
+        for yaml_file in yaml_files:
+            try:
+                data = self.parse_yaml_file(yaml_file)
+                if 'tables' not in data or not isinstance(data['tables'], dict):
+                    if not self.quiet:
+                        print(f"no 'tables' section in {yaml_file}")
+                    continue
+
+                for table_name, table_def in data['tables'].items():
+                    if 'fields' not in table_def:
+                        print(f"Warning: Table '{table_name}' in {yaml_file} has no fields", file=sys.stderr)
+                        continue
+
+                    # Normalize table name (remove _table suffix if present)
+                    normalized_name = table_name
+                    if table_name.endswith('_table'):
+                        normalized_name = table_name[:-6]
+
+                    self.all_tables[normalized_name] = table_def
+                    self.table_files[normalized_name] = yaml_file
+
+            except Exception as e:
+                print(f"Error parsing {yaml_file}: {e}", file=sys.stderr)
+
+    def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
+        data = self.parse_yaml_file(yaml_file)
+
+        try:
+            tables = data['tables']
+        except Exception as e:
+            if not self.quiet:
+                print("(No tables)")
+            return ""
+
+        if len(tables) == 0:
+            if not self.quiet:
+                print("(No tables)")
+            return ""
+
+        if not isinstance(tables, dict):
+            raise ValueError("'tables' section must be a non-empty mapping of table_name -> table_def")
+
+        # Generate all modules
+        generated: list[tuple[str, str]] = []  # (table_name, module_content)
+        for table_name, table_def in tables.items():
+            if 'fields' not in table_def:
+                raise ValueError(f"Table '{table_name}' must have a 'fields' section")
+
+            fields = table_def['fields']
+            relationships = table_def.get('relationships', [])
+
+            module_content = self.generate_module(table_name, fields, yaml_file, relationships)
+            generated.append((table_name, module_content))
+
+        # Handle output
+        if output_file:
+            # If output_file is a directory, write there; else use its parent.
+            dest_dir = output_file
+            # try:
+            #     # Treat as directory if it exists and is directory
+            #     if not dest_dir.exists() or not dest_dir.is_dir():
+            #         dest_dir = output_file.parent
+            # except Exception:
+            #     dest_dir = Path(output_file).parent
+
+            dest_dir = dest_dir / rel_path
+
+            dest_dir.mkdir(parents=True, exist_ok=True)
+
+            for table_name, module_content in generated:
+                if table_name.endswith('_table'):
+                    table_name = table_name.replace('_table', '')
+
+                pascal = self.to_pascal_case(table_name)
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                out_path = dest_dir / f"{pascal}RS.ixx"
+                with open(out_path, 'w', encoding='utf-8') as f:
+                    f.write(module_content)
+                    print(f"{out_path} : RecordSet generated Ok")
+
+            # Return the last generated content to preserve return type
+            return generated[-1][1]
+
+        # No output file specified: return concatenated modules
+        return ("\n\n").join(module for _, module in generated)
+
+    def format_default_value(self, field_def: Dict[str, Any], cpp_type: str) -> str:
+        """Format the default value based on the field definition and C++ type."""
+        if 'default' not in field_def:
+            return 'nullopt'
+
+        default_val = field_def['default']
+
+        # Format the default value based on the C++ type
+        if cpp_type == 'std::string':
+            return f'"{default_val}"'
+        elif cpp_type == 'hs_bool':
+            return 'hs_bool(true)' if default_val else 'hs_bool(false)'
+        elif cpp_type == 'hs_id':
+            return str(default_val)
+        elif cpp_type in ['int', 'float', 'double']:
+            return str(default_val)
+        elif cpp_type == 'std::tm':  # Handle datetime defaults
+            if default_val in ('now', 'current_timestamp'):
+                return 'std::tm{}'
+            else:
+                return 'std::tm{}'
+        else:
+            return str(default_val)
+
+    def map_yaml_type_to_cpp(self, yaml_type: str) -> str:
+        """Convert YAML type to C++ type."""
+        return self.type_mapping.get(yaml_type.lower(), 'std::string')
+
+    def to_camel_case(self, snake_str: str) -> str:
+        """Convert snake_case to camelCase."""
+        components = snake_str.split('_')
+        return components[0] + ''.join(word.capitalize() for word in components[1:])
+
+    def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
+        """Parse the YAML file and return the table definitions."""
+        with open(yaml_file, 'r') as file:
+            return yaml.safe_load(file)
+
+    def _generate_related_declarations_and_reads(self, relationships: List[Dict[str, Any]]) -> tuple[
+        List[str], List[str]]:
+        """
+        Create declarations and row reads for joined columns using resolved table data.
+        All related fields are optional. Names are <prefix>__<col>.
+        """
+        decls: list[str] = []
+        reads: list[str] = []
+
+        # Use the new resolution method
+        resolved_fields = self.resolve_relationship_fields(relationships)
+
+        if not resolved_fields:
+            return decls, reads
+
+        max_name_len = max(len(name) for name, _, _ in resolved_fields)
+        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
+
+        for name, cpp_type, required in resolved_fields:
+            type_str = f"optional<{cpp_type}>"
+            decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
+            reads.append(
+                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
+            )
+
+        return decls, reads
+
+    def _resolve_related_fields(self, base_yaml: Path, ref_table: str) -> Dict[str, Any]:
+        """
+        Try to locate the YAML for a referenced table and return its fields dict.
+        Search alongside the base yaml using common naming patterns.
+        """
+        search_dir = base_yaml.parent
+        candidates = [
+            search_dir / f"{ref_table}.yaml",
+            search_dir / f"{self.to_pascal_case(ref_table)}.yaml",
+            base_yaml  # check the current YAML last (multi-table YAMLs)
+        ]
+        for cand in candidates:
+            if cand.exists():
+                data = self.parse_yaml_file(cand)
+                # Prefer exact (or normalized) match inside this YAML
+                if "tables" in data and isinstance(data["tables"], dict):
+                    # normalize names to compare (strip trailing '_table', lowercase)
+                    def _norm(s: str) -> str:
+                        s = s or ""
+                        s = s.strip()
+                        s = s[:-6] if s.lower().endswith("_table") else s
+                        return s.lower()
+
+                    wanted = _norm(ref_table)
+                    for key, tdef in data["tables"].items():
+                        if _norm(key) == wanted and isinstance(tdef, dict):
+                            if "fields" in tdef and isinstance(tdef["fields"], dict):
+                                return tdef["fields"]
+
+                    # Only use fallback if this is NOT the base_yaml file
+                    # Fallback: if ref_table key differs (e.g., PascalCase) but there is only one table
+                    if cand != base_yaml and len(data["tables"]) == 1:
+                        _, tdef = next(iter(data["tables"].items()))
+                        if "fields" in tdef and isinstance(tdef["fields"], dict):
+                            return tdef["fields"]
+        return {}
+
+    def _resolve_related_fields0(self, base_yaml: Path, ref_table: str) -> Dict[str, Any]:
+        """
+        Try to locate the YAML for a referenced table and return its fields dict.
+        Search alongside the base yaml using common naming patterns.
+        """
+        search_dir = base_yaml.parent
+        candidates = [
+            base_yaml,  # check the current YAML first (multi-table YAMLs)
+            search_dir / f"{ref_table}.yaml",
+            search_dir / f"{self.to_pascal_case(ref_table)}.yaml"
+        ]
+        for cand in candidates:
+            if cand.exists():
+                data = self.parse_yaml_file(cand)
+                # Prefer exact (or normalized) match inside this YAML
+                if "tables" in data and isinstance(data["tables"], dict):
+                    # normalize names to compare (strip trailing '_table', lowercase)
+                    def _norm(s: str) -> str:
+                        s = s or ""
+                        s = s.strip()
+                        s = s[:-6] if s.lower().endswith("_table") else s
+                        return s.lower()
+
+                    wanted = _norm(ref_table)
+                    for key, tdef in data["tables"].items():
+                        if _norm(key) == wanted and isinstance(tdef, dict):
+                            if "fields" in tdef and isinstance(tdef["fields"], dict):
+                                return tdef["fields"]
+
+                    # Fallback: if ref_table key differs (e.g., PascalCase) but there is only one table
+                    if len(data["tables"]) == 1:
+                        _, tdef = next(iter(data["tables"].items()))
+                        if "fields" in tdef and isinstance(tdef["fields"], dict):
+                            return tdef["fields"]
+        return {}
+
+    def _collect_join_columns(self, yaml_file: Path, relationships: list) -> list[dict]:
+        """
+        For each many_to_one relationship, return:
+        {
+          'rel': <relationship dict>,
+          'alias': tN,
+          'prefix': <name|references_table>,
+          'columns': [{ 'name': <col>, 'cpp_type': <mapped>, 'required': False }]
+        }
+        """
+        collected = []
+        alias_index = 1
+        for rel in relationships or []:
+            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
+                continue
+            ref_table = rel.get("references_table")
+            if not ref_table:
+                continue
+            alias = f"t{alias_index}"
+            alias_index += 1
+            prefix = rel.get("name") or ref_table
+            ref_fields = self._resolve_related_fields(yaml_file, ref_table)
+            cols = []
+            for col_name, col_def in ref_fields.items():
+                cpp_type = self.map_yaml_type_to_cpp(col_def.get("type", "string"))
+                cols.append({"name": col_name, "cpp_type": cpp_type, "required": False})
+            collected.append({"rel": rel, "alias": alias, "prefix": prefix, "columns": cols})
+        return collected
+
+    def is_required_field(self, field_def: Dict[str, Any]) -> bool:
+        """Check if a field is required (not_null, primary_key, or auto_increment primary keys)."""
+        if field_def.get('primary_key', False):
+            return True
+        return field_def.get('not_null', False) and not field_def.get('auto_increment', False)
+
+    def generate_field_declarations(self, fields: Dict[str, Any]) -> List[str]:
+        """Generate C++ field declarations (for Record struct)."""
+        declarations = []
+        max_type_len = 0
+        max_name_len = 0
+
+        # Calculate max lengths for alignment
+        for field_name, field_def in fields.items():
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+            type_str = cpp_type if self.is_required_field(field_def) else f"optional<{cpp_type}>"
+            max_type_len = max(max_type_len, len(type_str))
+            max_name_len = max(max_name_len, len(field_name))
+
+        # Generate declarations with alignment
+        for field_name, field_def in fields.items():
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+
+            if self.is_required_field(field_def):
+                type_str = cpp_type
+                if 'default' in field_def:
+                    init_value = f"{{{self.format_default_value(field_def, cpp_type)}}}"
+                else:
+                    if cpp_type == 'hs_bool':
+                        init_value = "{hs_bool(false)}"
+                    elif cpp_type == 'hs_id':
+                        init_value = "{hs_id(ID::Null)}"
+                    else:
+                        init_value = "{}"
+            else:
+                type_str = f"optional<{cpp_type}>"
+                if 'default' in field_def:
+                    init_value = f"{{{self.format_default_value(field_def, cpp_type)}}}"
+                else:
+                    init_value = "{{nullopt}}".format()
+
+            padded_type = type_str.ljust(max_type_len)
+            padded_name = field_name.ljust(max_name_len)
+            declarations.append(f"    {padded_type}     {padded_name} {init_value};")
+
+        return declarations
+
+    def get_required_fields(self, fields: Dict[str, Any]) -> List[str]:
+        """Get list of required field names."""
+        required = []
+        for field_name, field_def in fields.items():
+            if self.is_required_field(field_def):
+                required.append(field_name)
+        return required
+
+    def generate_constructor_params(self, fields: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+        """Generate constructor parameter list and initializer list."""
+        required_fields = self.get_required_fields(fields)
+        params = []
+        initializers = []
+
+        # Required parameters first (no optional wrapper)
+        for field_name in required_fields:
+            field_def = fields[field_name]
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+            camel_name = self.to_camel_case(field_name)
+            params.append(f"        {cpp_type}                    {camel_name}")
+            initializers.append(f"        {field_name.ljust(16)} ({camel_name})")
+
+        # Optional parameters (with optional wrapper and default values)
+        for field_name, field_def in fields.items():
+            if field_name not in required_fields and not field_def.get('auto_increment', False):
+                cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+                camel_name = self.to_camel_case(field_name)
+
+                if 'default' in field_def:
+                    default_val = self.format_default_value(field_def, cpp_type)
+                    params.append(f"        optional<{cpp_type}>         {camel_name.ljust(16)} = {default_val}")
+                else:
+                    params.append(f"        optional<{cpp_type}>         {camel_name.ljust(16)} = nullopt")
+
+                initializers.append(f"        {field_name.ljust(16)} ({camel_name})")
+
+        return params, initializers
+
+    def generate_insert_params(self, fields: Dict[str, Any]) -> List[str]:
+        """Generate insertRecord_impl parameter list."""
+        required_fields = self.get_required_fields(fields)
+        params: List[str] = []
+
+        # Required parameters first (skip auto-increment)
+        for field_name in required_fields:
+            field_def = fields[field_name]
+            if field_def.get('auto_increment', False):
+                continue
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+            camel_name = self.to_camel_case(field_name)
+
+            # Prefer const ref for strings
+            if cpp_type == 'std::string':
+                params.append(f"        const std::string&          {camel_name}")
+            else:
+                params.append(f"        {cpp_type}                    {camel_name}")
+
+        # Optional parameters (skip auto-increment and required)
+        for field_name, field_def in fields.items():
+            if field_def.get('auto_increment', False) or field_name in required_fields:
+                continue
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+            camel_name = self.to_camel_case(field_name)
+            if 'default' in field_def:
+                default_val = self.format_default_value(field_def, cpp_type)
+                params.append(f"        std::optional<{cpp_type}>     {camel_name} = {default_val}")
+            else:
+                params.append(f"        std::optional<{cpp_type}>     {camel_name} = nullopt")
+
+        return params
+
+    def generate_prepare_insert_pairs(self, fields: Dict[str, Any]) -> List[str]:
+        """Generate pair(...) items for prepareInsertStatement bound to this->in_.<field> to ensure stable storage."""
+        pairs = []
+        for field_name, field_def in fields.items():
+            if field_def.get('auto_increment', False):
+                continue
+            pad = " " * max(0, 16 - len(field_name))
+            pairs.append(f'           pair ("{field_name}"s,{pad}this->in_.{field_name})')
+        return pairs
+
+    def generate_row_assignments(self, fields: Dict[str, Any]) -> List[str]:
+        """Generate row assignment statements (Record::in) for base table only."""
+        assignments = []
+        max_name_len = max(len(name) for name in fields.keys()) if fields else 0
+        for field_name, field_def in fields.items():
+            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
+            padded_name = field_name.ljust(max_name_len)
+            if self.is_required_field(field_def):
+                assignments.append(
+                    f'      {padded_name} = row.get<{cpp_type}>{" " * max(0, 23 - len(cpp_type))}("{field_name}");'
+                )
+            else:
+                assignments.append(
+                    f'      {padded_name} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{field_name}");'
+                )
+        return assignments
+
+    def _cpp_type_default(self, cpp_type: str) -> str:
+        """Default literal for a mapped C++ type."""
+        if cpp_type in ("int", "long", "long long", "unsigned long long", "unsigned int", "double", "float"):
+            return "0"
+        if cpp_type == "hs_bool":
+            return "hs_bool(false)"
+        if cpp_type == "std::tm":
+            return "{}"
+        if cpp_type == "hs_id":
+            return "hs_id(ID::Null)"
+        return "std::string{}"
+
+    def _field_order_for_insert(self, fields: Dict[str, Any]) -> List[str]:
+        """Return non-AI field names in declaration order for INSERT column list."""
+        cols: List[str] = []
+        for fname, fdef in fields.items():
+            if fdef.get("auto_increment", False) and fdef.get("primary_key", False):
+                continue
+            cols.append(fname)
+        return cols
+
+    def _assignment_lines_for_insert(self, fields: Dict[str, Any]) -> List[str]:
+        """
+        Build lines assigning ctor params into this->in_.<field>.
+        Required fields assign directly; optional use value_or(default).
+        """
+        lines: List[str] = []
+        required = set(self.get_required_fields(fields))
+        for fname, fdef in fields.items():
+            if fdef.get("auto_increment", False) and fdef.get("primary_key", False):
+                continue
+            cpp_type = self.map_yaml_type_to_cpp(fdef["type"])
+            camel = self.to_camel_case(fname)
+            if fname in required:
+                lines.append(f"        this->in_.{fname.ljust(24)} = {camel};")
+            else:
+                if "default" in fdef:
+                    dflt = self.format_default_value(fdef, cpp_type)
+                else:
+                    dflt = self._cpp_type_default(cpp_type)
+                dflt_expr = "std::tm{}" if cpp_type == "std::tm" and dflt == "{}" else dflt
+                # lines.append(f"        this->in_.{fname.ljust(24)} = {camel}.value_or({dflt_expr});")
+                lines.append(f"        this->in_.{fname.ljust(24)} = {camel};")
+        return lines
+
+    def generate_insert_impl(self, table_name: str, fields: Dict[str, Any]) -> str:
+        """
+        Generate insertRecord_impl using SOCI prepared statements bound to this->in_.*
+        Executes immediately to ensure lifetimes are valid.
+        """
+        params = self.generate_insert_params(fields)
+        params_sig = ",\n".join(params) if params else "        /* no fields to insert */"
+
+        assigns = self._assignment_lines_for_insert(fields)
+        cols = self._field_order_for_insert(fields)
+        placeholders = ", ".join([f":{c}" for c in cols])
+        uses_lines = ",\n               ".join([f"soci::use(this->in_.{c})" for c in cols])
+
+        return f"""
+    int insertRecord_impl (
+{params_sig}) {{
+{chr(10).join(assigns)}
+
+        auto session = table_.getSession();
+        soci::statement stmt = (session->prepare
+            << "INSERT INTO {table_name} ({', '.join(cols)}) VALUES ({placeholders})",
+               {uses_lines});
+
+        auto rowID = table_.insertRecordStmt (stmt);
+        return rowID;
+        // auto r = selectRecords(std::format("t0.ID = {{}}", rowID));
+        // return r.begin() == r.end() ? 0 : records_[0]->id;
+    }}
+"""
+
+
+class CppGroupGenerator:
+    quiet: bool = False
+    verbose: bool = False
+    sizer_info = False
+    target_type: str = "groups"
+    target_class: str = "Group"
+    app_target: str = "pass_the_name_of_your_app_target_to_yaml2ui"
+    now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")
+    next_PageType: int = 1000
+    export_var: str = "GFX_EXPORT"
+    impl_dir: Optional[Path] = None
+
+    @dataclass(frozen=True)
+    class SizerProperties:
+        position: Optional[Tuple[int, int]]
+        span: Optional[Tuple[int, int]]
+        rows: int
+        cols: int
+        kind: str = "flexgrid"
+        proportion: int = 0
+        growable_rows: List[int] = None
+        growable_cols: List[int] = None
+        col_width: int = 0
+        row_height: int = 0
+        hgap: int = 0
+        vgap: int = 0
+        flag: int = 0  # e.g. wx.ALIGN_RIGHT | wx.EXPAND | wx.ALL
+        border: int = 0
+        min_size: Optional[Tuple[int, int]] = None
+        size: Optional[Tuple[int, int]] = None
+
+    def __init__(self):
+        self.control_value_mapping = {
+            'Activity': 'hs::NullValue',
+            'BitmapToggleButton': 'bool',
+            'Button': 'std::string',
+            'CheckBox': 'bool',
+            'Choice': 'ID::Type',
+            'Combo': 'ID::Type',
+            'ComplexComboBox': 'ID::Type',
+            'DatePicker': 'wxDateTime',
+            'ELBox': 'WhoCared',
+            'Gauge': 'int',
+            'GridCtrl': 'dunno',
+            'Group': 'std::string',
+            'InfoBar': 'hs::NullType',
+            'MarkupText': 'std::string',
+            'MaskedEdit': 'std::string',
+            'RadioBox': 'int',
+            'RadioButton': 'bool',
+            'ScrollBar': 'int',
+            'SearchBar': 'std::string',
+            'SearchToolBar': 'std::string',
+            'Slider': 'int',
+            'SpinCtrl': 'int',
+            'SpinCtrlDouble': 'double',
+            'StaticBox': 'std::string',
+            'StaticLine': 'hs::NullValue',
+            'StaticText': 'std::string',
+            'TextCtrl': 'std::string',
+            'ToggleButton': 'bool',
+            'TreeCtrl': 'hs::NullValue',
+        }
+
+        self.control_default_mapping = {
+            'Activity': 'hs::NullValue::Null',
+            'BitmapToggleButton': 'false',
+            'Button': '""',
+            'CheckBox': 'false',
+            'Choice': 'ID::Null',
+            'Combo': 'ID::Null',
+            'ComplexComboBox': 'ID::Null',
+            'DatePicker': 'nulldatetime',
+            'ELBox': 'WhoCared',
+            'Gauge': '0',
+            'GridCtrl': 'dunno',
+            'Group': '""',
+            'InfoBar': 'Null',
+            'MarkupText': '""',
+            'MaskedEdit': '""',
+            'RadioBox': '0',
+            'RadioButton': 'false',
+            'ScrollBar': '0',
+            'SearchBar': '""',
+            'SearchToolBar': '""',
+            'Slider': '0',
+            'SpinCtrl': '0',
+            'SpinCtrlDouble': '0',
+            'StaticBox': '""',
+            'StaticLine': 'hs::NullValue::Null',
+            'StaticText': '""',
+            'TextCtrl': '""',
+            'ToggleButton': 'false',
+            'TreeCtrl': 'hs::NullValue::Null',
+        }
+
+        self.control_contains_value_mapping = {
+            'Activity': False,
+            'BitmapToggleButton': False,
+            'Button': False,
+            'CheckBox': True,
+            'Choice': True,
+            'Combo': True,
+            'ComplexComboBox': True,
+            'DateCtrl': True,
+            'DatePicker': True,
+            'ELBox': True,
+            'Gauge': True,
+            'GridCtrl': True,
+            'Group': False,
+            'InfoBar': False,
+            'MarkupText': True,
+            'MaskedEdit': True,
+            'OutlineText': False,
+            'Page': False,
+            'RadioBox': True,
+            'RadioButton': True,
+            'ScrollBar': True,
+            'SearchBar': False,
+            'SearchToolBar': False,
+            'Slider': True,
+            'SpinCtrl': True,
+            'SpinCtrlDouble': True,
+            'StaticBox': False,
+            'StaticLine': False,
+            'StaticText': True,
+            'TextCtrl': True,
+            'ToggleButton': False,
+            'TreeCtrl': False,
+        }
+        # self.control_to_module = {
+        #     'Activity': 'Activity',
+        #     'Button': 'Button',
+        #     'ToggleButton': 'Button',
+        #     'BitmapToggleButton': 'Button',
+        #     'CheckBox': 'CheckBox',
+        #     'Choice': 'Choice',
+        #     'IntChoice': 'Choice',
+        #     'ComboBox': 'Combo',
+        #     'IntComboBox': 'Combo',
+        #     'ComplexComboBox': 'Ctrl.ComplexComboBox',
+        #     'DatePicker': 'Date',
+        #     'DateCtrl': 'Date',
+        #     'ELBox': 'EditableListBox',
+        #     'Gauge': 'Gauge',
+        #     'GridCtrl': 'Grid',
+        #     'AuiInfoBar': 'InfoBar.Aui',
+        #     'InfoBar': 'InfoBar',
+        #     'MarkupText': 'Markup',
+        #     'MaskedEdit': 'MaskedEdit',
+        #     'OutlineText': 'OutlineText',
+        #     'RadioButton': 'RadioButton',
+        #     'RadioBox': 'RadioButton',
+        #     'ScrollBar': 'ScrollBar',
+        #     'SearchBar': 'Search.Bar',
+        #     'SearchToolBar': 'SearchToolBar',
+        #     'Slider': 'Slider',
+        #     'SpinCtrl': 'Spin',
+        #     'SpinCtrlDouble': 'Spin',
+        #     'StaticBox': 'StaticBox',
+        #     'StaticLine': 'StaticLine',
+        #     'StaticText': 'StaticText',
+        #     'TextCtrl': 'TextCtrl',
+        #     'Toolbar': 'Toolbar',
+        #     'TreeCtrl': 'Tree',
+        #     'UserBar': 'User.Bar'
+        # }
+
+        self.validator_class_mapping = {
+            'CapsValidator': 'CapsValidator',
+            'GenericValidator': 'GenericValidator',
+            'ComboLikeValidator': 'ComboLikeValidator'
+        }
+        # Validator to module mapping
+        self.validator_to_module = {
+            'CapsValidator': 'TextCtrl',
+            'CapsValidatorBase': 'GenericValidator',
+            'ComboLikeCapsValidator': 'GenericValidator',
+            'ComboLikeValidator': 'GenericValidator',
+            'ComplexComboBoxValidator': 'Ctrl.ComplexComboBox',
+            'CurrencyValidator': 'TextCtrl',
+            'DateValidator': 'Date',
+            'DomainValidator': 'GenericValidator',
+            'ELBoxValidator': 'EditableListBox',
+            'EmailValidator': 'GenericValidator',
+            'GenericValidator': 'GenericValidator',
+            'MaskValidator': 'MaskedEdit',
+            'PhoneValidator': 'MaskedEdit',
+            'TextFilterValidator': 'TextCtrl'
+        }
+        # Size to wxSize mapping
+        self.size_mapping = {
+            'sizeCtrlButton': 'sizeCtrlButton',
+            'sizeCtrlCheckBox': 'sizeCtrlCheckBox',
+            'sizeCtrlELB': 'sizeCtrlELB',
+            'sizeCtrlLarge': 'sizeCtrlLarge',
+            'sizeCtrlMedium': 'sizeCtrlMedium',
+            'sizeCtrlMediumLarge': 'sizeCtrlMediumLarge',
+            'sizeCtrlSmall': 'sizeCtrlSmall',
+            'sizeCtrlSpin': 'sizeCtrlSpin',
+            'sizeNotes': 'sizeNotes',
+            'sizeLabel': 'sizeLabel',
+            'sizeLabelLarge': 'sizeLabelLarge',
+            'sizeLabelMedium': 'sizeLabelMedium',
+            'sizeLabelSmall': 'sizeLabelSmall',
+            'sizeGroup': 'wxDefaultSize',
+            'sizePage': 'wxDefaultSize',
+            'sizeWizardPage': 'wxDefaultSize'
+        }
+        self.event_mapping = {
+
+            'EVT_BUTTON': 'wxEVT_BUTTON',
+            'EVT_TOGGLEBUTTON': 'wxEVT_TOGGLEBUTTON',
+
+            'EVT_CHECKBOX': 'wxEVT_CHECKBOX',
+
+            'EVT_CHOICE': 'wxEVT_CHOICE',
+
+            'EVT_COMBOBOX_CLOSEUP': 'wxEVT_COMBOBOX_CLOSEUP',
+            'EVT_COMBOBOX_DROPDOWN': 'wxEVT_COMBOBOX_DROPDOWN',
+            'EVT_COMBOBOX': 'wxEVT_COMBOBOX',
+
+            'EVT_DATE_CHANGED': 'wxEVT_DATE_CHANGED',
+
+            'EVT_LISTBOX': 'wxEVT_LISTBOX',
+            'EVT_LISTBOX_DCLICK': 'wxEVT_LISTBOX_DCLICK',
+
+            'EVT_LIST_BEGIN_LABEL_EDIT': 'wxEVT_LIST_BEGIN_LABEL_EDIT',
+            'EVT_LIST_BEGIN_RDRAG': 'wxEVT_LIST_BEGIN_RDRAG',
+            'EVT_LIST_CACHE_HINT': 'wxEVT_LIST_CACHE_HINT',
+            'EVT_LIST_COL_BEGIN_DRAG': 'wxEVT_LIST_COL_BEGIN_DRAG',
+            'EVT_LIST_COL_CLICK': 'wxEVT_LIST_COL_CLICK',
+            'EVT_LIST_COL_DRAGGING': 'wxEVT_LIST_COL_DRAGGING',
+            'EVT_LIST_COL_END_DRAG': 'wxEVT_LIST_COL_END_DRAG',
+            'EVT_LIST_COL_RIGHT_CLICK': 'wxEVT_LIST_COL_RIGHT_CLICK',
+            'EVT_LIST_DELETE_ALL_ITEMS': 'wxEVT_LIST_DELETE_ALL_ITEMS',
+            'EVT_LIST_DELETE_ITEM': 'wxEVT_LIST_DELETE_ITEM',
+            'EVT_LIST_END_LABEL_EDIT': 'wxEVT_LIST_END_LABEL_EDIT',
+            'EVT_LIST_INSERT_ITEM': 'wxEVT_LIST_INSERT_ITEM',
+            'EVT_LIST_ITEM_ACTIVATED': 'wxEVT_LIST_ITEM_ACTIVATED',
+            'EVT_LIST_ITEM_CHECKED': 'wxEVT_LIST_ITEM_CHECKED',
+            'EVT_LIST_ITEM_DESELECTED': 'wxEVT_LIST_ITEM_DESELECTED',
+            'EVT_LIST_ITEM_FOCUSED': 'wxEVT_LIST_ITEM_FOCUSED',
+            'EVT_LIST_ITEM_MIDDLE_CLICK': 'wxEVT_LIST_ITEM_MIDDLE_CLICK',
+            'EVT_LIST_ITEM_RIGHT_CLICK': 'wxEVT_LIST_ITEM_RIGHT_CLICK',
+            'EVT_LIST_ITEM_SELECTED': 'wxEVT_LIST_ITEM_SELECTED',
+            'EVT_LIST_ITEM_UNCHECKED': 'wxEVT_LIST_ITEM_UNCHECKED',
+            'EVT_LIST_KEY_DOWN': 'wxEVT_LIST_KEY_DOWN',
+
+            'EVT_RADIOBOX': 'wxEVT_RADIOBOX',
+
+            'EVT_RADIOBUTTON': 'wxEVT_RADIOBUTTON',
+
+            'EVT_SCROLL_TOP': 'wxEVT_SCROLL_TOP',
+            'EVT_SCROLL_BOTTOM': 'wxEVT_SCROLL_BOTTOM',
+            'EVT_SCROLL_LINEUP': 'wxEVT_SCROLL_LINEUP',
+            'EVT_SCROLL_LINEDOWN': 'wxEVT_SCROLL_LINEDOWN',
+            'EVT_SCROLL_PAGEUP': 'wxEVT_SCROLL_PAGEUP',
+            'EVT_SCROLL_PAGEDOWN': 'wxEVT_SCROLL_PAGEDOWN',
+            'EVT_SCROLL_THUMBTRACK': 'wxEVT_SCROLL_THUMBTRACK',
+            'EVT_SCROLL_THUMBRELEASE': 'wxEVT_SCROLL_THUMBRELEASE',
+            'EVT_SCROLL_CHANGED': 'wxEVT_SCROLL_CHANGED',
+
+            'EVT_SLIDER': 'wxEVT_SLIDER',
+
+            'EVT_SPIN': 'wxEVT_SPIN',
+            'EVT_SPINCTRL': 'wxEVT_SPINCTRL',
+            'EVT_SPINCTRLDOUBLE': 'wxEVT_SPINCTRLDOUBLE',
+
+            'EVT_TEXT': 'wxEVT_TEXT',
+            'EVT_TEXT_ENTER': 'wxEVT_TEXT_ENTER',
+            'EVT_TEXT_URL': 'wxEVT_TEXT_URL',
+            'EVT_TEXT_MAXLEN': 'wxEVT_TEXT_MAXLEN',
+
+            'EVT_TREE_BEGIN_DRAG': 'wxEVT_TREE_BEGIN_DRAG',
+            'EVT_TREE_BEGIN_LABEL_EDIT': 'wxEVT_TREE_BEGIN_LABEL_EDIT',
+            'EVT_TREE_BEGIN_RDRAG': 'wxEVT_TREE_BEGIN_RDRAG',
+            'EVT_TREE_DELETE_ITEM': 'wxEVT_TREE_DELETE_ITEM',
+            'EVT_TREE_END_DRAG': 'wxEVT_TREE_END_DRAG',
+            'EVT_TREE_END_LABEL_EDIT': 'wxEVT_TREE_END_LABEL_EDIT',
+            'EVT_TREE_GET_INFO': 'wxEVT_TREE_GET_INFO',
+            'EVT_TREE_ITEM_GETTOOLTIP': 'wxEVT_TREE_ITEM_GETTOOLTIP',
+            'EVT_TREE_ITEM_ACTIVATED': 'wxEVT_TREE_ITEM_ACTIVATED',
+            'EVT_TREE_ITEM_COLLAPSED': 'wxEVT_TREE_ITEM_COLLAPSED',
+            'EVT_TREE_ITEM_COLLAPSING': 'wxEVT_TREE_ITEM_COLLAPSING',
+            'EVT_TREE_ITEM_EXPANDED': 'wxEVT_TREE_ITEM_EXPANDED',
+            'EVT_TREE_ITEM_EXPANDING': 'wxEVT_TREE_ITEM_EXPANDING',
+            'EVT_TREE_ITEM_MENU': 'wxEVT_TREE_ITEM_MENU',
+            'EVT_TREE_ITEM_MIDDLE_CLICK': 'wxEVT_TREE_ITEM_MIDDLE_CLICK',
+            'EVT_TREE_ITEM_RIGHT_CLICK': 'wxEVT_TREE_ITEM_RIGHT_CLICK',
+            'EVT_TREE_KEY_DOWN': 'wxEVT_TREE_KEY_DOWN',
+            'EVT_TREE_SEL_CHANGED': 'wxEVT_TREE_SEL_CHANGED',
+            'EVT_TREE_SEL_CHANGING': 'wxEVT_TREE_SEL_CHANGING',
+            'EVT_TREE_SET_INFO': 'wxEVT_TREE_SET_INFO',
+            'EVT_TREE_STATE_IMAGE_CLICK': 'wxEVT_TREE_STATE_IMAGE_CLICK',
+
+            'EVT_SET_FOCUS': 'wxEVT_SET_FOCUS',
+            'EVT_KILL_FOCUS': 'wxEVT_KILL_FOCUS',
+
+            'EVT_MENU': 'wxEVT_MENU',
+            'EVT_UPDATE_UI': 'wxEVT_UPDATE_UI',
+            'EVT_TOOL': 'wxEVT_TOOL',
+            'EVT_TOOL_RCLICKED': 'wxEVT_TOOL_RCLICKED',
+
+            'EVT_SIZE': 'wxEVT_SIZE',
+            'EVT_MOVE': 'wxEVT_MOVE',
+            'EVT_PAINT': 'wxEVT_PAINT',
+            'EVT_IDLE': 'wxEVT_IDLE',
+            'EVT_TIMER': 'wxEVT_TIMER',
+
+            'EVT_KEY_DOWN': 'wxEVT_KEY_DOWN',
+            'EVT_KEY_UP': 'wxEVT_KEY_UP',
+            'EVT_CHAR': 'wxEVT_CHAR',
+            'EVT_CHAR_HOOK': 'wxEVT_CHAR_HOOK',
+
+            'EVT_LEFT_DOWN': 'wxEVT_LEFT_DOWN',
+            'EVT_LEFT_UP': 'wxEVT_LEFT_UP',
+            'EVT_LEFT_DCLICK': 'wxEVT_LEFT_DCLICK',
+            'EVT_MIDDLE_DOWN': 'wxEVT_MIDDLE_DOWN',
+            'EVT_MIDDLE_UP': 'wxEVT_MIDDLE_UP',
+            'EVT_MIDDLE_DCLICK': 'wxEVT_MIDDLE_DCLICK',
+            'EVT_RIGHT_DOWN': 'wxEVT_RIGHT_DOWN',
+            'EVT_RIGHT_UP': 'wxEVT_RIGHT_UP',
+            'EVT_RIGHT_DCLICK': 'wxEVT_RIGHT_DCLICK',
+            'EVT_MOTION': 'wxEVT_MOTION',
+            'EVT_ENTER_WINDOW': 'wxEVT_ENTER_WINDOW',
+            'EVT_LEAVE_WINDOW': 'wxEVT_LEAVE_WINDOW',
+            'EVT_MOUSEWHEEL': 'wxEVT_MOUSEWHEEL',
+        }
+
+    def be_quiet(self, _quiet: bool) -> None:
+        self.quiet = bool(_quiet)
+
+    def be_verbose(self, _verbose: bool) -> None:
+        self.verbose = bool(_verbose)
+
+    def show_sizer_info(self, _show: bool) -> None:
+        self.sizer_info = bool(_show)
+
+    def target(self, _targets: str) -> None:
+        t = _targets.lower()
+        if t == "groups" or t == "group":
+            self.target_class = "Group"
+            self.target_type = "groups"
+        elif t == "pages" or t == "page":
+            self.target_class = "Page"
+            self.target_type = "pages"
+        elif t == "wizardpages" or t == "wizardpage":
+            self.target_class = "WizardPage"
+            self.target_type = "wizardpages"
+        else:
+            raise ValueError(f"Unknown target '{_targets}'")
+
+    def generate_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
+                         output_dir: Optional[Path] = None) -> str:
+        """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
+        allow = self._allowed_sets()
+        self._warn_unknown_keys(class_def, allow["class_def"], f"widget class_def '{target_name}'", yaml_file)
+
+        code: List[str] = []
+        code.append('module;')
+        code.append('//')
+        # Use YAML file modification time for deterministic headers (prevents needless rebuilds)
+        try:
+            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
+            _mts = _mt.isoformat(sep=' ', timespec='seconds')
+        except Exception:
+            _mts = 'unknown'
+        code.append(f'// Auto-generated from')
+        code.append(f'// file://{yaml_file} (mtime: {_mts})')
+        code.append('')
+        code.append('// Make any changes there. This file will be overwritten.')
+        code.append('')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
+        code.append('')
+        # wx/wx.h omitted intentionally: including it in every generated module's
+        # global fragment multiplies its SLoc entries by the number of BMIs, exhausting
+        # Clang's 2.1 GB source-location budget.  wx types (wxWindowIDRef, etc.) are
+        # reachable via `import SplitterPage;` in the module body, so they don't need
+        # to be re-declared here.  See commit 8c24e32 for the Windows precedent.
+        code.append('#include "Gfx/gfx_export.h"')
+        code.append('#include "Gfx/WidgetsFwd.h"')
+        code.append('')
+        code.append(f'#include "{self.app_target}/Sizes.h"')
+        code.append('')
+        code.append('#include <unordered_set>')
+        code.append('')
+
+        layout_key = target_name
+
+        pascal_name = self.to_pascal_case(target_name)
+        class_name = f"{pascal_name}{self.target_class}"
+
+        # Elements are a list in the new schema
+        elements = class_def.get('elements', [])
+        if not isinstance(elements, list):
+            elements = []
+
+        cpp_class = class_def.get("class_name") or self.to_pascal_case(target_name) + self.target_class
+
+        # Required imports
+        required_imports = self.get_required_imports(elements, yaml_file)
+
+        # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
+        recordset = self.extract_recordset(target_name, class_def, yaml_file) \
+            if self.target_type in ("pages", "groups") else None
+        if recordset and recordset['module'] not in required_imports:
+            required_imports.append(recordset['module'])
+        module_name = self.extract_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
+        module_list = self.extract_needed_modules(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
+        export_module = self.extract_export_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
+        if not module_name is None and not module_name == export_module:
+            required_imports.append(module_name)
+        elif not module_list is None:
+            required_imports.extend(module_list)
+
+        true_imports = []
+        for module in required_imports:
+            if not module == export_module:
+                true_imports.append(module)
+            else:
+                print(f'export_module {export_module} cannot be imported: {target_name} (file://{yaml_file})')
+
+        imports_formatted = '\n'.join(f"import {module};" for module in true_imports)
+        code.append(f'export module {export_module};')
+        code.append('')
+        code.append(f'{imports_formatted}')
+        code.append('')
+        code.append('export namespace PageType {')
+        code.append(f"const Type {cpp_class}({self.next_PageType});")
+        code.append('}')
+        code.append('')
+
+        ns = class_def.get("namespace", "wx")
+        layout_class_name = class_def.get("layout", self.to_pascal_case(target_name) + self.target_class)
+
+        # Determine base class (Page/Group/WizardPage)
+        _, top_base_class = self.extract_control_class(target_name, class_def, yaml_file)
+
+        code.append(f"namespace {ns} {{")
+        code.append("")
+        self.next_PageType += 1
+
+        # Placement 1: top-level verbatim (inside namespace, before class)
+        if isinstance(top_verbatim, str) and top_verbatim.strip():
+            for line in top_verbatim.rstrip().splitlines():
+                code.append(f"{line}")
+
+        # alt_data_source: emit each widget's generated DBSource policy struct (namespace
+        # scope, non-exported) before the class that names it as a template argument.
+        for var, tag, alt_ds, data_type in self.collect_alt_data_sources(elements, yaml_file):
+            struct_name = f"{tag}DBSource"
+            value_expr = f"ID::Type(r.{alt_ds['value_field']})" if data_type == "ID::Type" else f"r.{alt_ds['value_field']}"
+            code.append(f"struct {struct_name} {{")
+            code.append(f"   using RS = {alt_ds['class']};")
+            code.append(f"   using Record = {alt_ds['record']};")
+            code.append(f'   static auto table() -> std::string {{ return "{alt_ds["table"]}"; }}')
+            code.append(f"   static auto displayText(const Record &r) -> std::string {{ return r.{alt_ds['display_field']}; }}")
+            code.append(f"   static auto value(const Record &r) -> {data_type} {{ return {value_expr}; }}")
+            code.append(f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
+            code.append(f'   static auto blankText() -> std::string {{ return "{alt_ds["blank_text"]}"; }}')
+            code.append("};")
+            code.append("")
+
+        code.append(f"export class {self.export_var} {cpp_class} : public {top_base_class} {{")
+        code.append("   std::filesystem::path layoutPath;")
+        code.append("   std::string layoutKey;")
+
+        parent_args_var_for_children: Optional[str] = None
+        page_args_out_triplets: List[Tuple[str, str, Any]] = []
+
+        # Page-level args map and outs at top of ctor
+        # if top_base_class == "Page":
+        packed_args_in = self._emit_page_scope_args(target_name, class_def)
+        if packed_args_in is not None:
+            static_lines, page_args_var, page_args_out_triplets = packed_args_in
+            if static_lines is not None:
+                # Clang 21 crashes (infinite recursion in getTypeInfoImpl) on any
+                # static anymap variable initialized with std::any values inside a
+                # C++ module — class-level inline or function-local, doesn't matter.
+                # Workaround: emit no static at all.  The constructor default becomes
+                # nullanymap; hs::param() falls through to its literal default anyway,
+                # which is identical to what the map values were.
+                # hs::param calls in the body use 'args' (the ctor parameter) so that
+                # callers can still override via custom anymap arguments.
+                parent_args_var_for_children = "args"
+
+        # Impl dir/stub path determined early: both the on_set_active/on_kill_active
+        # overrides and 'functions:' entries may need to be stubbed out here.
+        if self.impl_dir is not None:
+            impl_dir = self.impl_dir
+        elif output_dir is not None:
+            impl_dir = output_dir / "impl"
+        else:
+            impl_dir = yaml_file.parent / "impl"
+        stub_path = impl_dir / f"{cpp_class}_impl.cpp"
+
+        kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
+        set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
+        event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
+        # refreshFromCurrent() always hands off to refreshEx() so hand-written
+        # tweaks to freshly-loaded field values have a stable, never-overwritten home.
+        refresh_ex_declared = recordset is not None
+        if kill_declared or set_declared or event_declared or refresh_ex_declared:
+            code.append("")
+            code.append("protected:")
+            code.append("   // OnKillActive/SetActive/onEvent overrides")
+            if kill_declared:
+                note = "" if on_kill_active is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onKillActive(bool autoDisable) -> void override;{note}")
+            if set_declared:
+                note = "" if on_set_active is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onSetActive(bool autoEnable) -> void override;{note}")
+            if event_declared:
+                note = "" if on_event is not None else f"  // Implemented in file://{stub_path}"
+                code.append(f"   auto onEvent(db::RecordSetEvent event) -> void override;{note}")
+            if refresh_ex_declared:
+                code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in file://{stub_path}")
+
+        # Declarations
+        control_decls = self.generate_control_declarations(elements, yaml_file)
+        code.append("")
+        code.append('\n'.join(control_decls) if control_decls else '   // No elements defined')
+
+        # RecordSet members (pages own the shared_ptr and the Move* subscription)
+        if recordset and self.target_type == "pages":
+            if not (kill_declared or set_declared):
+                code.append("")
+                code.append("protected:")
+            code.append(f"   std::shared_ptr<{recordset['class']}> m_rs;")
+            code.append("   size_t m_moveHandle{};")
+
+        # Functions (group/page level) inside class
+        functions_all = self._validate_functions(class_def.get('functions'))
+        access_groups = {'public': [], 'protected': [], 'private': []}
+        for fname, fdef in functions_all.items():
+            args = fdef['args']
+            ret = fdef['return']
+            body = fdef['body']
+            const_suffix = " const" if fdef['const'] else ""
+            static_prefix = "static " if fdef['static'] else ""
+            override_suffix = " override" if fdef['override'] else ""
+            noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
+            if body is None:
+                fn_text = (
+                    f"   {static_prefix}auto {fname} ({args})"
+                    f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix};"
+                    f"  // Implemented in file://{stub_path}"
+                )
+            else:
+                body = body.replace('\r\n', '\n').replace('\r', '\n')
+                body_lines = body.split('\n')
+                indented_body = '\n'.join(f"      {line}" if line else "" for line in body_lines)
+                fn_text = (
+                    f"   {static_prefix}auto {fname} ({args}){const_suffix}{noexcept_suffix} -> {ret}{override_suffix} {{\n"
+                    f"{indented_body}"
+                    f"   }}"
+                )
+            access_groups[fdef['access']].append(fn_text)
+
+        # Generated refreshFromCurrent(): pages read the current record from m_rs and fan
+        # out; groups receive the record and initialize their field-bound controls.
+        if recordset:
+            bound_controls, group_members = self.collect_refresh_targets(elements, yaml_file)
+            record = recordset['record']
+            rfc: List[str] = []
+            if self.target_type == "pages":
+                rfc.append("   auto refreshFromCurrent () -> void {")
+                rfc.append(f"      const {record} *rec = m_rs ? m_rs->current() : nullptr;")
+                rfc.append("      if (!rec)")
+                rfc.append("         return;")
+            else:  # groups
+                rfc.append(f"   auto refreshFromCurrent (const {record} *rec) -> void {{")
+                rfc.append("      if (!rec)")
+                rfc.append("         return;")
+            for var, fld in bound_controls:
+                rfc.append(f"      wx::initFromField({var}, rec->{fld});")
+                # Retarget the control's commit() UPDATE at the current record
+                rfc.append(f'      {var}->where("id = " + std::to_string(rec->id));')
+            for var in group_members:
+                # Guarded: a nested group without its own recordset: (or typed on a
+                # different record) is skipped instead of breaking the build.
+                rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                rfc.append(f"         {var}->refreshFromCurrent(rec);")
+            rfc.append("      refreshEx(rec);")
+            rfc.append("   }")
+            access_groups['public'].append('\n'.join(rfc))
+
+        def format_access_block(access_name: str, fns: List[str]) -> str:
+            if not fns:
+                return ""
+            return f"\n{access_name}:\n" + '\n'.join(fns)
+
+        public_access_block = format_access_block('public', access_groups['public'])
+        protected_access_block = format_access_block('protected', access_groups['protected'])
+        private_access_block = format_access_block('private', access_groups['private'])
+
+        if public_access_block:     code.append(public_access_block)
+        if protected_access_block:  code.append(protected_access_block)
+        if private_access_block:    code.append(private_access_block)
+
+        code.append("")
+        code.append("public:")
+        if recordset and self.target_type == "pages":
+            # The Subscribe lambda in the ctor captures 'this' — must unsubscribe.
+            code.append(f"   ~{cpp_class}() override {{ db::recordSetSignal().Unsubscribe(m_moveHandle); }}")
+        else:
+            code.append(f"   ~{cpp_class}() override = default;")
+        code.append("")
+
+        # Constructor signature and base ctor call.
+        # When parent_args_var_for_children is "args" it means we suppressed the
+        # static anymap (clang 21 crash workaround); use nullanymap as the default
+        # so the constructor signature doesn't read "= args" which is circular.
+        if parent_args_var_for_children == "args":
+            default_args_expr = "nullanymap"
+        else:
+            default_args_expr = (parent_args_var_for_children or "nullanymap")
+        value_default = "PageType::Null" if top_base_class == "Page" else "std::string{}"
+        pad1: str = " " * len(f"   explicit {cpp_class} ( ")
+        if self.target_type == "pages":
+            code.append(f"   explicit {cpp_class} ( Book *book, ")
+            code.append(f"{pad1}wxWindowIDRef id, ")
+            code.append(f"{pad1}const std::string& name,")
+            code.append(f"{pad1}PageType::Type type = PageType::{cpp_class},")
+            code.append(f"{pad1}int imageIndex = -1,")
+            code.append(f"{pad1}const anymap &args = {default_args_expr})")
+            code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, args) {{")
+        else:
+            code.append(f"   explicit {cpp_class} ( UICreateFlags cflags, ")
+            code.append(f"{pad1}std::string name, ")
+            code.append(f"{pad1}wxWindow *pParent, ")
+            code.append(f"{pad1}value_t value = {value_default},")
+            code.append(f"{pad1}const anymap &args = {default_args_expr},")
+            code.append(f"{pad1}long style = 0)")
+            code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
+
+        # Page args_out at ctor top
+        # if top_base_class == "Page" and page_args_out_triplets:
+        if page_args_out_triplets:
+            for name_out, type_out, default_out in page_args_out_triplets:
+                lit = self._format_default_literal(type_out, default_out)
+                code.append(f'      auto {name_out} = hs::param({parent_args_var_for_children}, "{name_out}", {lit});')
+            # code.append("")
+
+        # Layout boilerplate
+        code.append(
+            f'      layoutPath = Util::getInstance().resourceName(UIType::GeneratorSource, "{layout_class_name}", false, nullptr);')
+        code.append(
+            '      ASSERT_MSG(!layoutPath.empty(), "Couldn\'t find layout resource file://" + layoutPath.string());')
+        code.append(f'      layoutKey = "{layout_key}";')
+        code.append("")
+
+        # # Page-level sizer properties. Needed before any placement calls.
+
+        if self.sizer_info:
+            # Get sizer information
+            sizer_def = class_def.get('sizer')
+            if sizer_def:
+                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                code.append(f'      /*')
+                code.append(f'       * Sizer information for {self.target_class}:')
+                code.append(f'       *')
+                code.append(f'       *        border : {sizer_properties.border}')
+                code.append(f'       *     col_width : {sizer_properties.col_width}')
+                code.append(f'       *          cols : {sizer_properties.cols}')
+                code.append(f'       *          flag : {sizer_properties.flag}')
+                code.append(f'       * growable_cols : {sizer_properties.growable_cols}')
+                code.append(f'       * growable_rows : {sizer_properties.growable_rows}')
+                code.append(f'       *          hgap : {sizer_properties.hgap}')
+                code.append(f'       *          kind : {sizer_properties.kind}')
+                code.append(f'       *      min_size : {sizer_properties.min_size}')
+                code.append(f'       *      position : {sizer_properties.position}')
+                code.append(f'       *    proportion : {sizer_properties.proportion}')
+                code.append(f'       *    row_height : {sizer_properties.row_height}')
+                code.append(f'       *          rows : {sizer_properties.rows}')
+                code.append(f'       *          size : {sizer_properties.size}')
+                code.append(f'       *          span : {sizer_properties.span}')
+                code.append(f'       *          vgap : {sizer_properties.vgap}')
+                code.append(f'       */')
+                code.append(f'')
+
+        # sizer_def = class_def.get('sizer')
+        # if sizer_def:
+        #     sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+        #     if sizer_properties.kind == 'gridbag' or sizer_properties.kind == 'flexgrid':
+        #         code.append(
+        #             f'      setSizerType("{sizer_properties.kind}", {sizer_properties.rows}, {sizer_properties.cols}, {sizer_properties.row_height}, {sizer_properties.col_width}, {sizer_properties.vgap}, {sizer_properties.hgap});')
+        #         code.append("")
+        # else:
+        #     raise RuntimeError(f"sizer properties missing")
+
+        # Creation code for list-based elements
+        creation_code, target_parent = self.generate_control_creation(target_name, elements, layout_class_name,
+                                                                      yaml_file,
+                                                                      parent_args_var_for_children)
+
+        if creation_code:
+
+            code.append(f'      auto targetParent = {target_parent};')
+            code.append('')
+            code.append('\n'.join(creation_code))
+
+        else:
+            code.append('      // No control creation code\n')
+
+        # RecordSet Move* subscription: refresh the page when the RecordSetInterface
+        # navigates. Suspended until onSetActive resumes it (per-subscription).
+        if recordset and self.target_type == "pages":
+            code.append("")
+            code.append("      m_moveHandle = db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
+            code.append("                                                     db::RecordSetEvent::MoveFirst, db::RecordSetEvent::MovePrevious,")
+            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast);")
+            code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
+            code.append("")
+
+        code.append(
+            '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource file://" + layoutPath.string());')
+
+        if self.target_type == 'wizardpages':
+            code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW, borderWidth);")
+            code.append('      SetSizerAndFit(&GetPageSizer(), true);')
+        elif self.target_type == 'pages':
+            code.append('      if (getForm())')
+            code.append('         getForm()->SetSizerAndFit(&grid(), true);')
+
+        # Placement: finally (end of ctor)
+        finally_block = self._extract_finally_begin(class_def)
+        if isinstance(finally_block, str) and finally_block.strip():
+            for line in finally_block.rstrip().splitlines():
+                code.append(f"      {line}")
+
+        code.append("   }")
+        code.append("};")
+
+        if on_kill_active is not None or on_set_active is not None or on_event is not None:
+            code.append("")
+            if on_kill_active is not None:
+                code.append(f"auto {cpp_class}::onKillActive(bool autoDisable) -> void {{")
+                code.append(f"{on_kill_active}")
+                code.append(f"}}")
+            if on_set_active is not None:
+                code.append(f"auto {cpp_class}::onSetActive(bool autoEnable) -> void {{")
+                code.append(f"{on_set_active}")
+                code.append(f"}}")
+            if on_event is not None:
+                code.append(f"auto {cpp_class}::onEvent(db::RecordSetEvent event) -> void {{")
+                code.append(f"{on_event}")
+                code.append(f"}}")
+
+        code.append(f"}} // namespace {ns}")
+
+        # Write _impl.cpp stub for any declaration-only functions (no body: key in YAML)
+        stub_fns = {n: d for n, d in functions_all.items() if d['body'] is None}
+        if kill_declared and on_kill_active is None:
+            stub_fns['onKillActive'] = {
+                'args': 'bool autoDisable', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    // Interface::onKillActive(autoDisable); must be called at some point",
+                    "    Interface::onKillActive(autoDisable);",
+                ],
+            }
+        if set_declared and on_set_active is None:
+            stub_fns['onSetActive'] = {
+                'args': 'bool autoEnable', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    // Interface::onSetActive(autoEnable); must be called at some point",
+                    "    Interface::onSetActive(autoEnable);",
+                ],
+            }
+        if event_declared and on_event is None:
+            stub_fns['onEvent'] = {
+                'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
+                'stub_body': [
+                    "    Interface::onEvent(event);",
+                ],
+            }
+        if refresh_ex_declared:
+            stub_fns['refreshEx'] = {
+                'args': f"const {recordset['record']} *rec", 'return': 'void', 'const': False, 'override': False,
+                'stub_body': [
+                    "    // Tweak values set by refreshFromCurrent() here.",
+                ],
+            }
+        if stub_fns:
+            self._write_impl_stub(impl_dir, cpp_class, export_module, ns, stub_fns)
+
+        return "\n".join(code)
+
+    def generate_control_creation(self, group_name: str, elements: Any, layout_path: str, yaml_file: Path,
+                                  parent_args_var: Optional[str]) -> Tuple[List[str], str]:
+        """Build creation code from list-based elements[*].items."""
+        creation_code: List[str] = []
+        target_parent: str = ""
+
+        allow = self._allowed_sets()
+
+        if not isinstance(elements, list):
+            return creation_code, target_parent
+
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+
+            # Element-level verbatim (Placement: before this element's items)
+            elements_verbatim = self._extract_verbatim_body(element)
+            if elements_verbatim:
+                for line in elements_verbatim.rstrip().splitlines():
+                    creation_code.append(f"      {line}")
+
+            identity = element.get('identity') or element.get('Identity') or ""
+            tool_tip = element.get('tool_tip', '')
+            items = element.get('items', [])
+            if not isinstance(items, list):
+                continue
+
+            if self.target_type == "groups":
+                target_parent = "getSBSizer()->GetStaticBox();"
+            elif self.target_type == "pages":
+                target_parent = "getForm()"
+            elif self.target_type == "wizardpages":
+                target_parent = "this"
+            else:
+                target_parent = "pParent"
+
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+
+                # Controls in groups; groups in pages
+                if self.target_type == "groups" and "widget" in item and isinstance(item["widget"], dict):
+                    md = item["widget"]
+                    var = self.extract_member_variable(md, f"widget '{identity}'", yaml_file)
+                    # Per-member verbatim (Placement: before addControl)
+                    controlset_verbatim = self._extract_verbatim_body(md)
+                    creation_code.extend(self._generate_single_control(
+                        member_name=var,
+                        member_def=md,
+                        control_name=identity,
+                        tool_tip=tool_tip,
+                        all_elements=element,  # pass element dict for labels
+                        yaml_file=yaml_file,
+                        parent_args_var=parent_args_var,
+                        controlset_verbatim=controlset_verbatim
+                    ))
+
+                elif ((self.target_type == "pages" or self.target_type == "wizardpages")
+                      and "widget" in item and isinstance(item["widget"], dict)):
+
+                    md = item["widget"]
+                    var = self.extract_member_variable(md, f"widget '{identity}'", yaml_file)
+                    # Per-member verbatim (Placement: before addGroup)
+                    controlset_verbatim = self._extract_verbatim_body(md)
+                    creation_code.extend(self._generate_single_group(
+                        member_name=var,
+                        member_def=md,
+                        control_name=identity,
+                        tool_tip=tool_tip,
+                        all_elements=element,  # pass element dict for labels (if nested in group later)
+                        yaml_file=yaml_file,
+                        parent_args_var=parent_args_var,
+                        controlset_verbatim=controlset_verbatim
+                    ))
+
+                # Spacers carry no C++ object - just placement, resolved at runtime by
+                # Interface::loadLayout. Only validate the schema and (optionally) trace it.
+                elif "spacer" in item and isinstance(item["spacer"], dict):
+                    spacer_def = item["spacer"]
+                    self._warn_unknown_keys(spacer_def, {"sizer"}, f"spacer '{identity}'", yaml_file)
+                    if self.sizer_info and spacer_def.get('sizer'):
+                        sp = self.extract_sizer(spacer_def['sizer'])
+                        creation_code.append(
+                            f'      // Spacer: Position: {sp.position}, Border: {sp.border}')
+
+                elif "expanding-spacer" in item and isinstance(item["expanding-spacer"], dict):
+                    spacer_def = item["expanding-spacer"]
+                    self._warn_unknown_keys(spacer_def, {"sizer"}, f"expanding-spacer '{identity}'", yaml_file)
+                    if self.sizer_info and spacer_def.get('sizer'):
+                        sp = self.extract_sizer(spacer_def['sizer'])
+                        creation_code.append(
+                            f'      // Expanding spacer: Position: {sp.position}, Proportion: {sp.proportion}')
+
+        return creation_code, target_parent
+
+    def _generate_single_control(self, member_name: str, member_def: Dict[str, Any],
+                                 control_name: str, tool_tip: str, all_elements: Dict[str, Any], yaml_file: Path,
+                                 parent_args_var: Optional[str],
+                                 controlset_verbatim: str = "") -> List[str]:
+        """Generate creation code for a single control (new list schema)."""
+        code: List[str] = []
+
+        # args_in before allocation
+        args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
+                                                          f"widget '{member_name}'")
+
+        code.extend(args_lines)
+
+        control_class, base_class = self.extract_control_class(member_name, member_def, yaml_file)
+        cpp_class = self.resolve_member_cpp_type(member_name, member_def, yaml_file)
+        pos = self.extract_position(member_name, member_def, yaml_file)
+        size = self.extract_size(member_name, member_def, control_class, yaml_file)
+        style = self.extract_style(member_name, member_def, yaml_file)
+        data_type = self.extract_data_type(member_name, member_def, yaml_file)
+        value, value_is_literal = self.extract_value(member_name, member_def, control_class, base_class, yaml_file)
+        cflags_list, cflags, is_group = self.extract_uicreate_flags(member_name, member_def, yaml_file)
+
+        # Use 'key' for constructor-visible name (fallback to legacy name extractor)
+        name = self.extract_member_tag(member_def, control_name, yaml_file)  # adapter you added
+        #
+        # parent: str = "dynamic_cast<Page*>(pParent)->getForm()"
+        # if self.target_type == "wizardpages":
+        #     parent = "pParent"
+
+        table, field = self.extract_db_info(member_name, member_def, yaml_file)
+        # signature = member_def.get('signature', '{cflags}, "{name}", {parent}, nextID(), {value}, {size}, {style}')
+        # signature = member_def.get('signature', '{cflags}, "{name}", targetParent, nextID(), {value}, {size}, {style}')
+        signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
+        signature = self._signature_with_args(signature, local_args_var or parent_args_var)
+        signature += f', {style}, {size})'
+        if (member_name):
+            out = f'      ({member_name} = new {cpp_class}({signature})'
+        else:
+            out = f'      (new {cpp_class}({signature})'
+
+        out = out.format_map(locals())
+        code.append(out)
+
+        if self.sizer_info:
+            # Get sizer information
+            sizer_def = member_def.get('sizer')
+            if sizer_def:
+                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                code.append(
+                    f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
+
+        # chain
+        member_accessor = '->'
+        if value and not value == "hs::NullValue::Null" and signature.find('value') == -1:
+            code.append(f"         ->set <{data_type}> ({value if not value_is_literal else repr(value)})")
+            member_accessor = '.'
+
+        validator = member_def.get('validator', {})
+        if validator:
+            validator_code = self._generate_validator(validator, member_name, member_def)
+            if validator_code:
+                code.append(f"         {member_accessor}{validator_code}")
+                member_accessor = '.'
+
+        # Labels from the element dict
+        label_code = self._generate_labels(all_elements, None)
+        if label_code:
+            label_code[0] = label_code[0].replace('.createLabel', f'{member_accessor}createLabel', 1)
+            member_accessor = '.'
+            code.extend(label_code)
+
+        if tool_tip:
+            code.append(f"         {member_accessor}setToolTip(\"{tool_tip}\")")
+            member_accessor = '.'
+
+        handlers = member_def.get('handlers', [])
+        for handler in handlers:
+            handler_code = self._generate_event_handler(handler, member_name, member_def)
+            if handler_code:
+                code.append(f"         {member_accessor}{handler_code}")
+                member_accessor = '.'
+
+        if style != '0' and signature.find('style') == -1:
+            code.append(f"         {member_accessor}setWindowStyleFlags({style})")
+            member_accessor = '.'
+
+        if table and field and signature.find('table') == -1 and signature.find('field') == -1:
+            db_chain = f'dbInfo({table}, {field})'
+            code.append(f"         {member_accessor}{db_chain}")
+            member_accessor = '.'
+
+        # terminate allocation line
+        potential_last_line: str = ''
+        linx: int = -1
+        while abs(linx) < len(code):
+            potential_last_line = code[linx].strip()
+            if not potential_last_line.startswith('//'):
+                break
+            linx -= 1
+
+        code[linx] = code[linx] + ";"
+
+        # Placement: per-member verbatim before addControl
+        if controlset_verbatim:
+            for line in controlset_verbatim.rstrip().splitlines():
+                code.append(f"      {line}")
+
+        # alt_data_source: auto-call the generic DB-backed loadFromDB() right where a
+        # hand-written 'verbatim: body: member->loadFromDB();' would otherwise go.
+        if self.extract_alt_data_source(member_name, member_def, yaml_file) is not None:
+            code.append(f"      {member_name}->loadFromDB();")
+
+        # add to map
+        if is_group:
+            code.append(f"      addGroup({member_name});")
+        else:
+            code.append(f"      addControl({member_name});")
+
+        # args_out after construction
+        args_block = member_def.get("args")
+        if isinstance(args_block, dict):
+            _, outs, _ins = self._parse_args_block(args_block, f"widget '{member_name}'", yaml_file, require_out=False)
+            if outs:
+                arg_var = local_args_var or parent_args_var or "args"
+                for n, ty, v in outs:
+                    lit = self._format_cpp_literal(v, ty)
+                    code.append(f'      auto {n} = hs::param({arg_var}, "{n}", {lit});')
+
+        code.append("")
+
+        return code
+
+    def _generate_single_group(self, member_name: str, member_def: Dict[str, Any],
+                               control_name: str, tool_tip: str, all_elements: Dict[str, Any], yaml_file: Path,
+                               parent_args_var: Optional[str],
+                               controlset_verbatim: str = "") -> List[str]:
+        """Generate creation code for a single nested widget (used when target is Page/WizardPage)."""
+        code: List[str] = []
+
+        # args_in before allocation
+        args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
+                                                          f"widget '{member_name}'")
+        code.extend(args_lines)
+
+        control_class, base_class = self.extract_control_class(member_name, member_def, yaml_file)
+        cpp_class = control_class
+        pos = self.extract_position(member_name, member_def, yaml_file)
+        size = self.extract_size(member_name, member_def, control_class, yaml_file)
+        style = self.extract_style(member_name, member_def, yaml_file)
+        value, value_is_literal = self.extract_value(member_name, member_def, control_class, base_class, yaml_file)
+        cflags_list, cflags, is_group = self.extract_uicreate_flags(member_name, member_def, yaml_file)
+
+        name = self.extract_member_tag(member_def, control_name, yaml_file)
+        # parent: str = "getForm()"
+        # if self.target_class == "Page":
+        #     parent = "getForm()"
+
+        signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
+        # signature = member_def.get('signature', '{cflags}, "{name}", {parent}, nextID(), {value}, {size}, {style}')
+        signature = self._signature_with_args(signature, local_args_var or parent_args_var)
+        signature += f', {style}'
+        out = f'      ({member_name} = new {cpp_class}({signature}));'
+        out = out.format_map(locals())
+        code.append(out)
+
+        if self.sizer_info:
+            # Get sizer information
+            sizer_def = member_def.get('sizer')
+            if sizer_def:
+                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                code.append(
+                    f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
+
+        # Placement: per-member verbatim before addGroup
+        if controlset_verbatim:
+            for line in controlset_verbatim.rstrip().splitlines():
+                code.append(f"      {line}")
+
+        code.append(f"      addGroup({member_name});")
+
+        # args_out after construction
+        args_cfg = member_def.get('args', {})
+        outs = args_cfg.get('args_out', [])
+        if outs:
+            triplets = []
+            if outs and isinstance(outs[0], str):
+                for i in range(0, len(outs), 3):
+                    triplets.append((outs[i], outs[i + 1], outs[i + 2]))
+            else:
+                for entry in outs:
+                    if isinstance(entry, (list, tuple)) and len(entry) >= 3:
+                        triplets.append((entry[0], entry[1], entry[2]))
+
+            arg_var = local_args_var or parent_args_var or "args"
+            for name_out, type_out, default_out in triplets:
+                default_literal = self._format_default_literal(type_out, default_out)
+                code.append(f'      auto {name_out} = hs::param({arg_var}, "{name_out}", {default_literal});')
+
+        code.append("")
+        return code
+
+    def generate_control_declarations(self, elements: Any, yaml_file: Path) -> List[str]:
+        decls: List[str] = []
+        # elements is now a list
+        if not isinstance(elements, list):
+            return decls
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            has_group = bool(element.get("has_group"))
+            has_control = bool(element.get("has_control"))
+            items = element.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                if (
+                        self.target_type == "pages" or self.target_type == "wizardpages") and "widget" in item and isinstance(
+                    item["widget"], dict):
+                    md = item["widget"]
+                    var = self.extract_member_variable(md, "widget declaration", yaml_file)
+                    ctrl_class = self.resolve_member_cpp_type(var or "Group", md, yaml_file)
+                    decls.append(f"   {ctrl_class}* {var} {{}};")
+                elif self.target_type == "groups" and "widget" in item and isinstance(item["widget"], dict):
+                    md = item["widget"]
+                    var = self.extract_member_variable(md, "control declaration", yaml_file)
+                    ctrl_class = self.resolve_member_cpp_type(var or "Ctrl", md, yaml_file)
+                    decls.append(f"   {ctrl_class}* {var} {{}};")
+        return decls
+
+    # -------- helpers for debugging unknown keys --------
+    def _warn_unknown_keys(self, obj: Any, allowed: set[str], context: str, yamlfile: Path) -> None:
+        if isinstance(obj, dict):
+            unknown = [k for k in obj.keys() if k not in allowed]
+            if unknown:
+                print(f"Warning: unknown keys {unknown} in {context} file://{yamlfile}", file=sys.stderr)
+
+    def _allowed_sets(self):
+
+        return {
+            "root": {
+                "verbatim",
+            },
+            "class_def": {
+                "args",
+                "base_class",
+                "class",
+                "elements",
+                "export_module",
+                "finally",
+                "functions",
+                "layout",
+                "module",
+                "modules",
+                "on_event",
+                "on_kill_active",
+                "on_set_active",
+                "pos",
+                "recordset",
+                "run_generator",
+                "size",
+                "sizer",
+                "style",
+                "title",
+                "value",
+                "verbatim",
+            },
+            "sizer_def": {
+                "border",
+                "col_widths",
+                "cols",
+                "growable_cols",
+                "growable_rows",
+                "hgap",
+                "kind",
+                "position",
+                "proportion",
+                "row_heights",
+                "rows",
+                "span",
+                "vgap",
+            },
+            "sizer_kinds": {
+                "flex",
+                "grid",
+            },
+            "args_def": {
+                "arg_name",
+                "args_in",
+                "args_out",
+            },
+            "recordset_def": {
+                "class",
+                "module",
+                "record",
+            },
+            "alt_data_source_def": {
+                "blank_text",
+                "class",
+                "display_field",
+                "include_blank",
+                "module",
+                "record",
+                "table",
+                "value_field",
+            },
+            "elements_root": {
+                "verbatim",
+            },
+            "control_set": {
+                "identity",
+                "items",
+                "size",
+                "sizer",
+                "tool_tip",
+                "verbatim",
+            },
+            "item_entry": {
+                "labels",
+                "widget",
+                "spacer",
+                "expanding-spacer",
+            },
+            "control_member_def": {
+                "alt_data_source",
+                "args",
+                "base_class",
+                "class",
+                "contains",
+                "default",
+                "field",
+                "handlers",
+                "is_group",
+                "module",
+                "name",
+                "name",
+                "pos",
+                "signature",
+                "size",
+                "sizer",
+                "style",
+                "table",
+                "tag",
+                "uicreateflags",
+                "validator",
+                "value",
+            },
+            "label_entry": {
+                "class",
+                "key",
+                "pos",
+                "size",
+                "sizer",
+                "style",
+                "tag",
+                "value",
+            },
+            "handler_entry": {
+                "event",
+                "handler",
+            },
+            "validator_def": {
+                "allow_empty",
+                "class",
+                "tool_tip",
+                "transfer_model",
+            },
+        }
+
+    # ---------------- verbatim extraction helpers ----------------
+    def _extract_verbatim_body(self, node: Any) -> str:
+        if not isinstance(node, dict):
+            return ""
+        vb = node.get("verbatim")
+        if isinstance(vb, dict):
+            beg = vb.get("body")
+            if isinstance(beg, str):
+                return beg
+            if beg is not None:
+                print("Warning: 'verbatim.body' must be a string; ignoring", file=sys.stderr)
+        return ""
+
+    def _extract_finally_begin(self, node: Any) -> str:
+        """Extracts 'finally.body' text block from a group-level node, mirroring 'verbatim' handling."""
+        if not isinstance(node, dict):
+            return ""
+        fin = node.get("finally")
+        if isinstance(fin, dict):
+            beg = fin.get("body")
+            if isinstance(beg, str):
+                return beg
+            if beg is not None:
+                print("Warning: 'finally.body' must be a string; ignoring", file=sys.stderr)
+        return ""
+
+    def _is_identifier(self, s: str) -> bool:
+        """Rudimentary C++-like identifier check."""
+        if not isinstance(s, str) or not s:
+            return False
+        if not (s[0].isalpha() or s[0] == "_"):
+            return False
+        return all(c.isalnum() or c == "_" for c in s)
+
+    def _normalize_event_name(self, ev: str) -> str:
+        """Normalize event name to a wxEVT_* token; accept exact wxEVT_* constants, map common EVT_* aliases."""
+        if not isinstance(ev, str):
+            return 'wxEVT_TEXT'
+        s = ev.strip()
+        if not s:
+            return 'wxEVT_TEXT'
+        # If already a wxEVT_* constant, keep as-is
+        if s.startswith('wxEVT_'):
+            return s
+
+        # Canonicalize input a bit
+        up = s.upper().replace('-', '_').replace(' ', '_')
+
+        # Allow bare tokens like "TEXT", "BUTTON" -> prefix EVT_
+        if not up.startswith('EVT_'):
+            up = f'EVT_{up}'
+
+        # 1) Try explicit alias table
+        mapped = self.event_mapping.get(up)
+        if mapped:
+            return mapped
+
+        # 2) Try modernizing legacy COMMAND_* aliases by dropping "COMMAND_"
+        if 'EVT_COMMAND_' in up:
+            try2 = up.replace('EVT_COMMAND_', 'EVT_', 1)
+            mapped2 = self.event_mapping.get(try2)
+            if mapped2:
+                return mapped2
+            # As a last attempt, synthesize wxEVT_COMMAND_* directly (some projects prefer these)
+            return 'wx' + up  # e.g., EVT_COMMAND_BUTTON_CLICKED -> wxEVT_COMMAND_BUTTON_CLICKED
+
+        # 3) Fallback: synthesize wxEVT_* directly (e.g., EVT_MENU -> wxEVT_MENU)
+        synthesized = 'wx' + up
+        if synthesized.startswith('wxEVT_'):
+            return synthesized
+
+        # 4) Final fallback with warning
+        print(f"Warning: unknown event alias '{ev}', defaulting to wxEVT_TEXT", file=sys.stderr)
+        return 'wxEVT_TEXT'
+
+    def to_pascal_case(self, snake_str: str) -> str:
+        """Convert snake_case to PascalCase."""
+        if not snake_str:
+            return ""
+
+        if '_' not in snake_str:
+            if snake_str[0].isupper():
+                return snake_str
+            return snake_str[0].upper() + snake_str[1:] if len(snake_str) > 1 else snake_str.upper()
+
+        components = snake_str.split('_')
+        return ''.join(word.capitalize() for word in components if word)
+
+    def to_camel_case(self, snake_str: str) -> str:
+        """Convert snake_case to camelCase."""
+        components = snake_str.split('_')
+        return components[0] + ''.join(word.capitalize() for word in components[1:])
+
+    def get_required_imports(self, elements: list[Any], yaml_file: Path) -> List[str]:
+        """Generate the list of required imports based on elements used (list-based schema)."""
+        used_modules: set[str] = set()
+
+        if self.target_type == "groups":
+            used_modules.update(
+                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'StringUtil', 'Validator', 'wxTypes', 'wxUtil',
+                 'Page'])
+        elif self.target_type == "pages":
+            used_modules.update(
+                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes', 'wxUtil'])
+        elif self.target_type == "wizardpages":
+            used_modules.update(
+                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'WizardPage', 'StringUtil', 'wxTypes', 'wxUtil'])
+
+        if not isinstance(elements, list):
+            return sorted(used_modules)
+
+        allow = self._allowed_sets()
+
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get('items', [])
+            if not isinstance(items, list):
+                continue
+
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+
+                control_map_key = "widget" if self.target_type == "groups" else "widget"
+                if control_map_key in item and isinstance(item[control_map_key], dict):
+                    md = item[control_map_key]
+
+                    # modules
+                    module_prop = md.get('module')
+                    if isinstance(module_prop, str) and module_prop.strip():
+                        used_modules.add(module_prop.strip())
+                    elif isinstance(module_prop, list):
+                        for m in module_prop:
+                            if isinstance(m, str) and m.strip():
+                                used_modules.add(m.strip())
+
+                    # alt_data_source module (control-level DB source for loadFromDB())
+                    if control_map_key == "widget":
+                        alt_ds = self.extract_alt_data_source(md.get('variable', ''), md, yaml_file)
+                        if alt_ds is not None:
+                            used_modules.add(alt_ds['module'])
+
+                    # validator modules (controls only)
+                    if control_map_key == "widget":
+                        validator = md.get('validator', {})
+                        if isinstance(validator, dict):
+                            self._warn_unknown_keys(validator, allow["validator_def"],
+                                                    f"validator for control '{md.get('variable', '')}' {{validator_def}}",
+                                                    yaml_file)
+                            vclass = validator.get('class', '')
+                            if vclass in self.validator_to_module:
+                                used_modules.add(self.validator_to_module[vclass])
+
+        return sorted(used_modules)
+
+    def extract_control_class(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[str, str]:
+        """
+        Rewritten:
+        - base_class: required to select the correct base (Group, Page, WizardPage, etc.). Falls back to self.target_class if missing.
+        - class: concrete C++ class name to instantiate for child items; falls back to base_class if missing.
+        Returns (control_class, base_class).
+        """
+        base_class = elements.get('base_class') or self.target_class
+        if not isinstance(base_class, str) or not base_class.strip():
+            print(
+                f"Warning: '{element_name}': base_class missing/invalid; defaulting to {self.target_class} ({yaml_file})",
+                file=sys.stderr)
+            base_class = self.target_class
+        else:
+            base_class = base_class.strip()
+
+        control_class = elements.get('class') or base_class
+        if not isinstance(control_class, str) or not control_class.strip():
+            print(f"Warning: '{element_name}': class missing/invalid; defaulting to {base_class} ({yaml_file})",
+                  file=sys.stderr)
+            control_class = base_class
+        else:
+            control_class = control_class.strip()
+
+        return control_class, base_class
+
+    def extract_data_type(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
+        data_type = elements.get('contains', 'std::string')
+        if not isinstance(data_type, str) and data_type is not None:
+            print(f"Warning: 'data_type' for '{element_name}' must be a string; ({yaml_file})",
+                  file=sys.stderr)
+        else:
+            data_type = data_type.strip()
+
+        return data_type
+
+    def extract_db_info(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[str, str]:
+        table = ''
+        field = ''
+        tbl = elements.get('table')
+        fld = elements.get('field')
+        if (tbl is None) ^ (fld is None):
+            # exactly one present -> error
+            print(
+                f"Error: widget '{element_name}': both or neither 'table' and 'field' must be provided ({yaml_file})",
+                file=sys.stderr)
+        elif tbl is not None and fld is not None:
+            if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
+                table = f'db::TableName {{"{tbl.strip()}"}}'
+                field = f'db::FieldName {{"{fld.strip()}"}}'
+            else:
+                print(f"Error: widget '{element_name}': 'table' and 'field' must be non-empty strings ({yaml_file})",
+                      file=sys.stderr)
+
+        return table, field
+
+    def extract_recordset(self, element_name: str, class_def: Dict[str, Any],
+                          yaml_file: Path) -> Optional[Dict[str, str]]:
+        """Extract the 'recordset:' block: {module, class, record}. 'record' is derived
+        by convention (trailing 'RS' -> 'Record') when absent."""
+        rs = class_def.get('recordset')
+        if rs is None:
+            return None
+        if not isinstance(rs, dict):
+            print(f"Error: '{element_name}': 'recordset' must be a mapping ({yaml_file})", file=sys.stderr)
+            return None
+        self._warn_unknown_keys(rs, self._allowed_sets()["recordset_def"],
+                                f"recordset for '{element_name}' {{recordset_def}}", yaml_file)
+        module = rs.get('module')
+        rs_class = rs.get('class')
+        if not (isinstance(module, str) and module.strip() and isinstance(rs_class, str) and rs_class.strip()):
+            print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        module = module.strip()
+        rs_class = rs_class.strip()
+        record = rs.get('record')
+        if isinstance(record, str) and record.strip():
+            record = record.strip()
+        elif rs_class.endswith('RS'):
+            record = rs_class[:-2] + 'Record'
+        else:
+            print(f"Error: '{element_name}': recordset class '{rs_class}' doesn't end in 'RS'; "
+                  f"add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+            return None
+        return {'module': module, 'class': rs_class, 'record': record}
+
+    def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
+                                yaml_file: Path) -> Optional[Dict[str, Any]]:
+        """Extract a widget's 'alt_data_source:' block: the RecordSet-backed source for
+        a DB-populated Choice/Combo/ListBox's generic loadFromDB(). Returns None when absent."""
+        ads = member_def.get('alt_data_source')
+        if ads is None:
+            return None
+        if not isinstance(ads, dict):
+            print(f"Error: widget '{element_name}': 'alt_data_source' must be a mapping ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        self._warn_unknown_keys(ads, self._allowed_sets()["alt_data_source_def"],
+                                f"alt_data_source for widget '{element_name}' {{alt_data_source_def}}", yaml_file)
+        module = ads.get('module')
+        rs_class = ads.get('class')
+        table = ads.get('table')
+        display_field = ads.get('display_field')
+        value_field = ads.get('value_field')
+        if not (isinstance(module, str) and module.strip() and
+                isinstance(rs_class, str) and rs_class.strip() and
+                isinstance(table, str) and table.strip() and
+                isinstance(display_field, str) and display_field.strip() and
+                isinstance(value_field, str) and value_field.strip()):
+            print(f"Error: widget '{element_name}': 'alt_data_source' needs non-empty "
+                  f"'module', 'class', 'table', 'display_field', and 'value_field' ({yaml_file})",
+                  file=sys.stderr)
+            return None
+        module = module.strip()
+        rs_class = rs_class.strip()
+        table = table.strip()
+        display_field = display_field.strip()
+        value_field = value_field.strip()
+        record = ads.get('record')
+        if isinstance(record, str) and record.strip():
+            record = record.strip()
+        elif rs_class.endswith('RS'):
+            record = rs_class[:-2] + 'Record'
+        else:
+            print(f"Error: widget '{element_name}': alt_data_source class '{rs_class}' doesn't end "
+                  f"in 'RS'; add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+            return None
+        include_blank = ads.get('include_blank', True)
+        if not isinstance(include_blank, bool):
+            print(f"Warning: widget '{element_name}': 'include_blank' must be a bool; "
+                  f"defaulting to true ({yaml_file})", file=sys.stderr)
+            include_blank = True
+        blank_text = ads.get('blank_text', '')
+        if not isinstance(blank_text, str):
+            print(f"Warning: widget '{element_name}': 'blank_text' must be a string; "
+                  f"defaulting to '' ({yaml_file})", file=sys.stderr)
+            blank_text = ''
+        return {
+            'module': module, 'class': rs_class, 'record': record, 'table': table,
+            'display_field': display_field, 'value_field': value_field,
+            'include_blank': include_blank, 'blank_text': blank_text,
+        }
+
+    def resolve_member_cpp_type(self, default_name: str, member_def: Dict[str, Any], yaml_file: Path) -> str:
+        """Returns the C++ type used for a widget's member declaration and construction.
+        Identical to extract_control_class()'s control_class unless 'alt_data_source:' is
+        present, in which case it's synthesized as '{base_class}<{data_type}, {Tag}DBSource>'
+        -- any explicit 'class:' override is ignored (warned) since a generated DBSource
+        struct can only be attached to the template itself, not a hand-written subclass."""
+        control_class, base_class = self.extract_control_class(default_name, member_def, yaml_file)
+        alt_ds = self.extract_alt_data_source(default_name, member_def, yaml_file)
+        if alt_ds is None:
+            return control_class
+        if member_def.get('class'):
+            print(f"Warning: '{default_name}': 'class' override ignored because 'alt_data_source' "
+                  f"is set ({yaml_file})", file=sys.stderr)
+        data_type = self.extract_data_type(default_name, member_def, yaml_file)
+        tag = self.extract_member_tag(member_def, default_name, yaml_file)
+        return f"{base_class}<{data_type}, {tag}DBSource>"
+
+    def collect_alt_data_sources(self, elements: Any, yaml_file: Path) -> List[Tuple[str, str, Dict[str, Any], str]]:
+        """Walk elements (same shape as generate_control_declarations) and collect
+        (var, tag, alt_data_source, data_type) for every widget with an 'alt_data_source:'
+        block, so generate_module can emit the corresponding DBSource policy structs
+        before the class body."""
+        results: List[Tuple[str, str, Dict[str, Any], str]] = []
+        if not isinstance(elements, list):
+            return results
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                    continue
+                md = item["widget"]
+                var = self.extract_member_variable(md, "alt_data_source scan", yaml_file)
+                if not var:
+                    continue
+                alt_ds = self.extract_alt_data_source(var, md, yaml_file)
+                if alt_ds is None:
+                    continue
+                tag = self.extract_member_tag(md, var, yaml_file)
+                data_type = self.extract_data_type(var, md, yaml_file)
+                results.append((var, tag, alt_ds, data_type))
+        return results
+
+    def collect_refresh_targets(self, elements: Any, yaml_file: Path) -> Tuple[List[Tuple[str, str]], List[str]]:
+        """Walk elements (same shape as generate_control_declarations) and collect
+        (bound_controls [(member, field)], group_members [member]) for refreshFromCurrent()."""
+        bound_controls: List[Tuple[str, str]] = []
+        group_members: List[str] = []
+        if not isinstance(elements, list):
+            return bound_controls, group_members
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                    continue
+                md = item["widget"]
+                var = self.extract_member_variable(md, "refresh target", yaml_file)
+                if not var:
+                    continue
+                cflags_list, _, is_group = self.extract_uicreate_flags(var, md, yaml_file)
+                if is_group or "Group" in cflags_list or md.get('base_class') == 'Group':
+                    group_members.append(var)
+                    continue
+                tbl = md.get('table')
+                fld = md.get('field')
+                if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
+                    bound_controls.append((var, fld.strip()))
+        return bound_controls, group_members
+
+    def extract_export_module(self, element_name: str, elements: Dict[str, Any], control_name: str,
+                              yaml_file: Path) -> str:
+        export_module = elements.get('export_module', f'{element_name}.{self.target_class}')
+        if not isinstance(export_module, str):
+            print(f"Warning: 'export_module' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+        else:
+            export_module = export_module.strip()
+
+        return export_module
+
+    def extract_group_method_body(self, tag: str, element_name: str, elements: Dict[str, Any],
+                                  yaml_file: Path) -> Tuple[bool, Optional[str]]:
+        """Extracts a group-level method body (onSetActive/onKillActive).
+
+        Returns (declared, body). `declared` is True whenever the tag key
+        (e.g. 'on_set_active') is present in the YAML, regardless of whether it
+        carries a body. `body` is the literal block text when a 'body:' key was
+        supplied, or None when the method should instead be stubbed out in the
+        impl file (mirrors how 'functions:' entries without a 'body:' behave).
+        """
+
+        if tag not in elements:
+            return False, None
+
+        ablk = elements.get(tag)
+        if not isinstance(ablk, dict):
+            return True, None
+
+        body = ablk.get("body")
+        if isinstance(body, str):
+            # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
+            if tag == "on_set_active" and "Interface::onSetActive" not in body:
+                raise ValueError(
+                    f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
+            if tag == "on_kill_active" and "Interface::onKillActive" not in body:
+                raise ValueError(
+                    f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
+            return True, body.rstrip("\n")
+        if body is not None:
+            print(f"Warning: '{tag}.body' must be a string; ignoring ({yaml_file})", file=sys.stderr)
+
+        return True, None
+        #
+        # if isinstance(val, str) and val.strip():
+        #     # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
+        #     if tag == "on_set_active" and "Interface::onSetActive" not in val:
+        #         raise ValueError(f"Interface::onSetActive must be called in group '{element_name}' ({yaml_file})")
+        #     if tag == "on_kill_active" and "Interface::OnKillActive" not in val:
+        #         raise ValueError(f"Interface::onKillActive must be called in group '{element_name}' ({yaml_file})")
+        #
+        #     # Keep as-is; caller will indent/place appropriately
+        #     return val.rstrip("\n")
+        # if val is not None and not isinstance(val, str):
+        #     print(f"Warning: group-level '{tag}' must be a string block (|). Ignoring. ({yaml_file})", file=sys.stderr)
+        # return None
+
+    def extract_identity(self, element: Dict[str, Any]) -> str | None:
+        ident = element.get("identity", "")
+        if ident == '':
+            return None
+
+        return ident.strip()
+
+    def extract_member_tag(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str:
+        tag = member_def.get("tag")
+        if isinstance(tag, str) and tag.strip():
+            return tag.strip()
+        raise ValueError(f"Item '{ctx}' in file://{yaml_file} must have a tag")
+
+    def extract_member_variable(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str | None:
+        var = member_def.get("variable")
+        if not isinstance(var, str) or not var.strip():
+            print(f"Warning: {ctx} missing required 'variable' string ({yaml_file})", file=sys.stderr)
+            return None
+        return var.strip()
+
+    def extract_needed_modules(self, element_name: str, elements: Dict[str, Any], control_name: str,
+                               yaml_file: Path) -> List[str] | None:
+
+        modules: List[str] = [] or None
+        if 'modules' in elements:
+            if isinstance(elements['modules'], list):
+                modules = elements['modules']
+            elif isinstance(elements['modules'], str):
+                modules.append(elements.get('modules').strip())
+            else:
+                print(f"Warning: 'modules' for '{element_name}' must be a list or a string; ({yaml_file})",
+                      file=sys.stderr)
+        return modules
+
+    def extract_module(self, element_name: str, elements: Dict[str, Any], control_name: str, yaml_file: Path) -> str:
+        module_name = elements.get('module', f'{element_name}.{self.target_class}')
+        if not isinstance(module_name, str):
+            print(f"Warning: 'module_name' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+        else:
+            module_name = module_name.strip()
+
+        return module_name
+
+    def extract_name(self, element_name: str, elements: Dict[str, Any], control_name: str, yaml_file: Path) -> str:
+        name = elements.get('name', control_name)
+        if not isinstance(name, str):
+            print(f"Warning: 'name' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+        else:
+            name = name.strip()
+
+        return name
+
+    def extract_position(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
+        pos = 'wxDefaultPosition'
+        if 'pos' in elements:
+            if isinstance(elements['pos'], list):
+                pos_a = elements['pos']
+                x = pos_a[0] if len(pos_a) > 0 else -1
+                y = pos_a[1] if len(pos_a) > 1 else -1
+                pos = f"wxPoint{{{x}, {y if y != -1 else 'wxDefaultCoord'}}}"
+            elif isinstance(elements['pos'], str):
+                p = elements['pos'].strip()
+                pos = p  # f'{{p}}'
+            else:
+                print(f"Warning: 'pos' for '{element_name}' must be a string or List[str]; ({yaml_file})",
+                      file=sys.stderr)
+                pos = 'wxDefaultPosition'
+        else:
+            pos = elements.get('pos', pos)
+        return pos
+
+    def extract_size(self, element_name: str, elements: Dict[str, Any], control_class: str, yaml_file: Path) -> str:
+        size: str = 'wxDefaultSize'
+        if 'size' in elements and isinstance(elements['size'], list):
+            size_a = elements['size']
+            w = size_a[0] if len(size_a) > 0 else -1
+            h = size_a[1] if len(size_a) > 1 else -1
+            size = f"wxSize{{{w}, {h if h != -1 else 'wxDefaultCoord'}}}"
+        else:
+            size_token = elements.get('size', "")
+            if size_token != "":
+                default_key = size_token
+            else:
+                # Choose default size token based on widget class via size_mapping
+                if control_class in ('SpinCtrl', 'SpinCtrlDouble'):
+                    default_key = 'sizeCtrlSpin'
+                # elif control_class == 'CheckBox':
+                #     default_key = 'sizeCtrlCheckBox'
+                elif control_class in ('ComboBox', 'Choice'):
+                    default_key = 'sizeCtrlComboLike'
+                elif control_class in ('IntComboBox', 'IntChoice'):
+                    default_key = 'sizeCtrlIntComboLike'
+                elif control_class in ('Button', 'ToggleButton'):
+                    default_key = 'sizeCtrlButton'
+                elif self.target_class == 'Group':
+                    default_key = 'sizeGroup'
+                elif self.target_class == 'Page':
+                    default_key = 'sizePage'
+                elif self.target_class == 'WizardPage':
+                    default_key = 'sizeWizardPage'
+                else:
+                    default_key = 'sizeCtrl'
+
+            # Prefer mapped value, fall back to key token
+            size_token = self.size_mapping.get(default_key, default_key)
+            size = size_token
+
+        return size
+
+    def extract_sizer(self, elements: Dict[str, Any]) -> SizerProperties:
+
+        layout = self.SizerProperties(
+            kind=elements.get("kind", "flexgrid"),
+            position=tuple(elements["position"]) if "position" in elements else None,
+            span=tuple(elements["span"]) if "span" in elements else None,
+            rows=elements.get("rows", 1),
+            cols=elements.get("cols", 1),
+            proportion=elements.get("proportion", 1),
+            growable_rows=elements.get("growable_rows", []),
+            growable_cols=elements.get("growable_cols", []),
+            col_width=elements.get("col_width", 0),
+            row_height=elements.get("row_height", 0),
+            hgap=elements.get("hgap", 0),
+            vgap=elements.get("vgap", 0),
+            border=elements.get("border", 0),
+            min_size=tuple(elements["min_size"]) if "min_size" in elements else None,
+            size=tuple(elements["size"]) if "size" in elements else None)
+
+        return layout
+
+        # def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
+        #     style = ''
+        #     if 'style' in elements:
+        #         if isinstance(elements['style'], list):
+        #             style = '|'.join(elements['style'])
+        #         elif isinstance(elements['style'], int):
+        #             ss = elements['style']
+        #             style = f'{{ss}}'
+        #         elif isinstance(elements['style'], str):
+        #             style = elements['style']
+        #         else:
+        #             print(f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
+        #                   file=sys.stderr)
+        #     else:
+        #         style = '0'
+        #     return style
+
+    def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
+        style = ''
+        if 'style' in elements:
+            if isinstance(elements['style'], list):
+                style = '|'.join(elements['style'])
+            elif isinstance(elements['style'], int):
+                ss = elements['style']
+                style = f'{{ss}}'
+            elif isinstance(elements['style'], str):
+                style = elements['style']
+            else:
+                print(
+                    f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
+                    file=sys.stderr)
+        else:
+            # Default to wxTAB_TRAVERSAL for Groups and Pages to enable tab navigation
+            if self.target_type in ("groups", "pages", "wizardpages"):
+                style = 'wxTAB_TRAVERSAL'
+            else:
+                style = '0'
+        return style
+
+    def extract_uicreate_flags(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[
+        List[str], str, bool]:
+        uicf_node = elements.get('uicreateflags', None)
+        cflags_list: List[str] = []
+
+        if isinstance(uicf_node, str):
+            if uicf_node.strip():
+                single_flag = uicf_node.strip()
+                if single_flag.startswith('wx::UICreateFlags::'):
+                    single_flag = single_flag[slice(len('wx::UICreateFlags::'), len(single_flag))]
+                elif single_flag.startswith('UICreateFlags::'):
+                    single_flag = single_flag[slice(len('UICreateFlags::'), len(single_flag))]
+                cflags_list.append(single_flag)
+            else:
+                print(f"Warning: 'uicreateflags' for '{element_name}' must be non-empty; ({yaml_file})",
+                      file=sys.stderr)
+                # cflags_list = ["Null"]
+        elif isinstance(uicf_node, list):
+            for f in uicf_node:
+                if isinstance(f, str) and f.strip():
+                    single_flag = f.strip()
+                    if single_flag.startswith('wx::UICreateFlags::'):
+                        single_flag = single_flag[slice(len('wx::UICreateFlags::'), len(single_flag))]
+                    elif single_flag.startswith('UICreateFlags::'):
+                        single_flag = single_flag[slice(len('UICreateFlags::'), len(single_flag))]
+                    cflags_list.append(single_flag)
+                else:
+                    print(
+                        f"Warning: 'uicreateflags' list contains non-string/empty value for '{element_name}' ({yaml_file})",
+                        file=sys.stderr)
+
+        # Extract is_group: if true, ensure Group flag is included
+        is_group = elements.get('is_group', False)
+        if not isinstance(is_group, bool):
+            print(f"Warning: 'is_group' for '{element_name}' must be hs_bool ({yaml_file})",
+                  file=sys.stderr)
+            is_group = False
+
+        if is_group and "Group" not in cflags_list:
+            cflags_list.append("Group")
+
+        if cflags_list == []:
+            cflags_list.append("Null")
+
+        cflags = " | ".join([f"UICreateFlags::{f}" for f in cflags_list])
+
+        return cflags_list, cflags, is_group
+
+    def extract_value(self, element_name: str, elements: Dict[str, Any], control_class: str, base_class: str,
+                      yaml_file: Path) -> tuple[str, bool]:
+
+        value_is_literal: bool = False
+        value: str = ""
+        control_contains_value = self.control_contains_value_mapping.get(control_class,
+                                                                         self.control_contains_value_mapping.get(
+                                                                             base_class, False))
+        # tp = elements.get('contains') if self.target_class == 'Group' else 'std::string'
+        tp = self.extract_data_type(element_name, elements, yaml_file)
+        # Get the initialization value (string) for the widget, defaulting to '' if not present.
+        if not tp is None and 'value' in elements:
+            if isinstance(elements['value'], list):
+                # if presented as a list, it is taken to be a variable name
+                v = elements['value'][0].strip()
+                value = self._format_default_literal(tp, v)
+                # value = f'{v}'
+                value_is_literal = False
+            else:
+                v = elements.get('value')
+                value = self._format_default_literal(tp, v)
+                # value = f'"{v}"'
+                value_is_literal = True
+        else:
+            if tp is None:
+                value = f'{self.control_value_mapping.get(control_class, self.control_value_mapping.get(base_class, ""))} {{ {self.control_default_mapping.get(control_class, self.control_default_mapping.get(base_class, ""))} }}'
+            else:
+                value = f'{tp} {{ {self.control_default_mapping.get(control_class, self.control_default_mapping.get(base_class, ""))} }}'
+
+            value_is_literal = False
+
+        return value, value_is_literal
+
+    def _format_default_literal(self, tp: str, val: Any) -> str:
+        """Format a Python/YAML value as a valid C++ literal based on a declared type string.
+           Rules:
+             - If val is an explicit C++ expression (contains '{' or '::' or parentheses), emit as-is.
+             - For string types, always emit std::string{"..."} with quotes around the inner literal.
+             - For booleans, emit true/false.
+             - For integers/floats, emit numeric literal.
+             - Fallback: stringize.
+        """
+        t = (tp or "").strip().lower()
+
+        # Allow explicit C++ expressions verbatim (e.g., std::string{"General"})
+        if isinstance(val, str) and ("{" in val or "::" in val or "(" in val or ")" in val):
+            return val
+
+        if "string" in t:
+            s = "" if val is None else str(val)
+            # Ensure quoted inner string for std::string{"..."}
+            if s.startswith('"') and s.endswith('"'):
+                inner = s
+            else:
+                inner = f'"{s}"'
+            return f'std::string{{{inner}}}'
+
+        if t in ("bool", "hs_bool", "hs_bool"):
+            v = str(val).strip().lower()
+            return "true" if v in ("1", "true", "yes") else "false"
+
+        if t in ("int", "long", "long long", "unsigned", "unsigned int"):
+            try:
+                return str(int(val))
+            except Exception:
+                return "0"
+
+        if t in ("double", "float"):
+            try:
+                return str(float(val))
+            except Exception:
+                return "0.0"
+
+    def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any]) -> Tuple[List[str], str, List[
+        Tuple[str, str, Any]]] | None:
+        """
+        Prepare lines for a static inline anymap <arg_name> holding args_in triplets,
+        and return args_out triplets for later emission inside the constructor body.
+        """
+        args_cfg = (page_def.get("args") or {})
+        arg_name = args_cfg.get("arg_name") or f"{page_key}Args"
+        ins = args_cfg.get("args_in", [])
+        outs = args_cfg.get("args_out", [])
+
+        # Normalize args_in triplets
+        in_triplets: List[Tuple[str, str, Any]] = []
+        if ins and isinstance(ins[0], str):
+            for i in range(0, len(ins), 3):
+                in_triplets.append((ins[i], ins[i + 1], ins[i + 2]))
+        else:
+            for entry in ins or []:
+                if isinstance(entry, (list, tuple)) and len(entry) >= 3:
+                    in_triplets.append((entry[0], entry[1], entry[2]))
+
+        # Normalize args_out triplets
+        out_triplets: List[Tuple[str, str, Any]] = []
+        if outs and isinstance(outs[0], str):
+            for i in range(0, len(outs), 3):
+                out_triplets.append((outs[i], outs[i + 1], outs[i + 2]))
+        else:
+            for entry in outs or []:
+                if isinstance(entry, (list, tuple)) and len(entry) >= 3:
+                    out_triplets.append((entry[0], entry[1], entry[2]))
+
+        # Build static inline anymap lines
+        static_lines: List[str] = []
+
+        if len(in_triplets) == 0:
+            return None
+
+        for name_in, type_in, default_in in in_triplets:
+            lit = self._format_default_literal(type_in, default_in)
+            static_lines.append(f'            {{"{name_in}", {lit}}}')
+
+        return static_lines, arg_name, out_triplets
+
+    def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
+        """Parse the YAML file and return the group definitions."""
+        try:
+            with open(yaml_file, 'r', encoding='utf-8') as file:
+                return yaml.safe_load(file)
+        except yaml.YAMLError as e:
+            # Try to provide more helpful error information
+            if hasattr(e, 'problem_mark'):
+                mark = e.problem_mark
+                print(f"YAML parsing error in {yaml_file}:", file=sys.stderr)
+                print(f"  Line {mark.line + 1}, Column {mark.column + 1}: {e.problem}", file=sys.stderr)
+                if hasattr(e, 'context'):
+                    print(f"  Context: {e.context}", file=sys.stderr)
+            raise ValueError(f"Invalid YAML format in {yaml_file}: {e}")
+
+    def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
+        """Generate event handler code."""
+        event = handler.get('event', 'EVT_TEXT')
+        handler_code = handler.get('handler', 'event.Skip();')
+
+        # Normalize handler code - handle both \n escapes and actual newlines
+        if isinstance(handler_code, str):
+            handler_code = handler_code.replace('\\n', '\n')
+            lines = [line.strip() for line in handler_code.split('\n')]
+            handler_code = '\n         '.join(lines)
+
+        # Support a single event or a list of events
+        events = event if isinstance(event, (list, tuple)) else [event]
+        wx_events = [self._normalize_event_name(e) for e in events]
+
+        # Generate one hook per event; caller decides whether to prefix with '->' or '.'
+        hooks = [
+            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {handler_code}}})"
+            for wx_evt in wx_events
+        ]
+
+        # If multiple, chain them with leading '.' for subsequent hooks (the first will be prefixed by caller)
+        return ("\n         .").join(hooks)
+
+    def _emit_item_args(self, member_def: Dict[str, Any], parent_args_var: Optional[str], yaml_file: Path,
+                        ctx: str) -> tuple[list[str], Optional[str]]:
+        """If the item has an args: block, generate local anymap lines and return (lines, local_map_name)."""
+        lines: list[str] = []
+        local_name: Optional[str] = None
+        args_block = member_def.get("args")
+        if isinstance(args_block, dict):
+            # Parse both outs and ins (outs are NOT applied here; only ins belong before construction)
+            local_name, outs, ins = self._parse_args_block(args_block, ctx, yaml_file, require_out=False)
+            base = parent_args_var if parent_args_var else "args"
+            if local_name:
+                lines.append(f"      anymap {local_name} = {base} ;")
+                # Apply args_in before allocation using type-aware literals
+                for n, ty, v in ins:
+                    lit = self._format_default_literal(ty, v)
+                    lines.append(f"      {local_name}[\"{n}\"] = {lit};")
+        return lines, local_name
+
+    def _signature_with_args(self, signature: str, args_var: Optional[str]) -> str:
+        """Append ', {args_var}' to signature if args_var is provided and signature doesn't already end with it."""
+        if not args_var:
+            return signature + ', nullanymap'
+        if args_var in signature:
+            return signature
+        # If user provided a custom signature, we can't reliably infer commas; assume it's comma-separated
+        return signature + f", {args_var}"
+
+    def _generate_validator(self, validator: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
+        """Generate validator code."""
+        validator_class = validator.get('class', 'GenericValidator')
+        allow_empty = validator.get('allow_empty', True)
+
+        # Get the data type from the widget's 'contains' property
+        data_type = member_def.get('contains', 'std::string')
+
+        # Helper: map transfer_model yaml to C++ enum token
+        def transfer_enum(val: str) -> str:
+            v = (val or "").strip()
+
+            if not v:
+                return ""
+            up = v.lower()
+            if up == "byindex":
+                return "hs::TransferModel::ByIndex"
+            if up == "byclientdata":
+                return "hs::TransferModel::ByClientData"
+            if up == "bytext":
+                return "hs::TransferModel::ByText"
+            print(f"Warning: unknown transfer_model '{val}', ignoring", file=sys.stderr)
+            return ""
+
+        control_class = member_def.get('class', 'TextCtrl')
+        base_class = member_def.get('base_class', '')
+
+        if validator_class == 'CapsValidator':
+            return f"addValidator(new CapsValidator({str(allow_empty).lower()}, {member_name}->liveAddr(), [] {{ return settings()->useCaps(); }}))"
+        elif validator_class == 'GenericValidator':
+            return f"addValidator(new GenericValidator({str(allow_empty).lower()}, {member_name}->liveAddr()))"
+        else:
+            # Special handling for ComboLike validators' transfer_model + template control class
+            if validator_class in ('ComboLikeValidator', 'ComboLikeCapsValidator') and (
+                    control_class in ('Combo', 'Choice') or base_class in ('Combo', 'Choice')):
+                tm = validator.get('transfer_model', "")
+
+                if tm is None:
+                    raise ValueError(
+                        f"Warning: 'transfer_model' missing for {validator_class} on {control_class} '{member_name}'")
+
+                tm_enum = transfer_enum(validator.get('transfer_model'))
+                if tm_enum == "":
+                    raise ValueError(
+                        f"Warning: unknown transfer_model '{tm}' for {validator_class} on {control_class} '{member_name}'")
+
+                # Inject template argument with control class
+                return f"addValidator(new {validator_class}<{control_class}>({str(allow_empty).lower()}, {member_name}->liveAddr(), {tm_enum}))"
+
+            # All other types/controls: ignore transfer_model, keep original 2-arg form
+            return f"addValidator(new {validator_class}({str(allow_empty).lower()}, {member_name}->liveAddr()))"
+
+    def _generate_labels(self, control_identity_or_element: Any, all_elements: Any) -> List[str]:
+        """Generate label creation code for the new list-based schema.
+           Accepts either:
+             - control_identity_or_element: identity string, with all_elements as the full elements list, or
+             - control_identity_or_element: the single element dict for this control (recommended), all_elements unused.
+        """
+        code: List[str] = []
+
+        # Resolve element dict
+        element = None
+        if isinstance(control_identity_or_element, dict):
+            element = control_identity_or_element
+        elif isinstance(control_identity_or_element, str) and isinstance(all_elements, list):
+            ident = control_identity_or_element
+            for el in all_elements:
+                if isinstance(el, dict) and (el.get("identity") == ident or el.get("Identity") == ident):
+                    element = el
+                    break
+
+        if not isinstance(element, dict):
+            return code
+
+        items = element.get('items', [])
+        if not isinstance(items, list):
+            return code
+
+        for item in items:
+            if not isinstance(item, dict) or 'labels' not in item:
+                continue
+
+            labels_seq = item['labels']
+            if not isinstance(labels_seq, list):
+                continue
+
+            for entry in labels_seq:
+                if not isinstance(entry, dict):
+                    continue
+                label_key = entry.get('key')
+                if not isinstance(label_key, str) or not label_key:
+                    continue
+
+                label_tag = entry.get('tag')
+                if not isinstance(label_tag, str) or not label_tag:
+                    label_tag = label_key
+
+                label_value = entry.get('value', "")
+                flags = entry.get('style', [])
+                flags_str = ' | '.join(flags) if flags else 'wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL'
+
+                # NOTE: 'size' and 'style' on label entries are parsed above (size_str,
+                # flags_str) but are NOT valid for createLabel() and must not be emitted —
+                # see docs/yaml-ui-reference.md "Known limitations". Do not wire these back
+                # in without confirming why they were dropped.
+                # Size
+                if 'size' in entry and isinstance(entry['size'], list):
+                    size_a = entry['size']
+                    w = size_a[0] if len(size_a) > 0 else -1
+                    h = size_a[1] if len(size_a) > 1 else -1
+                    size_str = f"wxSize{{{w}, {h if h != -1 else 'wxDefaultCoord'}}}"
+                else:
+                    default_key = entry.get('size', '') or 'sizeLabel'
+                    size_token = self.size_mapping.get(default_key, default_key)
+                    size_str = size_token
+
+                    # f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", targetParent, nextID(), \"{label_value}\", {size_str}, {flags_str})")
+                code.append(
+                    f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", \"{label_value}\")")
+
+                if self.sizer_info:
+                    # Get sizer information
+                    sizer_def = entry.get('sizer')
+                    if sizer_def:
+                        sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                        code.append(
+                            f'         // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
+
+        return code
+
+    def _format_cpp_literal(self, val: Any, ty: Optional[str]) -> str:
+
+        """Format a YAML scalar as a C++ literal guided by optional type token.
+           Rules:
+             - If type is 'bool' (case-insensitive), emit true/false.
+             - If no type is provided and value is a string 'true'/'false' (any case), emit true/false.
+             - If type is a numeric, coerce accordingly with safe fallback.
+             - If type is 'string' or explicit string desired, quote.
+             - Fallback by Python type (bool -> true/false, int/float -> number, else -> quoted string).
+        """
+        t = (ty or "").strip().lower()
+
+        # Explicit hs_bool type
+        if t == "bool":
+            return "true" if bool(val) else "false"
+
+        if not t and isinstance(val, str):
+            s = val.strip().lower()
+            if s in ("true", "false"):
+                return s  # unquoted hs_bool literal
+
+        # Strings
+        if t in ("string", "std::string"):
+            s = "" if val is None else str(val)
+            return f'"{s}"'
+
+        # Floating point
+        if t in ("double", "float"):
+            try:
+                return str(float(val))
+            except Exception:
+                return "0.0"
+
+        # Integers
+        if t in ("int", "long", "long long", "unsigned", "unsigned int"):
+            try:
+                return str(int(val))
+            except Exception:
+                return "0"
+
+        # Fallbacks by Python runtime type
+        if isinstance(val, bool):
+            return "true" if val else "false"
+        if isinstance(val, int):
+            return str(val)
+        if isinstance(val, float):
+            return str(val)
+
+        # Default: quote as string
+        return f'"{"" if val is None else str(val)}"'
+
+    def _parse_args_block(self, node: Any, ctx: str, yaml_file: Path, require_out: bool = False) -> tuple[
+        Optional[str], list[tuple[str, str, Any]], list[tuple[str, str, Any]]]:
+        """Parse args: { arg_name: <str>, args_out: [name, type, value, ...], args_in: [name, type, default, ...] }
+           Validates keys, structure, duplicates, and type/name tokens.
+        """
+        if not isinstance(node, dict):
+            print(f"Warning: {ctx}.args must be a mapping ({yaml_file})", file=sys.stderr)
+            return None, [], []
+
+        allow = self._allowed_sets()
+        self._warn_unknown_keys(node, allow["args_def"], f"args_def args block of '{ctx}'", yaml_file)
+        #
+        #
+        # # Unknown key detection
+        # allowed_keys = {"arg_name", "args_out", "args_in"}
+        # unknown = [k for k in node.keys() if k not in allowed_keys]
+        # if unknown:
+        #     print(f"Warning: {ctx}.args has unknown keys {unknown} ({yaml_file})", file=sys.stderr)
+
+        # arg_name
+        arg_name = node.get("arg_name")
+        if not isinstance(arg_name, str) or not arg_name.strip():
+            print(f"Warning: {ctx}.args.arg_name must be a non-empty string ({yaml_file})", file=sys.stderr)
+            return None, [], []
+        arg_name = arg_name.strip()
+        if not self._is_identifier(arg_name):
+            print(
+                f"Warning: {ctx}.args.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* ({yaml_file})",
+                file=sys.stderr)
+
+        known_types = {
+            "bool", "hs_bool", "hs_bool",
+            "string", "std::string",
+            "int", "long", "long long", "unsigned", "unsigned int",
+            "double", "float",
+        }
+
+        def _triples(arr: Any, key_name: str) -> list[tuple[str, str, Any]]:
+            res: list[tuple[str, str, Any]] = []
+            if arr is None:
+                return res
+            if not isinstance(arr, list):
+                print(f"Warning: {ctx}.args.{key_name} must be a list ({yaml_file})", file=sys.stderr)
+                return res
+            if len(arr) % 3 != 0:
+                print(f"Warning: {ctx}.args.{key_name} length must be a multiple of 3 (name,type,value) ({yaml_file})",
+                      file=sys.stderr)
+            for i in range(0, len(arr) - (len(arr) % 3), 3):
+                n, ty, v = arr[i], arr[i + 1], arr[i + 2]
+                if not isinstance(n, str) or not n.strip():
+                    print(f"Warning: {ctx}.args.{key_name}[{i}] name must be a non-empty string ({yaml_file})",
+                          file=sys.stderr)
+                    continue
+                name_clean = n.strip()
+                if not self._is_identifier(name_clean):
+                    print(
+                        f"Warning: {ctx}.args.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* ({yaml_file})",
+                        file=sys.stderr)
+                if not isinstance(ty, str) or not ty.strip():
+                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] type must be a non-empty string ({yaml_file})",
+                          file=sys.stderr)
+                    continue
+                ty_clean = ty.strip()
+                if ty_clean.lower() not in known_types:
+                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] unknown type '{ty_clean}' ({yaml_file})",
+                          file=sys.stderr)
+                res.append((name_clean, ty_clean, v))
+            # duplicate detection within this list
+            seen = set()
+            dups = []
+            for n, _, _ in res:
+                if n in seen:
+                    dups.append(n)
+                else:
+                    seen.add(n)
+            if dups:
+                print(f"Warning: {ctx}.args.{key_name} has duplicate names {sorted(set(dups))} ({yaml_file})",
+                      file=sys.stderr)
+            return res
+
+        outs = _triples(node.get("args_out"), "args_out")
+        ins = _triples(node.get("args_in"), "args_in")
+
+        if require_out and not outs:
+            print(f"Warning: {ctx}.args is missing required 'args_out' entries for item-level args ({yaml_file})",
+                  file=sys.stderr)
+
+        # cross duplicates (same key in outs and ins)
+        out_names = {n for n, _, _ in outs}
+        in_names = {n for n, _, _ in ins}
+        cross = sorted(out_names & in_names)
+        if cross:
+            print(f"Warning: {ctx}.args has names present in both args_out and args_in {cross} ({yaml_file})",
+                  file=sys.stderr)
+
+        return arg_name, outs, ins
+
+    def _validate_functions(self, functions_def: Any) -> Dict[str, Dict[str, Any]]:
+        """Validate and normalize the functions section. Returns a dict of name -> def."""
+        if functions_def is None:
+            return {}
+
+        if not isinstance(functions_def, dict):
+            raise ValueError("'functions' must be a mapping of function_name -> function_def")
+
+        normalized: Dict[str, Dict[str, Any]] = {}
+        for fname, fdef in functions_def.items():
+            if not isinstance(fname, str) or not fname:
+                raise ValueError("Function names must be non-empty strings")
+            if not isinstance(fdef, dict):
+                raise ValueError(f"Function '{fname}' definition must be a mapping")
+
+            # Validate string fields
+            for key in ('args', 'return', 'body'):
+                if key in fdef and not isinstance(fdef[key], str):
+                    raise ValueError(f"functions.{fname}.{key} must be a string")
+
+            # Validate bool/string fields
+            if 'const' in fdef and not isinstance(fdef['const'], bool):
+                raise ValueError(f"functions.{fname}.const must be a hs_bool")
+
+            if 'static' in fdef and not isinstance(fdef['static'], bool):
+                raise ValueError(f"functions.{fname}.static must be a hs_bool")
+
+            if 'noexcept' in fdef and not (isinstance(fdef['noexcept'], (bool, str))):
+                raise ValueError(f"functions.{fname}.noexcept must be a hs_bool or string")
+
+            if 'override' in fdef and not (isinstance(fdef['override'], (bool, str))):
+                raise ValueError(f"functions.{fname}.override must be a hs_bool or string")
+
+            # Access
+            access = fdef.get('access', 'public')
+            if access not in ('public', 'protected', 'private'):
+                raise ValueError(f"functions.{fname}.access must be one of: public, protected, private")
+
+            # Defaults
+            fdef.setdefault('args', '')
+            fdef.setdefault('return', 'void')
+            fdef.setdefault('override', False)
+            if 'body' not in fdef:
+                fdef['body'] = None   # sentinel: declaration-only, stub needed
+            fdef.setdefault('const', False)
+            fdef.setdefault('static', False)
+            fdef['access'] = access
+
+            normalized[fname] = fdef
+
+        return normalized
+
+    def _render_impl_fn(self, class_name: str, fname: str, fdef: Dict[str, Any]) -> List[str]:
+        args            = fdef['args']
+        ret             = fdef['return']
+        const_suffix    = " const"    if fdef['const']    else ""
+        noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
+        # 'override' is a virt-specifier: valid on the in-class declaration, but a
+        # compile error on an out-of-line definition — never emit it here.
+        body_lines = fdef.get('stub_body') or ["    // TODO: implement"]
+        return [
+            f"auto {class_name}::{fname} ({args})"
+            f"{const_suffix}{noexcept_suffix} -> {ret} {{",
+            *body_lines,
+            "}",
+            "",
+        ]
+
+    def _write_impl_stub(self, impl_dir: Path, class_name: str, module_name: str,
+                         ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
+        """Write (or incrementally extend) a module implementation unit stub.
+
+        Hand-written function bodies are never touched: each function in stub_fns
+        is checked for an existing 'ClassName::fname (' definition anywhere in the
+        file, and only the functions not yet present get a new TODO stub appended —
+        this lets a new function be added to a YAML that already has a hand-edited
+        impl file without clobbering the existing implementations.
+        """
+        impl_dir.mkdir(parents=True, exist_ok=True)
+        stub_path = impl_dir / f"{class_name}_impl.cpp"
+
+        if not stub_path.exists():
+            lines = [
+                "module;",
+                "// Module implementation unit — add includes your implementation needs.",
+                '#include "Core/Core.h"',
+                '#include <wx/event.h>',
+                "",
+                f"module {module_name};",
+                "",
+                f"namespace {ns} {{",
+                "",
+            ]
+            for fname, fdef in stub_fns.items():
+                lines.extend(self._render_impl_fn(class_name, fname, fdef))
+            lines.append(f"}} // namespace {ns}")
+            lines.append("")
+
+            stub_path.write_text("\n".join(lines), encoding="utf-8")
+            print(f"{stub_path} : Created (stub)")
+            return
+
+        existing = stub_path.read_text(encoding="utf-8")
+        missing_fns = {
+            fname: fdef for fname, fdef in stub_fns.items()
+            if not re.search(rf"{re.escape(class_name)}\s*::\s*{re.escape(fname)}\s*\(", existing)
+        }
+        if not missing_fns:
+            return  # every declared function already has a definition in the file
+
+        new_lines: List[str] = []
+        for fname, fdef in missing_fns.items():
+            new_lines.extend(self._render_impl_fn(class_name, fname, fdef))
+
+        # Insert the new stubs INSIDE the namespace: find the trailing
+        # '} // namespace <ns>' line (tolerating whitespace/comment-spacing/CRLF
+        # variations) and splice just above it.
+        existing_lines = existing.splitlines()
+        insert_at = None
+        for i in range(len(existing_lines) - 1, -1, -1):
+            stripped = existing_lines[i].strip()
+            if not stripped:
+                continue
+            if stripped.startswith("}") and "namespace" in stripped:
+                insert_at = i
+            break  # only the last non-blank line is a candidate
+        if insert_at is not None:
+            updated_lines = existing_lines[:insert_at] + [""] + new_lines + existing_lines[insert_at:]
+            updated = "\n".join(updated_lines).rstrip("\n") + "\n"
+        else:
+            # No recognizable namespace close (heavily hand-edited) — reopen the
+            # namespace so the stubs still land inside it.
+            updated = (existing.rstrip("\n") + f"\n\nnamespace {ns} {{\n\n"
+                       + "\n".join(new_lines) + f"\n}} // namespace {ns}\n")
+
+        stub_path.write_text(updated, encoding="utf-8")
+        print(f"{stub_path} : Updated (added stub(s) for {', '.join(missing_fns.keys())})")
+
+    def _format_noexcept(self, spec: Any) -> str:
+        if spec is True:
+            return " noexcept"
+        if isinstance(spec, str) and spec.strip():
+            return f" noexcept({spec.strip()})"
+        return ""
+
+    def _do_generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path) -> str:
+
+        data = self.parse_yaml_file(yaml_file)
+
+        try:
+            targets = data[self.target_type]
+        except Exception as e:
+            if not self.quiet:
+                print(f"(No {self.target_type})")
+            return ""
+
+        if len(targets) == 0:
+            if not self.quiet:
+                print(f"(No {self.target_type})")
+            return ""
+
+        if not isinstance(targets, dict):
+            raise ValueError("{self.target_type} section must be a non-empty mapping of group_name -> class_def")
+
+        # Extract placement 1: top-level verbatim if present
+        top_verbatim = ""
+        if "verbatim" in targets:
+            top_verbatim = self._extract_verbatim_body(targets)
+            # unknown key check at root
+            self._warn_unknown_keys(targets, self._allowed_sets()["root"] | set(targets.keys()),
+                                    f"{self.target_type} root", yaml_file)
+
+        # Generate all modules
+        generated: List[Tuple[str, str]] = []  # (group_name, module_content)
+        for target_name, class_def in targets.items():
+            if target_name == "verbatim":
+                continue  # handled above/later
+
+            # Honor run_generator flag (default true)
+            run_gen = class_def.get('run_generator', True)
+            if not isinstance(run_gen, bool):
+                print(f"Warning: target '{target_name}': 'run_generator' must be hs_bool; defaulting to true",
+                      file=sys.stderr)
+                run_gen = True
+            if not run_gen:
+                # Skip generation for this widget
+                continue
+
+            if 'elements' not in class_def:
+                print(f"Warning: {self.target_class} '{target_name}' has no 'elements' section", file=sys.stderr)
+                continue
+
+            elements = class_def['elements']
+            if (not isinstance(elements, list) or len(elements) == 0):
+                elements = {}
+                if not self.quiet:
+                    print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section",
+                          file=sys.stderr)
+
+            module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim, output_file)
+
+            generated.append((target_name, module_content))
+
+        if not generated:
+            raise ValueError(f"No valid {self.target_type} found to generate")
+
+        # Handle output (unchanged)
+        if output_file:
+            dest_dir = output_file / rel_path
+            dest_dir.mkdir(parents=True, exist_ok=True)
+
+            for target_name, module_content in generated:
+                pascal = self.to_pascal_case(target_name)
+                out_path = dest_dir / f"{pascal}{self.target_class}.ixx"
+
+                # Only update the file if content actually changed to avoid unnecessary rebuilds
+                try:
+                    existing = out_path.read_text(encoding='utf-8') if out_path.exists() else None
+                except Exception:
+                    existing = None
+
+                if existing != module_content:
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(out_path, 'w', encoding='utf-8') as f:
+                        f.write(module_content)
+                        if existing == None:
+                            print(f"{out_path} : {self.target_class} OK (created)")
+                        else:
+                            print(f"{out_path} : {self.target_class} OK (updated)")
+                else:
+                    # Keep timestamp untouched when no changes
+                    print(f"{out_path} : {self.target_class} OK (unchanged)")
+
+            return generated[-1][1]
+
+        # No output file specified: return concatenated modules
+        return ("\n\n").join(module for _, module in generated)
+
+    def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
+        """Generate C++ group module from YAML file."""
+
+        thing: str = ''
+        for cat in ["Group", "Page", "WizardPage"]:
+            try:
+                self.target(cat)
+
+                s: str = self._do_generate_from_yaml(yaml_file, rel_path, output_file)
+                thing = s if thing.strip() == '' else thing + "\n" + s
+
+            except Exception as e:
+                print(f"Error reading {yaml_file}: {e}", file=sys.stderr)
+
+        return thing
+
+
+def scan_and_generate(uigenerator,
+                      rsgenerator,
+                      args: any,
+                      output_dir: Path | None) -> int:
+    # def scan_and_generate(uigenerator, rsgenerator, roots: List[Path], output_dir: Path | None) -> int:
+    """Scan for *.yaml files, generate corresponding Group.ixx files."""
+
+    # Collect YAML files from all root directories
+    yaml_files = []
+    roots = args.scan;
+
+    for root in roots:
+        if not root.exists():
+            print(f"Warning: Scan directory '{root}' does not exist, skipping", file=sys.stderr)
+            continue
+        yaml_files.extend(sorted(list(root.rglob("*.yaml"))))
+
+    if not yaml_files:
+        if not gen.quiet:
+            print("No YAML files found in any of the specified directories", file=sys.stderr)
+        return 0
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_yaml_files = []
+    for f in yaml_files:
+        if f not in seen:
+            seen.add(f)
+            unique_yaml_files.append(f)
+    yaml_files = unique_yaml_files
+
+    # Validate output_dir semantics (batch mode rules)
+    if output_dir is not None:
+        if output_dir.exists() and not output_dir.is_dir():
+            print(f"Error: --output must be a directory in batch mode (got file: '{output_dir}')", file=sys.stderr)
+            return 1
+        if not output_dir.exists() and output_dir.suffix:
+            print(f"Error: --output must be a directory in batch mode (looks like a file: '{output_dir}')",
+                  file=sys.stderr)
+            return 1
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    if len(roots) == 1:
+        print(f"Processing classes in {len(yaml_files)} YAML files from one directory...")
+    else:
+        print(f"Processing classes in {len(yaml_files)} YAML files from {len(roots)} directories...")
+
+    # First pass: register every table from every YAML file before resolving any
+    # relationships, so a file processed early can still reference a table defined
+    # in a file processed later in the (sorted) list.
+    rsgenerator.collect_all_tables(yaml_files)
+
+    for yf in yaml_files:
+
+        full = Path(yf)
+        [base] = args.scan
+        base = Path(base)
+
+        rel_path = full.relative_to(base)
+        rel_path = rel_path.parent
+
+        try:
+            rsgenerator.generate_from_yaml(yf, rel_path, output_dir / "record_sets")
+            uigenerator.generate_from_yaml(yf, rel_path, output_dir / "user_interface")
+        except Exception as e:
+            print(f"Error reading {yf}: {e}", file=sys.stderr)
+            return 1
+
+    return 0
+
+def main():
+    """Main entry point for the script."""
+    parser = argparse.ArgumentParser(
+        description='Generate C++ Group/Page/WizardPage modules from YAML form definitions')
+    parser.add_argument('--impl-dir', type=Path, help='Directory to write hand-editable _impl.cpp stubs to (default: alongside --output, or next to the source YAML)')
+    parser.add_argument('--scan', type=Path, action='append', help='Scan this directory recursively for *.yaml (can be used multiple times)')
+    parser.add_argument('-a', '--app-target', action='store', help='The CMake target name of the application')
+    parser.add_argument('-c', '--cmake', type=Path, help='Update CMakeLists.txt file with generated modules')
+    parser.add_argument('-d', '--depth', type=int, default=3, help='Maximum depth for nested joins (default: 3)')
+    parser.add_argument('-f', '--first-pagetype', action='store', help='First page type to generate')
+    parser.add_argument('-o', '--output', type=Path, help='Output directory or file path')
+    parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
+    parser.add_argument('-s', '--sizer-info', action='store_true', help='Show sizer info in the generated UI classes')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
+    parser.add_argument('-x', '--export-var', action='store', help='The name of the generated export variable like GFX_EXPORT')
+    parser.add_argument('input_yaml', type=Path, nargs='?', help='Single input YAML file')
+
+    args = parser.parse_args()
+    uigenerator = CppGroupGenerator()
+    uigenerator.be_quiet(args.quiet)
+    uigenerator.be_verbose(args.verbose)
+    uigenerator.show_sizer_info(args.sizer_info)
+    uigenerator.export_var = args.export_var
+
+    rsgenerator = CppModuleGenerator()
+    rsgenerator.set_max_join_depth(args.depth)
+    rsgenerator.be_quiet(args.quiet)
+
+    if args.impl_dir is not None:
+        uigenerator.impl_dir = args.impl_dir
+
+    if not args.first_pagetype is None:
+        uigenerator.next_PageType = args.first_pagetype
+
+    if not args.app_target is None:
+        uigenerator.app_target = args.app_target
+
+    # Scan mode (batch)
+    if args.scan:
+        output_dir = args.output if args.output is not None else None
+        sys.exit(scan_and_generate(uigenerator, rsgenerator, args, output_dir))
+
+    # Single-file mode
+    if not args.input_yaml:
+        print("Error: input_yaml is required unless --scan is provided", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.input_yaml.exists():
+        print(f"Error: Input file '{args.input_yaml}' does not exist", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        rsresult = rsgenerator.generate_from_yaml(args.input_yaml, args.output)
+        uiresult = uigenerator.generate_from_yaml(args.input_yaml, args.output)
+
+        if not args.output:
+            print(uiresult)
+            print(rsresult)
+
+        return 0
+
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
