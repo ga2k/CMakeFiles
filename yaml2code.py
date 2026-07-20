@@ -482,7 +482,7 @@ class CppModuleGenerator:
         module_content = f'''module;
 
 // Auto-generated from
-// file://{yaml_file} (mtime: {_mts})
+// {yaml_file} (mtime: {_mts})
 
 // Make any changes there. This file will be overwritten.
 
@@ -1415,7 +1415,7 @@ class CppGroupGenerator:
         except Exception:
             _mts = 'unknown'
         code.append(f'// Auto-generated from')
-        code.append(f'// file://{yaml_file} (mtime: {_mts})')
+        code.append(f'// {yaml_file} (mtime: {_mts})')
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
@@ -1469,7 +1469,7 @@ class CppGroupGenerator:
             if not module == export_module:
                 true_imports.append(module)
             else:
-                print(f'export_module {export_module} cannot be imported: {target_name} (file://{yaml_file})')
+                print(f'export_module {export_module} cannot be imported: {target_name} ({yaml_file})')
 
         imports_formatted = '\n'.join(f"import {module};" for module in true_imports)
         code.append(f'export module {export_module};')
@@ -1556,16 +1556,16 @@ class CppGroupGenerator:
             code.append("protected:")
             code.append("   // OnKillActive/SetActive/onEvent overrides")
             if kill_declared:
-                note = "" if on_kill_active is not None else f"  // Implemented in file://{stub_path}"
+                note = "" if on_kill_active is not None else f"  // Implemented in {stub_path}"
                 code.append(f"   auto onKillActive(bool autoDisable) -> void override;{note}")
             if set_declared:
-                note = "" if on_set_active is not None else f"  // Implemented in file://{stub_path}"
+                note = "" if on_set_active is not None else f"  // Implemented in {stub_path}"
                 code.append(f"   auto onSetActive(bool autoEnable) -> void override;{note}")
             if event_declared:
-                note = "" if on_event is not None else f"  // Implemented in file://{stub_path}"
+                note = "" if on_event is not None else f"  // Implemented in {stub_path}"
                 code.append(f"   auto onEvent(db::RecordSetEvent event) -> void override;{note}")
             if refresh_ex_declared:
-                code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in file://{stub_path}")
+                code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in {stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -1595,7 +1595,7 @@ class CppGroupGenerator:
                 fn_text = (
                     f"   {static_prefix}auto {fname} ({args})"
                     f"{const_suffix}{noexcept_suffix} -> {ret}{override_suffix};"
-                    f"  // Implemented in file://{stub_path}"
+                    f"  // Implemented in {stub_path}"
                 )
             else:
                 body = body.replace('\r\n', '\n').replace('\r', '\n')
@@ -1697,7 +1697,7 @@ class CppGroupGenerator:
         code.append(
             f'      layoutPath = Util::getInstance().resourceName(UIType::GeneratorSource, "{layout_class_name}", false, nullptr);')
         code.append(
-            '      ASSERT_MSG(!layoutPath.empty(), "Couldn\'t find layout resource file://" + layoutPath.string());')
+            f'      ASSERT_MSG(!layoutPath.empty(), "Couldn\'t find layout resource \'{layout_class_name}\'");')
         code.append(f'      layoutKey = "{layout_key}";')
         code.append("")
 
@@ -1765,7 +1765,7 @@ class CppGroupGenerator:
             code.append("")
 
         code.append(
-            '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource file://" + layoutPath.string());')
+            '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource " + layoutPath.string());')
 
         if self.target_type == 'wizardpages':
             code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW, borderWidth);")
@@ -2168,7 +2168,7 @@ class CppGroupGenerator:
         if isinstance(obj, dict):
             unknown = [k for k in obj.keys() if k not in allowed]
             if unknown:
-                print(f"Warning: unknown keys {unknown} in {context} file://{yamlfile}", file=sys.stderr)
+                print(f"Warning: unknown keys {unknown} in {context} {yamlfile}", file=sys.stderr)
 
     def _allowed_sets(self):
 
@@ -2745,7 +2745,7 @@ class CppGroupGenerator:
         tag = member_def.get("tag")
         if isinstance(tag, str) and tag.strip():
             return tag.strip()
-        raise ValueError(f"Item '{ctx}' in file://{yaml_file} must have a tag")
+        raise ValueError(f"Item '{ctx}' in {yaml_file} must have a tag")
 
     def extract_member_variable(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str | None:
         var = member_def.get("variable")
@@ -3085,6 +3085,7 @@ class CppGroupGenerator:
     def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
         """Generate event handler code."""
         event = handler.get('event', 'EVT_TEXT')
+        type = handler.get('type', 'wxEvent')
         handler_code = handler.get('handler', 'event.Skip();')
 
         # Normalize handler code - handle both \n escapes and actual newlines
@@ -3099,7 +3100,7 @@ class CppGroupGenerator:
 
         # Generate one hook per event; caller decides whether to prefix with '->' or '.'
         hooks = [
-            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {handler_code}}})"
+            f"hookAndHandle({wx_evt}, [this]({type} &event) {{\n            {handler_code}}})"
             for wx_evt in wx_events
         ]
 
