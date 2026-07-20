@@ -51,6 +51,13 @@ macro(project_setup _Folder)
         set(SHOW_SIZER_INFO_FLAG "")
     endif ()
 
+    # Propagate option-derived flags
+    if (APP_DEBUG AND ${APP_DEBUG} GREATER 1)
+        set(SHOW_QUIET_FLAG "")
+    else ()
+        set(SHOW_QUIET_FLAG "--quiet")
+    endif ()
+
     # Feature-scoped extras for this project
     if (GUI IN_LIST APP_FEATURES)
         set(extra_wxCompilerOptions)
