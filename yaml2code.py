@@ -30,12 +30,16 @@ def ensure_yaml():
 
 yaml = ensure_yaml()
 
-class CppModuleGenerator:
-    now: str = datetime.datetime.now().date().isoformat() + " " + datetime.datetime.now().time().strftime("%H:%M:%S")
+class CppGenerator:
+    """
+    Generates C++23 module (.ixx) files from YAML form definitions: RecordSet modules
+    for `tables:` sections, and wxWidgets Group/Page/WizardPage modules for
+    `groups:`/`pages:`/`wizardpages:` sections. See generate_from_yaml() for the
+    single-parse entry point that checks a YAML file for all four sections.
+    """
 
-    quiet = False
-
-    def __init__(self):
+    def _init_table_state(self):
+        """Table (RecordSet) generation state - split out of __init__ for readability."""
         self.type_mapping = {
             'integer': 'int',
             'string': 'std::string',
@@ -51,26 +55,6 @@ class CppModuleGenerator:
         self.table_files: Dict[str, Path] = {}  # table_name -> yaml_file_path
         self.max_join_depth = 3  # Default maximum depth for nested joins
         self._relationship_cache: Dict[str, List[Tuple[str, str, str]]] = {}  # Cache to prevent infinite recursion
-
-    def be_quiet(self, _quiet: bool) -> None:
-        self.quiet = bool(_quiet)
-
-    def to_pascal_case(self, snake_str: str) -> str:
-        """Convert snake_case to PascalCase, preserving existing capitalization when appropriate."""
-        if not snake_str:
-            return ""
-
-        # If the string doesn't contain underscores, check if it's already in a reasonable format
-        if '_' not in snake_str:
-            # If it's already capitalized (like XMLHttpRequest), return as-is
-            if snake_str[0].isupper():
-                return snake_str
-            # Otherwise, just capitalize the first letter
-            return snake_str[0].upper() + snake_str[1:] if len(snake_str) > 1 else snake_str.upper()
-
-        # Handle underscore-separated words
-        components = snake_str.split('_')
-        return ''.join(word.capitalize() for word in components if word)
 
     def set_max_join_depth(self, depth: int) -> None:
         """Set the maximum depth for nested joins (default is 3)."""
@@ -433,7 +417,7 @@ class CppModuleGenerator:
         content.append(self.generate_get_rowset_impl(table_name, fields, relationships))
         return "\n".join(content)
 
-    def generate_module(self, table_name: str, fields: Dict[str, Any], yaml_file: Path,
+    def generate_table_module(self, table_name: str, fields: Dict[str, Any], yaml_file: Path,
                         relationships: List[Dict[str, Any]] | None = None) -> str:
         """Generate the complete C++ module file with nested relationship support."""
 
@@ -596,68 +580,6 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             except Exception as e:
                 print(f"Error parsing {yaml_file}: {e}", file=sys.stderr)
 
-    def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
-        data = self.parse_yaml_file(yaml_file)
-
-        try:
-            tables = data['tables']
-        except Exception as e:
-            if not self.quiet:
-                print("(No tables)")
-            return ""
-
-        if len(tables) == 0:
-            if not self.quiet:
-                print("(No tables)")
-            return ""
-
-        if not isinstance(tables, dict):
-            raise ValueError("'tables' section must be a non-empty mapping of table_name -> table_def")
-
-        # Generate all modules
-        generated: list[tuple[str, str]] = []  # (table_name, module_content)
-        for table_name, table_def in tables.items():
-            if 'fields' not in table_def:
-                raise ValueError(f"Table '{table_name}' must have a 'fields' section")
-
-            fields = table_def['fields']
-            relationships = table_def.get('relationships', [])
-
-            module_content = self.generate_module(table_name, fields, yaml_file, relationships)
-            generated.append((table_name, module_content))
-
-        # Handle output
-        if output_file:
-            # If output_file is a directory, write there; else use its parent.
-            dest_dir = output_file
-            # try:
-            #     # Treat as directory if it exists and is directory
-            #     if not dest_dir.exists() or not dest_dir.is_dir():
-            #         dest_dir = output_file.parent
-            # except Exception:
-            #     dest_dir = Path(output_file).parent
-
-            dest_dir = dest_dir / rel_path
-
-            dest_dir.mkdir(parents=True, exist_ok=True)
-
-            for table_name, module_content in generated:
-                if table_name.endswith('_table'):
-                    table_name = table_name.replace('_table', '')
-
-                pascal = self.to_pascal_case(table_name)
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                out_path = dest_dir / f"{pascal}RS.ixx"
-                with open(out_path, 'w', encoding='utf-8') as f:
-                    f.write(module_content)
-                    print(f"{out_path} : RecordSet generated Ok")
-
-            # Return the last generated content to preserve return type
-            return generated[-1][1]
-
-        # No output file specified: return concatenated modules
-        return ("\n\n").join(module for _, module in generated)
-
     def format_default_value(self, field_def: Dict[str, Any], cpp_type: str) -> str:
         """Format the default value based on the field definition and C++ type."""
         if 'default' not in field_def:
@@ -667,7 +589,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # Format the default value based on the C++ type
         if cpp_type == 'std::string':
-            return f'"{default_val}"'
+            return self._format_cpp_literal(default_val, cpp_type, string_style="literal")
         elif cpp_type == 'hs_bool':
             return 'hs_bool(true)' if default_val else 'hs_bool(false)'
         elif cpp_type == 'hs_id':
@@ -685,16 +607,6 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def map_yaml_type_to_cpp(self, yaml_type: str) -> str:
         """Convert YAML type to C++ type."""
         return self.type_mapping.get(yaml_type.lower(), 'std::string')
-
-    def to_camel_case(self, snake_str: str) -> str:
-        """Convert snake_case to camelCase."""
-        components = snake_str.split('_')
-        return components[0] + ''.join(word.capitalize() for word in components[1:])
-
-    def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
-        """Parse the YAML file and return the table definitions."""
-        with open(yaml_file, 'r') as file:
-            return yaml.safe_load(file)
 
     def _generate_related_declarations_and_reads(self, relationships: List[Dict[str, Any]]) -> tuple[
         List[str], List[str]]:
@@ -1046,9 +958,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 """
 
 
-class CppGroupGenerator:
     quiet: bool = False
-    verbose: bool = False
     sizer_info = False
     target_type: str = "groups"
     target_class: str = "Group"
@@ -1078,6 +988,8 @@ class CppGroupGenerator:
         size: Optional[Tuple[int, int]] = None
 
     def __init__(self):
+        self._init_table_state()
+
         self.control_value_mapping = {
             'Activity': 'hs::NullValue',
             'BitmapToggleButton': 'bool',
@@ -1379,9 +1291,6 @@ class CppGroupGenerator:
     def be_quiet(self, _quiet: bool) -> None:
         self.quiet = bool(_quiet)
 
-    def be_verbose(self, _verbose: bool) -> None:
-        self.verbose = bool(_verbose)
-
     def show_sizer_info(self, _show: bool) -> None:
         self.sizer_info = bool(_show)
 
@@ -1399,7 +1308,7 @@ class CppGroupGenerator:
         else:
             raise ValueError(f"Unknown target '{_targets}'")
 
-    def generate_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
+    def generate_ui_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
                          output_dir: Optional[Path] = None) -> str:
         """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
         allow = self._allowed_sets()
@@ -1689,7 +1598,7 @@ class CppGroupGenerator:
         # if top_base_class == "Page" and page_args_out_triplets:
         if page_args_out_triplets:
             for name_out, type_out, default_out in page_args_out_triplets:
-                lit = self._format_default_literal(type_out, default_out)
+                lit = self._format_cpp_literal(default_out, type_out, string_style="construct")
                 code.append(f'      auto {name_out} = hs::param({parent_args_var_for_children}, "{name_out}", {lit});')
             # code.append("")
 
@@ -1707,7 +1616,7 @@ class CppGroupGenerator:
             # Get sizer information
             sizer_def = class_def.get('sizer')
             if sizer_def:
-                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
                 code.append(f'      /*')
                 code.append(f'       * Sizer information for {self.target_class}:')
                 code.append(f'       *')
@@ -1729,16 +1638,6 @@ class CppGroupGenerator:
                 code.append(f'       *          vgap : {sizer_properties.vgap}')
                 code.append(f'       */')
                 code.append(f'')
-
-        # sizer_def = class_def.get('sizer')
-        # if sizer_def:
-        #     sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
-        #     if sizer_properties.kind == 'gridbag' or sizer_properties.kind == 'flexgrid':
-        #         code.append(
-        #             f'      setSizerType("{sizer_properties.kind}", {sizer_properties.rows}, {sizer_properties.cols}, {sizer_properties.row_height}, {sizer_properties.col_width}, {sizer_properties.vgap}, {sizer_properties.hgap});')
-        #         code.append("")
-        # else:
-        #     raise RuntimeError(f"sizer properties missing")
 
         # Creation code for list-based elements
         creation_code, target_parent = self.generate_control_creation(target_name, elements, layout_class_name,
@@ -1979,7 +1878,7 @@ class CppGroupGenerator:
             # Get sizer information
             sizer_def = member_def.get('sizer')
             if sizer_def:
-                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
                 code.append(
                     f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
@@ -2101,7 +2000,7 @@ class CppGroupGenerator:
             # Get sizer information
             sizer_def = member_def.get('sizer')
             if sizer_def:
-                sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
                 code.append(
                     f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
@@ -2127,7 +2026,7 @@ class CppGroupGenerator:
 
             arg_var = local_args_var or parent_args_var or "args"
             for name_out, type_out, default_out in triplets:
-                default_literal = self._format_default_literal(type_out, default_out)
+                default_literal = self._format_cpp_literal(default_out, type_out, string_style="construct")
                 code.append(f'      auto {name_out} = hs::param({arg_var}, "{name_out}", {default_literal});')
 
         code.append("")
@@ -2720,19 +2619,6 @@ class CppGroupGenerator:
             print(f"Warning: '{tag}.body' must be a string; ignoring ({yaml_file})", file=sys.stderr)
 
         return True, None
-        #
-        # if isinstance(val, str) and val.strip():
-        #     # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
-        #     if tag == "on_set_active" and "Interface::onSetActive" not in val:
-        #         raise ValueError(f"Interface::onSetActive must be called in group '{element_name}' ({yaml_file})")
-        #     if tag == "on_kill_active" and "Interface::OnKillActive" not in val:
-        #         raise ValueError(f"Interface::onKillActive must be called in group '{element_name}' ({yaml_file})")
-        #
-        #     # Keep as-is; caller will indent/place appropriately
-        #     return val.rstrip("\n")
-        # if val is not None and not isinstance(val, str):
-        #     print(f"Warning: group-level '{tag}' must be a string block (|). Ignoring. ({yaml_file})", file=sys.stderr)
-        # return None
 
     def extract_identity(self, element: Dict[str, Any]) -> str | None:
         ident = element.get("identity", "")
@@ -2757,7 +2643,7 @@ class CppGroupGenerator:
     def extract_needed_modules(self, element_name: str, elements: Dict[str, Any], control_name: str,
                                yaml_file: Path) -> List[str] | None:
 
-        modules: List[str] = [] or None
+        modules: List[str] = None
         if 'modules' in elements:
             if isinstance(elements['modules'], list):
                 modules = elements['modules']
@@ -2820,8 +2706,6 @@ class CppGroupGenerator:
                 # Choose default size token based on widget class via size_mapping
                 if control_class in ('SpinCtrl', 'SpinCtrlDouble'):
                     default_key = 'sizeCtrlSpin'
-                # elif control_class == 'CheckBox':
-                #     default_key = 'sizeCtrlCheckBox'
                 elif control_class in ('ComboBox', 'Choice'):
                     default_key = 'sizeCtrlComboLike'
                 elif control_class in ('IntComboBox', 'IntChoice'):
@@ -2864,23 +2748,6 @@ class CppGroupGenerator:
 
         return layout
 
-        # def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
-        #     style = ''
-        #     if 'style' in elements:
-        #         if isinstance(elements['style'], list):
-        #             style = '|'.join(elements['style'])
-        #         elif isinstance(elements['style'], int):
-        #             ss = elements['style']
-        #             style = f'{{ss}}'
-        #         elif isinstance(elements['style'], str):
-        #             style = elements['style']
-        #         else:
-        #             print(f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
-        #                   file=sys.stderr)
-        #     else:
-        #         style = '0'
-        #     return style
-
     def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         style = ''
         if 'style' in elements:
@@ -2919,7 +2786,6 @@ class CppGroupGenerator:
             else:
                 print(f"Warning: 'uicreateflags' for '{element_name}' must be non-empty; ({yaml_file})",
                       file=sys.stderr)
-                # cflags_list = ["Null"]
         elif isinstance(uicf_node, list):
             for f in uicf_node:
                 if isinstance(f, str) and f.strip():
@@ -2966,13 +2832,11 @@ class CppGroupGenerator:
             if isinstance(elements['value'], list):
                 # if presented as a list, it is taken to be a variable name
                 v = elements['value'][0].strip()
-                value = self._format_default_literal(tp, v)
-                # value = f'{v}'
+                value = self._format_cpp_literal(v, tp, string_style="construct")
                 value_is_literal = False
             else:
                 v = elements.get('value')
-                value = self._format_default_literal(tp, v)
-                # value = f'"{v}"'
+                value = self._format_cpp_literal(v, tp, string_style="construct")
                 value_is_literal = True
         else:
             if tp is None:
@@ -2983,46 +2847,6 @@ class CppGroupGenerator:
             value_is_literal = False
 
         return value, value_is_literal
-
-    def _format_default_literal(self, tp: str, val: Any) -> str:
-        """Format a Python/YAML value as a valid C++ literal based on a declared type string.
-           Rules:
-             - If val is an explicit C++ expression (contains '{' or '::' or parentheses), emit as-is.
-             - For string types, always emit std::string{"..."} with quotes around the inner literal.
-             - For booleans, emit true/false.
-             - For integers/floats, emit numeric literal.
-             - Fallback: stringize.
-        """
-        t = (tp or "").strip().lower()
-
-        # Allow explicit C++ expressions verbatim (e.g., std::string{"General"})
-        if isinstance(val, str) and ("{" in val or "::" in val or "(" in val or ")" in val):
-            return val
-
-        if "string" in t:
-            s = "" if val is None else str(val)
-            # Ensure quoted inner string for std::string{"..."}
-            if s.startswith('"') and s.endswith('"'):
-                inner = s
-            else:
-                inner = f'"{s}"'
-            return f'std::string{{{inner}}}'
-
-        if t in ("bool", "hs_bool", "hs_bool"):
-            v = str(val).strip().lower()
-            return "true" if v in ("1", "true", "yes") else "false"
-
-        if t in ("int", "long", "long long", "unsigned", "unsigned int"):
-            try:
-                return str(int(val))
-            except Exception:
-                return "0"
-
-        if t in ("double", "float"):
-            try:
-                return str(float(val))
-            except Exception:
-                return "0.0"
 
     def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any]) -> Tuple[List[str], str, List[
         Tuple[str, str, Any]]] | None:
@@ -3062,7 +2886,7 @@ class CppGroupGenerator:
             return None
 
         for name_in, type_in, default_in in in_triplets:
-            lit = self._format_default_literal(type_in, default_in)
+            lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
             static_lines.append(f'            {{"{name_in}", {lit}}}')
 
         return static_lines, arg_name, out_triplets
@@ -3120,7 +2944,7 @@ class CppGroupGenerator:
                 lines.append(f"      anymap {local_name} = {base} ;")
                 # Apply args_in before allocation using type-aware literals
                 for n, ty, v in ins:
-                    lit = self._format_default_literal(ty, v)
+                    lit = self._format_cpp_literal(v, ty, string_style="construct")
                     lines.append(f"      {local_name}[\"{n}\"] = {lit};")
         return lines, local_name
 
@@ -3249,7 +3073,6 @@ class CppGroupGenerator:
                     size_token = self.size_mapping.get(default_key, default_key)
                     size_str = size_token
 
-                    # f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", targetParent, nextID(), \"{label_value}\", {size_str}, {flags_str})")
                 code.append(
                     f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", \"{label_value}\")")
 
@@ -3257,61 +3080,62 @@ class CppGroupGenerator:
                     # Get sizer information
                     sizer_def = entry.get('sizer')
                     if sizer_def:
-                        sizer_properties: CppGroupGenerator.SizerProperties = self.extract_sizer(sizer_def)
+                        sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
                         code.append(
                             f'         // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
         return code
 
-    def _format_cpp_literal(self, val: Any, ty: Optional[str]) -> str:
-
-        """Format a YAML scalar as a C++ literal guided by optional type token.
+    def _format_cpp_literal(self, val: Any, ty: Optional[str], *, string_style: str = "literal") -> str:
+        """Format a YAML/Python scalar as a C++ literal or expression, guided by an optional type token.
            Rules:
-             - If type is 'bool' (case-insensitive), emit true/false.
-             - If no type is provided and value is a string 'true'/'false' (any case), emit true/false.
-             - If type is a numeric, coerce accordingly with safe fallback.
-             - If type is 'string' or explicit string desired, quote.
-             - Fallback by Python type (bool -> true/false, int/float -> number, else -> quoted string).
+             - If val is an explicit C++ expression (contains '{'/'}'/'('/')'/'::'), emit as-is.
+             - For bool/hs_bool types, emit true/false (string- and Python-bool aware).
+             - If no type is given and val is the string 'true'/'false', emit unquoted.
+             - For string/std::string types, quote; string_style="construct" wraps as std::string{"..."}
+               instead of a bare literal (needed where an anymap/std::any must disambiguate the type).
+             - For numeric types, coerce with a safe fallback.
+             - Otherwise fall back on val's Python runtime type, defaulting to a quoted string.
         """
         t = (ty or "").strip().lower()
 
-        # Explicit hs_bool type
-        if t == "bool":
-            return "true" if bool(val) else "false"
+        # Allow explicit C++ expressions verbatim (e.g., std::string{"General"}, ID::Null)
+        if isinstance(val, str) and ("{" in val or "::" in val or "(" in val or ")" in val):
+            return val
 
-        if not t and isinstance(val, str):
-            s = val.strip().lower()
-            if s in ("true", "false"):
-                return s  # unquoted hs_bool literal
+        if t in ("bool", "hs_bool"):
+            if isinstance(val, str):
+                return "true" if val.strip().lower() in ("1", "true", "yes") else "false"
+            return "true" if val else "false"
 
-        # Strings
+        if not t and isinstance(val, str) and val.strip().lower() in ("true", "false"):
+            return val.strip().lower()
+
         if t in ("string", "std::string"):
             s = "" if val is None else str(val)
+            if string_style == "construct":
+                inner = s if (s.startswith('"') and s.endswith('"')) else f'"{s}"'
+                return f'std::string{{{inner}}}'
             return f'"{s}"'
 
-        # Floating point
         if t in ("double", "float"):
             try:
                 return str(float(val))
-            except Exception:
+            except (TypeError, ValueError):
                 return "0.0"
 
-        # Integers
         if t in ("int", "long", "long long", "unsigned", "unsigned int"):
             try:
                 return str(int(val))
-            except Exception:
+            except (TypeError, ValueError):
                 return "0"
 
-        # Fallbacks by Python runtime type
+        # Unrecognized/absent type token: infer from Python runtime type.
         if isinstance(val, bool):
             return "true" if val else "false"
-        if isinstance(val, int):
-            return str(val)
-        if isinstance(val, float):
+        if isinstance(val, (int, float)):
             return str(val)
 
-        # Default: quote as string
         return f'"{"" if val is None else str(val)}"'
 
     def _parse_args_block(self, node: Any, ctx: str, yaml_file: Path, require_out: bool = False) -> tuple[
@@ -3345,7 +3169,7 @@ class CppGroupGenerator:
                 file=sys.stderr)
 
         known_types = {
-            "bool", "hs_bool", "hs_bool",
+            "bool", "hs_bool",
             "string", "std::string",
             "int", "long", "long long", "unsigned", "unsigned int",
             "double", "float",
@@ -3556,122 +3380,142 @@ class CppGroupGenerator:
             return f" noexcept({spec.strip()})"
         return ""
 
-    def _do_generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path) -> str:
-
-        data = self.parse_yaml_file(yaml_file)
-
-        try:
-            targets = data[self.target_type]
-        except Exception as e:
-            if not self.quiet:
-                print(f"(No {self.target_type})")
-            return ""
-
-        if len(targets) == 0:
-            if not self.quiet:
-                print(f"(No {self.target_type})")
-            return ""
-
-        if not isinstance(targets, dict):
-            raise ValueError("{self.target_type} section must be a non-empty mapping of group_name -> class_def")
-
-        # Extract placement 1: top-level verbatim if present
-        top_verbatim = ""
-        if "verbatim" in targets:
-            top_verbatim = self._extract_verbatim_body(targets)
-            # unknown key check at root
-            self._warn_unknown_keys(targets, self._allowed_sets()["root"] | set(targets.keys()),
-                                    f"{self.target_type} root", yaml_file)
-
-        # Generate all modules
-        generated: List[Tuple[str, str]] = []  # (group_name, module_content)
-        for target_name, class_def in targets.items():
-            if target_name == "verbatim":
-                continue  # handled above/later
-
-            # Honor run_generator flag (default true)
-            run_gen = class_def.get('run_generator', True)
-            if not isinstance(run_gen, bool):
-                print(f"Warning: target '{target_name}': 'run_generator' must be hs_bool; defaulting to true",
-                      file=sys.stderr)
-                run_gen = True
-            if not run_gen:
-                # Skip generation for this widget
-                continue
-
-            if 'elements' not in class_def:
-                print(f"Warning: {self.target_class} '{target_name}' has no 'elements' section", file=sys.stderr)
-                continue
-
-            elements = class_def['elements']
-            if (not isinstance(elements, list) or len(elements) == 0):
-                elements = {}
-                if not self.quiet:
-                    print(f"Warning: {self.target_class} '{target_name}' has empty or invalid elements section",
-                          file=sys.stderr)
-
-            module_content = self.generate_module(target_name, class_def, yaml_file, top_verbatim, output_file)
-
-            generated.append((target_name, module_content))
-
-        if not generated:
-            raise ValueError(f"No valid {self.target_type} found to generate")
-
-        # Handle output (unchanged)
-        if output_file:
-            dest_dir = output_file / rel_path
-            dest_dir.mkdir(parents=True, exist_ok=True)
-
-            for target_name, module_content in generated:
-                pascal = self.to_pascal_case(target_name)
-                out_path = dest_dir / f"{pascal}{self.target_class}.ixx"
-
-                # Only update the file if content actually changed to avoid unnecessary rebuilds
-                try:
-                    existing = out_path.read_text(encoding='utf-8') if out_path.exists() else None
-                except Exception:
-                    existing = None
-
-                if existing != module_content:
-                    out_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(out_path, 'w', encoding='utf-8') as f:
-                        f.write(module_content)
-                        if existing == None:
-                            print(f"{out_path} : {self.target_class} OK (created)")
-                        else:
-                            print(f"{out_path} : {self.target_class} OK (updated)")
-                else:
-                    # Keep timestamp untouched when no changes
-                    print(f"{out_path} : {self.target_class} OK (unchanged)")
-
-            return generated[-1][1]
-
-        # No output file specified: return concatenated modules
-        return ("\n\n").join(module for _, module in generated)
-
     def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
-        """Generate C++ group module from YAML file."""
+        """
+        Single entry point: parses yaml_file exactly once and, in that one pass, checks it
+        for 'tables', 'groups', 'pages', and 'wizardpages' sections, generating whichever
+        are present. Table output goes under <output_file>/record_sets/, UI output under
+        <output_file>/user_interface/ (matching the layout generateClasses() expects).
+        """
+        data = self.parse_yaml_file(yaml_file)
+        category_targets = {"groups": "Group", "pages": "Page", "wizardpages": "WizardPage"}
+        results: List[str] = []
 
-        thing: str = ''
-        for cat in ["Group", "Page", "WizardPage"]:
+        for category in ("tables", "groups", "pages", "wizardpages"):
             try:
-                self.target(cat)
+                if category in category_targets:
+                    self.target(category_targets[category])
 
-                s: str = self._do_generate_from_yaml(yaml_file, rel_path, output_file)
-                thing = s if thing.strip() == '' else thing + "\n" + s
+                sub_output = None
+                if output_file:
+                    sub_output = output_file / ("record_sets" if category == "tables" else "user_interface")
 
+                content = self._process_category(category, data, yaml_file, rel_path, sub_output)
+                if content:
+                    results.append(content)
             except Exception as e:
                 print(f"Error reading {yaml_file}: {e}", file=sys.stderr)
 
-        return thing
+        return ("\n\n").join(results)
+
+    def _process_category(self, category: str, data: Dict[str, Any], yaml_file: Path, rel_path: Path,
+                          output_file: Optional[Path]) -> str:
+        """
+        Shared load/validate/iterate/write pipeline for one top-level YAML section
+        ('tables', 'groups', 'pages', or 'wizardpages'). Per-item validation and generation
+        (which differs per category) is delegated to _generate_category_item().
+        """
+        items = data.get(category) if isinstance(data, dict) else None
+        if not items:
+            if not self.quiet:
+                print(f"(No {category})")
+            return ""
+
+        if not isinstance(items, dict):
+            raise ValueError(f"'{category}' section must be a non-empty mapping of name -> def")
+
+        top_verbatim = ""
+        if category != "tables" and "verbatim" in items:
+            top_verbatim = self._extract_verbatim_body(items)
+            self._warn_unknown_keys(items, self._allowed_sets()["root"] | set(items.keys()),
+                                    f"{category} root", yaml_file)
+
+        generated: List[Tuple[str, str]] = []  # (name, module_content)
+        for name, item_def in items.items():
+            if name == "verbatim":
+                continue  # handled above
+
+            content = self._generate_category_item(category, name, item_def, yaml_file, top_verbatim, output_file)
+            if content is not None:
+                generated.append((name, content))
+
+        if category == "tables":
+            suffix = "RS"
+        else:
+            if not generated:
+                raise ValueError(f"No valid {category} found to generate")
+            suffix = self.target_class
+
+        return self._write_or_concat(generated, suffix, rel_path, output_file, category)
+
+    def _generate_category_item(self, category: str, name: str, item_def: Dict[str, Any], yaml_file: Path,
+                                top_verbatim: str, output_file: Optional[Path]) -> Optional[str]:
+        """Per-item validation + generation. Returns None to skip an item (UI categories only)."""
+        if category == "tables":
+            if 'fields' not in item_def:
+                raise ValueError(f"Table '{name}' must have a 'fields' section")
+            fields = item_def['fields']
+            relationships = item_def.get('relationships', [])
+            return self.generate_table_module(name, fields, yaml_file, relationships)
+
+        # groups / pages / wizardpages
+        run_gen = item_def.get('run_generator', True)
+        if not isinstance(run_gen, bool):
+            print(f"Warning: target '{name}': 'run_generator' must be hs_bool; defaulting to true", file=sys.stderr)
+            run_gen = True
+        if not run_gen:
+            return None
+
+        if 'elements' not in item_def:
+            print(f"Warning: {self.target_class} '{name}' has no 'elements' section", file=sys.stderr)
+            return None
+
+        elements = item_def['elements']
+        if not isinstance(elements, list) or len(elements) == 0:
+            if not self.quiet:
+                print(f"Warning: {self.target_class} '{name}' has empty or invalid elements section",
+                      file=sys.stderr)
+
+        return self.generate_ui_module(name, item_def, yaml_file, top_verbatim, output_file)
+
+    def _write_or_concat(self, generated: List[Tuple[str, str]], suffix: str, rel_path: Path,
+                         output_file: Optional[Path], category: str) -> str:
+        """Write (name, module_content) pairs to disk - only touching files whose content
+           actually changed, to avoid unnecessary rebuilds - or return them concatenated."""
+        if not output_file:
+            return ("\n\n").join(module for _, module in generated)
+
+        dest_dir = output_file / rel_path
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        label = "RecordSet" if category == "tables" else self.target_class
+
+        for name, module_content in generated:
+            base_name = name[:-6] if name.endswith('_table') else name
+            pascal = self.to_pascal_case(base_name)
+            out_path = dest_dir / f"{pascal}{suffix}.ixx"
+
+            try:
+                existing = out_path.read_text(encoding='utf-8') if out_path.exists() else None
+            except Exception:
+                existing = None
+
+            if existing != module_content:
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(out_path, 'w', encoding='utf-8') as f:
+                    f.write(module_content)
+                print(f"{out_path} : {label} OK ({'created' if existing is None else 'updated'})")
+            else:
+                # Keep timestamp untouched when no changes
+                print(f"{out_path} : {label} OK (unchanged)")
+
+        return generated[-1][1]
 
 
-def scan_and_generate(uigenerator,
-                      rsgenerator,
+def scan_and_generate(generator,
                       args: any,
                       output_dir: Path | None) -> int:
-    # def scan_and_generate(uigenerator, rsgenerator, roots: List[Path], output_dir: Path | None) -> int:
-    """Scan for *.yaml files, generate corresponding Group.ixx files."""
+    """Scan for *.yaml files, generate corresponding RS/Group/Page/WizardPage .ixx files."""
 
     # Collect YAML files from all root directories
     yaml_files = []
@@ -3684,7 +3528,7 @@ def scan_and_generate(uigenerator,
         yaml_files.extend(sorted(list(root.rglob("*.yaml"))))
 
     if not yaml_files:
-        if not gen.quiet:
+        if not generator.quiet:
             print("No YAML files found in any of the specified directories", file=sys.stderr)
         return 0
 
@@ -3716,7 +3560,7 @@ def scan_and_generate(uigenerator,
     # First pass: register every table from every YAML file before resolving any
     # relationships, so a file processed early can still reference a table defined
     # in a file processed later in the (sorted) list.
-    rsgenerator.collect_all_tables(yaml_files)
+    generator.collect_all_tables(yaml_files)
 
     for yf in yaml_files:
 
@@ -3728,8 +3572,7 @@ def scan_and_generate(uigenerator,
         rel_path = rel_path.parent
 
         try:
-            rsgenerator.generate_from_yaml(yf, rel_path, output_dir / "record_sets")
-            uigenerator.generate_from_yaml(yf, rel_path, output_dir / "user_interface")
+            generator.generate_from_yaml(yf, rel_path, output_dir)
         except Exception as e:
             print(f"Error reading {yf}: {e}", file=sys.stderr)
             return 1
@@ -3754,29 +3597,25 @@ def main():
     parser.add_argument('input_yaml', type=Path, nargs='?', help='Single input YAML file')
 
     args = parser.parse_args()
-    uigenerator = CppGroupGenerator()
-    uigenerator.be_quiet(args.quiet)
-    uigenerator.be_verbose(args.verbose)
-    uigenerator.show_sizer_info(args.sizer_info)
-    uigenerator.export_var = args.export_var
-
-    rsgenerator = CppModuleGenerator()
-    rsgenerator.set_max_join_depth(args.depth)
-    rsgenerator.be_quiet(args.quiet)
+    generator = CppGenerator()
+    generator.be_quiet(args.quiet)
+    generator.show_sizer_info(args.sizer_info)
+    generator.export_var = args.export_var
+    generator.set_max_join_depth(args.depth)
 
     if args.impl_dir is not None:
-        uigenerator.impl_dir = args.impl_dir
+        generator.impl_dir = args.impl_dir
 
     if not args.first_pagetype is None:
-        uigenerator.next_PageType = args.first_pagetype
+        generator.next_PageType = args.first_pagetype
 
     if not args.app_target is None:
-        uigenerator.app_target = args.app_target
+        generator.app_target = args.app_target
 
     # Scan mode (batch)
     if args.scan:
         output_dir = args.output if args.output is not None else None
-        sys.exit(scan_and_generate(uigenerator, rsgenerator, args, output_dir))
+        sys.exit(scan_and_generate(generator, args, output_dir))
 
     # Single-file mode
     if not args.input_yaml:
@@ -3788,12 +3627,10 @@ def main():
         sys.exit(1)
 
     try:
-        rsresult = rsgenerator.generate_from_yaml(args.input_yaml, args.output)
-        uiresult = uigenerator.generate_from_yaml(args.input_yaml, args.output)
+        result = generator.generate_from_yaml(args.input_yaml, Path("."), args.output)
 
         if not args.output:
-            print(uiresult)
-            print(rsresult)
+            print(result)
 
         return 0
 
