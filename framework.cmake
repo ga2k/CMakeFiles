@@ -64,13 +64,25 @@ set(extra_LibrariesList)
 set(extra_LibraryPaths)
 set(extra_LinkOptions)
 
-# Optional backtrace library for std::stacktrace
-find_library(BACKTRACE_LIB backtrace)
-find_library(STDCXX_BACKTRACE_LIB stdc++_libbacktrace)
-if (BACKTRACE_LIB)
-    list(APPEND extra_LibrariesList ${BACKTRACE_LIB})
-elseif (STDCXX_BACKTRACE_LIB)
-    list(APPEND extra_LibrariesList ${STDCXX_BACKTRACE_LIB})
+# std::stacktrace (C++23) needs a runtime backend, not just the header.
+# On Linux we build against libstdc++'s implementation (even under Clang), whose
+# symbols (std::__stacktrace_impl::...) live in libstdc++exp, a static archive
+# shipped next to libstdc++ itself and already on the compiler's library search
+# path -- it bundles its own copy of libbacktrace, so nothing else is needed.
+# HS_STACKTRACE_AVAILABLE gates the <stacktrace> usage in Core/include/Core/Core.h;
+# without it PRINT_STACKTRACE()/VERIFY_MSG()/ASSERT_MSG() fall back to a stub.
+if (LINUX)
+    execute_process(
+            COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++exp.a
+            OUTPUT_VARIABLE STDCXXEXP_LIB
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (EXISTS "${STDCXXEXP_LIB}")
+        list(APPEND extra_LibrariesList "${STDCXXEXP_LIB}")
+        list(APPEND extra_Definitions HS_STACKTRACE_AVAILABLE)
+    else ()
+        message(WARNING "libstdc++exp.a not found; std::stacktrace will be unavailable (PRINT_STACKTRACE will print a stub message)")
+    endif ()
 endif ()
 
 # Extra compile flags for clang module handling
