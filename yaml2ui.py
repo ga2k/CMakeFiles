@@ -162,6 +162,14 @@ class CppGroupGenerator:
             'ToggleButton': False,
             'TreeCtrl': False,
         }
+
+        # Controls that hold a set of rows rather than one scalar value. The table/field
+        # binding machinery (initFromField/where()/commit() on Ctrl) is built around a
+        # single-row scalar and doesn't apply to these - see collect_refresh_targets().
+        self.multi_row_control_classes = {
+            'ListCtrl',
+            'ELBox',
+        }
         # self.control_to_module = {
         #     'Activity': 'Activity',
         #     'Button': 'Button',
@@ -746,7 +754,8 @@ class CppGroupGenerator:
             code.append("")
             code.append("      m_moveHandle = db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
             code.append("                                                     db::RecordSetEvent::MoveFirst, db::RecordSetEvent::MovePrevious,")
-            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast);")
+            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast,")
+            code.append("                                                     db::RecordSetEvent::MoveAbsolute);")
             code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
             code.append("")
 
@@ -948,6 +957,10 @@ class CppGroupGenerator:
         #     parent = "pParent"
 
         table, field = self.extract_db_info(member_name, member_def, yaml_file)
+        is_multi_row_control = control_class.split('<', 1)[0].strip() in self.multi_row_control_classes
+        if is_multi_row_control and table and field:
+            print(f"Warning: '{member_name}' is a {control_class} (multi-row); ignoring 'table'/'field' - "
+                  f"they only apply to single-value controls ({yaml_file})", file=sys.stderr)
         # signature = member_def.get('signature', '{cflags}, "{name}", {parent}, nextID(), {value}, {size}, {style}')
         # signature = member_def.get('signature', '{cflags}, "{name}", targetParent, nextID(), {value}, {size}, {style}')
         signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
@@ -1004,7 +1017,7 @@ class CppGroupGenerator:
             code.append(f"         {member_accessor}setWindowStyleFlags({style})")
             member_accessor = '.'
 
-        if table and field and signature.find('table') == -1 and signature.find('field') == -1:
+        if table and field and not is_multi_row_control and signature.find('table') == -1 and signature.find('field') == -1:
             db_chain = f'dbInfo({table}, {field})'
             code.append(f"         {member_accessor}{db_chain}")
             member_accessor = '.'
@@ -1660,8 +1673,15 @@ class CppGroupGenerator:
                     continue
                 tbl = md.get('table')
                 fld = md.get('field')
-                if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
-                    bound_controls.append((var, fld.strip()))
+                if not (isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip()):
+                    continue
+                control_class, _ = self.extract_control_class(var, md, yaml_file)
+                if control_class.split('<', 1)[0].strip() in self.multi_row_control_classes:
+                    # A multi-row control's "value" (if any) is a selection, not a field
+                    # value, and it shows the whole table rather than one row. Skip
+                    # initFromField()/where() for it - see multi_row_control_classes.
+                    continue
+                bound_controls.append((var, fld.strip()))
         return bound_controls, group_members
 
     def extract_export_module(self, element_name: str, elements: Dict[str, Any], control_name: str,

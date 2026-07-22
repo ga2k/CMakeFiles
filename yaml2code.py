@@ -1094,6 +1094,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             'ToggleButton': False,
             'TreeCtrl': False,
         }
+
+        # Controls that hold a set of rows rather than one scalar value. The table/field
+        # binding machinery (initFromField/where()/commit() on Ctrl) is built around a
+        # single-row scalar and doesn't apply to these - see collect_refresh_targets().
+        self.multi_row_control_classes = {
+            'ListCtrl',
+            'ELBox',
+        }
         # self.control_to_module = {
         #     'Activity': 'Activity',
         #     'Button': 'Button',
@@ -1436,18 +1444,26 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # Page-level args map and outs at top of ctor
         # if top_base_class == "Page":
+        page_args_factory: Optional[str] = None
         packed_args_in = self._emit_page_scope_args(target_name, class_def)
         if packed_args_in is not None:
-            static_lines, page_args_var, page_args_out_triplets = packed_args_in
-            if static_lines is not None:
-                # Clang 21 crashes (infinite recursion in getTypeInfoImpl) on any
-                # static anymap variable initialized with std::any values inside a
-                # C++ module — class-level inline or function-local, doesn't matter.
-                # Workaround: emit no static at all.  The constructor default becomes
-                # nullanymap; hs::param() falls through to its literal default anyway,
-                # which is identical to what the map values were.
-                # hs::param calls in the body use 'args' (the ctor parameter) so that
-                # callers can still override via custom anymap arguments.
+            emplace_lines, page_args_var, page_args_out_triplets = packed_args_in
+            if emplace_lines:
+                # Clang 21 previously crashed (infinite recursion in getTypeInfoImpl) on
+                # a static anymap variable brace-aggregate-initialized with std::any
+                # values inside a C++ module — class-level inline or function-local,
+                # didn't matter, as long as the whole map came from one initializer_list
+                # expression. Building the map with sequential .emplace() calls instead
+                # (one std::any construction per statement, never inside a brace-init
+                # list) avoids that expression shape entirely.
+                page_args_factory = f"{page_args_var}Default"
+                code.append(f"   static auto {page_args_factory}() -> anymap {{")
+                code.append("      anymap m;")
+                code.extend(emplace_lines)
+                code.append("      return m;")
+                code.append("   }")
+                # param calls in the body use 'args' (the ctor parameter); the
+                # factory function above only supplies the ctor's default argument.
                 parent_args_var_for_children = "args"
 
         # Impl dir/stub path determined early: both the on_set_active/on_kill_active
@@ -1574,11 +1590,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append("")
 
         # Constructor signature and base ctor call.
-        # When parent_args_var_for_children is "args" it means we suppressed the
-        # static anymap (clang 21 crash workaround); use nullanymap as the default
-        # so the constructor signature doesn't read "= args" which is circular.
+        # When parent_args_var_for_children is "args", the ctor parameter itself is
+        # what param() reads from in the body (to stay non-circular); the default
+        # *value* for that parameter comes from the emplace-based factory function
+        # when args_in triplets were declared, else the empty nullanymap.
         if parent_args_var_for_children == "args":
-            default_args_expr = "nullanymap"
+            default_args_expr = f"{page_args_factory}()" if page_args_factory else "nullanymap"
         else:
             default_args_expr = (parent_args_var_for_children or "nullanymap")
         value_default = "PageType::Null" if top_base_class == "Page" else "std::string{}"
@@ -1605,7 +1622,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if page_args_out_triplets:
             for name_out, type_out, default_out in page_args_out_triplets:
                 lit = self._format_cpp_literal(default_out, type_out, string_style="construct")
-                code.append(f'      auto {name_out} = hs::param({parent_args_var_for_children}, "{name_out}", {lit});')
+                code.append(f'      auto {name_out} = param({parent_args_var_for_children}, "{name_out}", {lit});')
             # code.append("")
 
         # Layout boilerplate
@@ -1665,7 +1682,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append("")
             code.append("      m_moveHandle = db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
             code.append("                                                     db::RecordSetEvent::MoveFirst, db::RecordSetEvent::MovePrevious,")
-            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast);")
+            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast,")
+            code.append("                                                     db::RecordSetEvent::MoveAbsolute);")
             code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
             code.append("")
 
@@ -1867,6 +1885,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         #     parent = "pParent"
 
         table, field = self.extract_db_info(member_name, member_def, yaml_file)
+        is_multi_row_control = control_class.split('<', 1)[0].strip() in self.multi_row_control_classes
+        if is_multi_row_control and table and field:
+            print(f"Warning: '{member_name}' is a {control_class} (multi-row); ignoring 'table'/'field' - "
+                  f"they only apply to single-value controls ({yaml_file})", file=sys.stderr)
         # signature = member_def.get('signature', '{cflags}, "{name}", {parent}, nextID(), {value}, {size}, {style}')
         # signature = member_def.get('signature', '{cflags}, "{name}", targetParent, nextID(), {value}, {size}, {style}')
         signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
@@ -1923,7 +1945,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append(f"         {member_accessor}setWindowStyleFlags({style})")
             member_accessor = '.'
 
-        if table and field and signature.find('table') == -1 and signature.find('field') == -1:
+        if table and field and not is_multi_row_control and signature.find('table') == -1 and signature.find('field') == -1:
             db_chain = f'dbInfo({table}, {field})'
             code.append(f"         {member_accessor}{db_chain}")
             member_accessor = '.'
@@ -1963,7 +1985,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 arg_var = local_args_var or parent_args_var or "args"
                 for n, ty, v in outs:
                     lit = self._format_cpp_literal(v, ty)
-                    code.append(f'      auto {n} = hs::param({arg_var}, "{n}", {lit});')
+                    code.append(f'      auto {n} = param({arg_var}, "{n}", {lit});')
 
         code.append("")
 
@@ -2033,7 +2055,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             arg_var = local_args_var or parent_args_var or "args"
             for name_out, type_out, default_out in triplets:
                 default_literal = self._format_cpp_literal(default_out, type_out, string_style="construct")
-                code.append(f'      auto {name_out} = hs::param({arg_var}, "{name_out}", {default_literal});')
+                code.append(f'      auto {name_out} = param({arg_var}, "{name_out}", {default_literal});')
 
         code.append("")
         return code
@@ -2579,8 +2601,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     continue
                 tbl = md.get('table')
                 fld = md.get('field')
-                if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
-                    bound_controls.append((var, fld.strip()))
+                if not (isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip()):
+                    continue
+                control_class, _ = self.extract_control_class(var, md, yaml_file)
+                if control_class.split('<', 1)[0].strip() in self.multi_row_control_classes:
+                    # A multi-row control's "value" (if any) is a selection, not a field
+                    # value, and it shows the whole table rather than one row. Skip
+                    # initFromField()/where() for it - see multi_row_control_classes.
+                    continue
+                bound_controls.append((var, fld.strip()))
         return bound_controls, group_members
 
     def extract_export_module(self, element_name: str, elements: Dict[str, Any], control_name: str,
@@ -2846,6 +2875,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 v = elements.get('value')
                 value = self._format_cpp_literal(v, tp, string_style="construct")
                 value_is_literal = True
+        elif 'default' in elements:
+            # No explicit 'value': fall back to 'default', wrapped as <type> { <default> }
+            # instead of the class's generic default (e.g. contains: ID::Type, default: ID::Type::Null
+            # -> ID::Type { ID::Type::Null }).
+            wrap_type = tp if tp is not None else self.control_value_mapping.get(
+                control_class, self.control_value_mapping.get(base_class, ""))
+            default_lit = self._format_cpp_literal(elements.get('default'), tp, string_style="construct")
+            value = f'{wrap_type} {{ {default_lit} }}'
+            value_is_literal = False
         else:
             if tp is None:
                 value = f'{self.control_value_mapping.get(control_class, self.control_value_mapping.get(base_class, ""))} {{ {self.control_default_mapping.get(control_class, self.control_default_mapping.get(base_class, ""))} }}'
@@ -2859,8 +2897,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any]) -> Tuple[List[str], str, List[
         Tuple[str, str, Any]]] | None:
         """
-        Prepare lines for a static inline anymap <arg_name> holding args_in triplets,
-        and return args_out triplets for later emission inside the constructor body.
+        Prepare lines for a static factory function that builds the args_in default
+        anymap via sequential .emplace() calls (see note at call site on why this
+        avoids brace-aggregate-initializing an anymap), and return args_out triplets
+        for later emission inside the constructor body.
         """
         args_cfg = (page_def.get("args") or {})
         arg_name = args_cfg.get("arg_name") or f"{page_key}Args"
@@ -2887,17 +2927,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if isinstance(entry, (list, tuple)) and len(entry) >= 3:
                     out_triplets.append((entry[0], entry[1], entry[2]))
 
-        # Build static inline anymap lines
-        static_lines: List[str] = []
-
         if len(in_triplets) == 0:
             return None
 
+        # Build .emplace() statement lines (one std::any construction per statement,
+        # never inside a brace-init-list) for the factory function body.
+        emplace_lines: List[str] = []
         for name_in, type_in, default_in in in_triplets:
             lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
-            static_lines.append(f'            {{"{name_in}", {lit}}}')
+            emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
 
-        return static_lines, arg_name, out_triplets
+        return emplace_lines, arg_name, out_triplets
 
     def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
         """Parse the YAML file and return the group definitions."""
@@ -3405,14 +3445,34 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         category_targets = {"groups": "Group", "pages": "Page", "wizardpages": "WizardPage"}
         results: List[str] = []
 
+        # Preliminary scan - do we have rs AND ui in the one file?
+        have_tables = False
+        have_elements = False
+
+        if not data.get('tables', None) == None:
+            have_tables = True
+
+        for category in category_targets:
+            if not data.get(category, None) == None:
+                have_elements = True
+
+        sub_output = None
+        if output_file:
+            if have_tables and have_elements:
+                sub_output = output_file / 'combined'
+            elif have_tables:
+                sub_output = output_file / 'record_sets'
+            elif have_elements:
+                sub_output = output_file / 'user_interface'
+            else:
+                if not self.quiet:
+                    print(f"{yaml_file} has no useful content")
+                    return ""
+
         for category in ("tables", "groups", "pages", "wizardpages"):
             try:
                 if category in category_targets:
                     self.target(category_targets[category])
-
-                sub_output = None
-                if output_file:
-                    sub_output = output_file / ("record_sets" if category == "tables" else "user_interface")
 
                 content = self._process_category(category, data, yaml_file, rel_path, sub_output)
                 if content:
@@ -3564,7 +3624,14 @@ def scan_and_generate(generator,
             print(f"Error: --output must be a directory in batch mode (looks like a file: '{output_dir}')",
                   file=sys.stderr)
             return 1
-        output_dir.mkdir(parents=True, exist_ok=True)
+
+        rsdir = Path(output_dir / "record_sets")
+        uidir = Path(output_dir / "user_interface")
+        boths = Path(output_dir / "combined")
+
+        rsdir.mkdir(parents=True, exist_ok=True)
+        uidir.mkdir(parents=True, exist_ok=True)
+        boths.mkdir(parents=True, exist_ok=True)
 
     if len(roots) == 1:
         print(f"Processing classes in {len(yaml_files)} YAML files from one directory...")
