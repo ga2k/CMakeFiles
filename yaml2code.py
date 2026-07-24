@@ -30,6 +30,17 @@ def ensure_yaml():
 
 yaml = ensure_yaml()
 
+# A C++ numeric literal, optionally signed, optionally hex, optionally carrying an
+# integer/float suffix (-1L, 0x10u, 3.0f, 123ULL, .5, 5.). Recognized so it can be
+# emitted verbatim instead of being run through int()/float() (which chokes on the
+# suffix) or quoted as a string.
+_CPP_NUMERIC_LITERAL_RE = re.compile(r'^[+-]?(?:0[xX][0-9a-fA-F]+|\d+\.\d*|\.\d+|\d+)[uUlLfF]*$')
+
+# A bare C++ identifier (wxNOT_FOUND, nullptr, MY_CONSTANT) -- as opposed to a
+# quoted piece of text -- recognized so named constants can be emitted verbatim
+# instead of being quoted as a string literal.
+_CPP_IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
+
 class CppGenerator:
     """
     Generates C++23 module (.ixx) files from YAML form definitions: RecordSet modules
@@ -1328,6 +1339,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         allow = self._allowed_sets()
         self._warn_unknown_keys(class_def, allow["class_def"], f"widget class_def '{target_name}'", yaml_file)
 
+        variables_block = self.extract_variables_block(class_def, yaml_file)
+
         code: List[str] = []
         code.append('module;')
         code.append('//')
@@ -1357,6 +1370,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append(f'#include "{self.app_target}/Sizes.h"')
         code.append('')
         code.append('#include <unordered_set>')
+        for directive in self.collect_variable_includes(variables_block):
+            code.append(f'#include {directive}')
         code.append('')
 
         layout_key = target_name
@@ -1373,6 +1388,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # Required imports
         required_imports = self.get_required_imports(elements, yaml_file)
+        for mod in self.collect_variable_modules(variables_block):
+            if mod not in required_imports:
+                required_imports.append(mod)
 
         # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
         recordset = self.extract_recordset(target_name, class_def, yaml_file) \
@@ -1510,6 +1528,25 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append("protected:")
             code.append(f"   std::shared_ptr<{recordset['class']}> m_rs;")
             code.append("   size_t m_moveHandle{};")
+
+        # Custom member variables (variables: block) — grouped under explicit access
+        # specifiers so placement here is independent of whatever access level the
+        # preceding declarations left the class in.
+        variable_access_groups = {'public': [], 'protected': [], 'private': []}
+        for var_name, var_def in variables_block.items():
+            variable_access_groups[var_def['access']].append(self.format_variable_declaration(var_name, var_def))
+
+        def format_variable_access_block(access_name: str, decls: List[str]) -> str:
+            if not decls:
+                return ""
+            return f"\n{access_name}:\n" + '\n'.join(decls)
+
+        variables_public_block = format_variable_access_block('public', variable_access_groups['public'])
+        variables_protected_block = format_variable_access_block('protected', variable_access_groups['protected'])
+        variables_private_block = format_variable_access_block('private', variable_access_groups['private'])
+        if variables_public_block:     code.append(variables_public_block)
+        if variables_protected_block:  code.append(variables_protected_block)
+        if variables_private_block:    code.append(variables_private_block)
 
         # Functions (group/page level) inside class
         functions_all = self._validate_functions(class_def.get('functions'))
@@ -2125,6 +2162,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "style",
                 "title",
                 "value",
+                "variables",
                 "verbatim",
             },
             "sizer_def": {
@@ -2226,6 +2264,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "class",
                 "tool_tip",
                 "transfer_model",
+            },
+            "variable_def": {
+                "access",
+                "default",
+                "include",
+                "module",
+                "type",
             },
         }
 
@@ -2707,6 +2752,114 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         return name
 
+    def _extract_str_or_list(self, val: Any, ctx: str, yaml_file: Path) -> List[str]:
+        """Normalize a 'string, or list of strings' YAML value into a list of stripped strings."""
+        out: List[str] = []
+        if val is None:
+            return out
+        if isinstance(val, str):
+            if val.strip():
+                out.append(val.strip())
+        elif isinstance(val, list):
+            for v in val:
+                if isinstance(v, str) and v.strip():
+                    out.append(v.strip())
+                else:
+                    print(f"Warning: {ctx} list entries must be strings; ignoring {v!r} ({yaml_file})",
+                          file=sys.stderr)
+        else:
+            print(f"Warning: {ctx} must be a string or list of strings; ignoring ({yaml_file})", file=sys.stderr)
+        return out
+
+    def extract_variables_block(self, class_def: Dict[str, Any], yaml_file: Path) -> Dict[str, Dict[str, Any]]:
+        """Extract and normalize the class-level 'variables:' block:
+
+           variables:
+             <name>:
+               type: <cpp type>            # required
+               access: public|protected|private   # default: private
+               default: <value>            # optional; formatted per `type` via _format_cpp_literal
+               module: [ <modules> ]       # optional; string or list, added to the file's imports
+               include: [ <headers> ]      # optional; string or list, added to the global module fragment
+
+           Returns a dict keyed by variable name, in declaration order, mapping to
+           {type, access, has_default, default, modules, includes}.
+        """
+        raw = class_def.get('variables')
+        if raw is None:
+            return {}
+        if not isinstance(raw, dict):
+            print(f"Warning: 'variables' must be a mapping; ignoring ({yaml_file})", file=sys.stderr)
+            return {}
+
+        allow = self._allowed_sets()
+        result: Dict[str, Dict[str, Any]] = {}
+        for var_name, var_def in raw.items():
+            if not self._is_identifier(var_name):
+                print(f"Warning: variables key '{var_name}' is not a valid C++ identifier; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            if not isinstance(var_def, dict):
+                print(f"Warning: variables.'{var_name}' must be a mapping; skipping ({yaml_file})", file=sys.stderr)
+                continue
+            self._warn_unknown_keys(var_def, allow["variable_def"], f"variables.'{var_name}'", yaml_file)
+
+            cpp_type = var_def.get('type')
+            if not isinstance(cpp_type, str) or not cpp_type.strip():
+                print(f"Error: variables.'{var_name}' missing required 'type' string; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            cpp_type = cpp_type.strip()
+
+            access = var_def.get('access', 'private')
+            if not isinstance(access, str) or access.strip().lower() not in ('public', 'protected', 'private'):
+                print(f"Warning: variables.'{var_name}'.access must be one of public/protected/private; "
+                      f"defaulting to private ({yaml_file})", file=sys.stderr)
+                access = 'private'
+            else:
+                access = access.strip().lower()
+
+            result[var_name] = {
+                'type': cpp_type,
+                'access': access,
+                'has_default': 'default' in var_def,
+                'default': var_def.get('default'),
+                'modules': self._extract_str_or_list(var_def.get('module'), f"variables.'{var_name}'.module",
+                                                       yaml_file),
+                'includes': self._extract_str_or_list(var_def.get('include'), f"variables.'{var_name}'.include",
+                                                        yaml_file),
+            }
+        return result
+
+    def format_variable_declaration(self, var_name: str, var_def: Dict[str, Any]) -> str:
+        """Format one normalized 'variables:' entry as a class member declaration."""
+        cpp_type = var_def['type']
+        if var_def['has_default']:
+            lit = self._format_cpp_literal(var_def['default'], cpp_type, string_style="literal")
+            return f"   {cpp_type} {var_name} {{{lit}}};"
+        return f"   {cpp_type} {var_name} {{}};"
+
+    def collect_variable_modules(self, variables: Dict[str, Dict[str, Any]]) -> List[str]:
+        """Collect, in first-seen order, the deduplicated module imports requested across all variables."""
+        mods: List[str] = []
+        for var_def in variables.values():
+            for m in var_def.get('modules', []):
+                if m not in mods:
+                    mods.append(m)
+        return mods
+
+    def collect_variable_includes(self, variables: Dict[str, Dict[str, Any]]) -> List[str]:
+        """Collect, in first-seen order, the deduplicated #include directives requested across all variables.
+           Bare header paths are quoted; entries already wrapped in "..." or <...> are used as-is.
+        """
+        incs: List[str] = []
+        for var_def in variables.values():
+            for inc in var_def.get('includes', []):
+                directive = inc if (inc.startswith('"') or inc.startswith('<')) else f'"{inc}"'
+                if directive not in incs:
+                    incs.append(directive)
+        return incs
+
     def extract_position(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         pos = 'wxDefaultPosition'
         if 'pos' in elements:
@@ -3144,11 +3297,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """Format a YAML/Python scalar as a C++ literal or expression, guided by an optional type token.
            Rules:
              - If val is an explicit C++ expression (contains '{'/'}'/'('/')'/'::'), emit as-is.
+             - Unless the type is string/std::string: a bare numeric literal carrying a C++
+               suffix (-1L, 0x10u, 3.0f, 123ULL) or a bare identifier (wxNOT_FOUND, nullptr)
+               is also emitted as-is, rather than being quoted or run through int()/float()
+               (which would choke on the suffix / non-numeric text).
              - For bool/hs_bool types, emit true/false (string- and Python-bool aware).
              - If no type is given and val is the string 'true'/'false', emit unquoted.
              - For string/std::string types, quote; string_style="construct" wraps as std::string{"..."}
                instead of a bare literal (needed where an anymap/std::any must disambiguate the type).
-             - For numeric types, coerce with a safe fallback.
+             - For numeric types, coerce with a safe fallback; a value that fails to coerce
+               (and wasn't already caught by the literal/identifier check above -- e.g. a typo)
+               is emitted as-is with a warning rather than silently collapsing to 0/0.0.
              - Otherwise fall back on val's Python runtime type, defaulting to a quoted string.
         """
         t = (ty or "").strip().lower()
@@ -3156,6 +3315,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # Allow explicit C++ expressions verbatim (e.g., std::string{"General"}, ID::Null)
         if isinstance(val, str) and ("{" in val or "::" in val or "(" in val or ")" in val):
             return val
+
+        if isinstance(val, str) and t not in ("string", "std::string"):
+            s = val.strip()
+            if s.lower() not in ("true", "false") and (
+                    _CPP_NUMERIC_LITERAL_RE.match(s) or _CPP_IDENTIFIER_RE.match(s)):
+                return s
 
         if t in ("bool", "hs_bool"):
             if isinstance(val, str):
@@ -3176,13 +3341,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             try:
                 return str(float(val))
             except (TypeError, ValueError):
-                return "0.0"
+                print(f"Warning: default value {val!r} is not a valid {t} literal; emitting as-is "
+                      f"(this will likely fail to compile)", file=sys.stderr)
+                return str(val)
 
         if t in ("int", "long", "long long", "unsigned", "unsigned int"):
             try:
                 return str(int(val))
             except (TypeError, ValueError):
-                return "0"
+                print(f"Warning: default value {val!r} is not a valid {t} literal; emitting as-is "
+                      f"(this will likely fail to compile)", file=sys.stderr)
+                return str(val)
 
         # Unrecognized/absent type token: infer from Python runtime type.
         if isinstance(val, bool):
