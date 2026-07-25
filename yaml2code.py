@@ -1021,6 +1021,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             'GridCtrl': 'dunno',
             'Group': 'std::string',
             'InfoBar': 'hs::NullType',
+            'IntTextCtrl': 'int',
             'MarkupText': 'std::string',
             'MaskedEdit': 'std::string',
             'RadioBox': 'int',
@@ -1053,6 +1054,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             'GridCtrl': 'dunno',
             'Group': '""',
             'InfoBar': 'Null',
+            'IntTextCtrl': '0',
             'MarkupText': '""',
             'MaskedEdit': '""',
             'RadioBox': '0',
@@ -1073,6 +1075,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         self.control_contains_value_mapping = {
             'Activity': False,
+            'BitmapButton': False,
             'BitmapToggleButton': False,
             'Button': False,
             'CheckBox': True,
@@ -1086,6 +1089,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             'GridCtrl': True,
             'Group': False,
             'InfoBar': False,
+            'IntTextCtrl': True,
             'MarkupText': True,
             'MaskedEdit': True,
             'OutlineText': False,
@@ -1457,7 +1461,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append("   std::filesystem::path layoutPath;")
         code.append("   std::string layoutKey;")
 
-        parent_args_var_for_children: Optional[str] = None
+        # The generated ctor parameter is always named 'args' (see ctor signature
+        # emission below), regardless of whether this page/group declares its own
+        # args_in factory. Children that don't supply their own 'args:' block must
+        # receive that same parameter unaltered, not a hardcoded nullanymap — so
+        # this is set unconditionally rather than only when a factory is built.
+        parent_args_var_for_children: Optional[str] = "args"
         page_args_out_triplets: List[Tuple[str, str, Any]] = []
 
         # Page-level args map and outs at top of ctor
@@ -1482,7 +1491,6 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append("   }")
                 # param calls in the body use 'args' (the ctor parameter); the
                 # factory function above only supplies the ctor's default argument.
-                parent_args_var_for_children = "args"
 
         # Impl dir/stub path determined early: both the on_set_active/on_kill_active
         # overrides and 'functions:' entries may need to be stubbed out here.
@@ -1627,14 +1635,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append("")
 
         # Constructor signature and base ctor call.
-        # When parent_args_var_for_children is "args", the ctor parameter itself is
-        # what param() reads from in the body (to stay non-circular); the default
-        # *value* for that parameter comes from the emplace-based factory function
-        # when args_in triplets were declared, else the empty nullanymap.
-        if parent_args_var_for_children == "args":
-            default_args_expr = f"{page_args_factory}()" if page_args_factory else "nullanymap"
-        else:
-            default_args_expr = (parent_args_var_for_children or "nullanymap")
+        # The ctor parameter itself (named 'args') is what param() reads from in the
+        # body (to stay non-circular) and what gets forwarded unaltered to children;
+        # the default *value* for that parameter comes from the emplace-based factory
+        # function when args_in triplets were declared, else the empty nullanymap.
+        default_args_expr = f"{page_args_factory}()" if page_args_factory else "nullanymap"
         value_default = "PageType::Null" if top_base_class == "Page" else "std::string{}"
         pad1: str = " " * len(f"   explicit {cpp_class} ( ")
         if self.target_type == "pages":
@@ -1728,7 +1733,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource " + layoutPath.string());')
 
         if self.target_type == 'wizardpages':
-            code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW, borderWidth);")
+            code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW, border_width);")
             code.append('      SetSizerAndFit(&GetPageSizer(), true);')
         elif self.target_type == 'pages':
             code.append('      if (getForm())')
