@@ -1379,6 +1379,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append('')
 
         layout_key = target_name
+        #
+        # if ':' not in target_name:
+        #     layout_category = "GeneratorSource"
+        #     layout_key = target_name
+        # else:
+        #     layout_category, layout_key = target_name.split(':', 1)
+        #     target_name = layout_key
 
         pascal_name = self.to_pascal_case(target_name)
         class_name = f"{pascal_name}{self.target_class}"
@@ -1428,6 +1435,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         ns = class_def.get("namespace", "wx")
         layout_class_name = class_def.get("layout", self.to_pascal_case(target_name) + self.target_class)
+
+        if ':' not in layout_class_name:
+            layout_category = "GeneratorSource"
+        else:
+            layout_category, layout_class_name = layout_class_name.split(':', 1)
 
         # Determine base class (Page/Group/WizardPage)
         _, top_base_class = self.extract_control_class(target_name, class_def, yaml_file)
@@ -1669,7 +1681,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # Layout boilerplate
         code.append(
-            f'      layoutPath = Util::getInstance().resourceName(UIType::GeneratorSource, "{layout_class_name}", false, nullptr);')
+            f'      layoutPath = Util::getInstance().resourceName(UIType::{layout_category}, "{layout_class_name}", false, nullptr);')
         code.append(
             f'      ASSERT_MSG(!layoutPath.empty(), "Couldn\'t find layout resource \'{layout_class_name}\'");')
         code.append(f'      layoutKey = "{layout_key}";')
@@ -1677,32 +1689,32 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # # Page-level sizer properties. Needed before any placement calls.
 
-        if self.sizer_info:
-            # Get sizer information
-            sizer_def = class_def.get('sizer')
-            if sizer_def:
-                sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
-                code.append(f'      /*')
-                code.append(f'       * Sizer information for {self.target_class}:')
-                code.append(f'       *')
-                code.append(f'       *        border : {sizer_properties.border}')
-                code.append(f'       *     col_width : {sizer_properties.col_width}')
-                code.append(f'       *          cols : {sizer_properties.cols}')
-                code.append(f'       *          flag : {sizer_properties.flag}')
-                code.append(f'       * growable_cols : {sizer_properties.growable_cols}')
-                code.append(f'       * growable_rows : {sizer_properties.growable_rows}')
-                code.append(f'       *          hgap : {sizer_properties.hgap}')
-                code.append(f'       *          kind : {sizer_properties.kind}')
-                code.append(f'       *      min_size : {sizer_properties.min_size}')
-                code.append(f'       *      position : {sizer_properties.position}')
-                code.append(f'       *    proportion : {sizer_properties.proportion}')
-                code.append(f'       *    row_height : {sizer_properties.row_height}')
-                code.append(f'       *          rows : {sizer_properties.rows}')
-                code.append(f'       *          size : {sizer_properties.size}')
-                code.append(f'       *          span : {sizer_properties.span}')
-                code.append(f'       *          vgap : {sizer_properties.vgap}')
-                code.append(f'       */')
-                code.append(f'')
+        # if self.sizer_info:
+        #     # Get sizer information
+        #     sizer_def = class_def.get('sizer')
+        #     if sizer_def:
+        #         sizer_properties: CppGenerator.SizerProperties = self.extract_sizer(sizer_def)
+        #         code.append(f'      /*')
+        #         code.append(f'       * Sizer information for {self.target_class}:')
+        #         code.append(f'       *')
+        #         code.append(f'       *        border : {sizer_properties.border}')
+        #         code.append(f'       *     col_width : {sizer_properties.col_width}')
+        #         code.append(f'       *          cols : {sizer_properties.cols}')
+        #         code.append(f'       *          flag : {sizer_properties.flag}')
+        #         code.append(f'       * growable_cols : {sizer_properties.growable_cols}')
+        #         code.append(f'       * growable_rows : {sizer_properties.growable_rows}')
+        #         code.append(f'       *          hgap : {sizer_properties.hgap}')
+        #         code.append(f'       *          kind : {sizer_properties.kind}')
+        #         code.append(f'       *      min_size : {sizer_properties.min_size}')
+        #         code.append(f'       *      position : {sizer_properties.position}')
+        #         code.append(f'       *    proportion : {sizer_properties.proportion}')
+        #         code.append(f'       *    row_height : {sizer_properties.row_height}')
+        #         code.append(f'       *          rows : {sizer_properties.rows}')
+        #         code.append(f'       *          size : {sizer_properties.size}')
+        #         code.append(f'       *          span : {sizer_properties.span}')
+        #         code.append(f'       *          vgap : {sizer_properties.vgap}')
+        #         code.append(f'       */')
+        #         code.append(f'')
 
         # Creation code for list-based elements
         creation_code, target_parent = self.generate_control_creation(target_name, elements, layout_class_name,
@@ -1733,7 +1745,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource " + layoutPath.string());')
 
         if self.target_type == 'wizardpages':
-            code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW, border_width);")
+            code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW);")
             code.append('      SetSizerAndFit(&GetPageSizer(), true);')
         elif self.target_type == 'pages':
             code.append('      if (getForm())')
