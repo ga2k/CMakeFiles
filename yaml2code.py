@@ -1746,16 +1746,22 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         if self.target_type == 'wizardpages':
             code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW);")
-            code.append('      SetSizerAndFit(&GetPageSizer(), true);')
         elif self.target_type == 'pages':
-            code.append('      if (getForm())')
-            code.append('         getForm()->SetSizerAndFit(&grid(), true);')
+            pass
 
-        # Placement: finally (end of ctor)
+        # Placement: finally (end of ctor). Spliced in before the sizer is fit/frozen below,
+        # so any widgets a finally block adds to GetPageSizer()/grid() are still accounted
+        # for in the fit instead of being tacked onto an already-sized page.
         finally_block = self._extract_finally_begin(class_def)
         if isinstance(finally_block, str) and finally_block.strip():
             for line in finally_block.rstrip().splitlines():
                 code.append(f"      {line}")
+
+        if self.target_type == 'wizardpages':
+            code.append('      SetSizerAndFit(&GetPageSizer(), true);')
+        elif self.target_type == 'pages':
+            code.append('      if (getForm())')
+            code.append('         getForm()->SetSizerAndFit(&grid(), true);')
 
         code.append("   }")
         code.append("};")
