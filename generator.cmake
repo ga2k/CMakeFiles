@@ -71,6 +71,8 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
             "${OUT_DIR}/*Group.ixx"
             "${OUT_DIR}/*Page.ixx"
             "${OUT_DIR}/*RS.ixx"
+            "${OUT_DIR}/*Wizard.ixx"
+            "${OUT_DIR}/*Book.ixx"
     )
 
     add_custom_target(generate_classes ALL DEPENDS "${CLASSES_STAMP}")

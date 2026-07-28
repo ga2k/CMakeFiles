@@ -1334,6 +1334,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         elif t == "wizardpages" or t == "wizardpage":
             self.target_class = "WizardPage"
             self.target_type = "wizardpages"
+        elif t == "wizard":
+            self.target_class = "Wizard"
+            self.target_type = "wizard"
+        elif t == "book":
+            self.target_class = "Book"
+            self.target_type = "book"
         else:
             raise ValueError(f"Unknown target '{_targets}'")
 
@@ -1341,7 +1347,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                          output_dir: Optional[Path] = None) -> str:
         """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
         allow = self._allowed_sets()
-        self._warn_unknown_keys(class_def, allow["class_def"], f"widget class_def '{target_name}'", yaml_file)
+        self._warn_unknown_keys(class_def, allow["class_def"], f"control class_def '{target_name}'", yaml_file)
 
         variables_block = self.extract_variables_block(class_def, yaml_file)
 
@@ -1403,6 +1409,21 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if mod not in required_imports:
                 required_imports.append(mod)
 
+        # A book-container item (book: ... container: true) declares child pages to
+        # populate its nested Book with, via the same 'pages' key the book: category's
+        # container:false 'populate' flavour uses. Not a widget/element - just gather
+        # each child's module for import here; the actual new-Page-call lines are
+        # emitted further down, right after this class's own control-grid layout loads.
+        book_children = class_def.get('pages')
+        if isinstance(book_children, list):
+            for child in book_children:
+                if isinstance(child, dict):
+                    mod = child.get('module')
+                    if isinstance(mod, str) and mod.strip() and mod.strip() not in required_imports:
+                        required_imports.append(mod.strip())
+            if book_children and "Book" not in required_imports:
+                required_imports.append("Book")
+
         # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
         recordset = self.extract_recordset(target_name, class_def, yaml_file) \
             if self.target_type in ("pages", "groups") else None
@@ -1453,7 +1474,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             for line in top_verbatim.rstrip().splitlines():
                 code.append(f"{line}")
 
-        # alt_data_source: emit each widget's generated DBSource policy struct (namespace
+        # alt_data_source: emit each control's generated DBSource policy struct (namespace
         # scope, non-exported) before the class that names it as a template argument.
         for var, tag, alt_ds, data_type in self.collect_alt_data_sources(elements, yaml_file):
             struct_name = f"{tag}DBSource"
@@ -1747,10 +1768,16 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if self.target_type == 'wizardpages':
             code.append("      GetPageSizer().Add(&grid(), 1, wxALL | wxGROW);")
         elif self.target_type == 'pages':
-            pass
+            if isinstance(book_children, list) and book_children:
+                if not isinstance(top_base_class, str) or "PageContainer" not in top_base_class:
+                    print(f"Warning: '{target_name}' declares 'pages' (book children) but base_class "
+                          f"'{top_base_class}' does not derive from PageContainer; book() won't exist "
+                          f"({yaml_file})", file=sys.stderr)
+                code.append("      load();")
+                code.extend(self._generate_book_child_calls(target_name, book_children, "this->book()", yaml_file))
 
         # Placement: finally (end of ctor). Spliced in before the sizer is fit/frozen below,
-        # so any widgets a finally block adds to GetPageSizer()/grid() are still accounted
+        # so any controls a finally block adds to GetPageSizer()/grid() are still accounted
         # for in the fit instead of being tacked onto an already-sized page.
         finally_block = self._extract_finally_begin(class_def)
         if isinstance(finally_block, str) and finally_block.strip():
@@ -1820,6 +1847,392 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         return "\n".join(code)
 
+    # Default cancel-dialog text, mirrored from Wizard::cancelMessage()'s own default in
+    # Gfx (Libs/Gfx/src/interface/wizard/Wizard.cpp) so a partial 'cancel_message:'
+    # override (only sub_heading, or only body) can fall back to the same text.
+    _DEFAULT_CANCEL_SUB_HEADING = "Setup is incomplete"
+    _DEFAULT_CANCEL_BODY = "<p>The wizard was canceled.</p><p>Setup is incomplete; exiting.</p>"
+
+    def _cpp_string_literal(self, s: str) -> str:
+        """Escape a Python string for embedding as a C++ string literal body (no surrounding quotes)."""
+        return str(s).replace("\\", "\\\\").replace('"', '\\"')
+
+    def generate_wizard_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path,
+                               output_dir: Optional[Path] = None) -> str:
+        """Generate a Wizard-container module: a fixed-signature Wizard subclass (matching the
+           DBManager.cpp call-site contract: ctor(wxFrame*, std::string, const anymap&)) that
+           chains a declared sequence of already-generated WizardPage classes in order.
+
+           Unlike groups/pages/wizardpages, a wizard's 'pages:' list describes class
+           instantiations to chain together, not physical controls on a sizer grid, so this
+           does not reuse the elements/control schema or generate_ui_module."""
+        allow = self._allowed_sets()
+        self._warn_unknown_keys(class_def, allow["wizard_def"], f"wizard '{target_name}'", yaml_file)
+
+        pascal_name = self.to_pascal_case(target_name)
+        cpp_class = class_def.get("class") or f"{pascal_name}Wizard"
+        if not isinstance(cpp_class, str) or not cpp_class.strip():
+            print(f"Warning: wizard '{target_name}' 'class' must be a non-empty string; defaulting", file=sys.stderr)
+            cpp_class = f"{pascal_name}Wizard"
+        cpp_class = cpp_class.strip()
+
+        export_module = class_def.get("module") or f"{pascal_name}.Wizard"
+        if not isinstance(export_module, str) or not export_module.strip():
+            print(f"Warning: wizard '{target_name}' 'module' must be a non-empty string; defaulting", file=sys.stderr)
+            export_module = f"{pascal_name}.Wizard"
+        export_module = export_module.strip()
+
+        # args: only args_in is meaningful here — the ctor's own 'args' parameter IS the
+        # anymap (Wizard's ctor signature is fixed, unlike pages/groups there's no separate
+        # packed-defaults factory). Declared names are used only to validate 'if:'/header
+        # 'condition:' keys on page entries below.
+        declared_arg_names: set[str] = set()
+        args_node = class_def.get("args")
+        if args_node is not None:
+            _, _, ins = self._parse_args_block(args_node, f"wizard '{target_name}'", yaml_file)
+            declared_arg_names = {n for n, _, _ in ins}
+
+        cancel_message = class_def.get("cancel_message")
+        required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
+                                      "Util", "DDT", "Types"}
+        modules_extra = class_def.get("modules")
+        if isinstance(modules_extra, list):
+            required_imports.update(m.strip() for m in modules_extra if isinstance(m, str) and m.strip())
+        elif isinstance(modules_extra, str) and modules_extra.strip():
+            required_imports.add(modules_extra.strip())
+        if cancel_message is not None:
+            required_imports.add("HtmlDialog")
+
+        pages = class_def.get("pages", [])
+        page_call_lines: List[str] = []
+        for idx, page in enumerate(pages):
+            if not isinstance(page, dict):
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] must be a mapping; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            self._warn_unknown_keys(page, allow["wizard_page_entry"], f"wizard '{target_name}'.pages[{idx}]",
+                                    yaml_file)
+
+            page_class = page.get("class")
+            if not isinstance(page_class, str) or not page_class.strip():
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] missing required 'class'; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            page_class = page_class.strip()
+
+            page_module = page.get("module")
+            if not isinstance(page_module, str) or not page_module.strip():
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') missing required 'module'; "
+                      f"skipping ({yaml_file})", file=sys.stderr)
+                continue
+            required_imports.add(page_module.strip())
+
+            page_name = page.get("name")
+            if not isinstance(page_name, str) or not page_name.strip():
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') missing required 'name'; "
+                      f"skipping ({yaml_file})", file=sys.stderr)
+                continue
+            page_name = page_name.strip()
+
+            if "uicreateflags" in page:
+                _, cflags, _ = self.extract_uicreate_flags(f"{target_name}.pages[{idx}]", page, yaml_file)
+            else:
+                cflags = "UICreateFlags::ExcludeFromColour | UICreateFlags::NoValidation | UICreateFlags::NoDefaultBinds"
+
+            header = page.get("header", "")
+            if isinstance(header, dict):
+                condition = header.get("condition")
+                if_true = self._cpp_string_literal(str(header.get("if_true", "")))
+                if_false = self._cpp_string_literal(str(header.get("if_false", "")))
+                if not isinstance(condition, str) or not condition.strip():
+                    print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition must be a non-empty "
+                          f"string naming an args_in key ({yaml_file})", file=sys.stderr)
+                    header_expr = f'"{if_true}"s'
+                else:
+                    cond = condition.strip()
+                    if declared_arg_names and cond not in declared_arg_names:
+                        print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition '{cond}' is not "
+                              f"declared in this wizard's args_in ({yaml_file})", file=sys.stderr)
+                    header_expr = f'(param<bool>(args, "{cond}", false) ? "{if_true}"s : "{if_false}"s)'
+            elif isinstance(header, str):
+                header_expr = f'"{self._cpp_string_literal(header)}"s'
+            else:
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') 'header' must be a string "
+                      f"or {{condition, if_true, if_false}} mapping; defaulting to empty ({yaml_file})",
+                      file=sys.stderr)
+                header_expr = '""s'
+
+            args_expr = page.get("args", "args")
+            if not isinstance(args_expr, str) or not args_expr.strip():
+                args_expr = "args"
+
+            call_line = (f'addPage(new {page_class}({cflags}, "{page_name}", this, '
+                        f'{header_expr}, {args_expr}, 0L));')
+
+            if_key = page.get("if")
+            if isinstance(if_key, str) and if_key.strip():
+                raw = if_key.strip()
+                negate = raw.startswith("!")
+                key = raw[1:].strip() if negate else raw
+                if declared_arg_names and key not in declared_arg_names:
+                    print(f"Warning: wizard '{target_name}'.pages[{idx}] if: '{key}' is not declared in this "
+                          f"wizard's args_in ({yaml_file})", file=sys.stderr)
+                cond_expr = f'{"!" if negate else ""}param<bool>(args, "{key}", false)'
+                page_call_lines.append(f"      if ({cond_expr}) {{")
+                page_call_lines.append(f"         {call_line}")
+                page_call_lines.append("      }")
+            else:
+                page_call_lines.append(f"      {call_line}")
+
+        finally_body = self._extract_finally_begin(class_def)
+
+        code: List[str] = []
+        code.append('module;')
+        code.append('//')
+        try:
+            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
+            _mts = _mt.isoformat(sep=' ', timespec='seconds')
+        except Exception:
+            _mts = 'unknown'
+        code.append(f'// Auto-generated from')
+        code.append(f'// {yaml_file} (mtime: {_mts})')
+        code.append('')
+        code.append('// Make any changes there. This file will be overwritten.')
+        code.append('')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
+        code.append('#include "Gfx/gfx_export.h"')
+        code.append('#include "Gfx/WidgetsFwd.h"')
+        # nid:: notification IDs (used by a 'finally:' body, e.g. ctrlSignal().Notify(...))
+        # live in the app's own GlobalIDs.h, a plain header — not a module.
+        code.append(f'#include "{self.app_target}/GlobalIDs.h"')
+        code.append('#include <wx/wizard.h>')
+        code.append('#include <utility>')
+        code.append('')
+
+        true_imports = sorted(m for m in required_imports if m != export_module)
+        code.append(f'export module {export_module};')
+        code.append('')
+        code.extend(f"import {module};" for module in true_imports)
+        code.append('')
+        code.append('namespace wx {')
+        code.append(f'export class {self.export_var} {cpp_class} : public Wizard {{')
+
+        if cancel_message is not None:
+            if not isinstance(cancel_message, dict):
+                print(f"Warning: wizard '{target_name}' 'cancel_message' must be a mapping "
+                      f"{{sub_heading, body}} ({yaml_file})", file=sys.stderr)
+                cancel_message = {}
+            sub_heading = self._cpp_string_literal(str(cancel_message.get("sub_heading", self._DEFAULT_CANCEL_SUB_HEADING)))
+            body = self._cpp_string_literal(str(cancel_message.get("body", self._DEFAULT_CANCEL_BODY)))
+            code.append('protected:')
+            code.append('   [[nodiscard]] auto cancelMessage() const -> std::pair<std::string, std::string> override;')
+            code.append('')
+
+        code.append(' public:')
+        code.append(f'   explicit {cpp_class}(wxFrame *frame, std::string title, const anymap &args) '
+                    f': Wizard(frame, title, args) {{')
+        code.append('')
+        code.append('      TraceCall;')
+        code.append('')
+        code.extend(page_call_lines)
+        if finally_body.strip():
+            code.append('')
+            for line in finally_body.rstrip().splitlines():
+                code.append(f"      {line}" if line.strip() else "")
+        code.append('   }')
+        code.append('};')
+
+        if cancel_message is not None:
+            code.append('')
+            code.append(f'auto {cpp_class}::cancelMessage() const -> std::pair<std::string, std::string> {{')
+            code.append(f'   return {{"{sub_heading}", "{body}"}};')
+            code.append('}')
+
+        code.append('} // namespace wx')
+
+        return "\n".join(code)
+
+    def _book_child_arg_expr(self, val: Any, ctx: str, yaml_file: Path) -> str:
+        """A single value in a book page-entry's 'args' mapping: either a plain scalar
+           literal, or {icon: {type, file, must_exist}} -> a wx::getIcon(...) call."""
+        if isinstance(val, dict) and "icon" in val:
+            icon = val.get("icon") or {}
+            if not isinstance(icon, dict):
+                print(f"Warning: {ctx} 'icon' must be a mapping ({yaml_file})", file=sys.stderr)
+                icon = {}
+            itype = icon.get("type", "Button")
+            if not isinstance(itype, str) or not itype.strip():
+                print(f"Warning: {ctx} icon.type must be a non-empty string; defaulting to 'Button' ({yaml_file})",
+                      file=sys.stderr)
+                itype = "Button"
+            file = icon.get("file", "")
+            if not isinstance(file, str) or not file.strip():
+                print(f"Warning: {ctx} icon.file must be a non-empty string ({yaml_file})", file=sys.stderr)
+                file = ""
+            must_exist = icon.get("must_exist", True)
+            if not isinstance(must_exist, bool):
+                print(f"Warning: {ctx} icon.must_exist must be hs_bool; defaulting to true ({yaml_file})",
+                      file=sys.stderr)
+                must_exist = True
+            return f'wx::getIcon(UIType::{itype.strip()}, "{self._cpp_string_literal(file.strip())}", ' \
+                   f'{"true" if must_exist else "false"})'
+        if isinstance(val, bool):
+            return "true" if val else "false"
+        if isinstance(val, (int, float)):
+            return str(val)
+        return f'"{self._cpp_string_literal(str(val))}"'
+
+    def _generate_book_child_calls(self, ctx_name: str, children: List[Any], parent_expr: str,
+                                   yaml_file: Path) -> List[str]:
+        """Shared by both book: flavours (container:true's own constructor, and
+           container:false's free populate() function): emit, in declared order, an
+           optional local anymap arg variable plus a '(void) new <class>(<parent_expr>,
+           wx::nextID(), "<name>", PageType::<type>, -1[, <argsVar>]);' line per child
+           page. imageIndex is always -1 here - Book::loadLayout() assigns real image
+           indexes at runtime from the paired form-layout file, not at construction."""
+        allow = self._allowed_sets()
+        lines: List[str] = []
+        for idx, child in enumerate(children):
+            if not isinstance(child, dict):
+                print(f"Warning: '{ctx_name}'.pages[{idx}] must be a mapping; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            ctx = f"'{ctx_name}'.pages[{idx}]"
+            self._warn_unknown_keys(child, allow["book_page_entry"], ctx, yaml_file)
+
+            child_class = child.get("class")
+            if not isinstance(child_class, str) or not child_class.strip():
+                print(f"Warning: {ctx} missing required 'class'; skipping ({yaml_file})", file=sys.stderr)
+                continue
+            child_class = child_class.strip()
+
+            child_module = child.get("module")
+            if not isinstance(child_module, str) or not child_module.strip():
+                print(f"Warning: {ctx} ('{child_class}') missing required 'module'; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+
+            child_name = child.get("name")
+            if not isinstance(child_name, str) or not child_name.strip():
+                print(f"Warning: {ctx} ('{child_class}') missing required 'name'; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            child_name = child_name.strip()
+
+            child_type = child.get("type")
+            if not isinstance(child_type, str) or not child_type.strip():
+                print(f"Warning: {ctx} ('{child_class}') missing required 'type'; skipping ({yaml_file})",
+                      file=sys.stderr)
+                continue
+            child_type = child_type.strip()
+
+            args_expr = None
+            args_map = child.get("args")
+            if isinstance(args_map, dict) and args_map:
+                var_name = f"{self.to_camel_case(child_name)}Args"
+                lines.append(f'      anymap {var_name};')
+                for key, val in args_map.items():
+                    expr = self._book_child_arg_expr(val, f"{ctx} args.{key}", yaml_file)
+                    lines.append(f'      {var_name}.emplace("{key}", {expr});')
+                args_expr = var_name
+            elif args_map is not None:
+                print(f"Warning: {ctx} 'args' must be a mapping; ignoring ({yaml_file})", file=sys.stderr)
+
+            ctor_args = f'{parent_expr}, wx::nextID(), "{child_name}", PageType::{child_type}, -1'
+            if args_expr:
+                ctor_args += f', {args_expr}'
+            lines.append(f'      (void) new {child_class}({ctor_args});')
+        return lines
+
+    def generate_book_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path,
+                             top_verbatim: str, output_dir: Optional[Path] = None) -> str:
+        """Generate a 'book:' item. Two flavours, chosen by 'container':
+             - container: true  -> a PageContainer-derived class (same shape 'pages:'
+               already produces for a base_class: PageContainer item), with its
+               declared 'pages' children instantiated into its own nested book().
+               Implemented by reusing generate_ui_module() itself (temporarily, since
+               that function already has all the Page ctor/layoutPath/args_out
+               scaffolding this needs) rather than duplicating that machinery here.
+             - container: false (default) -> a free 'populate(Book *book)' function
+               that instantiates the declared 'pages' children directly into a
+               caller-supplied Book* (the top-level book, which the app - not the
+               generator - already owns via CView::initBook()).
+        """
+        container = class_def.get('container', False)
+        if not isinstance(container, bool):
+            print(f"Warning: book '{target_name}' 'container' must be hs_bool; defaulting to false ({yaml_file})",
+                  file=sys.stderr)
+            container = False
+
+        if container:
+            saved_type, saved_class = self.target_type, self.target_class
+            self.target("pages")
+            try:
+                content = self.generate_ui_module(target_name, class_def, yaml_file, top_verbatim, output_dir)
+            finally:
+                self.target_type, self.target_class = saved_type, saved_class
+            return content
+
+        return self._generate_book_populate_module(target_name, class_def, yaml_file)
+
+    def _generate_book_populate_module(self, target_name: str, class_def: Dict[str, Any],
+                                       yaml_file: Path) -> str:
+        allow = self._allowed_sets()
+        self._warn_unknown_keys(class_def, allow["class_def"], f"book '{target_name}'", yaml_file)
+
+        pascal_name = self.to_pascal_case(target_name)
+        export_module = class_def.get("module") or f"{pascal_name}.Book"
+        if not isinstance(export_module, str) or not export_module.strip():
+            print(f"Warning: book '{target_name}' 'module' must be a non-empty string; defaulting", file=sys.stderr)
+            export_module = f"{pascal_name}.Book"
+        export_module = export_module.strip()
+
+        children = class_def.get("pages", [])
+        required_imports: set[str] = {"Book", "wxTypes", "Util", "DDT", "Types"}
+        for child in children:
+            if isinstance(child, dict):
+                mod = child.get("module")
+                if isinstance(mod, str) and mod.strip():
+                    required_imports.add(mod.strip())
+
+        call_lines = self._generate_book_child_calls(target_name, children, "book", yaml_file)
+
+        code: List[str] = []
+        code.append('module;')
+        code.append('//')
+        try:
+            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
+            _mts = _mt.isoformat(sep=' ', timespec='seconds')
+        except Exception:
+            _mts = 'unknown'
+        code.append(f'// Auto-generated from')
+        code.append(f'// {yaml_file} (mtime: {_mts})')
+        code.append('')
+        code.append('// Make any changes there. This file will be overwritten.')
+        code.append('')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
+        code.append('#include "Gfx/gfx_export.h"')
+        code.append('#include "Gfx/WidgetsFwd.h"')
+        code.append('')
+
+        true_imports = sorted(m for m in required_imports if m != export_module)
+        code.append(f'export module {export_module};')
+        code.append('')
+        code.extend(f"import {module};" for module in true_imports)
+        code.append('')
+        code.append('namespace wx {')
+        code.append('export auto populate(Book *book) -> void {')
+        code.append('')
+        code.extend(call_lines)
+        code.append('}')
+        code.append('} // namespace wx')
+
+        return "\n".join(code)
+
     def generate_control_creation(self, group_name: str, elements: Any, layout_path: str, yaml_file: Path,
                                   parent_args_var: Optional[str]) -> Tuple[List[str], str]:
         """Build creation code from list-based elements[*].items."""
@@ -1841,7 +2254,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 for line in elements_verbatim.rstrip().splitlines():
                     creation_code.append(f"      {line}")
 
-            identity = element.get('identifier') or element.get('Identifier') or ""
+            identity = element.get('section') or element.get('Section') or ""
             tool_tip = element.get('tool_tip', '')
             items = element.get('items', [])
             if not isinstance(items, list):
@@ -1861,9 +2274,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     continue
 
                 # Controls in groups; groups in pages
-                if self.target_type == "groups" and "widget" in item and isinstance(item["widget"], dict):
-                    md = item["widget"]
-                    var = self.extract_member_variable(md, f"widget '{identity}'", yaml_file)
+                if self.target_type == "groups" and "control" in item and isinstance(item["control"], dict):
+                    md = item["control"]
+                    var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
                     # Per-member verbatim (Placement: before addControl)
                     controlset_verbatim = self._extract_verbatim_body(md)
                     creation_code.extend(self._generate_single_control(
@@ -1878,10 +2291,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     ))
 
                 elif ((self.target_type == "pages" or self.target_type == "wizardpages")
-                      and "widget" in item and isinstance(item["widget"], dict)):
+                      and "control" in item and isinstance(item["control"], dict)):
 
-                    md = item["widget"]
-                    var = self.extract_member_variable(md, f"widget '{identity}'", yaml_file)
+                    md = item["control"]
+                    var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
                     # Per-member verbatim (Placement: before addGroup)
                     controlset_verbatim = self._extract_verbatim_body(md)
                     creation_code.extend(self._generate_single_group(
@@ -1924,7 +2337,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # args_in before allocation
         args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
-                                                          f"widget '{member_name}'")
+                                                          f"control '{member_name}'")
 
         code.extend(args_lines)
 
@@ -2040,7 +2453,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # args_out after construction
         args_block = member_def.get("args")
         if isinstance(args_block, dict):
-            _, outs, _ins = self._parse_args_block(args_block, f"widget '{member_name}'", yaml_file, require_out=False)
+            _, outs, _ins = self._parse_args_block(args_block, f"control '{member_name}'", yaml_file, require_out=False)
             if outs:
                 arg_var = local_args_var or parent_args_var or "args"
                 for n, ty, v in outs:
@@ -2055,12 +2468,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                                control_name: str, tool_tip: str, all_elements: Dict[str, Any], yaml_file: Path,
                                parent_args_var: Optional[str],
                                controlset_verbatim: str = "") -> List[str]:
-        """Generate creation code for a single nested widget (used when target is Page/WizardPage)."""
+        """Generate creation code for a single nested control (used when target is Page/WizardPage)."""
         code: List[str] = []
 
         # args_in before allocation
         args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
-                                                          f"widget '{member_name}'")
+                                                          f"control '{member_name}'")
         code.extend(args_lines)
 
         control_class, base_class = self.extract_control_class(member_name, member_def, yaml_file)
@@ -2137,14 +2550,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if not isinstance(item, dict):
                     continue
                 if (
-                        self.target_type == "pages" or self.target_type == "wizardpages") and "widget" in item and isinstance(
-                    item["widget"], dict):
-                    md = item["widget"]
-                    var = self.extract_member_variable(md, "widget declaration", yaml_file)
+                        self.target_type == "pages" or self.target_type == "wizardpages") and "control" in item and isinstance(
+                    item["control"], dict):
+                    md = item["control"]
+                    var = self.extract_member_variable(md, "control declaration", yaml_file)
                     ctrl_class = self.resolve_member_cpp_type(var or "Group", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
-                elif self.target_type == "groups" and "widget" in item and isinstance(item["widget"], dict):
-                    md = item["widget"]
+                elif self.target_type == "groups" and "control" in item and isinstance(item["control"], dict):
+                    md = item["control"]
                     var = self.extract_member_variable(md, "control declaration", yaml_file)
                     ctrl_class = self.resolve_member_cpp_type(var or "Ctrl", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
@@ -2167,6 +2580,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "args",
                 "base_class",
                 "class",
+                "class_name",
+                "container",
                 "elements",
                 "export_module",
                 "finally",
@@ -2177,6 +2592,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "on_event",
                 "on_kill_active",
                 "on_set_active",
+                "pages",
                 "pos",
                 "recordset",
                 "run_generator",
@@ -2231,7 +2647,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "verbatim",
             },
             "control_set": {
-                "identifier",
+                "section",
                 "items",
                 "size",
                 "sizer",
@@ -2240,7 +2656,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             },
             "item_entry": {
                 "labels",
-                "widget",
+                "control",
                 "spacer",
                 "expanding_spacer",
             },
@@ -2256,14 +2672,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "is_group",
                 "module",
                 "name",
-                "name",
                 "pos",
                 "signature",
                 "size",
                 "sizer",
                 "style",
                 "table",
-                "identifier",
                 "uicreateflags",
                 "validator",
                 "value",
@@ -2275,7 +2689,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "size",
                 "sizer",
                 "style",
-                "identifier",
+                "name",
                 "value",
             },
             "handler_entry": {
@@ -2293,6 +2707,32 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "default",
                 "include",
                 "module",
+                "type",
+            },
+            "wizard_def": {
+                "args",
+                "cancel_message",
+                "class",
+                "finally",
+                "module",
+                "modules",
+                "pages",
+                "run_generator",
+            },
+            "wizard_page_entry": {
+                "args",
+                "class",
+                "header",
+                "if",
+                "module",
+                "name",
+                "uicreateflags",
+            },
+            "book_page_entry": {
+                "args",
+                "class",
+                "module",
+                "name",
                 "type",
             },
         }
@@ -2421,7 +2861,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if not isinstance(item, dict):
                     continue
 
-                control_map_key = "widget" if self.target_type == "groups" else "widget"
+                control_map_key = "control"
                 if control_map_key in item and isinstance(item[control_map_key], dict):
                     md = item[control_map_key]
 
@@ -2435,13 +2875,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                                 used_modules.add(m.strip())
 
                     # alt_data_source module (control-level DB source for loadFromDB())
-                    if control_map_key == "widget":
+                    if control_map_key == "control":
                         alt_ds = self.extract_alt_data_source(md.get('variable', ''), md, yaml_file)
                         if alt_ds is not None:
                             used_modules.add(alt_ds['module'])
 
                     # validator modules (controls only)
-                    if control_map_key == "widget":
+                    if control_map_key == "control":
                         validator = md.get('validator', {})
                         if isinstance(validator, dict):
                             self._warn_unknown_keys(validator, allow["validator_def"],
@@ -2497,14 +2937,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if (tbl is None) ^ (fld is None):
             # exactly one present -> error
             print(
-                f"Error: widget '{element_name}': both or neither 'table' and 'field' must be provided ({yaml_file})",
+                f"Error: control '{element_name}': both or neither 'table' and 'field' must be provided ({yaml_file})",
                 file=sys.stderr)
         elif tbl is not None and fld is not None:
             if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
                 table = f'db::TableName {{"{tbl.strip()}"}}'
                 field = f'db::FieldName {{"{fld.strip()}"}}'
             else:
-                print(f"Error: widget '{element_name}': 'table' and 'field' must be non-empty strings ({yaml_file})",
+                print(f"Error: control '{element_name}': 'table' and 'field' must be non-empty strings ({yaml_file})",
                       file=sys.stderr)
 
         return table, field
@@ -2542,17 +2982,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
-        """Extract a widget's 'alt_data_source:' block: the RecordSet-backed source for
+        """Extract a control's 'alt_data_source:' block: the RecordSet-backed source for
         a DB-populated Choice/Combo/ListBox's generic loadFromDB(). Returns None when absent."""
         ads = member_def.get('alt_data_source')
         if ads is None:
             return None
         if not isinstance(ads, dict):
-            print(f"Error: widget '{element_name}': 'alt_data_source' must be a mapping ({yaml_file})",
+            print(f"Error: control '{element_name}': 'alt_data_source' must be a mapping ({yaml_file})",
                   file=sys.stderr)
             return None
         self._warn_unknown_keys(ads, self._allowed_sets()["alt_data_source_def"],
-                                f"alt_data_source for widget '{element_name}' {{alt_data_source_def}}", yaml_file)
+                                f"alt_data_source for control '{element_name}' {{alt_data_source_def}}", yaml_file)
         module = ads.get('module')
         rs_class = ads.get('class')
         table = ads.get('table')
@@ -2563,7 +3003,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 isinstance(table, str) and table.strip() and
                 isinstance(display_field, str) and display_field.strip() and
                 isinstance(value_field, str) and value_field.strip()):
-            print(f"Error: widget '{element_name}': 'alt_data_source' needs non-empty "
+            print(f"Error: control '{element_name}': 'alt_data_source' needs non-empty "
                   f"'module', 'class', 'table', 'display_field', and 'value_field' ({yaml_file})",
                   file=sys.stderr)
             return None
@@ -2578,17 +3018,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         elif rs_class.endswith('RS'):
             record = rs_class[:-2] + 'Record'
         else:
-            print(f"Error: widget '{element_name}': alt_data_source class '{rs_class}' doesn't end "
+            print(f"Error: control '{element_name}': alt_data_source class '{rs_class}' doesn't end "
                   f"in 'RS'; add an explicit 'record:' ({yaml_file})", file=sys.stderr)
             return None
         include_blank = ads.get('include_blank', True)
         if not isinstance(include_blank, bool):
-            print(f"Warning: widget '{element_name}': 'include_blank' must be a bool; "
+            print(f"Warning: control '{element_name}': 'include_blank' must be a bool; "
                   f"defaulting to true ({yaml_file})", file=sys.stderr)
             include_blank = True
         blank_text = ads.get('blank_text', '')
         if not isinstance(blank_text, str):
-            print(f"Warning: widget '{element_name}': 'blank_text' must be a string; "
+            print(f"Warning: control '{element_name}': 'blank_text' must be a string; "
                   f"defaulting to '' ({yaml_file})", file=sys.stderr)
             blank_text = ''
         return {
@@ -2598,7 +3038,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         }
 
     def resolve_member_cpp_type(self, default_name: str, member_def: Dict[str, Any], yaml_file: Path) -> str:
-        """Returns the C++ type used for a widget's member declaration and construction.
+        """Returns the C++ type used for a control's member declaration and construction.
         Identical to extract_control_class()'s control_class unless 'alt_data_source:' is
         present, in which case it's synthesized as '{base_class}<{data_type}, {Tag}DBSource>'
         -- any explicit 'class:' override is ignored (warned) since a generated DBSource
@@ -2616,7 +3056,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
     def collect_alt_data_sources(self, elements: Any, yaml_file: Path) -> List[Tuple[str, str, Dict[str, Any], str]]:
         """Walk elements (same shape as generate_control_declarations) and collect
-        (var, tag, alt_data_source, data_type) for every widget with an 'alt_data_source:'
+        (var, tag, alt_data_source, data_type) for every control with an 'alt_data_source:'
         block, so generate_module can emit the corresponding DBSource policy structs
         before the class body."""
         results: List[Tuple[str, str, Dict[str, Any], str]] = []
@@ -2629,9 +3069,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not isinstance(items, list):
                 continue
             for item in items:
-                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                if not isinstance(item, dict) or "control" not in item or not isinstance(item["control"], dict):
                     continue
-                md = item["widget"]
+                md = item["control"]
                 var = self.extract_member_variable(md, "alt_data_source scan", yaml_file)
                 if not var:
                     continue
@@ -2657,9 +3097,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not isinstance(items, list):
                 continue
             for item in items:
-                if not isinstance(item, dict) or "widget" not in item or not isinstance(item["widget"], dict):
+                if not isinstance(item, dict) or "control" not in item or not isinstance(item["control"], dict):
                     continue
-                md = item["widget"]
+                md = item["control"]
                 var = self.extract_member_variable(md, "refresh target", yaml_file)
                 if not var:
                     continue
@@ -2723,18 +3163,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         return True, None
 
-    def extract_identity(self, element: Dict[str, Any]) -> str | None:
-        ident = element.get("identifier", "")
-        if ident == '':
-            return None
-
-        return ident.strip()
-
     def extract_member_tag(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str:
-        tag = member_def.get("identifier")
+        tag = member_def.get("name")
         if isinstance(tag, str) and tag.strip():
             return tag.strip()
-        raise ValueError(f"Item '{ctx}' in {yaml_file} must have an identifier")
+        raise ValueError(f"Item '{ctx}' in {yaml_file} must have a 'name'")
 
     def extract_member_variable(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str | None:
         var = member_def.get("variable")
@@ -2914,7 +3347,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if size_token != "":
                 default_key = size_token
             else:
-                # Choose default size token based on widget class via size_mapping
+                # Choose default size token based on control class via size_mapping
                 if control_class in ('SpinCtrl', 'SpinCtrlDouble'):
                     default_key = 'sizeCtrlSpin'
                 elif control_class in ('ComboBox', 'Choice'):
@@ -3040,7 +3473,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                                                                              base_class, False))
         # tp = elements.get('contains') if self.target_class == 'Group' else 'std::string'
         tp = self.extract_data_type(element_name, elements, yaml_file)
-        # Get the initialization value (string) for the widget, defaulting to '' if not present.
+        # Get the initialization value (string) for the control, defaulting to '' if not present.
         if not tp is None and 'value' in elements:
             if isinstance(elements['value'], list):
                 # if presented as a list, it is taken to be a variable name
@@ -3187,7 +3620,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         validator_class = validator.get('class', 'GenericValidator')
         allow_empty = validator.get('allow_empty', True)
 
-        # Get the data type from the widget's 'contains' property
+        # Get the data type from the control's 'contains' property
         data_type = member_def.get('contains', 'std::string')
 
         # Helper: map transfer_model yaml to C++ enum token
@@ -3249,7 +3682,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         elif isinstance(control_identity_or_element, str) and isinstance(all_elements, list):
             ident = control_identity_or_element
             for el in all_elements:
-                if isinstance(el, dict) and (el.get("identifier") == ident or el.get("Identifier") == ident):
+                if isinstance(el, dict) and (el.get("section") == ident or el.get("Section") == ident):
                     element = el
                     break
 
@@ -3275,7 +3708,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if not isinstance(label_key, str) or not label_key:
                     continue
 
-                label_tag = entry.get('identifier')
+                label_tag = entry.get('name')
                 if not isinstance(label_tag, str) or not label_tag:
                     label_tag = label_key
 
@@ -3629,12 +4062,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
         """
         Single entry point: parses yaml_file exactly once and, in that one pass, checks it
-        for 'tables', 'groups', 'pages', and 'wizardpages' sections, generating whichever
-        are present. Table output goes under <output_file>/record_sets/, UI output under
+        for 'tables', 'groups', 'pages', 'wizardpages', 'wizard', and 'book' sections, generating
+        whichever are present. Table output goes under <output_file>/record_sets/, UI output under
         <output_file>/user_interface/ (matching the layout generateClasses() expects).
         """
         data = self.parse_yaml_file(yaml_file)
-        category_targets = {"groups": "Group", "pages": "Page", "wizardpages": "WizardPage"}
+        category_targets = {"groups": "Group", "pages": "Page", "wizardpages": "WizardPage", "wizard": "Wizard",
+                            "book": "Book"}
         results: List[str] = []
 
         # Preliminary scan - do we have rs AND ui in the one file?
@@ -3661,7 +4095,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     print(f"{yaml_file} has no useful content")
                     return ""
 
-        for category in ("tables", "groups", "pages", "wizardpages"):
+        for category in ("tables", "groups", "pages", "wizardpages", "wizard", "book"):
             try:
                 if category in category_targets:
                     self.target(category_targets[category])
@@ -3723,6 +4157,36 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             fields = item_def['fields']
             relationships = item_def.get('relationships', [])
             return self.generate_table_module(name, fields, yaml_file, relationships)
+
+        if category == "wizard":
+            run_gen = item_def.get('run_generator', True)
+            if not isinstance(run_gen, bool):
+                print(f"Warning: wizard '{name}': 'run_generator' must be hs_bool; defaulting to true",
+                      file=sys.stderr)
+                run_gen = True
+            if not run_gen:
+                return None
+
+            if 'pages' not in item_def or not isinstance(item_def['pages'], list) or not item_def['pages']:
+                print(f"Warning: wizard '{name}' has no non-empty 'pages' list", file=sys.stderr)
+                return None
+
+            return self.generate_wizard_module(name, item_def, yaml_file, output_file)
+
+        if category == "book":
+            run_gen = item_def.get('run_generator', True)
+            if not isinstance(run_gen, bool):
+                print(f"Warning: book '{name}': 'run_generator' must be hs_bool; defaulting to true",
+                      file=sys.stderr)
+                run_gen = True
+            if not run_gen:
+                return None
+
+            if 'pages' not in item_def or not isinstance(item_def['pages'], list) or not item_def['pages']:
+                print(f"Warning: book '{name}' has no non-empty 'pages' list", file=sys.stderr)
+                return None
+
+            return self.generate_book_module(name, item_def, yaml_file, top_verbatim, output_file)
 
         # groups / pages / wizardpages
         run_gen = item_def.get('run_generator', True)
