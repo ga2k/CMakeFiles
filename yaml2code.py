@@ -49,6 +49,8 @@ class CppGenerator:
     single-parse entry point that checks a YAML file for all four sections.
     """
 
+    debugging = False
+
     def _init_table_state(self):
         """Table (RecordSet) generation state - split out of __init__ for readability."""
         self.type_mapping = {
@@ -105,8 +107,18 @@ class CppGenerator:
             if ref_table.endswith('_table'):
                 normalized_ref = ref_table[:-6]
 
-            # Prevent infinite recursion by checking if we've already processed this table in the current chain
-            cache_key = f"{current_table_name}->{normalized_ref}@{depth}"
+            rel_name = rel.get('name', ref_table)
+            current_prefix = f"{prefix}__{rel_name}" if prefix else rel_name
+
+            # Prevent infinite recursion by checking if we've already processed this exact
+            # relationship path. Keyed on current_prefix (the full accumulated field-name
+            # path), NOT on current_table_name->normalized_ref: two distinct sibling
+            # relationships from the same table to the same target (e.g. a 'doctors' row
+            # having both an 'address' and a 'postal_address', both -> addresses) are a
+            # legitimate, common shape and must both resolve — keying on the table pair
+            # alone previously treated the second one as an already-visited cycle and
+            # silently dropped all of its fields (e.g. a joined-in fNotes).
+            cache_key = current_prefix
             if cache_key in self._relationship_cache:
                 continue
 
@@ -117,9 +129,6 @@ class CppGenerator:
 
             ref_table_def = self.all_tables[normalized_ref]
             ref_fields = ref_table_def.get('fields', {})
-
-            rel_name = rel.get('name', ref_table)
-            current_prefix = f"{prefix}__{rel_name}" if prefix else rel_name
 
             # Add all direct fields from the referenced table
             direct_fields = []
@@ -1323,6 +1332,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def show_sizer_info(self, _show: bool) -> None:
         self.sizer_info = bool(_show)
 
+    def _dbg(self, msg: str) -> None:
+        """Verbose trace output, gated on the per-file 'debugging: true' YAML key
+        (see generate_from_yaml). Always to stderr so it never pollutes generated
+        code piped to stdout in single-file mode."""
+        if self.debugging:
+            print(f"[DEBUG] {msg}", file=sys.stderr)
+
     def target(self, _targets: str) -> None:
         t = _targets.lower()
         if t == "groups" or t == "group":
@@ -1346,10 +1362,16 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def generate_ui_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
                          output_dir: Optional[Path] = None) -> str:
         """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
+        self._dbg(f"generate_ui_module: '{target_name}' -> {self.target_class} "
+                  f"(top-level keys: {list(class_def.keys()) if isinstance(class_def, dict) else class_def})")
         allow = self._allowed_sets()
         self._warn_unknown_keys(class_def, allow["class_def"], f"control class_def '{target_name}'", yaml_file)
 
         variables_block = self.extract_variables_block(class_def, yaml_file)
+        if variables_block:
+            self._dbg(f"'{target_name}': variables block: {list(variables_block.keys())}")
+        else:
+            self._dbg(f"'{target_name}': no 'variables' block")
 
         code: List[str] = []
         code.append('module;')
@@ -1399,7 +1421,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # Elements are a list in the new schema
         elements = class_def.get('elements', [])
         if not isinstance(elements, list):
+            self._dbg(f"'{target_name}': 'elements' is a {type(elements).__name__}, not a list - treating as empty")
             elements = []
+        else:
+            self._dbg(f"'{target_name}': {len(elements)} element section(s)")
 
         cpp_class = class_def.get("class_name") or self.to_pascal_case(target_name) + self.target_class
 
@@ -1416,6 +1441,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # emitted further down, right after this class's own control-grid layout loads.
         book_children = class_def.get('pages')
         if isinstance(book_children, list):
+            self._dbg(f"'{target_name}': {len(book_children)} book child page(s) declared under 'pages'")
             for child in book_children:
                 if isinstance(child, dict):
                     mod = child.get('module')
@@ -1423,12 +1449,16 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                         required_imports.append(mod.strip())
             if book_children and "Book" not in required_imports:
                 required_imports.append("Book")
+        else:
+            self._dbg(f"'{target_name}': no book child 'pages' declared")
 
         # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
         recordset = self.extract_recordset(target_name, class_def, yaml_file) \
             if self.target_type in ("pages", "groups") else None
         if recordset and recordset['module'] not in required_imports:
             required_imports.append(recordset['module'])
+        self._dbg(f"'{target_name}': recordset = {recordset}" if recordset
+                  else f"'{target_name}': no 'recordset:' block (or not applicable to {self.target_type})")
         module_name = self.extract_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         module_list = self.extract_needed_modules(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         export_module = self.extract_export_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
@@ -1443,7 +1473,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 true_imports.append(module)
             else:
                 print(f'export_module {export_module} cannot be imported: {target_name} {yaml_file}')
+                self._dbg(f"'{target_name}': import '{module}' DROPPED (same as this module's own export_module)")
 
+        self._dbg(f"'{target_name}': resolved imports: {true_imports}")
         imports_formatted = '\n'.join(f"import {module};" for module in true_imports)
         code.append(f'export module {export_module};')
         code.append('')
@@ -1538,6 +1570,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
         set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
         event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
+        self._dbg(f"'{target_name}': on_kill_active declared={kill_declared} (has body={on_kill_active is not None}), "
+                  f"on_set_active declared={set_declared} (has body={on_set_active is not None}), "
+                  f"on_event declared={event_declared} (has body={on_event is not None})")
         # refreshFromCurrent() always hands off to refreshEx() so hand-written
         # tweaks to freshly-loaded field values have a stable, never-overwritten home.
         refresh_ex_declared = recordset is not None
@@ -1559,6 +1594,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
+        self._dbg(f"'{target_name}': {len(control_decls)} member declaration line(s) generated"
+                  if control_decls else f"'{target_name}': NO control declarations generated from 'elements'")
         code.append("")
         code.append('\n'.join(control_decls) if control_decls else '   // No elements defined')
 
@@ -1748,6 +1785,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                                                                       yaml_file,
                                                                       parent_args_var_for_children)
 
+        self._dbg(f"'{target_name}': generate_control_creation -> {len(creation_code)} line(s), "
+                  f"target_parent='{target_parent}'")
         if creation_code:
 
             code.append(f'      auto targetParent = {target_parent};')
@@ -1755,6 +1794,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append('\n'.join(creation_code))
 
         else:
+            self._dbg(f"'{target_name}': NO control creation code produced - class body will have an empty ctor")
             code.append('      // No control creation code\n')
 
         # RecordSet Move* subscription: refresh the page when the RecordSetInterface
@@ -1849,8 +1889,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 ],
             }
         if stub_fns:
+            self._dbg(f"'{target_name}': writing impl stub(s) for {list(stub_fns.keys())} to {stub_path}")
             self._write_impl_stub(impl_dir, cpp_class, export_module, ns, stub_fns)
 
+        self._dbg(f"'{target_name}': generate_ui_module complete, {len(code)} line(s) of C++ generated")
         return "\n".join(code)
 
     # Default cancel-dialog text, mirrored from Wizard::cancelMessage()'s own default in
@@ -2248,10 +2290,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         allow = self._allowed_sets()
 
         if not isinstance(elements, list):
+            self._dbg(f"generate_control_creation('{group_name}'): 'elements' is a "
+                      f"{type(elements).__name__}, not a list - DROPPED, no creation code")
             return creation_code, target_parent
 
-        for element in elements:
+        for idx, element in enumerate(elements):
             if not isinstance(element, dict):
+                self._dbg(f"'{group_name}': elements[{idx}] is a {type(element).__name__}, not a mapping - "
+                          f"DROPPED")
                 continue
 
             # Element-level verbatim (Placement: before this element's items)
@@ -2264,7 +2310,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             tool_tip = element.get('tool_tip', '')
             items = element.get('items', [])
             if not isinstance(items, list):
+                self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]) 'items' is a "
+                          f"{type(items).__name__}, not a list - DROPPED, section produces nothing")
                 continue
+
+            self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]): {len(items)} item(s)")
 
             if self.target_type == "groups":
                 target_parent = "getSBSizer()->GetStaticBox();"
@@ -2275,14 +2325,18 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             else:
                 target_parent = "pParent"
 
-            for item in items:
+            for item_idx, item in enumerate(items):
                 if not isinstance(item, dict):
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}] is a "
+                              f"{type(item).__name__}, not a mapping - DROPPED")
                     continue
 
                 # Controls in groups; groups in pages
                 if self.target_type == "groups" and "control" in item and isinstance(item["control"], dict):
                     md = item["control"]
                     var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: control "
+                              f"'{var}' (class={md.get('class')!r})")
                     # Per-member verbatim (Placement: before addControl)
                     controlset_verbatim = self._extract_verbatim_body(md)
                     creation_code.extend(self._generate_single_control(
@@ -2301,6 +2355,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
                     md = item["control"]
                     var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: nested group "
+                              f"'{var}' (class={md.get('class')!r})")
                     # Per-member verbatim (Placement: before addGroup)
                     controlset_verbatim = self._extract_verbatim_body(md)
                     creation_code.extend(self._generate_single_group(
@@ -2317,6 +2373,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 # Spacers carry no C++ object - just placement, resolved at runtime by
                 # Interface::loadLayout. Only validate the schema and (optionally) trace it.
                 elif "spacer" in item and isinstance(item["spacer"], dict):
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: spacer")
                     spacer_def = item["spacer"]
                     self._warn_unknown_keys(spacer_def, {"sizer"}, f"spacer '{identity}'", yaml_file)
                     if self.sizer_info and spacer_def.get('sizer'):
@@ -2325,6 +2382,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                             f'      // Spacer: Position: {sp.position}, Border: {sp.border}')
 
                 elif "expanding_spacer" in item and isinstance(item["expanding_spacer"], dict):
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: expanding_spacer")
                     spacer_def = item["expanding_spacer"]
                     self._warn_unknown_keys(spacer_def, {"sizer"}, f"expanding_spacer '{identity}'", yaml_file)
                     if self.sizer_info and spacer_def.get('sizer'):
@@ -2332,6 +2390,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                         creation_code.append(
                             f'      // Expanding spacer: Position: {sp.position}, Proportion: {sp.proportion}')
 
+                else:
+                    # No 'control'/'spacer'/'expanding_spacer' key this target_type
+                    # recognizes here (e.g. a label-only item - those are picked up
+                    # separately via _generate_labels()). Not an error, but silent
+                    # unless traced.
+                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: no control/spacer "
+                              f"recognized for target_type '{self.target_type}' (keys: {list(item.keys())}) "
+                              f"- contributes no creation code here")
+
+        self._dbg(f"generate_control_creation('{group_name}'): {len(creation_code)} line(s) total, "
+                  f"target_parent='{target_parent}'")
         return creation_code, target_parent
 
     def _generate_single_control(self, member_name: str, member_def: Dict[str, Any],
@@ -3505,12 +3574,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 value_is_literal = False
             else:
                 v = elements.get('value')
-                is_a_var, value = self.resolve_literal_is_var(v)
-                if is_a_var:
-                    value_is_literal = False
-                else:
-                    value = self._format_cpp_literal(v, tp, string_style="construct")
-                    value_is_literal = True
+                # is_a_var, value = self.resolve_literal_is_var(v)
+                # if is_a_var:
+                #     value_is_literal = False
+                # else:
+                value = self._format_cpp_literal(v, tp, string_style="construct")
+                value_is_literal = True
         elif 'default' in elements:
             # No explicit 'value': fall back to 'default', wrapped as <type> { <default> }
             # instead of the class's generic default (e.g. contains: ID::Type, default: ID::Type::Null
@@ -3714,15 +3783,21 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     break
 
         if not isinstance(element, dict):
+            self._dbg("_generate_labels: no element dict resolved (identity not found, or bad arg) - "
+                      "DROPPED, no labels generated")
             return code
 
         items = element.get('items', [])
         if not isinstance(items, list):
+            self._dbg(f"_generate_labels: section '{element.get('section') or element.get('Section')}' "
+                      f"'items' is a {type(items).__name__}, not a list - DROPPED")
             return code
 
         for item in items:
             if not isinstance(item, dict) or 'labels' not in item:
                 continue
+            self._dbg(f"_generate_labels: section '{element.get('section') or element.get('Section')}': "
+                      f"found 'labels' item with {len(item['labels']) if isinstance(item['labels'], list) else 0} entr(y/ies)")
 
             labels_seq = item['labels']
             if not isinstance(labels_seq, list):
@@ -3766,8 +3841,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
                 # Size added by adding extra default parameter to createLabel GH 21/7/2026
 
-                label_name_is_a_var, label_value = self.resolve_literal_is_var(label_value)
-                if label_name_is_a_var:
+                if isinstance(label_value, list):
+                    # A label 'value:' given as a one-item list (e.g. `value: [ GT ]`) names a
+                    # variable/expression to emit unquoted, rather than a literal string.
+                    label_value = str(label_value[0]).strip()
                     Q = ''
                 else:
                     Q = '"'
@@ -4102,7 +4179,18 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         whichever are present. Table output goes under <output_file>/record_sets/, UI output under
         <output_file>/user_interface/ (matching the layout generateClasses() expects).
         """
+
         data = self.parse_yaml_file(yaml_file)
+
+        # 'debugging: true' is a topmost key in the YAML document, a sibling of
+        # 'groups:'/'pages:'/'wizardpages:'/'book:'/'wizard:'/'tables:' - not nested
+        # inside any one of them. It scopes verbose tracing to everything parsed out
+        # of this one file for the rest of this call.
+        self.debugging = bool(data.get('debugging', False)) if isinstance(data, dict) else False
+
+        if self.debugging:
+            self._dbg(f"==== generate_from_yaml: {yaml_file} (debugging=on) ====")
+
         category_targets = {"groups": "Group", "pages": "Page", "wizardpages": "WizardPage", "wizard": "Wizard",
                             "book": "Book"}
         results: List[str] = []
@@ -4113,10 +4201,21 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         if not data.get('tables', None) == None:
             have_tables = True
+            self._dbg(f"'tables' section present ({len(data['tables'])} entries)"
+                      if isinstance(data['tables'], dict) else "'tables' section present (not a mapping!)")
+        else:
+            self._dbg("no 'tables' section in this file")
 
         for category in category_targets:
             if not data.get(category, None) == None:
                 have_elements = True
+                section = data[category]
+                if isinstance(section, dict):
+                    self._dbg(f"'{category}' section present, top-level keys: {list(section.keys())}")
+                else:
+                    self._dbg(f"'{category}' section present but is a {type(section).__name__}, not a mapping!")
+            else:
+                self._dbg(f"no '{category}' section in this file")
 
         sub_output = None
         if output_file:
@@ -4136,6 +4235,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if category in category_targets:
                     self.target(category_targets[category])
 
+                self._dbg(f"-- processing category '{category}' --")
                 if category == "tables":
                     content = self._process_category(category, data, yaml_file, rel_path, output_file / "rs")
                 else:
@@ -4143,7 +4243,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
                 if content:
                     results.append(content)
+                    self._dbg(f"category '{category}' produced output ({len(content)} chars)")
+                else:
+                    self._dbg(f"category '{category}' produced no output")
             except Exception as e:
+                self._dbg(f"category '{category}' raised {type(e).__name__}: {e} - "
+                          f"rest of this category is DROPPED for {yaml_file}")
                 print(f"Error reading {yaml_file}: {e}", file=sys.stderr)
 
         return ("\n\n").join(results)
@@ -4157,6 +4262,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """
         items = data.get(category) if isinstance(data, dict) else None
         if not items:
+            self._dbg(f"'{category}': section absent or empty - nothing to generate")
             if not self.quiet:
                 print(f"(No {category})")
             return ""
@@ -4164,9 +4270,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if not isinstance(items, dict):
             raise ValueError(f"'{category}' section must be a non-empty mapping of name -> def")
 
+        self._dbg(f"'{category}': {len(items)} top-level entries found: {list(items.keys())}")
+
         top_verbatim = ""
         if category != "tables" and "verbatim" in items:
             top_verbatim = self._extract_verbatim_body(items)
+            self._dbg(f"'{category}': root-level 'verbatim' block found ({len(top_verbatim)} chars)")
             self._warn_unknown_keys(items, self._allowed_sets()["root"] | set(items.keys()),
                                     f"{category} root", yaml_file)
 
@@ -4175,9 +4284,24 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if name == "verbatim":
                 continue  # handled above
 
+            # A stray scalar/list sibling at this level (e.g. a misplaced flag that
+            # belongs at the document root, not inside 'groups:'/'pages:') used to
+            # blow up _generate_category_item's item_def.get(...) calls and abort
+            # every remaining entry in this category silently. Warn and skip instead.
+            if not isinstance(item_def, dict):
+                print(f"Warning: '{category}.{name}' is not a mapping (got {type(item_def).__name__}: "
+                      f"{item_def!r}); skipping this entry - did you mean a top-level 'debugging:' key "
+                      f"instead? {yaml_file}", file=sys.stderr)
+                self._dbg(f"'{category}.{name}': DROPPED (not a mapping)")
+                continue
+
+            self._dbg(f"'{category}.{name}': generating...")
             content = self._generate_category_item(category, name, item_def, yaml_file, top_verbatim, output_file)
             if content is not None:
                 generated.append((name, content))
+                self._dbg(f"'{category}.{name}': generated ({len(content)} chars)")
+            else:
+                self._dbg(f"'{category}.{name}': DROPPED (see warning above, or run_generator: false)")
 
         if category == "tables":
             suffix = "RS"
@@ -4186,6 +4310,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 raise ValueError(f"No valid {category} found to generate")
             suffix = self.target_class
 
+        self._dbg(f"'{category}': {len(generated)}/{len(items)} entries generated: "
+                  f"{[n for n, _ in generated]}")
         return self._write_or_concat(generated, suffix, rel_path, output_file, category)
 
     def _generate_category_item(self, category: str, name: str, item_def: Dict[str, Any], yaml_file: Path,
@@ -4205,12 +4331,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                       file=sys.stderr)
                 run_gen = True
             if not run_gen:
+                self._dbg(f"wizard '{name}': run_generator is false - DROPPED")
                 return None
 
             if 'pages' not in item_def or not isinstance(item_def['pages'], list) or not item_def['pages']:
                 print(f"Warning: wizard '{name}' has no non-empty 'pages' list", file=sys.stderr)
+                self._dbg(f"wizard '{name}': DROPPED (no non-empty 'pages' list)")
                 return None
 
+            self._dbg(f"wizard '{name}': {len(item_def['pages'])} page(s) declared")
             return self.generate_wizard_module(name, item_def, yaml_file, output_file)
 
         if category == "book":
@@ -4220,12 +4349,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                       file=sys.stderr)
                 run_gen = True
             if not run_gen:
+                self._dbg(f"book '{name}': run_generator is false - DROPPED")
                 return None
 
             if 'pages' not in item_def or not isinstance(item_def['pages'], list) or not item_def['pages']:
                 print(f"Warning: book '{name}' has no non-empty 'pages' list", file=sys.stderr)
+                self._dbg(f"book '{name}': DROPPED (no non-empty 'pages' list)")
                 return None
 
+            self._dbg(f"book '{name}': {len(item_def['pages'])} page(s) declared")
             return self.generate_book_module(name, item_def, yaml_file, top_verbatim, output_file)
 
         # groups / pages / wizardpages
@@ -4234,10 +4366,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             print(f"Warning: target '{name}': 'run_generator' must be hs_bool; defaulting to true", file=sys.stderr)
             run_gen = True
         if not run_gen:
+            self._dbg(f"{self.target_class} '{name}': run_generator is false - DROPPED")
             return None
 
         if 'elements' not in item_def:
             print(f"Warning: {self.target_class} '{name}' has no 'elements' section", file=sys.stderr)
+            self._dbg(f"{self.target_class} '{name}': DROPPED (no 'elements' key present at all)")
             return None
 
         elements = item_def['elements']
@@ -4245,6 +4379,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not self.quiet:
                 print(f"Warning: {self.target_class} '{name}' has empty or invalid elements section",
                       file=sys.stderr)
+            self._dbg(f"{self.target_class} '{name}': 'elements' present but empty/invalid "
+                      f"({type(elements).__name__}) - generating anyway with no controls")
+        else:
+            self._dbg(f"{self.target_class} '{name}': {len(elements)} element section(s) found")
 
         return self.generate_ui_module(name, item_def, yaml_file, top_verbatim, output_file)
 
