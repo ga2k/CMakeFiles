@@ -1442,7 +1442,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not module == export_module:
                 true_imports.append(module)
             else:
-                print(f'export_module {export_module} cannot be imported: {target_name} ({yaml_file})')
+                print(f'export_module {export_module} cannot be imported: {target_name} {yaml_file}')
 
         imports_formatted = '\n'.join(f"import {module};" for module in true_imports)
         code.append(f'export module {export_module};')
@@ -1642,6 +1642,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
                 rfc.append(f"         {var}->refreshFromCurrent(rec);")
             rfc.append("      refreshEx(rec);")
+            # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
+            # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
+            # cents -> "$123.45" formatting) only run via transferToWindow(), so re-run it
+            # here or freshly-displayed records show unformatted raw values until the user
+            # starts editing (which is the only other place transferToWindow() is invoked).
+            rfc.append("      ICtrl::transferTheseToWindow(controlMap());")
             rfc.append("   }")
             access_groups['public'].append('\n'.join(rfc))
 
@@ -1772,7 +1778,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if not isinstance(top_base_class, str) or "PageContainer" not in top_base_class:
                     print(f"Warning: '{target_name}' declares 'pages' (book children) but base_class "
                           f"'{top_base_class}' does not derive from PageContainer; book() won't exist "
-                          f"({yaml_file})", file=sys.stderr)
+                          f"{yaml_file}", file=sys.stderr)
                 code.append("      load();")
                 code.extend(self._generate_book_child_calls(target_name, book_children, "this->book()", yaml_file))
 
@@ -1907,7 +1913,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         page_call_lines: List[str] = []
         for idx, page in enumerate(pages):
             if not isinstance(page, dict):
-                print(f"Warning: wizard '{target_name}'.pages[{idx}] must be a mapping; skipping ({yaml_file})",
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] must be a mapping; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             self._warn_unknown_keys(page, allow["wizard_page_entry"], f"wizard '{target_name}'.pages[{idx}]",
@@ -1915,7 +1921,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
             page_class = page.get("class")
             if not isinstance(page_class, str) or not page_class.strip():
-                print(f"Warning: wizard '{target_name}'.pages[{idx}] missing required 'class'; skipping ({yaml_file})",
+                print(f"Warning: wizard '{target_name}'.pages[{idx}] missing required 'class'; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             page_class = page_class.strip()
@@ -1923,14 +1929,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             page_module = page.get("module")
             if not isinstance(page_module, str) or not page_module.strip():
                 print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') missing required 'module'; "
-                      f"skipping ({yaml_file})", file=sys.stderr)
+                      f"skipping {yaml_file}", file=sys.stderr)
                 continue
             required_imports.add(page_module.strip())
 
             page_name = page.get("name")
             if not isinstance(page_name, str) or not page_name.strip():
                 print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') missing required 'name'; "
-                      f"skipping ({yaml_file})", file=sys.stderr)
+                      f"skipping {yaml_file}", file=sys.stderr)
                 continue
             page_name = page_name.strip()
 
@@ -1946,19 +1952,19 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if_false = self._cpp_string_literal(str(header.get("if_false", "")))
                 if not isinstance(condition, str) or not condition.strip():
                     print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition must be a non-empty "
-                          f"string naming an args_in key ({yaml_file})", file=sys.stderr)
+                          f"string naming an args_in key {yaml_file}", file=sys.stderr)
                     header_expr = f'"{if_true}"s'
                 else:
                     cond = condition.strip()
                     if declared_arg_names and cond not in declared_arg_names:
                         print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition '{cond}' is not "
-                              f"declared in this wizard's args_in ({yaml_file})", file=sys.stderr)
+                              f"declared in this wizard's args_in {yaml_file}", file=sys.stderr)
                     header_expr = f'(param<bool>(args, "{cond}", false) ? "{if_true}"s : "{if_false}"s)'
             elif isinstance(header, str):
                 header_expr = f'"{self._cpp_string_literal(header)}"s'
             else:
                 print(f"Warning: wizard '{target_name}'.pages[{idx}] ('{page_class}') 'header' must be a string "
-                      f"or {{condition, if_true, if_false}} mapping; defaulting to empty ({yaml_file})",
+                      f"or {{condition, if_true, if_false}} mapping; defaulting to empty {yaml_file}",
                       file=sys.stderr)
                 header_expr = '""s'
 
@@ -1976,7 +1982,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 key = raw[1:].strip() if negate else raw
                 if declared_arg_names and key not in declared_arg_names:
                     print(f"Warning: wizard '{target_name}'.pages[{idx}] if: '{key}' is not declared in this "
-                          f"wizard's args_in ({yaml_file})", file=sys.stderr)
+                          f"wizard's args_in {yaml_file}", file=sys.stderr)
                 cond_expr = f'{"!" if negate else ""}param<bool>(args, "{key}", false)'
                 page_call_lines.append(f"      if ({cond_expr}) {{")
                 page_call_lines.append(f"         {call_line}")
@@ -2022,7 +2028,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if cancel_message is not None:
             if not isinstance(cancel_message, dict):
                 print(f"Warning: wizard '{target_name}' 'cancel_message' must be a mapping "
-                      f"{{sub_heading, body}} ({yaml_file})", file=sys.stderr)
+                      f"{{sub_heading, body}} {yaml_file}", file=sys.stderr)
                 cancel_message = {}
             sub_heading = self._cpp_string_literal(str(cancel_message.get("sub_heading", self._DEFAULT_CANCEL_SUB_HEADING)))
             body = self._cpp_string_literal(str(cancel_message.get("body", self._DEFAULT_CANCEL_BODY)))
@@ -2060,20 +2066,20 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if isinstance(val, dict) and "icon" in val:
             icon = val.get("icon") or {}
             if not isinstance(icon, dict):
-                print(f"Warning: {ctx} 'icon' must be a mapping ({yaml_file})", file=sys.stderr)
+                print(f"Warning: {ctx} 'icon' must be a mapping {yaml_file}", file=sys.stderr)
                 icon = {}
             itype = icon.get("type", "Button")
             if not isinstance(itype, str) or not itype.strip():
-                print(f"Warning: {ctx} icon.type must be a non-empty string; defaulting to 'Button' ({yaml_file})",
+                print(f"Warning: {ctx} icon.type must be a non-empty string; defaulting to 'Button' {yaml_file}",
                       file=sys.stderr)
                 itype = "Button"
             file = icon.get("file", "")
             if not isinstance(file, str) or not file.strip():
-                print(f"Warning: {ctx} icon.file must be a non-empty string ({yaml_file})", file=sys.stderr)
+                print(f"Warning: {ctx} icon.file must be a non-empty string {yaml_file}", file=sys.stderr)
                 file = ""
             must_exist = icon.get("must_exist", True)
             if not isinstance(must_exist, bool):
-                print(f"Warning: {ctx} icon.must_exist must be hs_bool; defaulting to true ({yaml_file})",
+                print(f"Warning: {ctx} icon.must_exist must be hs_bool; defaulting to true {yaml_file}",
                       file=sys.stderr)
                 must_exist = True
             return f'wx::getIcon(UIType::{itype.strip()}, "{self._cpp_string_literal(file.strip())}", ' \
@@ -2096,7 +2102,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         lines: List[str] = []
         for idx, child in enumerate(children):
             if not isinstance(child, dict):
-                print(f"Warning: '{ctx_name}'.pages[{idx}] must be a mapping; skipping ({yaml_file})",
+                print(f"Warning: '{ctx_name}'.pages[{idx}] must be a mapping; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             ctx = f"'{ctx_name}'.pages[{idx}]"
@@ -2104,26 +2110,26 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
             child_class = child.get("class")
             if not isinstance(child_class, str) or not child_class.strip():
-                print(f"Warning: {ctx} missing required 'class'; skipping ({yaml_file})", file=sys.stderr)
+                print(f"Warning: {ctx} missing required 'class'; skipping {yaml_file}", file=sys.stderr)
                 continue
             child_class = child_class.strip()
 
             child_module = child.get("module")
             if not isinstance(child_module, str) or not child_module.strip():
-                print(f"Warning: {ctx} ('{child_class}') missing required 'module'; skipping ({yaml_file})",
+                print(f"Warning: {ctx} ('{child_class}') missing required 'module'; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
 
             child_name = child.get("name")
             if not isinstance(child_name, str) or not child_name.strip():
-                print(f"Warning: {ctx} ('{child_class}') missing required 'name'; skipping ({yaml_file})",
+                print(f"Warning: {ctx} ('{child_class}') missing required 'name'; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             child_name = child_name.strip()
 
             child_type = child.get("type")
             if not isinstance(child_type, str) or not child_type.strip():
-                print(f"Warning: {ctx} ('{child_class}') missing required 'type'; skipping ({yaml_file})",
+                print(f"Warning: {ctx} ('{child_class}') missing required 'type'; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             child_type = child_type.strip()
@@ -2138,7 +2144,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     lines.append(f'      {var_name}.emplace("{key}", {expr});')
                 args_expr = var_name
             elif args_map is not None:
-                print(f"Warning: {ctx} 'args' must be a mapping; ignoring ({yaml_file})", file=sys.stderr)
+                print(f"Warning: {ctx} 'args' must be a mapping; ignoring {yaml_file}", file=sys.stderr)
 
             ctor_args = f'{parent_expr}, wx::nextID(), "{child_name}", PageType::{child_type}, -1'
             if args_expr:
@@ -2162,7 +2168,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """
         container = class_def.get('container', False)
         if not isinstance(container, bool):
-            print(f"Warning: book '{target_name}' 'container' must be hs_bool; defaulting to false ({yaml_file})",
+            print(f"Warning: book '{target_name}' 'container' must be hs_bool; defaulting to false {yaml_file}",
                   file=sys.stderr)
             container = False
 
@@ -2361,7 +2367,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         is_multi_row_control = control_class.split('<', 1)[0].strip() in self.multi_row_control_classes
         if is_multi_row_control and table and field:
             print(f"Warning: '{member_name}' is a {control_class} (multi-row); ignoring 'table'/'field' - "
-                  f"they only apply to single-value controls ({yaml_file})", file=sys.stderr)
+                  f"they only apply to single-value controls {yaml_file}", file=sys.stderr)
         # signature = member_def.get('signature', '{cflags}, "{name}", {parent}, nextID(), {value}, {size}, {style}')
         # signature = member_def.get('signature', '{cflags}, "{name}", targetParent, nextID(), {value}, {size}, {style}')
         signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
@@ -2389,8 +2395,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append(f"         ->set <{data_type}> ({value if not value_is_literal else repr(value)})")
             member_accessor = '.'
 
+        xfer_required = member_def.get('transfer', True)
+        xfer_method = "pushToCtrl(live_)"
+
         validator = member_def.get('validator', {})
         if validator:
+            xfer_method = "transferToWindow()"
             validator_code = self._generate_validator(validator, member_name, member_def)
             if validator_code:
                 code.append(f"         {member_accessor}{validator_code}")
@@ -2421,6 +2431,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if table and field and not is_multi_row_control and signature.find('table') == -1 and signature.find('field') == -1:
             db_chain = f'dbInfo({table}, {field})'
             code.append(f"         {member_accessor}{db_chain}")
+            member_accessor = '.'
+
+        if xfer_required:
+            code.append(f"         {member_accessor}{xfer_method}")
             member_accessor = '.'
 
         # terminate allocation line
@@ -2456,8 +2470,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             _, outs, _ins = self._parse_args_block(args_block, f"control '{member_name}'", yaml_file, require_out=False)
             if outs:
                 arg_var = local_args_var or parent_args_var or "args"
+                code.append("")
                 for n, ty, v in outs:
-                    lit = self._format_cpp_literal(v, ty)
+                    lit = self._format_cpp_literal(v, ty, string_style="construct")
                     code.append(f'      auto {n} = param({arg_var}, "{n}", {lit});')
 
         code.append("")
@@ -2903,7 +2918,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         base_class = elements.get('base_class') or self.target_class
         if not isinstance(base_class, str) or not base_class.strip():
             print(
-                f"Warning: '{element_name}': base_class missing/invalid; defaulting to {self.target_class} ({yaml_file})",
+                f"Warning: '{element_name}': base_class missing/invalid; defaulting to {self.target_class} {yaml_file}",
                 file=sys.stderr)
             base_class = self.target_class
         else:
@@ -2911,7 +2926,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         control_class = elements.get('class') or base_class
         if not isinstance(control_class, str) or not control_class.strip():
-            print(f"Warning: '{element_name}': class missing/invalid; defaulting to {base_class} ({yaml_file})",
+            print(f"Warning: '{element_name}': class missing/invalid; defaulting to {base_class} {yaml_file}",
                   file=sys.stderr)
             control_class = base_class
         else:
@@ -2922,7 +2937,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def extract_data_type(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         data_type = elements.get('contains', 'std::string')
         if not isinstance(data_type, str) and data_type is not None:
-            print(f"Warning: 'data_type' for '{element_name}' must be a string; ({yaml_file})",
+            print(f"Warning: 'data_type' for '{element_name}' must be a string; {yaml_file}",
                   file=sys.stderr)
         else:
             data_type = data_type.strip()
@@ -2937,14 +2952,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if (tbl is None) ^ (fld is None):
             # exactly one present -> error
             print(
-                f"Error: control '{element_name}': both or neither 'table' and 'field' must be provided ({yaml_file})",
+                f"Error: control '{element_name}': both or neither 'table' and 'field' must be provided {yaml_file}",
                 file=sys.stderr)
         elif tbl is not None and fld is not None:
             if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
                 table = f'db::TableName {{"{tbl.strip()}"}}'
                 field = f'db::FieldName {{"{fld.strip()}"}}'
             else:
-                print(f"Error: control '{element_name}': 'table' and 'field' must be non-empty strings ({yaml_file})",
+                print(f"Error: control '{element_name}': 'table' and 'field' must be non-empty strings {yaml_file}",
                       file=sys.stderr)
 
         return table, field
@@ -2957,14 +2972,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if rs is None:
             return None
         if not isinstance(rs, dict):
-            print(f"Error: '{element_name}': 'recordset' must be a mapping ({yaml_file})", file=sys.stderr)
+            print(f"Error: '{element_name}': 'recordset' must be a mapping {yaml_file}", file=sys.stderr)
             return None
         self._warn_unknown_keys(rs, self._allowed_sets()["recordset_def"],
                                 f"recordset for '{element_name}' {{recordset_def}}", yaml_file)
         module = rs.get('module')
         rs_class = rs.get('class')
         if not (isinstance(module, str) and module.strip() and isinstance(rs_class, str) and rs_class.strip()):
-            print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' ({yaml_file})",
+            print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' {yaml_file}",
                   file=sys.stderr)
             return None
         module = module.strip()
@@ -2976,7 +2991,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             record = rs_class[:-2] + 'Record'
         else:
             print(f"Error: '{element_name}': recordset class '{rs_class}' doesn't end in 'RS'; "
-                  f"add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+                  f"add an explicit 'record:' {yaml_file}", file=sys.stderr)
             return None
         return {'module': module, 'class': rs_class, 'record': record}
 
@@ -2988,7 +3003,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if ads is None:
             return None
         if not isinstance(ads, dict):
-            print(f"Error: control '{element_name}': 'alt_data_source' must be a mapping ({yaml_file})",
+            print(f"Error: control '{element_name}': 'alt_data_source' must be a mapping {yaml_file}",
                   file=sys.stderr)
             return None
         self._warn_unknown_keys(ads, self._allowed_sets()["alt_data_source_def"],
@@ -3004,7 +3019,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 isinstance(display_field, str) and display_field.strip() and
                 isinstance(value_field, str) and value_field.strip()):
             print(f"Error: control '{element_name}': 'alt_data_source' needs non-empty "
-                  f"'module', 'class', 'table', 'display_field', and 'value_field' ({yaml_file})",
+                  f"'module', 'class', 'table', 'display_field', and 'value_field' {yaml_file}",
                   file=sys.stderr)
             return None
         module = module.strip()
@@ -3019,17 +3034,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             record = rs_class[:-2] + 'Record'
         else:
             print(f"Error: control '{element_name}': alt_data_source class '{rs_class}' doesn't end "
-                  f"in 'RS'; add an explicit 'record:' ({yaml_file})", file=sys.stderr)
+                  f"in 'RS'; add an explicit 'record:' {yaml_file}", file=sys.stderr)
             return None
         include_blank = ads.get('include_blank', True)
         if not isinstance(include_blank, bool):
             print(f"Warning: control '{element_name}': 'include_blank' must be a bool; "
-                  f"defaulting to true ({yaml_file})", file=sys.stderr)
+                  f"defaulting to true {yaml_file}", file=sys.stderr)
             include_blank = True
         blank_text = ads.get('blank_text', '')
         if not isinstance(blank_text, str):
             print(f"Warning: control '{element_name}': 'blank_text' must be a string; "
-                  f"defaulting to '' ({yaml_file})", file=sys.stderr)
+                  f"defaulting to '' {yaml_file}", file=sys.stderr)
             blank_text = ''
         return {
             'module': module, 'class': rs_class, 'record': record, 'table': table,
@@ -3049,7 +3064,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             return control_class
         if member_def.get('class'):
             print(f"Warning: '{default_name}': 'class' override ignored because 'alt_data_source' "
-                  f"is set ({yaml_file})", file=sys.stderr)
+                  f"is set {yaml_file}", file=sys.stderr)
         data_type = self.extract_data_type(default_name, member_def, yaml_file)
         tag = self.extract_member_tag(member_def, default_name, yaml_file)
         return f"{base_class}<{data_type}, {tag}DBSource>"
@@ -3124,7 +3139,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                               yaml_file: Path) -> str:
         export_module = elements.get('export_module', f'{element_name}.{self.target_class}')
         if not isinstance(export_module, str):
-            print(f"Warning: 'export_module' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+            print(f"Warning: 'export_module' for '{element_name}' must be a string; {yaml_file}", file=sys.stderr)
         else:
             export_module = export_module.strip()
 
@@ -3153,13 +3168,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             # ensure that Interface::onSetActive/onKillActive is called somewhere in the group
             if tag == "on_set_active" and "Interface::onSetActive" not in body:
                 raise ValueError(
-                    f"Interface::onSetActive must be called in widget '{element_name}' ({yaml_file})")
+                    f"Interface::onSetActive must be called in widget '{element_name}' {yaml_file}")
             if tag == "on_kill_active" and "Interface::onKillActive" not in body:
                 raise ValueError(
-                    f"Interface::onKillActive must be called in widget '{element_name}' ({yaml_file})")
+                    f"Interface::onKillActive must be called in widget '{element_name}' {yaml_file}")
             return True, body.rstrip("\n")
         if body is not None:
-            print(f"Warning: '{tag}.body' must be a string; ignoring ({yaml_file})", file=sys.stderr)
+            print(f"Warning: '{tag}.body' must be a string; ignoring {yaml_file}", file=sys.stderr)
 
         return True, None
 
@@ -3172,7 +3187,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def extract_member_variable(self, member_def: Dict[str, Any], ctx: str, yaml_file: Path) -> str | None:
         var = member_def.get("variable")
         if not isinstance(var, str) or not var.strip():
-            print(f"Warning: {ctx} missing required 'variable' string ({yaml_file})", file=sys.stderr)
+            print(f"Warning: {ctx} missing required 'variable' string {yaml_file}", file=sys.stderr)
             return None
         return var.strip()
 
@@ -3186,23 +3201,30 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             elif isinstance(elements['modules'], str):
                 modules.append(elements.get('modules').strip())
             else:
-                print(f"Warning: 'modules' for '{element_name}' must be a list or a string; ({yaml_file})",
+                print(f"Warning: 'modules' for '{element_name}' must be a list or a string; {yaml_file}",
                       file=sys.stderr)
         return modules
 
     def extract_module(self, element_name: str, elements: Dict[str, Any], control_name: str, yaml_file: Path) -> str:
         module_name = elements.get('module', f'{element_name}.{self.target_class}')
         if not isinstance(module_name, str):
-            print(f"Warning: 'module_name' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+            print(f"Warning: 'module_name' for '{element_name}' must be a string; {yaml_file}", file=sys.stderr)
         else:
             module_name = module_name.strip()
 
         return module_name
 
+    def resolve_literal_is_var(self, value: str):
+        is_a_var = value.startswith('_') and value.endswith('_')
+        if is_a_var:
+            value = value[1:-1]
+
+        return is_a_var, value
+
     def extract_name(self, element_name: str, elements: Dict[str, Any], control_name: str, yaml_file: Path) -> str:
         name = elements.get('name', control_name)
         if not isinstance(name, str):
-            print(f"Warning: 'name' for '{element_name}' must be a string; ({yaml_file})", file=sys.stderr)
+            print(f"Warning: 'name' for '{element_name}' must be a string; {yaml_file}", file=sys.stderr)
         else:
             name = name.strip()
 
@@ -3221,10 +3243,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if isinstance(v, str) and v.strip():
                     out.append(v.strip())
                 else:
-                    print(f"Warning: {ctx} list entries must be strings; ignoring {v!r} ({yaml_file})",
+                    print(f"Warning: {ctx} list entries must be strings; ignoring {v!r} {yaml_file}",
                           file=sys.stderr)
         else:
-            print(f"Warning: {ctx} must be a string or list of strings; ignoring ({yaml_file})", file=sys.stderr)
+            print(f"Warning: {ctx} must be a string or list of strings; ignoring {yaml_file}", file=sys.stderr)
         return out
 
     def extract_variables_block(self, class_def: Dict[str, Any], yaml_file: Path) -> Dict[str, Dict[str, Any]]:
@@ -3245,24 +3267,24 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if raw is None:
             return {}
         if not isinstance(raw, dict):
-            print(f"Warning: 'variables' must be a mapping; ignoring ({yaml_file})", file=sys.stderr)
+            print(f"Warning: 'variables' must be a mapping; ignoring {yaml_file}", file=sys.stderr)
             return {}
 
         allow = self._allowed_sets()
         result: Dict[str, Dict[str, Any]] = {}
         for var_name, var_def in raw.items():
             if not self._is_identifier(var_name):
-                print(f"Warning: variables key '{var_name}' is not a valid C++ identifier; skipping ({yaml_file})",
+                print(f"Warning: variables key '{var_name}' is not a valid C++ identifier; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             if not isinstance(var_def, dict):
-                print(f"Warning: variables.'{var_name}' must be a mapping; skipping ({yaml_file})", file=sys.stderr)
+                print(f"Warning: variables.'{var_name}' must be a mapping; skipping {yaml_file}", file=sys.stderr)
                 continue
             self._warn_unknown_keys(var_def, allow["variable_def"], f"variables.'{var_name}'", yaml_file)
 
             cpp_type = var_def.get('type')
             if not isinstance(cpp_type, str) or not cpp_type.strip():
-                print(f"Error: variables.'{var_name}' missing required 'type' string; skipping ({yaml_file})",
+                print(f"Error: variables.'{var_name}' missing required 'type' string; skipping {yaml_file}",
                       file=sys.stderr)
                 continue
             cpp_type = cpp_type.strip()
@@ -3270,7 +3292,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             access = var_def.get('access', 'private')
             if not isinstance(access, str) or access.strip().lower() not in ('public', 'protected', 'private'):
                 print(f"Warning: variables.'{var_name}'.access must be one of public/protected/private; "
-                      f"defaulting to private ({yaml_file})", file=sys.stderr)
+                      f"defaulting to private {yaml_file}", file=sys.stderr)
                 access = 'private'
             else:
                 access = access.strip().lower()
@@ -3328,7 +3350,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 p = elements['pos'].strip()
                 pos = p  # f'{{p}}'
             else:
-                print(f"Warning: 'pos' for '{element_name}' must be a string or List[str]; ({yaml_file})",
+                print(f"Warning: 'pos' for '{element_name}' must be a string or List[str]; {yaml_file}",
                       file=sys.stderr)
                 pos = 'wxDefaultPosition'
         else:
@@ -3406,7 +3428,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 style = elements['style']
             else:
                 print(
-                    f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; ({yaml_file})",
+                    f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; {yaml_file}",
                     file=sys.stderr)
         else:
             # Default to wxTAB_TRAVERSAL for Groups and Pages to enable tab navigation
@@ -3430,7 +3452,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     single_flag = single_flag[slice(len('UICreateFlags::'), len(single_flag))]
                 cflags_list.append(single_flag)
             else:
-                print(f"Warning: 'uicreateflags' for '{element_name}' must be non-empty; ({yaml_file})",
+                print(f"Warning: 'uicreateflags' for '{element_name}' must be non-empty; {yaml_file}",
                       file=sys.stderr)
         elif isinstance(uicf_node, list):
             for f in uicf_node:
@@ -3443,13 +3465,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     cflags_list.append(single_flag)
                 else:
                     print(
-                        f"Warning: 'uicreateflags' list contains non-string/empty value for '{element_name}' ({yaml_file})",
+                        f"Warning: 'uicreateflags' list contains non-string/empty value for '{element_name}' {yaml_file}",
                         file=sys.stderr)
 
         # Extract is_group: if true, ensure Group flag is included
         is_group = elements.get('is_group', False)
         if not isinstance(is_group, bool):
-            print(f"Warning: 'is_group' for '{element_name}' must be hs_bool ({yaml_file})",
+            print(f"Warning: 'is_group' for '{element_name}' must be hs_bool {yaml_file}",
                   file=sys.stderr)
             is_group = False
 
@@ -3478,12 +3500,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if isinstance(elements['value'], list):
                 # if presented as a list, it is taken to be a variable name
                 v = elements['value'][0].strip()
-                value = self._format_cpp_literal(v, tp, string_style="construct")
+                # value = self._format_cpp_literal(v, tp, string_style="construct")
+                value = v
                 value_is_literal = False
             else:
                 v = elements.get('value')
-                value = self._format_cpp_literal(v, tp, string_style="construct")
-                value_is_literal = True
+                is_a_var, value = self.resolve_literal_is_var(v)
+                if is_a_var:
+                    value_is_literal = False
+                else:
+                    value = self._format_cpp_literal(v, tp, string_style="construct")
+                    value_is_literal = True
         elif 'default' in elements:
             # No explicit 'value': fall back to 'default', wrapped as <type> { <default> }
             # instead of the class's generic default (e.g. contains: ID::Type, default: ID::Type::Null
@@ -3716,6 +3743,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     label_tag = label_key
 
                 label_value = entry.get('value', "")
+
                 flags = entry.get('style', [])
                 flags_str = ' | '.join(flags) if flags else 'wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL'
 
@@ -3729,6 +3757,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     size_token = self.size_mapping.get(default_key, default_key)
                     size_str = size_token
 
+                # NOTE NOTE: The below text is no longer true - size and style ARE emitted now
+
                 # NOTE: 'size' and 'style' on label entries are parsed above (size_str,
                 # flags_str) but are NOT valid for createLabel() and must not be emitted —
                 # see docs/yaml-ui-reference.md "Known limitations". Do not wire these back
@@ -3736,8 +3766,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
                 # Size added by adding extra default parameter to createLabel GH 21/7/2026
 
+                label_name_is_a_var, label_value = self.resolve_literal_is_var(label_value)
+                if label_name_is_a_var:
+                    Q = ''
+                else:
+                    Q = '"'
+
                 code.append(
-                    f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", \"{label_value}\", {size_str}, {flags_str})")
+                    f"         .createLabel(UICreateFlags::Label, \"{label_tag}\", {Q}{label_value}{Q}, {size_str}, {flags_str})")
 
                 if self.sizer_info:
                     # Get sizer information
@@ -3823,7 +3859,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
            Validates keys, structure, duplicates, and type/name tokens.
         """
         if not isinstance(node, dict):
-            print(f"Warning: {ctx}.args must be a mapping ({yaml_file})", file=sys.stderr)
+            print(f"Warning: {ctx}.args must be a mapping {yaml_file}", file=sys.stderr)
             return None, [], []
 
         allow = self._allowed_sets()
@@ -3834,17 +3870,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # allowed_keys = {"arg_name", "args_out", "args_in"}
         # unknown = [k for k in node.keys() if k not in allowed_keys]
         # if unknown:
-        #     print(f"Warning: {ctx}.args has unknown keys {unknown} ({yaml_file})", file=sys.stderr)
+        #     print(f"Warning: {ctx}.args has unknown keys {unknown} {yaml_file}", file=sys.stderr)
 
         # arg_name
         arg_name = node.get("arg_name")
         if not isinstance(arg_name, str) or not arg_name.strip():
-            print(f"Warning: {ctx}.args.arg_name must be a non-empty string ({yaml_file})", file=sys.stderr)
+            print(f"Warning: {ctx}.args.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
             return None, [], []
         arg_name = arg_name.strip()
         if not self._is_identifier(arg_name):
             print(
-                f"Warning: {ctx}.args.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* ({yaml_file})",
+                f"Warning: {ctx}.args.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
                 file=sys.stderr)
 
         known_types = {
@@ -3859,29 +3895,29 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if arr is None:
                 return res
             if not isinstance(arr, list):
-                print(f"Warning: {ctx}.args.{key_name} must be a list ({yaml_file})", file=sys.stderr)
+                print(f"Warning: {ctx}.args.{key_name} must be a list {yaml_file}", file=sys.stderr)
                 return res
             if len(arr) % 3 != 0:
-                print(f"Warning: {ctx}.args.{key_name} length must be a multiple of 3 (name,type,value) ({yaml_file})",
+                print(f"Warning: {ctx}.args.{key_name} length must be a multiple of 3 (name,type,value) {yaml_file}",
                       file=sys.stderr)
             for i in range(0, len(arr) - (len(arr) % 3), 3):
                 n, ty, v = arr[i], arr[i + 1], arr[i + 2]
                 if not isinstance(n, str) or not n.strip():
-                    print(f"Warning: {ctx}.args.{key_name}[{i}] name must be a non-empty string ({yaml_file})",
+                    print(f"Warning: {ctx}.args.{key_name}[{i}] name must be a non-empty string {yaml_file}",
                           file=sys.stderr)
                     continue
                 name_clean = n.strip()
                 if not self._is_identifier(name_clean):
                     print(
-                        f"Warning: {ctx}.args.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* ({yaml_file})",
+                        f"Warning: {ctx}.args.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
                         file=sys.stderr)
                 if not isinstance(ty, str) or not ty.strip():
-                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] type must be a non-empty string ({yaml_file})",
+                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] type must be a non-empty string {yaml_file}",
                           file=sys.stderr)
                     continue
                 ty_clean = ty.strip()
                 if ty_clean.lower() not in known_types:
-                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] unknown type '{ty_clean}' ({yaml_file})",
+                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] unknown type '{ty_clean}' {yaml_file}",
                           file=sys.stderr)
                 res.append((name_clean, ty_clean, v))
             # duplicate detection within this list
@@ -3893,7 +3929,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 else:
                     seen.add(n)
             if dups:
-                print(f"Warning: {ctx}.args.{key_name} has duplicate names {sorted(set(dups))} ({yaml_file})",
+                print(f"Warning: {ctx}.args.{key_name} has duplicate names {sorted(set(dups))} {yaml_file}",
                       file=sys.stderr)
             return res
 
@@ -3901,7 +3937,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         ins = _triples(node.get("args_in"), "args_in")
 
         if require_out and not outs:
-            print(f"Warning: {ctx}.args is missing required 'args_out' entries for item-level args ({yaml_file})",
+            print(f"Warning: {ctx}.args is missing required 'args_out' entries for item-level args {yaml_file}",
                   file=sys.stderr)
 
         # cross duplicates (same key in outs and ins)
@@ -3909,7 +3945,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         in_names = {n for n, _, _ in ins}
         cross = sorted(out_names & in_names)
         if cross:
-            print(f"Warning: {ctx}.args has names present in both args_out and args_in {cross} ({yaml_file})",
+            print(f"Warning: {ctx}.args has names present in both args_out and args_in {cross} {yaml_file}",
                   file=sys.stderr)
 
         return arg_name, outs, ins
@@ -4100,7 +4136,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 if category in category_targets:
                     self.target(category_targets[category])
 
-                content = self._process_category(category, data, yaml_file, rel_path, sub_output)
+                if category == "tables":
+                    content = self._process_category(category, data, yaml_file, rel_path, output_file / "rs")
+                else:
+                    content = self._process_category(category, data, yaml_file, rel_path, output_file / "ui")
+
                 if content:
                     results.append(content)
             except Exception as e:
@@ -4215,7 +4255,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         if not output_file:
             return ("\n\n").join(module for _, module in generated)
 
-        dest_dir = output_file / rel_path
+        dest_dir = output_file # / rel_path
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         label = "RecordSet" if category == "tables" else self.target_class
@@ -4281,13 +4321,11 @@ def scan_and_generate(generator,
                   file=sys.stderr)
             return 1
 
-        rsdir = Path(output_dir / "record_sets")
-        uidir = Path(output_dir / "user_interface")
-        boths = Path(output_dir / "combined")
+        rsdir = Path(output_dir / "rs")
+        uidir = Path(output_dir / "ui")
 
         rsdir.mkdir(parents=True, exist_ok=True)
         uidir.mkdir(parents=True, exist_ok=True)
-        boths.mkdir(parents=True, exist_ok=True)
 
     if len(roots) == 1:
         print(f"Processing classes in {len(yaml_files)} YAML files from one directory...")
