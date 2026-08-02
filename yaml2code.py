@@ -1808,6 +1808,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
             code.append("")
 
+        # Placement: finally (before loadLayout). Spliced in here, rather than at the
+        # end of the ctor, so a finally block's effects (state/widgets it sets up) are
+        # already in place by the time loadLayout's resolution pass runs, instead of
+        # only existing after layout has already completed.
+        finally_block = self._extract_finally_begin(class_def)
+        if isinstance(finally_block, str) and finally_block.strip():
+            for line in finally_block.rstrip().splitlines():
+                code.append(f"      {line}")
+
         code.append(
             '      VERIFY_MSG(this->loadLayout(layoutPath, layoutKey), "Error loading layout resource " + layoutPath.string());')
 
@@ -1820,16 +1829,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                           f"'{top_base_class}' does not derive from PageContainer; book() won't exist "
                           f"{yaml_file}", file=sys.stderr)
                 code.append("      load();")
-                code.extend(self._generate_book_child_calls(target_name, book_children, "this->book()", yaml_file))
+                code.extend(self._generate_book_child_calls(target_name, book_children, "this->book()", yaml_file,
+                                                            parent_args_var="args"))
 
-        # Placement: finally (end of ctor). Spliced in before the sizer is fit/frozen below,
-        # so any controls a finally block adds to GetPageSizer()/grid() are still accounted
-        # for in the fit instead of being tacked onto an already-sized page.
-        finally_block = self._extract_finally_begin(class_def)
-        if isinstance(finally_block, str) and finally_block.strip():
-            for line in finally_block.rstrip().splitlines():
-                code.append(f"      {line}")
-
+        # Placement: sizer fit/freeze (end of ctor) - after loadLayout and any book
+        # children, so controls added by either are accounted for in the fit instead
+        # of being tacked onto an already-sized page.
         if self.target_type == 'wizardpages':
             code.append('      SetSizerAndFit(&GetPageSizer(), true);')
         elif self.target_type == 'pages':
@@ -2010,9 +2015,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                       file=sys.stderr)
                 header_expr = '""s'
 
-            args_expr = page.get("args", "args")
-            if not isinstance(args_expr, str) or not args_expr.strip():
-                args_expr = "args"
+            page_args_lines: List[str] = []
+            raw_args = page.get("args", "args")
+            if isinstance(raw_args, dict):
+                page_args_lines, local_name = self._emit_item_args(
+                    page, "args", yaml_file, f"wizard '{target_name}'.pages[{idx}]")
+                args_expr = local_name if local_name else "args"
+            else:
+                args_expr = raw_args.strip() if isinstance(raw_args, str) and raw_args.strip() else "args"
 
             call_line = (f'addPage(new {page_class}({cflags}, "{page_name}", this, '
                         f'{header_expr}, {args_expr}, 0L));')
@@ -2027,9 +2037,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                           f"wizard's args_in {yaml_file}", file=sys.stderr)
                 cond_expr = f'{"!" if negate else ""}param<bool>(args, "{key}", false)'
                 page_call_lines.append(f"      if ({cond_expr}) {{")
+                page_call_lines.extend(f"   {l}" for l in page_args_lines)
                 page_call_lines.append(f"         {call_line}")
                 page_call_lines.append("      }")
             else:
+                page_call_lines.extend(page_args_lines)
                 page_call_lines.append(f"      {call_line}")
 
         finally_body = self._extract_finally_begin(class_def)
@@ -2133,13 +2145,20 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         return f'"{self._cpp_string_literal(str(val))}"'
 
     def _generate_book_child_calls(self, ctx_name: str, children: List[Any], parent_expr: str,
-                                   yaml_file: Path) -> List[str]:
+                                   yaml_file: Path, parent_args_var: Optional[str] = None) -> List[str]:
         """Shared by both book: flavours (container:true's own constructor, and
            container:false's free populate() function): emit, in declared order, an
            optional local anymap arg variable plus a '(void) new <class>(<parent_expr>,
            wx::nextID(), "<name>", PageType::<type>, -1[, <argsVar>]);' line per child
            page. imageIndex is always -1 here - Book::loadLayout() assigns real image
-           indexes at runtime from the paired form-layout file, not at construction."""
+           indexes at runtime from the paired form-layout file, not at construction.
+
+           A child's 'args:' may be either the original flat {key: literal/icon} mapping
+           (built fresh, no parent forwarding - still needed for container:false, which has
+           no incoming anymap at all), or, when it contains an 'arg_name' key, the same
+           arg_name/args_in schema class-level and control-level args: blocks use, remapped
+           from parent_args_var via _emit_item_args. The latter requires an anymap actually
+           be in scope at the call site (parent_args_var not None)."""
         allow = self._allowed_sets()
         lines: List[str] = []
         for idx, child in enumerate(children):
@@ -2178,7 +2197,16 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
             args_expr = None
             args_map = child.get("args")
-            if isinstance(args_map, dict) and args_map:
+            if isinstance(args_map, dict) and "arg_name" in args_map:
+                if parent_args_var:
+                    arg_lines, local_name = self._emit_item_args(child, parent_args_var, yaml_file, f"{ctx} args")
+                    lines.extend(arg_lines)
+                    args_expr = local_name
+                else:
+                    print(f"Warning: {ctx} 'args' uses the arg_name/args_in schema, but no parent anymap is "
+                          f"available here (book container:false populate() takes no args); ignoring "
+                          f"{yaml_file}", file=sys.stderr)
+            elif isinstance(args_map, dict) and args_map:
                 var_name = f"{self.to_camel_case(child_name)}Args"
                 lines.append(f'      anymap {var_name};')
                 for key, val in args_map.items():
@@ -3694,6 +3722,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             # Parse both outs and ins (outs are NOT applied here; only ins belong before construction)
             local_name, outs, ins = self._parse_args_block(args_block, ctx, yaml_file, require_out=False)
             base = parent_args_var if parent_args_var else "args"
+            if local_name and local_name == base:
+                print(f"Warning: {ctx}.args.arg_name '{local_name}' must not be the same as the "
+                      f"parent args variable '{base}' (would emit a self-shadowing 'anymap {base} = {base};'); "
+                      f"ignoring this args block and forwarding '{base}' unmodified {yaml_file}", file=sys.stderr)
+                return [], None
             if local_name:
                 lines.append(f"      anymap {local_name} = {base} ;")
                 # Apply args_in before allocation using type-aware literals
