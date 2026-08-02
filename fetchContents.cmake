@@ -491,7 +491,13 @@ function(fetchContents)
                                         list(APPEND outStr "SUBBUILD_DIR" "${use_subbin}")
                                     endif ()
 
-                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" ${this_find_package_args})
+                                    # Strip EXCLUDE_FROM_ALL: it is not a find_package keyword, and in CMake 4.x
+                                    # CMP0170=NEW causes FetchContent_MakeAvailable to forward it to add_subdirectory,
+                                    # which breaks relative-path source validation in the fetched content's CMakeLists.
+                                    set(_fc_declare_args ${this_find_package_args})
+                                    list(REMOVE_ITEM _fc_declare_args EXCLUDE_FROM_ALL)
+                                    list(APPEND outStr "${OVERRIDE_FIND_PACKAGE_KEYWORD}" ${_fc_declare_args})
+                                    unset(_fc_declare_args)
                                     list(APPEND outStr "${COMPONENTS_KEYWORD}" ${this_find_package_components})
                                     list(APPEND outStr "${GIT_TAG_KEYWORD}" "${this_tag}")
 
