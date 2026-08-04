@@ -1711,10 +1711,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 rt.append( "      // should walk the same sequence).")
                 rt.append(''   )
                 rt.append(f'      if (!rs->getRowlist("", "{order_by}")) {{ // false = the query itself failed')
-                rt.append( '         std::cout << "initial query failed: " << rs->lastError_ << std::endl;')
+                rt.append( '         doutif(TraceLevel::Info) << "initial query failed: " << rs->lastError_ << std::endl;')
                 rt.append('          return nullptr;')
                 rt.append( '      }')
                 rt.append(f'      const {record} *rec = rs->moveLast(); // nullptr = rows_ is empty')
+                rt.append(f'      if (rec)')
+                rt.append(f'          doutif(TraceLevel::Info) << "got record id " << rec->id << std::endl;')
+                rt.append( '')
+                rt.append(f'      db::rsInterface()->select(rs); // buttons now gate on the REAL recordset')
                 rt.append( '      return rs;')
                 rt.append( '   }')
                 access_groups['public'].append('\n'.join(rt))
@@ -2981,14 +2985,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         if self.target_type == "groups":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'StringUtil', 'Validator', 'wxTypes', 'wxUtil',
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator', 'wxTypes', 'wxUtil',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes', 'wxUtil'])
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes', 'wxUtil'])
         elif self.target_type == "wizardpages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'Interface', 'Group', 'WizardPage', 'StringUtil', 'wxTypes', 'wxUtil'])
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil', 'wxTypes', 'wxUtil'])
 
         if not isinstance(elements, list):
             return sorted(used_modules)
