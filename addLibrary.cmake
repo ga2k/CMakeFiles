@@ -226,9 +226,13 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
-            SOVERSION                   "${_hs_so_ver}"
             VERSION                     "${arg_VERSION}"
     )
+    if (NOT arg_EXECUTABLE)
+        set_target_properties(${arg_NAME} PROPERTIES
+            SOVERSION                   "${_hs_so_ver}"
+    )
+    endif ()
     unset(_hs_so_ver)
 
     if (APP_TYPE STREQUAL Executable)
