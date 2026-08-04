@@ -226,18 +226,19 @@ function(addLibrary)
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
-            VERSION                     "${arg_VERSION}"
     )
-    if (NOT arg_EXECUTABLE)
+
+    # VERSION drives CMake's versioned-filename + symlink behavior on its own,
+    # independent of SOVERSION/NO_SONAME, so it must stay off executable targets.
+    if (APP_TYPE STREQUAL Executable)
         set_target_properties(${arg_NAME} PROPERTIES
-            SOVERSION                   "${_hs_so_ver}"
-    )
+            NO_SONAME                   ON)
+    else ()
+        set_target_properties(${arg_NAME} PROPERTIES
+            VERSION                     "${arg_VERSION}"
+            SOVERSION                   "${_hs_so_ver}")
     endif ()
     unset(_hs_so_ver)
-
-    if (APP_TYPE STREQUAL Executable)
-        set_target_properties(${arg_NAME} PROPERTIES NO_SONAME ON)
-    endif ()
 
     # Explicitly add the compile feature to help the exporter
     target_compile_features(${arg_NAME} PUBLIC cxx_std_23)
