@@ -1588,7 +1588,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append(f"   auto onSetActive(bool autoEnable) -> void override;{note}")
             if event_declared:
                 note = "" if on_event is not None else f"  // Implemented in {stub_path}"
-                code.append(f"   auto onEvent(db::RecordSetEvent event) -> void override;{note}")
+                code.append(f"   auto onEvent(sig::RecordSetEvent event) -> void override;{note}")
             if refresh_ex_declared:
                 code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in {stub_path}")
 
@@ -1604,8 +1604,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not (kill_declared or set_declared):
                 code.append("")
                 code.append("protected:")
-            code.append(f"   std::shared_ptr<{recordset['class']}> m_rs;")
-            code.append("   size_t m_moveHandle{};")
+            code.append(f"   using rs_t = std::shared_ptr<{recordset['class']}>;")
+            code.append(f"   rs_t m_rs;")
+            code.append( "   size_t m_moveHandle{};")
 
         # Custom member variables (variables: block) — grouped under explicit access
         # specifiers so placement here is independent of whatever access level the
@@ -1661,14 +1662,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             record = recordset['record']
             rfc: List[str] = []
             if self.target_type == "pages":
-                rfc.append("   auto refreshFromCurrent () -> void {")
+                rfc.append( "   auto refreshFromCurrent () -> void {")
                 rfc.append(f"      const {record} *rec = m_rs ? m_rs->current() : nullptr;")
-                rfc.append("      if (!rec)")
-                rfc.append("         return;")
+                rfc.append( "      if (!rec)")
+                rfc.append( "         return;")
             else:  # groups
                 rfc.append(f"   auto refreshFromCurrent (const {record} *rec) -> void {{")
-                rfc.append("      if (!rec)")
-                rfc.append("         return;")
+                rfc.append( "      if (!rec)")
+                rfc.append( "         return;")
             for var, fld in bound_controls:
                 rfc.append(f"      wx::initFromField({var}, rec->{fld});")
                 # Retarget the control's commit() UPDATE at the current record
@@ -1688,6 +1689,36 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             rfc.append("   }")
             access_groups['public'].append('\n'.join(rfc))
 
+            # Method to reload the table from the physical db on disk
+
+            rt: List[str] = []
+            tbl = recordset['table']
+            order_by = recordset['order_by']
+
+            if self.target_type == "pages" and tbl is not None:
+                rt.append(f'   auto reloadTable (const std::string &t = "{tbl}") -> rs_t {{')
+                rt.append( '      auto db = db::db();')
+                rt.append( '      if (!db)')
+                rt.append( '         return nullptr;')
+                rt.append( '      auto table = db->getTable(t);')
+                rt.append( '      if (!table)')
+                rt.append( '         return nullptr;')
+                rt.append( '   ')
+                rt.append(f'      auto rs = std::make_shared<{recordset["class"]}>(*table);')
+                rt.append(''   )
+                rt.append( "      // Same order as select()'s list query, so the list's displayed order and the")
+                rt.append( "      // recordset's navigation order agree (clicking a row and Prev/Next-ing from it")
+                rt.append( "      // should walk the same sequence).")
+                rt.append(''   )
+                rt.append(f'      if (!rs->getRowlist("", "{order_by}")) {{ // false = the query itself failed')
+                rt.append( '         std::cout << "initial query failed: " << rs->lastError_ << std::endl;')
+                rt.append('          return nullptr;')
+                rt.append( '      }')
+                rt.append(f'      const {record} *rec = rs->moveLast(); // nullptr = rows_ is empty')
+                rt.append( '      return rs;')
+                rt.append( '   }')
+                access_groups['public'].append('\n'.join(rt))
+
         def format_access_block(access_name: str, fns: List[str]) -> str:
             if not fns:
                 return ""
@@ -1705,7 +1736,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         code.append("public:")
         if recordset and self.target_type == "pages":
             # The Subscribe lambda in the ctor captures 'this' — must unsubscribe.
-            code.append(f"   ~{cpp_class}() override {{ db::recordSetSignal().Unsubscribe(m_moveHandle); }}")
+            code.append(f"   ~{cpp_class}() override {{ sig::recordSetSignal().Unsubscribe(m_moveHandle); }}")
         else:
             code.append(f"   ~{cpp_class}() override = default;")
         code.append("")
@@ -1801,11 +1832,11 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # navigates. Suspended until onSetActive resumes it (per-subscription).
         if recordset and self.target_type == "pages":
             code.append("")
-            code.append("      m_moveHandle = db::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
-            code.append("                                                     db::RecordSetEvent::MoveFirst, db::RecordSetEvent::MovePrevious,")
-            code.append("                                                     db::RecordSetEvent::MoveNext, db::RecordSetEvent::MoveLast,")
-            code.append("                                                     db::RecordSetEvent::MoveAbsolute);")
-            code.append("      db::recordSetSignal().suspendSignals(m_moveHandle);")
+            code.append("      m_moveHandle = sig::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
+            code.append("                                                     sig::RecordSetEvent::MoveFirst, sig::RecordSetEvent::MovePrevious,")
+            code.append("                                                     sig::RecordSetEvent::MoveNext, sig::RecordSetEvent::MoveLast,")
+            code.append("                                                     sig::RecordSetEvent::MoveAbsolute);")
+            code.append("      sig::recordSetSignal().suspendSignals(m_moveHandle);")
             code.append("")
 
         # Placement: finally (before loadLayout). Spliced in here, rather than at the
@@ -1855,7 +1886,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append(f"{on_set_active}")
                 code.append(f"}}")
             if on_event is not None:
-                code.append(f"auto {cpp_class}::onEvent(db::RecordSetEvent event) -> void {{")
+                code.append(f"auto {cpp_class}::onEvent(sig::RecordSetEvent event) -> void {{")
                 code.append(f"{on_event}")
                 code.append(f"}}")
 
@@ -1881,7 +1912,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             }
         if event_declared and on_event is None:
             stub_fns['onEvent'] = {
-                'args': 'db::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
+                'args': 'sig::RecordSetEvent event', 'return': 'void', 'const': False, 'override': True,
                 'stub_body': [
                     "    Interface::onEvent(event);",
                 ],
@@ -2744,6 +2775,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "class",
                 "module",
                 "record",
+                "table",
+                "order_by"
             },
             "alt_data_source_def": {
                 "blank_text",
@@ -3075,6 +3108,19 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                                 f"recordset for '{element_name}' {{recordset_def}}", yaml_file)
         module = rs.get('module')
         rs_class = rs.get('class')
+
+        # Two vars needed for reloadTable()
+        order_by = rs.get('order_by', 'id')
+        tbl = rs.get('table')
+
+        if self.debugging:
+            if tbl is None and (order_by is None or order_by == "id"):
+                print(
+                    f"Warning: '{element_name}': reloadTable() generation skipped {yaml_file}")
+            else:
+                if tbl is None:
+                    print(f"Warning: '{element_name}': 'recordset' needs non-empty 'table' for reloadTable() generation {yaml_file}")
+
         if not (isinstance(module, str) and module.strip() and isinstance(rs_class, str) and rs_class.strip()):
             print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' {yaml_file}",
                   file=sys.stderr)
@@ -3090,7 +3136,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             print(f"Error: '{element_name}': recordset class '{rs_class}' doesn't end in 'RS'; "
                   f"add an explicit 'record:' {yaml_file}", file=sys.stderr)
             return None
-        return {'module': module, 'class': rs_class, 'record': record}
+        return {'module': module, 'class': rs_class, 'record': record, 'order_by': order_by, 'table': tbl}
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
