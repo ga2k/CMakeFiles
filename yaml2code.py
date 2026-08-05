@@ -3229,15 +3229,10 @@ class CppGenerator:
             print(f"Warning: {ctx}.{schema} is missing required extract entries for item-level args {yaml_file}",
                   file=sys.stderr)
 
-        # cross duplicates (same key in ins and any extract list)
-        in_names = {n for n, _, _, _ in ins}
-        for timing, lst in extracts.items():
-            extract_names = {n for n, _, _, _ in lst}
-            cross = sorted(in_names & extract_names)
-            if cross:
-                key = timing_keys[timing]
-                print(f"Warning: {ctx}.{schema} has names present in both {ins_key} and {key} {cross} {yaml_file}",
-                      file=sys.stderr)
+        # Note: unlike args_in vs. args_out under the old schema, a name appearing in
+        # both ins and an extract list is NOT flagged here -- it's the normal, common
+        # idiom (a key gets a class/translation default, then the same name is read
+        # back out as a local for use elsewhere in the body), not a shadowing mistake.
 
         return arg_name, ins, extracts
 
