@@ -43,946 +43,18 @@ _CPP_IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
 
 class CppGenerator:
     """
-    Generates C++23 module (.ixx) files from YAML form definitions: RecordSet modules
-    for `tables:` sections, and wxWidgets Group/Page/WizardPage modules for
-    `groups:`/`pages:`/`wizardpages:` sections. See generate_from_yaml() for the
-    single-parse entry point that checks a YAML file for all four sections.
+    Generates C++23 module (.ixx) files from YAML form definitions: wxWidgets
+    Group/Page/WizardPage modules for `groups:`/`pages:`/`wizardpages:` sections.
+    See generate_from_yaml() for the single-parse entry point.
+
+    `tables:` sections are no longer generated into C++ at all -- db::TableLoader
+    (Libs/Core/src/Table.cpp, hand-written) parses the same `tables:`/`relationships:`
+    YAML directly at runtime to CREATE TABLE the schema and CREATE VIEW a
+    "<table>_detail" joined view per table with relationships. Reads/writes go through
+    the generic db::RowSet (Libs/Core/src/RowSet.ixx) -- no per-table generated struct.
     """
 
     debugging = False
-
-    def _init_table_state(self):
-        """Table (RecordSet) generation state - split out of __init__ for readability."""
-        self.type_mapping = {
-            'integer': 'int',
-            'string': 'std::string',
-            'hs_bool': 'hs_bool',
-            'float': 'float',
-            'double': 'double',
-            'text': 'std::string',
-            'datetime': 'std::tm',
-            'date': 'std::tm'
-        }
-        # Two-pass processing: first collect all tables, then resolve relationships
-        self.all_tables: Dict[str, Dict[str, Any]] = {}  # table_name -> table_def
-        self.table_files: Dict[str, Path] = {}  # table_name -> yaml_file_path
-        self.max_join_depth = 3  # Default maximum depth for nested joins
-        self._relationship_cache: Dict[str, List[Tuple[str, str, str]]] = {}  # Cache to prevent infinite recursion
-
-    def set_max_join_depth(self, depth: int) -> None:
-        """Set the maximum depth for nested joins (default is 3)."""
-        self.max_join_depth = max(1, depth)  # Minimum depth is 1
-
-    def resolve_relationship_fields(self, relationships: List[Dict[str, Any]],
-                                    current_table_name: str = "",
-                                    prefix: str = "",
-                                    depth: int = 0) -> List[Tuple[str, str, str]]:
-        """
-        Recursively resolve relationship fields using collected table data.
-
-        Args:
-            relationships: List of relationship definitions
-            current_table_name: Name of the current table (for cycle detection)
-            prefix: Current prefix for field names (for nested relationships)
-            depth: Current recursion depth
-
-        Returns:
-            List of (field_name, cpp_type, required) tuples
-        """
-        if depth >= self.max_join_depth:
-            return []
-
-        resolved_fields = []
-
-        for rel in relationships or []:
-            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
-                continue
-
-            ref_table = rel.get("references_table")
-            if not ref_table:
-                continue
-
-            # Normalize referenced table name
-            normalized_ref = ref_table
-            if ref_table.endswith('_table'):
-                normalized_ref = ref_table[:-6]
-
-            rel_name = rel.get('name', ref_table)
-            current_prefix = f"{prefix}__{rel_name}" if prefix else rel_name
-
-            # Prevent infinite recursion by checking if we've already processed this exact
-            # relationship path. Keyed on current_prefix (the full accumulated field-name
-            # path), NOT on current_table_name->normalized_ref: two distinct sibling
-            # relationships from the same table to the same target (e.g. a 'doctors' row
-            # having both an 'address' and a 'postal_address', both -> addresses) are a
-            # legitimate, common shape and must both resolve — keying on the table pair
-            # alone previously treated the second one as an already-visited cycle and
-            # silently dropped all of its fields (e.g. a joined-in fNotes).
-            cache_key = current_prefix
-            if cache_key in self._relationship_cache:
-                continue
-
-            # Look up the referenced table in our collected tables
-            if normalized_ref not in self.all_tables:
-                print(f"Warning: Referenced table '{ref_table}' not found at depth {depth}", file=sys.stderr)
-                continue
-
-            ref_table_def = self.all_tables[normalized_ref]
-            ref_fields = ref_table_def.get('fields', {})
-
-            # Add all direct fields from the referenced table
-            direct_fields = []
-            for field_name, field_def in ref_fields.items():
-                cpp_type = self.map_yaml_type_to_cpp(field_def.get('type', 'string'))
-                prefixed_name = f"{current_prefix}__{field_name}"
-                direct_fields.append((prefixed_name, cpp_type, False))  # All relationship fields are optional
-
-            resolved_fields.extend(direct_fields)
-
-            # Cache this level to prevent cycles
-            self._relationship_cache[cache_key] = direct_fields
-
-            # Recursively process nested relationships
-            nested_relationships = ref_table_def.get('relationships', [])
-            if nested_relationships and depth < self.max_join_depth - 1:
-                nested_fields = self.resolve_relationship_fields(
-                    nested_relationships,
-                    normalized_ref,  # This becomes the current table for the next level
-                    current_prefix,  # Pass down the accumulated prefix
-                    depth + 1
-                )
-                resolved_fields.extend(nested_fields)
-
-        return resolved_fields
-
-    def generate_nested_joins(self, table_name: str, relationships: List[Dict[str, Any]],
-                              base_alias: str = "our", depth: int = 0,
-                              used_aliases: set = None) -> Tuple[List[str], Dict[str, List[str]]]:
-        """
-        Generate nested JOIN clauses and select columns for relationships.
-
-        New behavior:
-          - If a relationship block contains 'as', use it as the SQL alias; otherwise use a unique tN.
-          - Preserve recursion, max depth, alias uniqueness, and nested name prefixing.
-        """
-        if used_aliases is None:
-            used_aliases = {base_alias}
-
-        if depth >= self.max_join_depth:
-            return [], {}
-
-        join_lines = []
-        select_cols_by_alias = {}
-        alias_counter = len(used_aliases)
-
-        def next_auto_alias(counter: int) -> Tuple[str, int]:
-            alias = f"t{counter}"
-            while alias in used_aliases:
-                counter += 1
-                alias = f"t{counter}"
-            return alias, counter + 1
-
-        for rel in relationships or []:
-            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
-                continue
-
-            fk = rel.get("foreign_key")
-            ref_table = rel.get("references_table")
-            ref_field = rel.get("references_field")
-            if not (fk and ref_table and ref_field):
-                continue
-
-            # Determine alias: prefer explicit 'as', else allocate tN
-            explicit_alias = rel.get("as")
-            if explicit_alias:
-                alias = explicit_alias
-                # Ensure global uniqueness; if taken, fall back to auto
-                if alias in used_aliases:
-                    alias, alias_counter = next_auto_alias(alias_counter)
-            else:
-                alias, alias_counter = next_auto_alias(alias_counter)
-
-            used_aliases.add(alias)
-
-            rel_name = rel.get('name', ref_table)
-
-            # Determine JOIN type
-            join_override = (rel.get("join") or "").lower()
-            if join_override in ("inner", "left"):
-                join_kw = "INNER" if join_override == "inner" else "LEFT"
-            else:
-                join_kw = "LEFT"
-
-            # Add this level's JOIN
-            join_lines.append(f"{join_kw} JOIN {ref_table} {alias} ON {base_alias}.{fk} = {alias}.{ref_field}")
-
-            # Get fields from referenced table
-            normalized_ref = ref_table[:-6] if ref_table.endswith('_table') else ref_table
-            if normalized_ref in self.all_tables:
-                ref_fields = self.all_tables[normalized_ref].get('fields', {})
-                select_cols_by_alias[alias] = [
-                    f"{alias}.{col_name} AS {rel_name}__{col_name}"
-                    for col_name in ref_fields.keys()
-                ]
-
-                # Recursively process nested relationships
-                nested_relationships = self.all_tables[normalized_ref].get('relationships', [])
-                if nested_relationships and depth < self.max_join_depth - 1:
-                    nested_joins, nested_cols = self.generate_nested_joins(
-                        ref_table, nested_relationships, alias, depth + 1, used_aliases
-                    )
-                    join_lines.extend(nested_joins)
-
-                    # Merge nested select columns with proper prefixing
-                    for nested_alias, cols in nested_cols.items():
-                        prefixed_cols = []
-                        for col in cols:
-                            if " AS " in col:
-                                select_part, as_part = col.split(" AS ", 1)
-                                prefixed_cols.append(f"{select_part} AS {rel_name}__{as_part}")
-                            else:
-                                prefixed_cols.append(col)
-                        select_cols_by_alias[nested_alias] = prefixed_cols
-
-        return join_lines, select_cols_by_alias
-
-    def generate_select_impl(self, table_name: str, fields: dict, relationships: list, yaml_file: Path) -> str:
-        """
-        Generate a C++ select_impl with support for nested JOINs.
-        """
-        base_alias = "our"
-
-        # Base table columns
-        base_select_cols = [f"{base_alias}.{col} AS {col}" for col in fields.keys()]
-
-        # Generate nested JOINs and select columns
-        join_lines, select_cols_by_alias = self.generate_nested_joins(table_name, relationships, base_alias)
-
-        # Flatten all select columns
-        rel_select_cols = []
-        for cols in select_cols_by_alias.values():
-            rel_select_cols.extend(cols)
-
-        # Compose SQL
-        select_clause = "SELECT " + ", ".join(base_select_cols + rel_select_cols)
-        from_clause = f"FROM {table_name} {base_alias}"
-
-        # Build the method body
-        if join_lines:
-            joins_block = "\\n".join(join_lines)
-            joins_emit = f'        sql.append("{joins_block}\\n");'
-        else:
-            joins_emit = ""
-
-        cpp = f"""
-            std::string selectRecords_impl(std::string where = std::string{{}}, std::string order_by = std::string{{}}, std::string limit_offset = std::string{{}}) {{
-                std::string sql;
-                sql.reserve(2048);  // Larger buffer for nested joins
-                sql.append("{select_clause}\\n");
-                sql.append("{from_clause}\\n");
-        {joins_emit}
-                if (!where.empty()) {{
-                    sql.append("WHERE ");
-                    sql.append(where);
-                    sql.append("\\n");
-                }}
-                if (!order_by.empty()) {{
-                    sql.append("ORDER BY ");
-                    sql.append(order_by);
-                    sql.append("\\n");
-                }}
-                if (!limit_offset.empty()) {{
-                    sql.append(std::string(limit_offset));
-                }}
-                return sql;
-            }}
-        """
-        return cpp
-
-    def _collect_relationship_map(self, relationships: list) -> list:
-        """
-        Normalize relationship entries and extract replace_with/as/replace_as if present.
-        Returns a list of dicts with keys:
-          - name
-          - type
-          - foreign_key
-          - references_table
-          - references_field
-          - replace_with (list[str] or None)
-          - as_alias (str|None)
-          - replace_as (str|None)
-        """
-        rels = []
-        if not relationships:
-            return rels
-        for rel in relationships:
-            rw = rel.get("replace_with")
-            if isinstance(rw, list):
-                rw_list = [str(x) for x in rw]
-            elif isinstance(rw, str):
-                rw_list = [rw]
-            else:
-                rw_list = None
-            rels.append({
-                "name": rel.get("name"),
-                "type": rel.get("type"),
-                "foreign_key": rel.get("foreign_key"),
-                "references_table": rel.get("references_table"),
-                "references_field": rel.get("references_field"),
-                "replace_with": rw_list,
-                "as_alias": rel.get("as"),
-                "replace_as": rel.get("replace_as"),
-            })
-        return rels
-
-    def generate_get_rowset_impl(self, table_name: str, fields: dict, relationships: list) -> str:
-        """
-        Generate Recordset::getRowset_impl SQL that replaces foreign-key fields
-        using 'replace_with'. Supports:
-          - 'as' for join alias name
-          - 'replace_as' to rename the resulting SQL field (alias) instead of the FK name
-        """
-        base_alias = "our"
-
-        # Build join lines with aliasing (uses 'as' if provided)
-        join_lines, _ = self.generate_nested_joins(table_name, relationships, base_alias)
-
-        # Prepare relationship metadata and alias map
-        rel_infos = self._collect_relationship_map(relationships)
-
-        # Build alias map for FK -> alias honoring 'as'; fallback to t1.. if missing
-        used_aliases = set([base_alias])
-        alias_for_fk = {}
-        auto_n = 1
-        def next_auto_alias(n):
-            a = f"t{n}"
-            while a in used_aliases:
-                n += 1
-                a = f"t{n}"
-            return a, n
-
-        for rel in rel_infos:
-            alias = rel["as_alias"]
-            if not alias or alias in used_aliases:
-                alias, auto_n = next_auto_alias(auto_n)
-            used_aliases.add(alias)
-            alias_for_fk[rel["foreign_key"]] = alias
-
-        # Start with the list of base fields in order
-        base_field_order = list(fields.keys())
-
-        # Build projection with replacements
-        projected_cols = []
-        for col in base_field_order:
-            rel = next((r for r in rel_infos if r["foreign_key"] == col and r.get("replace_with")), None)
-            if rel is None:
-                projected_cols.append(f"{base_alias}.{col} AS {col}")
-                continue
-
-            alias = alias_for_fk.get(col)
-            rw_list = rel["replace_with"] or []
-            out_name = rel.get("replace_as") or col
-
-            if not alias or not rw_list:
-                projected_cols.append(f"{base_alias}.{col} AS {out_name}")
-                continue
-
-            if len(rw_list) == 1:
-                repl = rw_list[0]
-                projected_cols.append(f"{alias}.{repl} AS {out_name}")
-            else:
-                concat_expr = " || ' ' || ".join([f"{alias}.{c}" for c in rw_list])
-                projected_cols.append(f"{concat_expr} AS {out_name}")
-
-        select_clause = "SELECT " + ", ".join(projected_cols)
-        from_clause = f"FROM {table_name} {base_alias}"
-
-        if join_lines:
-            joins_block = "\\n".join(join_lines)
-            joins_emit = f'        sql.append("{joins_block}\\n");'
-        else:
-            joins_emit = ""
-
-        cpp = f"""
-            std::string getRowset_impl(std::string where = std::string{{}}, std::string order_by = std::string{{}}, std::string limit_offset = std::string{{}}) {{
-                std::string sql;
-                sql.reserve(2048);
-                sql.append("{select_clause}\\n");
-                sql.append("{from_clause}\\n");
-        {joins_emit}
-                if (!where.empty()) {{
-                    sql.append("WHERE ");
-                    sql.append(where);
-                    sql.append("\\n");
-                }}
-                if (!order_by.empty()) {{
-                    sql.append("ORDER BY ");
-                    sql.append(order_by);
-                    sql.append("\\n");
-                }}
-                if (!limit_offset.empty()) {{
-                    sql.append(std::string(limit_offset));
-                }}
-                return sql;
-            }}
-        """
-        return cpp
-
-    def generate_recordset_impl(self, table_name: str, fields: dict, relationships: list, yaml_file: Path) -> str:
-        """
-        Top-level generator that emits all impl functions for a table.
-        """
-        content = []
-        content.append(self.generate_select_impl(table_name, fields, relationships, yaml_file))
-        content.append(self.generate_get_rowset_impl(table_name, fields, relationships))
-        return "\n".join(content)
-
-    def generate_table_module(self, table_name: str, fields: Dict[str, Any], yaml_file: Path,
-                        relationships: List[Dict[str, Any]] | None = None) -> str:
-        """Generate the complete C++ module file with nested relationship support."""
-
-        if table_name.endswith('_table'):
-            proposed_name = table_name.replace('_table', '')
-        else:
-            proposed_name = table_name
-
-        pascal = self.to_pascal_case(proposed_name)
-        class_name = f"{pascal}RS"
-        record_name = f"{pascal}Record"
-
-        # Clear relationship cache for each table generation
-        self._relationship_cache.clear()
-
-        field_declarations = self.generate_field_declarations(fields)
-
-        # Use the enhanced nested relationship resolver
-        normalized_table = table_name[:-6] if table_name.endswith('_table') else table_name
-        related_decls, related_reads = self._generate_related_declarations_and_reads_nested(relationships or [],
-                                                                                            normalized_table)
-
-        constructor_params, _constructor_initializers = self.generate_constructor_params(fields)
-        row_assignments = self.generate_row_assignments(fields)
-
-        constructor_params_str = ",\n".join(constructor_params)
-
-        # Build ctor body: copy ctor params into this->in_.*
-        ctor_body_lines: List[str] = []
-        for field_name, field_def in fields.items():
-            if field_def.get('auto_increment', False):
-                continue
-            camel = self.to_camel_case(field_name)
-            ctor_body_lines.append(f"        this->in_.{field_name.ljust(24)} = {camel};")
-        ctor_body = "\n".join(ctor_body_lines)
-
-        # Generate safe insertRecord_impl
-        insert_impl = self.generate_insert_impl(table_name, fields)
-        # Use YAML file modification time for deterministic headers (prevents needless rebuilds)
-        try:
-            _mt = datetime.datetime.fromtimestamp(yaml_file.stat().st_mtime)
-            _mts = _mt.isoformat(sep=' ', timespec='seconds')
-        except Exception:
-            _mts = 'unknown'
-
-        module_content = f'''module;
-
-// Auto-generated from
-// {yaml_file} (mtime: {_mts})
-
-// Make any changes there. This file will be overwritten.
-
-//
-// Generated from {yaml_file.name} (nested joins: depth {self.max_join_depth})
-//
-
-#include "Core/CoreData.h"
-#include "Core/Core.h"
-
-#include <soci/soci.h>
-#include <string>
-
-export module {pascal}.RS;
-export import DB.RS;
-export import DB.Table;
-
-import Types;
-import Util;
-import DDT;
-
-export namespace mc {{
-using namespace db;
-using namespace std::string_literals;
-
-// clang-format off
-struct {record_name} {{
-{chr(10).join(field_declarations + related_decls)}
-
-   {record_name} () = default;
-   explicit {record_name} (const soci::row &row) {{
-      in (row);
-   }}
-   void in (const soci::row &row) {{
-{chr(10).join(row_assignments + related_reads)}
-   }}
-}};
-
-class {class_name} : public RecordSet<{class_name}, {record_name}> {{
-  public:
-   using Record = {record_name};
-
-    explicit {class_name} (Table &table)
-        : RecordSet<{class_name}, Record> (table)
-        {{}}
-
-    explicit {class_name} (Table &table,
-{constructor_params_str})
-    : RecordSet (table) {{
-{ctor_body}
-    }}
-
-    ~{class_name}() override = default;
-{insert_impl}
-{self.generate_recordset_impl(table_name, fields, relationships or [], yaml_file)}
-}};
-}} // namespace mc
-'''
-        return module_content
-
-    def _generate_related_declarations_and_reads_nested(self, relationships: List[Dict[str, Any]],
-                                                        current_table: str) -> tuple[List[str], List[str]]:
-        """
-        Create declarations and row reads for nested joined columns.
-        """
-        decls: list[str] = []
-        reads: list[str] = []
-
-        # Use the new nested resolution method
-        resolved_fields = self.resolve_relationship_fields(relationships, current_table)
-
-        if not resolved_fields:
-            return decls, reads
-
-        max_name_len = max(len(name) for name, _, _ in resolved_fields)
-        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
-
-        for name, cpp_type, required in resolved_fields:
-            type_str = f"optional<{cpp_type}>"
-            decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
-            reads.append(
-                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
-            )
-
-        return decls, reads
-
-    def collect_all_tables(self, yaml_files: List[Path]) -> None:
-        """First pass: collect all table definitions from all YAML files."""
-
-        if not self.quiet:
-            print("Starting full-scan table collection")
-
-        for yaml_file in yaml_files:
-            try:
-                data = self.parse_yaml_file(yaml_file)
-                if 'tables' not in data or not isinstance(data['tables'], dict):
-                    if not self.quiet:
-                        print(f"no 'tables' section in {yaml_file}")
-                    continue
-
-                for table_name, table_def in data['tables'].items():
-                    if 'fields' not in table_def:
-                        print(f"Warning: Table '{table_name}' in {yaml_file} has no fields", file=sys.stderr)
-                        continue
-
-                    # Normalize table name (remove _table suffix if present)
-                    normalized_name = table_name
-                    if table_name.endswith('_table'):
-                        normalized_name = table_name[:-6]
-
-                    self.all_tables[normalized_name] = table_def
-                    self.table_files[normalized_name] = yaml_file
-
-            except Exception as e:
-                print(f"Error parsing {yaml_file}: {e}", file=sys.stderr)
-
-        if not self.quiet:
-            print("Finished full-scan table collection")
-
-    def format_default_value(self, field_def: Dict[str, Any], cpp_type: str) -> str:
-        """Format the default value based on the field definition and C++ type."""
-        if 'default' not in field_def:
-            return 'nullopt'
-
-        default_val = field_def['default']
-
-        # Format the default value based on the C++ type
-        if cpp_type == 'std::string':
-            return self._format_cpp_literal(default_val, cpp_type, string_style="literal")
-        elif cpp_type == 'hs_bool':
-            return 'hs_bool(true)' if default_val else 'hs_bool(false)'
-        elif cpp_type == 'hs_id':
-            return str(default_val)
-        elif cpp_type in ['int', 'float', 'double']:
-            return str(default_val)
-        elif cpp_type == 'std::tm':  # Handle datetime defaults
-            if default_val in ('now', 'current_timestamp'):
-                return 'std::tm{}'
-            else:
-                return 'std::tm{}'
-        else:
-            return str(default_val)
-
-    def map_yaml_type_to_cpp(self, yaml_type: str) -> str:
-        """Convert YAML type to C++ type."""
-        return self.type_mapping.get(yaml_type.lower(), 'std::string')
-
-    def _generate_related_declarations_and_reads(self, relationships: List[Dict[str, Any]]) -> tuple[
-        List[str], List[str]]:
-        """
-        Create declarations and row reads for joined columns using resolved table data.
-        All related fields are optional. Names are <prefix>__<col>.
-        """
-        decls: list[str] = []
-        reads: list[str] = []
-
-        # Use the new resolution method
-        resolved_fields = self.resolve_relationship_fields(relationships)
-
-        if not resolved_fields:
-            return decls, reads
-
-        max_name_len = max(len(name) for name, _, _ in resolved_fields)
-        max_type_len = max(len(f"optional<{cpp_type}>") for _, cpp_type, _ in resolved_fields)
-
-        for name, cpp_type, required in resolved_fields:
-            type_str = f"optional<{cpp_type}>"
-            decls.append(f"    {type_str.ljust(max_type_len)}     {name.ljust(max_name_len)} {{nullopt}};")
-            reads.append(
-                f'      {name.ljust(max_name_len)} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{name}");'
-            )
-
-        return decls, reads
-
-    def _resolve_related_fields(self, base_yaml: Path, ref_table: str) -> Dict[str, Any]:
-        """
-        Try to locate the YAML for a referenced table and return its fields dict.
-        Search alongside the base yaml using common naming patterns.
-        """
-        search_dir = base_yaml.parent
-        candidates = [
-            search_dir / f"{ref_table}.yaml",
-            search_dir / f"{self.to_pascal_case(ref_table)}.yaml",
-            base_yaml  # check the current YAML last (multi-table YAMLs)
-        ]
-        for cand in candidates:
-            if cand.exists():
-                data = self.parse_yaml_file(cand)
-                # Prefer exact (or normalized) match inside this YAML
-                if "tables" in data and isinstance(data["tables"], dict):
-                    # normalize names to compare (strip trailing '_table', lowercase)
-                    def _norm(s: str) -> str:
-                        s = s or ""
-                        s = s.strip()
-                        s = s[:-6] if s.lower().endswith("_table") else s
-                        return s.lower()
-
-                    wanted = _norm(ref_table)
-                    for key, tdef in data["tables"].items():
-                        if _norm(key) == wanted and isinstance(tdef, dict):
-                            if "fields" in tdef and isinstance(tdef["fields"], dict):
-                                return tdef["fields"]
-
-                    # Only use fallback if this is NOT the base_yaml file
-                    # Fallback: if ref_table key differs (e.g., PascalCase) but there is only one table
-                    if cand != base_yaml and len(data["tables"]) == 1:
-                        _, tdef = next(iter(data["tables"].items()))
-                        if "fields" in tdef and isinstance(tdef["fields"], dict):
-                            return tdef["fields"]
-        return {}
-
-    def _resolve_related_fields0(self, base_yaml: Path, ref_table: str) -> Dict[str, Any]:
-        """
-        Try to locate the YAML for a referenced table and return its fields dict.
-        Search alongside the base yaml using common naming patterns.
-        """
-        search_dir = base_yaml.parent
-        candidates = [
-            base_yaml,  # check the current YAML first (multi-table YAMLs)
-            search_dir / f"{ref_table}.yaml",
-            search_dir / f"{self.to_pascal_case(ref_table)}.yaml"
-        ]
-        for cand in candidates:
-            if cand.exists():
-                data = self.parse_yaml_file(cand)
-                # Prefer exact (or normalized) match inside this YAML
-                if "tables" in data and isinstance(data["tables"], dict):
-                    # normalize names to compare (strip trailing '_table', lowercase)
-                    def _norm(s: str) -> str:
-                        s = s or ""
-                        s = s.strip()
-                        s = s[:-6] if s.lower().endswith("_table") else s
-                        return s.lower()
-
-                    wanted = _norm(ref_table)
-                    for key, tdef in data["tables"].items():
-                        if _norm(key) == wanted and isinstance(tdef, dict):
-                            if "fields" in tdef and isinstance(tdef["fields"], dict):
-                                return tdef["fields"]
-
-                    # Fallback: if ref_table key differs (e.g., PascalCase) but there is only one table
-                    if len(data["tables"]) == 1:
-                        _, tdef = next(iter(data["tables"].items()))
-                        if "fields" in tdef and isinstance(tdef["fields"], dict):
-                            return tdef["fields"]
-        return {}
-
-    def _collect_join_columns(self, yaml_file: Path, relationships: list) -> list[dict]:
-        """
-        For each many_to_one relationship, return:
-        {
-          'rel': <relationship dict>,
-          'alias': tN,
-          'prefix': <name|references_table>,
-          'columns': [{ 'name': <col>, 'cpp_type': <mapped>, 'required': False }]
-        }
-        """
-        collected = []
-        alias_index = 1
-        for rel in relationships or []:
-            if not isinstance(rel, dict) or rel.get("type") != "many_to_one":
-                continue
-            ref_table = rel.get("references_table")
-            if not ref_table:
-                continue
-            alias = f"t{alias_index}"
-            alias_index += 1
-            prefix = rel.get("name") or ref_table
-            ref_fields = self._resolve_related_fields(yaml_file, ref_table)
-            cols = []
-            for col_name, col_def in ref_fields.items():
-                cpp_type = self.map_yaml_type_to_cpp(col_def.get("type", "string"))
-                cols.append({"name": col_name, "cpp_type": cpp_type, "required": False})
-            collected.append({"rel": rel, "alias": alias, "prefix": prefix, "columns": cols})
-        return collected
-
-    def is_required_field(self, field_def: Dict[str, Any]) -> bool:
-        """Check if a field is required (not_null, primary_key, or auto_increment primary keys)."""
-        if field_def.get('primary_key', False):
-            return True
-        return field_def.get('not_null', False) and not field_def.get('auto_increment', False)
-
-    def generate_field_declarations(self, fields: Dict[str, Any]) -> List[str]:
-        """Generate C++ field declarations (for Record struct)."""
-        declarations = []
-        max_type_len = 0
-        max_name_len = 0
-
-        # Calculate max lengths for alignment
-        for field_name, field_def in fields.items():
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-            type_str = cpp_type if self.is_required_field(field_def) else f"optional<{cpp_type}>"
-            max_type_len = max(max_type_len, len(type_str))
-            max_name_len = max(max_name_len, len(field_name))
-
-        # Generate declarations with alignment
-        for field_name, field_def in fields.items():
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-
-            if self.is_required_field(field_def):
-                type_str = cpp_type
-                if 'default' in field_def:
-                    init_value = f"{{{self.format_default_value(field_def, cpp_type)}}}"
-                else:
-                    if cpp_type == 'hs_bool':
-                        init_value = "{hs_bool(false)}"
-                    elif cpp_type == 'hs_id':
-                        init_value = "{hs_id(ID::Null)}"
-                    else:
-                        init_value = "{}"
-            else:
-                type_str = f"optional<{cpp_type}>"
-                if 'default' in field_def:
-                    init_value = f"{{{self.format_default_value(field_def, cpp_type)}}}"
-                else:
-                    init_value = "{{nullopt}}".format()
-
-            padded_type = type_str.ljust(max_type_len)
-            padded_name = field_name.ljust(max_name_len)
-            declarations.append(f"    {padded_type}     {padded_name} {init_value};")
-
-        return declarations
-
-    def get_required_fields(self, fields: Dict[str, Any]) -> List[str]:
-        """Get list of required field names."""
-        required = []
-        for field_name, field_def in fields.items():
-            if self.is_required_field(field_def):
-                required.append(field_name)
-        return required
-
-    def generate_constructor_params(self, fields: Dict[str, Any]) -> Tuple[List[str], List[str]]:
-        """Generate constructor parameter list and initializer list."""
-        required_fields = self.get_required_fields(fields)
-        params = []
-        initializers = []
-
-        # Required parameters first (no optional wrapper)
-        for field_name in required_fields:
-            field_def = fields[field_name]
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-            camel_name = self.to_camel_case(field_name)
-            params.append(f"        {cpp_type}                    {camel_name}")
-            initializers.append(f"        {field_name.ljust(16)} ({camel_name})")
-
-        # Optional parameters (with optional wrapper and default values)
-        for field_name, field_def in fields.items():
-            if field_name not in required_fields and not field_def.get('auto_increment', False):
-                cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-                camel_name = self.to_camel_case(field_name)
-
-                if 'default' in field_def:
-                    default_val = self.format_default_value(field_def, cpp_type)
-                    params.append(f"        optional<{cpp_type}>         {camel_name.ljust(16)} = {default_val}")
-                else:
-                    params.append(f"        optional<{cpp_type}>         {camel_name.ljust(16)} = nullopt")
-
-                initializers.append(f"        {field_name.ljust(16)} ({camel_name})")
-
-        return params, initializers
-
-    def generate_insert_params(self, fields: Dict[str, Any]) -> List[str]:
-        """Generate insertRecord_impl parameter list."""
-        required_fields = self.get_required_fields(fields)
-        params: List[str] = []
-
-        # Required parameters first (skip auto-increment)
-        for field_name in required_fields:
-            field_def = fields[field_name]
-            if field_def.get('auto_increment', False):
-                continue
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-            camel_name = self.to_camel_case(field_name)
-
-            # Prefer const ref for strings
-            if cpp_type == 'std::string':
-                params.append(f"        const std::string&          {camel_name}")
-            else:
-                params.append(f"        {cpp_type}                    {camel_name}")
-
-        # Optional parameters (skip auto-increment and required)
-        for field_name, field_def in fields.items():
-            if field_def.get('auto_increment', False) or field_name in required_fields:
-                continue
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-            camel_name = self.to_camel_case(field_name)
-            if 'default' in field_def:
-                default_val = self.format_default_value(field_def, cpp_type)
-                params.append(f"        std::optional<{cpp_type}>     {camel_name} = {default_val}")
-            else:
-                params.append(f"        std::optional<{cpp_type}>     {camel_name} = nullopt")
-
-        return params
-
-    def generate_prepare_insert_pairs(self, fields: Dict[str, Any]) -> List[str]:
-        """Generate pair(...) items for prepareInsertStatement bound to this->in_.<field> to ensure stable storage."""
-        pairs = []
-        for field_name, field_def in fields.items():
-            if field_def.get('auto_increment', False):
-                continue
-            pad = " " * max(0, 16 - len(field_name))
-            pairs.append(f'           pair ("{field_name}"s,{pad}this->in_.{field_name})')
-        return pairs
-
-    def generate_row_assignments(self, fields: Dict[str, Any]) -> List[str]:
-        """Generate row assignment statements (Record::in) for base table only."""
-        assignments = []
-        max_name_len = max(len(name) for name in fields.keys()) if fields else 0
-        for field_name, field_def in fields.items():
-            cpp_type = self.map_yaml_type_to_cpp(field_def['type'])
-            padded_name = field_name.ljust(max_name_len)
-            if self.is_required_field(field_def):
-                assignments.append(
-                    f'      {padded_name} = row.get<{cpp_type}>{" " * max(0, 23 - len(cpp_type))}("{field_name}");'
-                )
-            else:
-                assignments.append(
-                    f'      {padded_name} = row.get<optional<{cpp_type}>>{" " * max(0, 15 - len(cpp_type))}("{field_name}");'
-                )
-        return assignments
-
-    def _cpp_type_default(self, cpp_type: str) -> str:
-        """Default literal for a mapped C++ type."""
-        if cpp_type in ("int", "long", "long long", "unsigned long long", "unsigned int", "double", "float"):
-            return "0"
-        if cpp_type == "hs_bool":
-            return "hs_bool(false)"
-        if cpp_type == "std::tm":
-            return "{}"
-        if cpp_type == "hs_id":
-            return "hs_id(ID::Null)"
-        return "std::string{}"
-
-    def _field_order_for_insert(self, fields: Dict[str, Any]) -> List[str]:
-        """Return non-AI field names in declaration order for INSERT column list."""
-        cols: List[str] = []
-        for fname, fdef in fields.items():
-            if fdef.get("auto_increment", False) and fdef.get("primary_key", False):
-                continue
-            cols.append(fname)
-        return cols
-
-    def _assignment_lines_for_insert(self, fields: Dict[str, Any]) -> List[str]:
-        """
-        Build lines assigning ctor params into this->in_.<field>.
-        Required fields assign directly; optional use value_or(default).
-        """
-        lines: List[str] = []
-        required = set(self.get_required_fields(fields))
-        for fname, fdef in fields.items():
-            if fdef.get("auto_increment", False) and fdef.get("primary_key", False):
-                continue
-            cpp_type = self.map_yaml_type_to_cpp(fdef["type"])
-            camel = self.to_camel_case(fname)
-            if fname in required:
-                lines.append(f"        this->in_.{fname.ljust(24)} = {camel};")
-            else:
-                if "default" in fdef:
-                    dflt = self.format_default_value(fdef, cpp_type)
-                else:
-                    dflt = self._cpp_type_default(cpp_type)
-                dflt_expr = "std::tm{}" if cpp_type == "std::tm" and dflt == "{}" else dflt
-                # lines.append(f"        this->in_.{fname.ljust(24)} = {camel}.value_or({dflt_expr});")
-                lines.append(f"        this->in_.{fname.ljust(24)} = {camel};")
-        return lines
-
-    def generate_insert_impl(self, table_name: str, fields: Dict[str, Any]) -> str:
-        """
-        Generate insertRecord_impl using SOCI prepared statements bound to this->in_.*
-        Executes immediately to ensure lifetimes are valid.
-        """
-        params = self.generate_insert_params(fields)
-        params_sig = ",\n".join(params) if params else "        /* no fields to insert */"
-
-        assigns = self._assignment_lines_for_insert(fields)
-        cols = self._field_order_for_insert(fields)
-        placeholders = ", ".join([f":{c}" for c in cols])
-        uses_lines = ",\n               ".join([f"soci::use(this->in_.{c})" for c in cols])
-
-        return f"""
-    int insertRecord_impl (
-{params_sig}) {{
-{chr(10).join(assigns)}
-
-        auto session = table_.getSession();
-        soci::statement stmt = (session->prepare
-            << "INSERT INTO {table_name} ({', '.join(cols)}) VALUES ({placeholders})",
-               {uses_lines});
-
-        auto rowID = table_.insertRecordStmt (stmt);
-        return rowID;
-        // auto r = selectRecords(std::format("t0.ID = {{}}", rowID));
-        // return r.begin() == r.end() ? 0 : records_[0]->id;
-    }}
-"""
-
 
     quiet: bool = False
     sizer_info = False
@@ -1014,8 +86,6 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         size: Optional[Tuple[int, int]] = None
 
     def __init__(self):
-        self._init_table_state()
-
         self.control_value_mapping = {
             'Activity': 'hs::NullValue',
             'BitmapToggleButton': 'bool',
@@ -1455,8 +525,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # RecordSet-refresh scaffolding (recordset: block) — pages and groups only
         recordset = self.extract_recordset(target_name, class_def, yaml_file) \
             if self.target_type in ("pages", "groups") else None
-        if recordset and recordset['module'] not in required_imports:
-            required_imports.append(recordset['module'])
+        if recordset and "DB.RowSet" not in required_imports:
+            required_imports.append("DB.RowSet")
         self._dbg(f"'{target_name}': recordset = {recordset}" if recordset
                   else f"'{target_name}': no 'recordset:' block (or not applicable to {self.target_type})")
         module_name = self.extract_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
@@ -1507,16 +577,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append(f"{line}")
 
         # alt_data_source: emit each control's generated DBSource policy struct (namespace
-        # scope, non-exported) before the class that names it as a template argument.
+        # scope, non-exported) before the class that names it as a template argument. Backed
+        # by the generic db::Row (DB.RowSet) -- value_field is assumed integer-typed (id/FK),
+        # matching every real usage (a lookup table's id, populating an ID::Type-valued control).
         for var, tag, alt_ds, data_type in self.collect_alt_data_sources(elements, yaml_file):
             struct_name = f"{tag}DBSource"
-            value_expr = f"ID::Type(r.{alt_ds['value_field']})" if data_type == "ID::Type" else f"r.{alt_ds['value_field']}"
+            value_get = f'r.get<int>("{alt_ds["value_field"]}")'
+            value_expr = f"ID::Type({value_get})" if data_type == "ID::Type" else value_get
             code.append(f"struct {struct_name} {{")
-            code.append(f"   using RS = {alt_ds['class']};")
-            code.append(f"   using Record = {alt_ds['record']};")
             code.append(f'   static auto table() -> std::string {{ return "{alt_ds["table"]}"; }}')
-            code.append(f"   static auto displayText(const Record &r) -> std::string {{ return r.{alt_ds['display_field']}; }}")
-            code.append(f"   static auto value(const Record &r) -> {data_type} {{ return {value_expr}; }}")
+            code.append(f'   static auto displayText(const db::Row &r) -> std::string {{ return r.get<std::string>("{alt_ds["display_field"]}"); }}')
+            code.append(f"   static auto value(const db::Row &r) -> {data_type} {{ return {value_expr}; }}")
             code.append(f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
             code.append(f'   static auto blankText() -> std::string {{ return "{alt_ds["blank_text"]}"; }}')
             code.append("};")
@@ -1528,26 +599,34 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         # The generated ctor parameter is always named 'args' (see ctor signature
         # emission below), regardless of whether this page/group declares its own
-        # args_in factory. Children that don't supply their own 'args:' block must
-        # receive that same parameter unaltered, not a hardcoded nullanymap — so
-        # this is set unconditionally rather than only when a factory is built.
+        # class_args.args_in factory. Children that don't supply their own
+        # 'control_args:' block must receive that same parameter unaltered, not a
+        # hardcoded nullanymap — so this is set unconditionally rather than only when
+        # a factory is built.
         parent_args_var_for_children: Optional[str] = "args"
-        page_args_out_triplets: List[Tuple[str, str, Any]] = []
+        page_extract_inside_triplets: List[Tuple[str, str, Any, bool]] = []
 
-        # Page-level args map and outs at top of ctor
-        # if top_base_class == "Page":
+        # Class-level (class_args:) args map and extract_inside triplets at top of ctor
         page_args_factory: Optional[str] = None
-        packed_args_in = self._emit_page_scope_args(target_name, class_def)
+        page_args_var: Optional[str] = None
+        merge_helper_name: Optional[str] = None
+        has_class_args = False
+        packed_args_in = self._emit_page_scope_args(target_name, class_def, yaml_file)
         if packed_args_in is not None:
-            emplace_lines, page_args_var, page_args_out_triplets = packed_args_in
+            emplace_lines, page_args_var, page_extract_inside_triplets = packed_args_in
             if emplace_lines:
+                has_class_args = True
                 # Clang 21 previously crashed (infinite recursion in getTypeInfoImpl) on
                 # a static anymap variable brace-aggregate-initialized with std::any
                 # values inside a C++ module — class-level inline or function-local,
                 # didn't matter, as long as the whole map came from one initializer_list
                 # expression. Building the map with sequential .emplace() calls instead
                 # (one std::any construction per statement, never inside a brace-init
-                # list) avoids that expression shape entirely.
+                # list) avoids that expression shape entirely. The same reasoning rules
+                # out a static anymap *member* for class_args' own defaults -- it's
+                # regenerated by this same factory function, called fresh at every merge
+                # site below (merge() drains its source, so reusing one instance across
+                # calls would silently empty it out after the first construction).
                 page_args_factory = f"{page_args_var}Default"
                 code.append(f"   static auto {page_args_factory}() -> anymap {{")
                 code.append("      anymap m;")
@@ -1556,6 +635,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 code.append("   }")
                 # param calls in the body use 'args' (the ctor parameter); the
                 # factory function above only supplies the ctor's default argument.
+
+                # merge() returns void, so it can't sit inline as the anymap argument to
+                # the base-class constructor call below -- this helper mutates the
+                # caller's own 'args' local in place (by reference) and hands back a
+                # reference to it, so later body code (extract_inside's param() calls)
+                # sees the filled-in class defaults too.
+                merge_helper_name = f"{page_args_var}Merged"
+                code.append(f"   static auto {merge_helper_name}(anymap &a) -> anymap & {{")
+                code.append(f"      a.merge({page_args_factory}());")
+                code.append("      return a;")
+                code.append("   }")
 
         # Impl dir/stub path determined early: both the on_set_active/on_kill_active
         # overrides and 'functions:' entries may need to be stubbed out here.
@@ -1590,7 +680,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 note = "" if on_event is not None else f"  // Implemented in {stub_path}"
                 code.append(f"   auto onEvent(sig::RecordSetEvent event) -> void override;{note}")
             if refresh_ex_declared:
-                code.append(f"   auto refreshEx(const {recordset['record']} *rec) -> void;  // Implemented in {stub_path}")
+                code.append(f"   auto refreshEx(const db::Row *rec) -> void;  // Implemented in {stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -1604,7 +694,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             if not (kill_declared or set_declared):
                 code.append("")
                 code.append("protected:")
-            code.append(f"   using rs_t = std::shared_ptr<{recordset['class']}>;")
+            code.append(f"   using rs_t = std::shared_ptr<db::RowSet>;")
             code.append(f"   rs_t m_rs;")
             code.append( "   size_t m_moveHandle{};")
 
@@ -1656,27 +746,30 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             access_groups[fdef['access']].append(fn_text)
 
         # Generated refreshFromCurrent(): pages read the current record from m_rs and fan
-        # out; groups receive the record and initialize their field-bound controls.
+        # out; groups receive the record and initialize their field-bound controls. Records
+        # are always db::Row -- there's no per-table generated struct, so every field read
+        # goes through get<T>(name), always wrapped in optional<> so a NULL column never
+        # throws (wx::initFromField already handles the optional-empty case by leaving the
+        # control untouched).
         if recordset:
             bound_controls, group_members = self.collect_refresh_targets(elements, yaml_file)
-            record = recordset['record']
             rfc: List[str] = []
             if self.target_type == "pages":
                 rfc.append( "   auto refreshFromCurrent () -> void {")
-                rfc.append(f"      const {record} *rec = m_rs ? m_rs->current() : nullptr;")
+                rfc.append( "      const db::Row *rec = m_rs ? m_rs->current() : nullptr;")
                 rfc.append( "      if (!rec)")
                 rfc.append( "         return;")
             else:  # groups
-                rfc.append(f"   auto refreshFromCurrent (const {record} *rec) -> void {{")
+                rfc.append( "   auto refreshFromCurrent (const db::Row *rec) -> void {")
                 rfc.append( "      if (!rec)")
                 rfc.append( "         return;")
-            for var, fld in bound_controls:
-                rfc.append(f"      wx::initFromField({var}, rec->{fld});")
+            for var, fld, cpp_type in bound_controls:
+                rfc.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
                 # Retarget the control's commit() UPDATE at the current record
-                rfc.append(f'      {var}->where("id = " + std::to_string(rec->id));')
+                rfc.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
             for var in group_members:
-                # Guarded: a nested group without its own recordset: (or typed on a
-                # different record) is skipped instead of breaking the build.
+                # Guarded: a nested group without its own recordset: is skipped instead of
+                # breaking the build.
                 rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
                 rfc.append(f"         {var}->refreshFromCurrent(rec);")
             rfc.append("      refreshEx(rec);")
@@ -1704,19 +797,19 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 rt.append( '      if (!table)')
                 rt.append( '         return nullptr;')
                 rt.append( '   ')
-                rt.append(f'      auto rs = std::make_shared<{recordset["class"]}>(*table);')
+                rt.append( '      auto rs = std::make_shared<db::RowSet>(*table);')
                 rt.append(''   )
                 rt.append( "      // Same order as select()'s list query, so the list's displayed order and the")
                 rt.append( "      // recordset's navigation order agree (clicking a row and Prev/Next-ing from it")
                 rt.append( "      // should walk the same sequence).")
                 rt.append(''   )
-                rt.append(f'      if (!rs->getRowlist("", "{order_by}")) {{ // false = the query itself failed')
+                rt.append(f'      if (!rs->load("", "{order_by}")) {{ // false = the query itself failed')
                 rt.append( '         doutif(TraceLevel::Info) << "initial query failed: " << rs->lastError_ << std::endl;')
                 rt.append('          return nullptr;')
                 rt.append( '      }')
-                rt.append(f'      const {record} *rec = rs->moveLast(); // nullptr = rows_ is empty')
+                rt.append( '      const db::Row *rec = rs->moveLast(); // nullptr = rows_ is empty')
                 rt.append(f'      if (rec)')
-                rt.append(f'          doutif(TraceLevel::Info) << "got record id " << rec->id << std::endl;')
+                rt.append( '          doutif(TraceLevel::Info) << "got record id " << rec->get<int>("id") << std::endl;')
                 rt.append( '')
                 rt.append(f'      db::rsInterface()->select(rs); // buttons now gate on the REAL recordset')
                 rt.append( '      return rs;')
@@ -1750,7 +843,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         # body (to stay non-circular) and what gets forwarded unaltered to children;
         # the default *value* for that parameter comes from the emplace-based factory
         # function when args_in triplets were declared, else the empty nullanymap.
+        # When this class declares class_args, 'args' must be a by-value parameter
+        # (not const anymap&) so {merge_helper_name}(args) -- which mutates it via
+        # unordered_map::merge -- can be called on it; classes without class_args keep
+        # the original const-ref parameter unchanged.
         default_args_expr = f"{page_args_factory}()" if page_args_factory else "nullanymap"
+        args_param_type = "anymap " if has_class_args else "const anymap &"
         value_default = "PageType::Null" if top_base_class == "Page" else "std::string{}"
         pad1: str = " " * len(f"   explicit {cpp_class} ( ")
         if self.target_type == "pages":
@@ -1759,23 +857,37 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             code.append(f"{pad1}const std::string& name,")
             code.append(f"{pad1}PageType::Type type = PageType::{cpp_class},")
             code.append(f"{pad1}int imageIndex = -1,")
-            code.append(f"{pad1}const anymap &args = {default_args_expr})")
-            code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, args) {{")
+            code.append(f"{pad1}{args_param_type}args = {default_args_expr})")
+            if has_class_args:
+                code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, {merge_helper_name}(args)) {{")
+            else:
+                code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, args) {{")
         else:
             code.append(f"   explicit {cpp_class} ( UICreateFlags cflags, ")
             code.append(f"{pad1}std::string name, ")
             code.append(f"{pad1}wxWindow *pParent, ")
             code.append(f"{pad1}value_t value = {value_default},")
-            code.append(f"{pad1}const anymap &args = {default_args_expr},")
+            code.append(f"{pad1}{args_param_type}args = {default_args_expr},")
             code.append(f"{pad1}long style = 0)")
-            code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
+            if has_class_args:
+                code.append(f"      : {top_base_class} (cflags, name, pParent, value, {merge_helper_name}(args), style) {{")
+            else:
+                code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
 
-        # Page args_out at ctor top
-        # if top_base_class == "Page" and page_args_out_triplets:
-        if page_args_out_triplets:
-            for name_out, type_out, default_out in page_args_out_triplets:
+        # class_args: feed the Interface-level creationArgs() storage too (fresh
+        # factory call, independent of the merge above) so post-construction reads of
+        # creationArgs() also see the filled-in class defaults. Interface:: is
+        # explicitly qualified because Group also inherits mergeWithCreationArgs from
+        # Ctrl (via StaticBox), making an unqualified call ambiguous there.
+        if has_class_args:
+            code.append(f"      this->Interface::mergeWithCreationArgs({page_args_factory}());")
+
+        # class_args.extract_inside at ctor top
+        if page_extract_inside_triplets:
+            for name_out, type_out, default_out, no_auto in page_extract_inside_triplets:
                 lit = self._format_cpp_literal(default_out, type_out, string_style="construct")
-                code.append(f'      auto {name_out} = param({parent_args_var_for_children}, "{name_out}", {lit});')
+                prefix = "" if no_auto else "auto "
+                code.append(f'      {prefix}{name_out} = param({parent_args_var_for_children}, "{name_out}", {lit});')
             # code.append("")
 
         # Layout boilerplate
@@ -1923,7 +1035,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             }
         if refresh_ex_declared:
             stub_fns['refreshEx'] = {
-                'args': f"const {recordset['record']} *rec", 'return': 'void', 'const': False, 'override': False,
+                'args': "const db::Row *rec", 'return': 'void', 'const': False, 'override': False,
                 'stub_body': [
                     "    // Tweak values set by refreshFromCurrent() here.",
                 ],
@@ -1970,15 +1082,22 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             export_module = f"{pascal_name}.Wizard"
         export_module = export_module.strip()
 
-        # args: only args_in is meaningful here — the ctor's own 'args' parameter IS the
-        # anymap (Wizard's ctor signature is fixed, unlike pages/groups there's no separate
-        # packed-defaults factory). Declared names are used only to validate 'if:'/header
-        # 'condition:' keys on page entries below.
+        # class_args: only args_in is meaningful here — the ctor's own 'args' parameter IS
+        # the anymap (Wizard's ctor signature is fixed and never defaulted, unlike
+        # pages/groups there's no separate packed-defaults factory, merge, or
+        # mergeWithCreationArgs call for a wizard). Declared names are used only to
+        # validate 'if:'/header 'condition:' keys on page entries below.
         declared_arg_names: set[str] = set()
-        args_node = class_def.get("args")
+        args_node = class_def.get("class_args")
         if args_node is not None:
-            _, _, ins = self._parse_args_block(args_node, f"wizard '{target_name}'", yaml_file)
-            declared_arg_names = {n for n, _, _ in ins}
+            if isinstance(args_node, dict) and any(
+                    args_node.get(k) for k in ("extract_inside", "extract_before", "extract_after")):
+                print(f"Warning: wizard '{target_name}' class_args does not support extraction -- "
+                      f"Wizard's ctor has no default-args mechanism to merge/extract against "
+                      f"{yaml_file}", file=sys.stderr)
+            _, ins, _extracts = self._parse_args_block(args_node, f"wizard '{target_name}'", yaml_file,
+                                                        schema="wizard_class_args")
+            declared_arg_names = {n for n, _, _, _ in ins}
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
@@ -2051,9 +1170,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 header_expr = '""s'
 
             page_args_lines: List[str] = []
-            raw_args = page.get("args", "args")
+            raw_args = page.get("control_args", "args")
             if isinstance(raw_args, dict):
-                page_args_lines, local_name = self._emit_item_args(
+                page_args_lines, local_name, _extract_after = self._emit_item_args(
                     page, "args", yaml_file, f"wizard '{target_name}'.pages[{idx}]")
                 args_expr = local_name if local_name else "args"
             else:
@@ -2188,12 +1307,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
            page. imageIndex is always -1 here - Book::loadLayout() assigns real image
            indexes at runtime from the paired form-layout file, not at construction.
 
-           A child's 'args:' may be either the original flat {key: literal/icon} mapping
-           (built fresh, no parent forwarding - still needed for container:false, which has
-           no incoming anymap at all), or, when it contains an 'arg_name' key, the same
-           arg_name/args_in schema class-level and control-level args: blocks use, remapped
-           from parent_args_var via _emit_item_args. The latter requires an anymap actually
-           be in scope at the call site (parent_args_var not None)."""
+           A child's 'control_args:' may be either the original flat {key: literal/icon}
+           mapping (built fresh, no parent forwarding - still needed for container:false,
+           which has no incoming anymap at all), or, when it contains an 'arg_name' key,
+           the same arg_name/insert_or_translate schema control_args: blocks elsewhere use,
+           remapped from parent_args_var via _emit_item_args. The latter requires an anymap
+           actually be in scope at the call site (parent_args_var not None)."""
         allow = self._allowed_sets()
         lines: List[str] = []
         for idx, child in enumerate(children):
@@ -2231,16 +1350,17 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             child_type = child_type.strip()
 
             args_expr = None
-            args_map = child.get("args")
+            args_map = child.get("control_args")
             if isinstance(args_map, dict) and "arg_name" in args_map:
                 if parent_args_var:
-                    arg_lines, local_name = self._emit_item_args(child, parent_args_var, yaml_file, f"{ctx} args")
+                    arg_lines, local_name, _extract_after = self._emit_item_args(child, parent_args_var, yaml_file,
+                                                                                 f"{ctx} control_args")
                     lines.extend(arg_lines)
                     args_expr = local_name
                 else:
-                    print(f"Warning: {ctx} 'args' uses the arg_name/args_in schema, but no parent anymap is "
-                          f"available here (book container:false populate() takes no args); ignoring "
-                          f"{yaml_file}", file=sys.stderr)
+                    print(f"Warning: {ctx} 'control_args' uses the arg_name/insert_or_translate schema, but no "
+                          f"parent anymap is available here (book container:false populate() takes no args); "
+                          f"ignoring {yaml_file}", file=sys.stderr)
             elif isinstance(args_map, dict) and args_map:
                 var_name = f"{self.to_camel_case(child_name)}Args"
                 lines.append(f'      anymap {var_name};')
@@ -2473,9 +1593,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """Generate creation code for a single control (new list schema)."""
         code: List[str] = []
 
-        # args_in before allocation
-        args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
-                                                          f"control '{member_name}'")
+        if "class_args" in member_def:
+            raise ValueError(
+                f"control '{member_name}': 'class_args' is not valid inside a control: block "
+                f"(class_args is class-scope only -- page/group/wizardpage/wizard/book); "
+                f"did you mean 'control_args'? {yaml_file}")
+
+        # insert_or_translate/extract_before before allocation
+        args_lines, local_args_var, extract_after = self._emit_item_args(member_def, parent_args_var, yaml_file,
+                                                                         f"control '{member_name}'")
 
         code.extend(args_lines)
 
@@ -2596,16 +1722,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         else:
             code.append(f"      addControl({member_name});")
 
-        # args_out after construction
-        args_block = member_def.get("args")
-        if isinstance(args_block, dict):
-            _, outs, _ins = self._parse_args_block(args_block, f"control '{member_name}'", yaml_file, require_out=False)
-            if outs:
-                arg_var = local_args_var or parent_args_var or "args"
-                code.append("")
-                for n, ty, v in outs:
-                    lit = self._format_cpp_literal(v, ty, string_style="construct")
-                    code.append(f'      auto {n} = param({arg_var}, "{n}", {lit});')
+        # extract_after, once construction is done
+        if extract_after:
+            arg_var = local_args_var or parent_args_var or "args"
+            code.append("")
+            for n, ty, v, no_auto in extract_after:
+                lit = self._format_cpp_literal(v, ty, string_style="construct")
+                prefix = "" if no_auto else "auto "
+                code.append(f'      {prefix}{n} = param({arg_var}, "{n}", {lit});')
 
         code.append("")
 
@@ -2618,9 +1742,15 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         """Generate creation code for a single nested control (used when target is Page/WizardPage)."""
         code: List[str] = []
 
-        # args_in before allocation
-        args_lines, local_args_var = self._emit_item_args(member_def, parent_args_var, yaml_file,
-                                                          f"control '{member_name}'")
+        if "class_args" in member_def:
+            raise ValueError(
+                f"control '{member_name}': 'class_args' is not valid inside a control: block "
+                f"(class_args is class-scope only -- page/group/wizardpage/wizard/book); "
+                f"did you mean 'control_args'? {yaml_file}")
+
+        # insert_or_translate/extract_before before allocation
+        args_lines, local_args_var, extract_after = self._emit_item_args(member_def, parent_args_var, yaml_file,
+                                                                         f"control '{member_name}'")
         code.extend(args_lines)
 
         control_class, base_class = self.extract_control_class(member_name, member_def, yaml_file)
@@ -2659,23 +1789,13 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         code.append(f"      addGroup({member_name});")
 
-        # args_out after construction
-        args_cfg = member_def.get('args', {})
-        outs = args_cfg.get('args_out', [])
-        if outs:
-            triplets = []
-            if outs and isinstance(outs[0], str):
-                for i in range(0, len(outs), 3):
-                    triplets.append((outs[i], outs[i + 1], outs[i + 2]))
-            else:
-                for entry in outs:
-                    if isinstance(entry, (list, tuple)) and len(entry) >= 3:
-                        triplets.append((entry[0], entry[1], entry[2]))
-
+        # extract_after, once construction is done
+        if extract_after:
             arg_var = local_args_var or parent_args_var or "args"
-            for name_out, type_out, default_out in triplets:
-                default_literal = self._format_cpp_literal(default_out, type_out, string_style="construct")
-                code.append(f'      auto {name_out} = param({arg_var}, "{name_out}", {default_literal});')
+            for n, ty, v, no_auto in extract_after:
+                lit = self._format_cpp_literal(v, ty, string_style="construct")
+                prefix = "" if no_auto else "auto "
+                code.append(f'      {prefix}{n} = param({arg_var}, "{n}", {lit});')
 
         code.append("")
         return code
@@ -2724,7 +1844,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "verbatim",
             },
             "class_def": {
-                "args",
+                "class_args",
                 "base_class",
                 "class",
                 "class_name",
@@ -2770,25 +1890,29 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "flex",
                 "grid",
             },
-            "args_def": {
+            "class_args_def": {                  # page / group / wizardpage / book(container:true)
                 "arg_name",
                 "args_in",
-                "args_out",
+                "extract_inside",
+            },
+            "wizard_class_args_def": {           # wizard: only -- reduced scope, no extraction
+                "arg_name",
+                "args_in",
+            },
+            "control_args_def": {                # nested inside control: only
+                "arg_name",
+                "insert_or_translate",
+                "extract_before",
+                "extract_after",
             },
             "recordset_def": {
-                "class",
-                "module",
-                "record",
                 "table",
                 "order_by"
             },
             "alt_data_source_def": {
                 "blank_text",
-                "class",
                 "display_field",
                 "include_blank",
-                "module",
-                "record",
                 "table",
                 "value_field",
             },
@@ -2811,7 +1935,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             },
             "control_member_def": {
                 "alt_data_source",
-                "args",
+                "control_args",
                 "base_class",
                 "class",
                 "contains",
@@ -2859,7 +1983,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "type",
             },
             "wizard_def": {
-                "args",
+                "class_args",
                 "cancel_message",
                 "class",
                 "finally",
@@ -2869,7 +1993,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "run_generator",
             },
             "wizard_page_entry": {
-                "args",
+                "control_args",
                 "class",
                 "header",
                 "if",
@@ -2878,7 +2002,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 "uicreateflags",
             },
             "book_page_entry": {
-                "args",
+                "control_args",
                 "class",
                 "module",
                 "name",
@@ -3023,11 +2147,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                             if isinstance(m, str) and m.strip():
                                 used_modules.add(m.strip())
 
-                    # alt_data_source module (control-level DB source for loadFromDB())
+                    # alt_data_source: control-level DB source for loadFromDB(), backed by
+                    # the generic db::Row (DB.RowSet) -- no per-table module to add.
                     if control_map_key == "control":
                         alt_ds = self.extract_alt_data_source(md.get('variable', ''), md, yaml_file)
                         if alt_ds is not None:
-                            used_modules.add(alt_ds['module'])
+                            used_modules.add("DB.RowSet")
 
                     # validator modules (controls only)
                     if control_map_key == "control":
@@ -3100,8 +2225,10 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
     def extract_recordset(self, element_name: str, class_def: Dict[str, Any],
                           yaml_file: Path) -> Optional[Dict[str, str]]:
-        """Extract the 'recordset:' block: {module, class, record}. 'record' is derived
-        by convention (trailing 'RS' -> 'Record') when absent."""
+        """Extract the 'recordset:' block: {table, order_by}. Reads/writes go through the
+        generic db::RowSet/db::Row (DB.RowSet) -- no generated per-table class needed.
+        'table' is only required to generate a page's reloadTable() -- a group's recordset:
+        (which only needs refreshFromCurrent()/refreshEx() scaffolding) can omit it."""
         rs = class_def.get('recordset')
         if rs is None:
             return None
@@ -3110,41 +2237,19 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             return None
         self._warn_unknown_keys(rs, self._allowed_sets()["recordset_def"],
                                 f"recordset for '{element_name}' {{recordset_def}}", yaml_file)
-        module = rs.get('module')
-        rs_class = rs.get('class')
-
-        # Two vars needed for reloadTable()
-        order_by = rs.get('order_by', 'id')
         tbl = rs.get('table')
-
-        if self.debugging:
-            if tbl is None and (order_by is None or order_by == "id"):
-                print(
-                    f"Warning: '{element_name}': reloadTable() generation skipped {yaml_file}")
-            else:
-                if tbl is None:
-                    print(f"Warning: '{element_name}': 'recordset' needs non-empty 'table' for reloadTable() generation {yaml_file}")
-
-        if not (isinstance(module, str) and module.strip() and isinstance(rs_class, str) and rs_class.strip()):
-            print(f"Error: '{element_name}': 'recordset' needs non-empty 'module' and 'class' {yaml_file}",
+        if not (tbl is None or (isinstance(tbl, str) and tbl.strip())):
+            print(f"Error: '{element_name}': 'recordset' 'table' must be a non-empty string {yaml_file}",
                   file=sys.stderr)
             return None
-        module = module.strip()
-        rs_class = rs_class.strip()
-        record = rs.get('record')
-        if isinstance(record, str) and record.strip():
-            record = record.strip()
-        elif rs_class.endswith('RS'):
-            record = rs_class[:-2] + 'Record'
-        else:
-            print(f"Error: '{element_name}': recordset class '{rs_class}' doesn't end in 'RS'; "
-                  f"add an explicit 'record:' {yaml_file}", file=sys.stderr)
-            return None
-        return {'module': module, 'class': rs_class, 'record': record, 'order_by': order_by, 'table': tbl}
+        if self.debugging and tbl is None:
+            print(f"Warning: '{element_name}': reloadTable() generation skipped (no 'table') {yaml_file}")
+        order_by = rs.get('order_by', 'id')
+        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by}
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
-        """Extract a control's 'alt_data_source:' block: the RecordSet-backed source for
+        """Extract a control's 'alt_data_source:' block: the db::RowSet-backed source for
         a DB-populated Choice/Combo/ListBox's generic loadFromDB(). Returns None when absent."""
         ads = member_def.get('alt_data_source')
         if ads is None:
@@ -3155,34 +2260,19 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             return None
         self._warn_unknown_keys(ads, self._allowed_sets()["alt_data_source_def"],
                                 f"alt_data_source for control '{element_name}' {{alt_data_source_def}}", yaml_file)
-        module = ads.get('module')
-        rs_class = ads.get('class')
         table = ads.get('table')
         display_field = ads.get('display_field')
         value_field = ads.get('value_field')
-        if not (isinstance(module, str) and module.strip() and
-                isinstance(rs_class, str) and rs_class.strip() and
-                isinstance(table, str) and table.strip() and
+        if not (isinstance(table, str) and table.strip() and
                 isinstance(display_field, str) and display_field.strip() and
                 isinstance(value_field, str) and value_field.strip()):
             print(f"Error: control '{element_name}': 'alt_data_source' needs non-empty "
-                  f"'module', 'class', 'table', 'display_field', and 'value_field' {yaml_file}",
+                  f"'table', 'display_field', and 'value_field' {yaml_file}",
                   file=sys.stderr)
             return None
-        module = module.strip()
-        rs_class = rs_class.strip()
         table = table.strip()
         display_field = display_field.strip()
         value_field = value_field.strip()
-        record = ads.get('record')
-        if isinstance(record, str) and record.strip():
-            record = record.strip()
-        elif rs_class.endswith('RS'):
-            record = rs_class[:-2] + 'Record'
-        else:
-            print(f"Error: control '{element_name}': alt_data_source class '{rs_class}' doesn't end "
-                  f"in 'RS'; add an explicit 'record:' {yaml_file}", file=sys.stderr)
-            return None
         include_blank = ads.get('include_blank', True)
         if not isinstance(include_blank, bool):
             print(f"Warning: control '{element_name}': 'include_blank' must be a bool; "
@@ -3194,8 +2284,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                   f"defaulting to '' {yaml_file}", file=sys.stderr)
             blank_text = ''
         return {
-            'module': module, 'class': rs_class, 'record': record, 'table': table,
-            'display_field': display_field, 'value_field': value_field,
+            'table': table, 'display_field': display_field, 'value_field': value_field,
             'include_blank': include_blank, 'blank_text': blank_text,
         }
 
@@ -3245,10 +2334,12 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                 results.append((var, tag, alt_ds, data_type))
         return results
 
-    def collect_refresh_targets(self, elements: Any, yaml_file: Path) -> Tuple[List[Tuple[str, str]], List[str]]:
+    def collect_refresh_targets(self, elements: Any, yaml_file: Path) -> Tuple[List[Tuple[str, str, str]], List[str]]:
         """Walk elements (same shape as generate_control_declarations) and collect
-        (bound_controls [(member, field)], group_members [member]) for refreshFromCurrent()."""
-        bound_controls: List[Tuple[str, str]] = []
+        (bound_controls [(member, field, cpp_type)], group_members [member]) for
+        refreshFromCurrent(). cpp_type is the control's 'contains:' type, used to read the
+        field back out of a db::Row as rec->get<optional<cpp_type>>(field)."""
+        bound_controls: List[Tuple[str, str, str]] = []
         group_members: List[str] = []
         if not isinstance(elements, list):
             return bound_controls, group_members
@@ -3279,7 +2370,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                     # value, and it shows the whole table rather than one row. Skip
                     # initFromField()/where() for it - see multi_row_control_classes.
                     continue
-                bound_controls.append((var, fld.strip()))
+                cpp_type = md.get('contains', 'std::string')
+                bound_controls.append((var, fld.strip(), cpp_type))
         return bound_controls, group_members
 
     def extract_export_module(self, element_name: str, elements: Dict[str, Any], control_name: str,
@@ -3677,50 +2769,34 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         return value, value_is_literal
 
-    def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any]) -> Tuple[List[str], str, List[
-        Tuple[str, str, Any]]] | None:
+    def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any], yaml_file: Path
+                              ) -> Optional[Tuple[List[str], str, List[Tuple[str, str, Any, bool]]]]:
         """
-        Prepare lines for a static factory function that builds the args_in default
-        anymap via sequential .emplace() calls (see note at call site on why this
-        avoids brace-aggregate-initializing an anymap), and return args_out triplets
-        for later emission inside the constructor body.
+        Parse this class's class_args: block (if present) and prepare lines for a
+        static factory function that builds the args_in default anymap via
+        sequential .emplace() calls (see note at call site on why this avoids
+        brace-aggregate-initializing an anymap). Returns (emplace_lines, arg_name,
+        extract_inside triplets), or None if there's no (valid) class_args: block at
+        all. emplace_lines may be empty even when non-None (a class_args block with
+        only extract_inside and no args_in) -- callers must check emplace_lines
+        themselves before treating this class as merge-enabled.
         """
-        args_cfg = (page_def.get("args") or {})
-        arg_name = args_cfg.get("arg_name") or f"{page_key}Args"
-        ins = args_cfg.get("args_in", [])
-        outs = args_cfg.get("args_out", [])
-
-        # Normalize args_in triplets
-        in_triplets: List[Tuple[str, str, Any]] = []
-        if ins and isinstance(ins[0], str):
-            for i in range(0, len(ins), 3):
-                in_triplets.append((ins[i], ins[i + 1], ins[i + 2]))
-        else:
-            for entry in ins or []:
-                if isinstance(entry, (list, tuple)) and len(entry) >= 3:
-                    in_triplets.append((entry[0], entry[1], entry[2]))
-
-        # Normalize args_out triplets
-        out_triplets: List[Tuple[str, str, Any]] = []
-        if outs and isinstance(outs[0], str):
-            for i in range(0, len(outs), 3):
-                out_triplets.append((outs[i], outs[i + 1], outs[i + 2]))
-        else:
-            for entry in outs or []:
-                if isinstance(entry, (list, tuple)) and len(entry) >= 3:
-                    out_triplets.append((entry[0], entry[1], entry[2]))
-
-        if len(in_triplets) == 0:
+        args_cfg = page_def.get("class_args")
+        if args_cfg is None:
             return None
+        arg_name, ins, extracts = self._parse_args_block(args_cfg, page_key, yaml_file, schema="class_args")
+        if arg_name is None:
+            return None
+        inside_triplets = extracts.get("inside", [])
 
         # Build .emplace() statement lines (one std::any construction per statement,
         # never inside a brace-init-list) for the factory function body.
         emplace_lines: List[str] = []
-        for name_in, type_in, default_in in in_triplets:
+        for name_in, type_in, default_in, _no_auto in ins:
             lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
             emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
 
-        return emplace_lines, arg_name, out_triplets
+        return emplace_lines, arg_name, inside_triplets
 
     def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
         """Parse the YAML file and return the group definitions."""
@@ -3763,27 +2839,38 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         return ("\n         .").join(hooks)
 
     def _emit_item_args(self, member_def: Dict[str, Any], parent_args_var: Optional[str], yaml_file: Path,
-                        ctx: str) -> tuple[list[str], Optional[str]]:
-        """If the item has an args: block, generate local anymap lines and return (lines, local_map_name)."""
+                        ctx: str) -> tuple[list[str], Optional[str], list[tuple[str, str, Any, bool]]]:
+        """If the item has a control_args: block, generate local anymap lines -- first
+           insert_or_translate (index-assignment, always before construction), then
+           extract_before (param() reads, also before construction) -- and return
+           (lines, local_map_name, extract_after triplets); extract_after is for the
+           caller to emit once construction is done, since 'before' and 'after' are
+           positioned relative to a construction call this function doesn't itself emit."""
         lines: list[str] = []
         local_name: Optional[str] = None
-        args_block = member_def.get("args")
+        extract_after: list[tuple[str, str, Any, bool]] = []
+        args_block = member_def.get("control_args")
         if isinstance(args_block, dict):
-            # Parse both outs and ins (outs are NOT applied here; only ins belong before construction)
-            local_name, outs, ins = self._parse_args_block(args_block, ctx, yaml_file, require_out=False)
+            local_name, ins, extracts = self._parse_args_block(args_block, ctx, yaml_file, schema="control_args")
+            extract_after = extracts.get("after", [])
             base = parent_args_var if parent_args_var else "args"
             if local_name and local_name == base:
-                print(f"Warning: {ctx}.args.arg_name '{local_name}' must not be the same as the "
+                print(f"Warning: {ctx}.control_args.arg_name '{local_name}' must not be the same as the "
                       f"parent args variable '{base}' (would emit a self-shadowing 'anymap {base} = {base};'); "
-                      f"ignoring this args block and forwarding '{base}' unmodified {yaml_file}", file=sys.stderr)
-                return [], None
+                      f"ignoring this control_args block and forwarding '{base}' unmodified {yaml_file}", file=sys.stderr)
+                return [], None, []
             if local_name:
                 lines.append(f"      anymap {local_name} = {base} ;")
-                # Apply args_in before allocation using type-aware literals
-                for n, ty, v in ins:
+                # insert_or_translate before allocation using type-aware literals
+                for n, ty, v, _no_auto in ins:
                     lit = self._format_cpp_literal(v, ty, string_style="construct")
                     lines.append(f"      {local_name}[\"{n}\"] = {lit};")
-        return lines, local_name
+                # extract_before -- read values out right before construction
+                for n, ty, v, no_auto in extracts.get("before", []):
+                    lit = self._format_cpp_literal(v, ty, string_style="construct")
+                    prefix = "" if no_auto else "auto "
+                    lines.append(f'      {prefix}{n} = param({local_name}, "{n}", {lit});')
+        return lines, local_name, extract_after
 
     def _signature_with_args(self, signature: str, args_var: Optional[str]) -> str:
         """Append ', {args_var}' to signature if args_var is provided and signature doesn't already end with it."""
@@ -4013,35 +3100,33 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
         return f'"{"" if val is None else str(val)}"'
 
-    def _parse_args_block(self, node: Any, ctx: str, yaml_file: Path, require_out: bool = False) -> tuple[
-        Optional[str], list[tuple[str, str, Any]], list[tuple[str, str, Any]]]:
-        """Parse args: { arg_name: <str>, args_out: [name, type, value, ...], args_in: [name, type, default, ...] }
-           Validates keys, structure, duplicates, and type/name tokens.
+    # Which extract_* timing keys are valid for each args schema, and what YAML key
+    # spells each one. class_args only offers "inside" (this class's own ctor body is
+    # the only code its own YAML can inject into); control_args only offers "before"/
+    # "after" (the referenced control's own ctor body -- if it even has one -- is owned
+    # by a different YAML file's class_args, not by whoever references it here);
+    # wizard_class_args offers none (Wizard's ctor has no default-args/merge mechanism
+    # to extract against). See yaml-generator-reference.md for the full rationale.
+    _TIMING_KEYS_BY_SCHEMA = {
+        "class_args": {"inside": "extract_inside"},
+        "wizard_class_args": {},
+        "control_args": {"before": "extract_before", "after": "extract_after"},
+    }
+
+    def _parse_triplets(self, arr: Any, ctx: str, key_name: str, yaml_file: Path,
+                        allow_no_auto: bool) -> list[tuple[str, str, Any, bool]]:
+        """Parse a flat [name, type, value, name, type, value, ...] array into
+           (name, type, value, no_auto) tuples. An entry may optionally be followed
+           by the literal string "no_auto" as a 4th element (consuming 4 slots instead
+           of 3 for that one entry), meaning: assign into an already-declared variable/
+           member instead of declaring a fresh 'auto' local.
         """
-        if not isinstance(node, dict):
-            print(f"Warning: {ctx}.args must be a mapping {yaml_file}", file=sys.stderr)
-            return None, [], []
-
-        allow = self._allowed_sets()
-        self._warn_unknown_keys(node, allow["args_def"], f"args_def args block of '{ctx}'", yaml_file)
-        #
-        #
-        # # Unknown key detection
-        # allowed_keys = {"arg_name", "args_out", "args_in"}
-        # unknown = [k for k in node.keys() if k not in allowed_keys]
-        # if unknown:
-        #     print(f"Warning: {ctx}.args has unknown keys {unknown} {yaml_file}", file=sys.stderr)
-
-        # arg_name
-        arg_name = node.get("arg_name")
-        if not isinstance(arg_name, str) or not arg_name.strip():
-            print(f"Warning: {ctx}.args.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
-            return None, [], []
-        arg_name = arg_name.strip()
-        if not self._is_identifier(arg_name):
-            print(
-                f"Warning: {ctx}.args.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
-                file=sys.stderr)
+        res: list[tuple[str, str, Any, bool]] = []
+        if arr is None:
+            return res
+        if not isinstance(arr, list):
+            print(f"Warning: {ctx}.{key_name} must be a list {yaml_file}", file=sys.stderr)
+            return res
 
         known_types = {
             "bool", "hs_bool",
@@ -4050,65 +3135,111 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             "double", "float",
         }
 
-        def _triples(arr: Any, key_name: str) -> list[tuple[str, str, Any]]:
-            res: list[tuple[str, str, Any]] = []
-            if arr is None:
-                return res
-            if not isinstance(arr, list):
-                print(f"Warning: {ctx}.args.{key_name} must be a list {yaml_file}", file=sys.stderr)
-                return res
-            if len(arr) % 3 != 0:
-                print(f"Warning: {ctx}.args.{key_name} length must be a multiple of 3 (name,type,value) {yaml_file}",
-                      file=sys.stderr)
-            for i in range(0, len(arr) - (len(arr) % 3), 3):
-                n, ty, v = arr[i], arr[i + 1], arr[i + 2]
-                if not isinstance(n, str) or not n.strip():
-                    print(f"Warning: {ctx}.args.{key_name}[{i}] name must be a non-empty string {yaml_file}",
-                          file=sys.stderr)
-                    continue
-                name_clean = n.strip()
-                if not self._is_identifier(name_clean):
-                    print(
-                        f"Warning: {ctx}.args.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
-                        file=sys.stderr)
-                if not isinstance(ty, str) or not ty.strip():
-                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] type must be a non-empty string {yaml_file}",
-                          file=sys.stderr)
-                    continue
-                ty_clean = ty.strip()
-                if ty_clean.lower() not in known_types:
-                    print(f"Warning: {ctx}.args.{key_name}[{i + 1}] unknown type '{ty_clean}' {yaml_file}",
-                          file=sys.stderr)
-                res.append((name_clean, ty_clean, v))
-            # duplicate detection within this list
-            seen = set()
-            dups = []
-            for n, _, _ in res:
-                if n in seen:
-                    dups.append(n)
+        i = 0
+        n = len(arr)
+        while i < n:
+            if i + 2 >= n:
+                print(f"Warning: {ctx}.{key_name} has a trailing incomplete (name,type,value[,no_auto]) "
+                      f"entry starting at index {i} {yaml_file}", file=sys.stderr)
+                break
+            entry_name, ty, v = arr[i], arr[i + 1], arr[i + 2]
+            no_auto = False
+            consumed = 3
+            if i + 3 < n and arr[i + 3] == "no_auto":
+                if allow_no_auto:
+                    no_auto = True
                 else:
-                    seen.add(n)
-            if dups:
-                print(f"Warning: {ctx}.args.{key_name} has duplicate names {sorted(set(dups))} {yaml_file}",
+                    print(f"Warning: {ctx}.{key_name}[{i}] 'no_auto' is not valid here (only on "
+                          f"extract_before/extract_inside/extract_after entries); ignoring {yaml_file}",
+                          file=sys.stderr)
+                consumed = 4
+
+            if not isinstance(entry_name, str) or not entry_name.strip():
+                print(f"Warning: {ctx}.{key_name}[{i}] name must be a non-empty string {yaml_file}",
                       file=sys.stderr)
-            return res
+                i += consumed
+                continue
+            name_clean = entry_name.strip()
+            if not self._is_identifier(name_clean):
+                print(
+                    f"Warning: {ctx}.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
+                    file=sys.stderr)
+            if not isinstance(ty, str) or not ty.strip():
+                print(f"Warning: {ctx}.{key_name}[{i + 1}] type must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                i += consumed
+                continue
+            ty_clean = ty.strip()
+            if ty_clean.lower() not in known_types:
+                print(f"Warning: {ctx}.{key_name}[{i + 1}] unknown type '{ty_clean}' {yaml_file}",
+                      file=sys.stderr)
+            res.append((name_clean, ty_clean, v, no_auto))
+            i += consumed
 
-        outs = _triples(node.get("args_out"), "args_out")
-        ins = _triples(node.get("args_in"), "args_in")
+        # duplicate detection within this list
+        seen = set()
+        dups = []
+        for entry_name, _, _, _ in res:
+            if entry_name in seen:
+                dups.append(entry_name)
+            else:
+                seen.add(entry_name)
+        if dups:
+            print(f"Warning: {ctx}.{key_name} has duplicate names {sorted(set(dups))} {yaml_file}",
+                  file=sys.stderr)
+        return res
 
-        if require_out and not outs:
-            print(f"Warning: {ctx}.args is missing required 'args_out' entries for item-level args {yaml_file}",
+    def _parse_args_block(self, node: Any, ctx: str, yaml_file: Path, schema: str = "class_args",
+                          require_out: bool = False) -> tuple[
+        Optional[str], list[tuple[str, str, Any, bool]], dict[str, list[tuple[str, str, Any, bool]]]]:
+        """Parse a class_args:/control_args: block: { arg_name: <str>, args_in|insert_or_translate:
+           [name, type, value, ...], extract_inside|extract_before|extract_after: [name, type, value,
+           [no_auto], ...] } -- the exact set of keys read/allowed depends on 'schema' (one of
+           "class_args", "wizard_class_args", "control_args" -- see _TIMING_KEYS_BY_SCHEMA and
+           _allowed_sets()). Validates keys, structure, duplicates, and type/name tokens. Returns
+           (arg_name, ins, extracts) where extracts is a dict keyed by "before"/"inside"/"after",
+           containing only the timings valid for this schema.
+        """
+        if not isinstance(node, dict):
+            print(f"Warning: {ctx}.{schema} must be a mapping {yaml_file}", file=sys.stderr)
+            return None, [], {}
+
+        allow = self._allowed_sets()
+        self._warn_unknown_keys(node, allow[f"{schema}_def"], f"{schema} block of '{ctx}'", yaml_file)
+
+        arg_name = node.get("arg_name")
+        if not isinstance(arg_name, str) or not arg_name.strip():
+            print(f"Warning: {ctx}.{schema}.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
+            return None, [], {}
+        arg_name = arg_name.strip()
+        if not self._is_identifier(arg_name):
+            print(
+                f"Warning: {ctx}.{schema}.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
+                file=sys.stderr)
+
+        ins_key = "insert_or_translate" if schema == "control_args" else "args_in"
+        ins = self._parse_triplets(node.get(ins_key), ctx, ins_key, yaml_file, allow_no_auto=False)
+
+        timing_keys = self._TIMING_KEYS_BY_SCHEMA.get(schema, {})
+        extracts: dict[str, list[tuple[str, str, Any, bool]]] = {}
+        for timing, key in timing_keys.items():
+            extracts[timing] = self._parse_triplets(node.get(key), ctx, key, yaml_file, allow_no_auto=True)
+
+        if require_out and not any(extracts.values()):
+            print(f"Warning: {ctx}.{schema} is missing required extract entries for item-level args {yaml_file}",
                   file=sys.stderr)
 
-        # cross duplicates (same key in outs and ins)
-        out_names = {n for n, _, _ in outs}
-        in_names = {n for n, _, _ in ins}
-        cross = sorted(out_names & in_names)
-        if cross:
-            print(f"Warning: {ctx}.args has names present in both args_out and args_in {cross} {yaml_file}",
-                  file=sys.stderr)
+        # cross duplicates (same key in ins and any extract list)
+        in_names = {n for n, _, _, _ in ins}
+        for timing, lst in extracts.items():
+            extract_names = {n for n, _, _, _ in lst}
+            cross = sorted(in_names & extract_names)
+            if cross:
+                key = timing_keys[timing]
+                print(f"Warning: {ctx}.{schema} has names present in both {ins_key} and {key} {cross} {yaml_file}",
+                      file=sys.stderr)
 
-        return arg_name, outs, ins
+        return arg_name, ins, extracts
 
     def _validate_functions(self, functions_def: Any) -> Dict[str, Dict[str, Any]]:
         """Validate and normalize the functions section. Returns a dict of name -> def."""
@@ -4258,9 +3389,14 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
     def generate_from_yaml(self, yaml_file: Path, rel_path: Path, output_file: Path = None) -> str:
         """
         Single entry point: parses yaml_file exactly once and, in that one pass, checks it
-        for 'tables', 'groups', 'pages', 'wizardpages', 'wizard', and 'book' sections, generating
-        whichever are present. Table output goes under <output_file>/record_sets/, UI output under
-        <output_file>/user_interface/ (matching the layout generateClasses() expects).
+        for 'groups', 'pages', 'wizardpages', 'wizard', and 'book' sections, generating
+        whichever are present. Output goes under <output_file>/user_interface/ (matching the
+        layout generateClasses() expects).
+
+        A `tables:` section, if present, is ignored here -- it is no longer a C++ generation
+        input at all. db::TableLoader (Libs/Core/src/Table.cpp) parses `tables:`/`relationships:`
+        directly at runtime instead, to CREATE TABLE the schema and CREATE VIEW a joined
+        "<table>_detail" view per table with relationships.
         """
 
         data = self.parse_yaml_file(yaml_file)
@@ -4278,17 +3414,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                             "book": "Book"}
         results: List[str] = []
 
-        # Preliminary scan - do we have rs AND ui in the one file?
-        have_tables = False
+        # Preliminary scan - is there anything in this file worth generating?
         have_elements = False
-
-        if not data.get('tables', None) == None:
-            have_tables = True
-            self._dbg(f"'tables' section present ({len(data['tables'])} entries)"
-                      if isinstance(data['tables'], dict) else "'tables' section present (not a mapping!)")
-        else:
-            self._dbg("no 'tables' section in this file")
-
         for category in category_targets:
             if not data.get(category, None) == None:
                 have_elements = True
@@ -4300,29 +3427,18 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             else:
                 self._dbg(f"no '{category}' section in this file")
 
-        sub_output = None
-        if output_file:
-            if have_tables and have_elements:
-                sub_output = output_file / 'combined'
-            elif have_tables:
-                sub_output = output_file / 'record_sets'
-            elif have_elements:
-                sub_output = output_file / 'user_interface'
-            else:
-                if not self.quiet:
-                    print(f"{yaml_file} has no useful content")
-                    return ""
+        if not have_elements:
+            if not self.quiet:
+                print(f"{yaml_file} has no useful content")
+            return ""
 
-        for category in ("tables", "groups", "pages", "wizardpages", "wizard", "book"):
+        for category in ("groups", "pages", "wizardpages", "wizard", "book"):
             try:
                 if category in category_targets:
                     self.target(category_targets[category])
 
                 self._dbg(f"-- processing category '{category}' --")
-                if category == "tables":
-                    content = self._process_category(category, data, yaml_file, rel_path, output_file / "rs")
-                else:
-                    content = self._process_category(category, data, yaml_file, rel_path, output_file / "ui")
+                content = self._process_category(category, data, yaml_file, rel_path, output_file / "ui")
 
                 if content:
                     results.append(content)
@@ -4340,8 +3456,8 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
                           output_file: Optional[Path]) -> str:
         """
         Shared load/validate/iterate/write pipeline for one top-level YAML section
-        ('tables', 'groups', 'pages', or 'wizardpages'). Per-item validation and generation
-        (which differs per category) is delegated to _generate_category_item().
+        ('groups', 'pages', 'wizardpages', 'wizard', or 'book'). Per-item validation and
+        generation (which differs per category) is delegated to _generate_category_item().
         """
         items = data.get(category) if isinstance(data, dict) else None
         if not items:
@@ -4356,7 +3472,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         self._dbg(f"'{category}': {len(items)} top-level entries found: {list(items.keys())}")
 
         top_verbatim = ""
-        if category != "tables" and "verbatim" in items:
+        if "verbatim" in items:
             top_verbatim = self._extract_verbatim_body(items)
             self._dbg(f"'{category}': root-level 'verbatim' block found ({len(top_verbatim)} chars)")
             self._warn_unknown_keys(items, self._allowed_sets()["root"] | set(items.keys()),
@@ -4386,12 +3502,9 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
             else:
                 self._dbg(f"'{category}.{name}': DROPPED (see warning above, or run_generator: false)")
 
-        if category == "tables":
-            suffix = "RS"
-        else:
-            if not generated:
-                raise ValueError(f"No valid {category} found to generate")
-            suffix = self.target_class
+        if not generated:
+            raise ValueError(f"No valid {category} found to generate")
+        suffix = self.target_class
 
         self._dbg(f"'{category}': {len(generated)}/{len(items)} entries generated: "
                   f"{[n for n, _ in generated]}")
@@ -4399,14 +3512,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 
     def _generate_category_item(self, category: str, name: str, item_def: Dict[str, Any], yaml_file: Path,
                                 top_verbatim: str, output_file: Optional[Path]) -> Optional[str]:
-        """Per-item validation + generation. Returns None to skip an item (UI categories only)."""
-        if category == "tables":
-            if 'fields' not in item_def:
-                raise ValueError(f"Table '{name}' must have a 'fields' section")
-            fields = item_def['fields']
-            relationships = item_def.get('relationships', [])
-            return self.generate_table_module(name, fields, yaml_file, relationships)
-
+        """Per-item validation + generation. Returns None to skip an item."""
         if category == "wizard":
             run_gen = item_def.get('run_generator', True)
             if not isinstance(run_gen, bool):
@@ -4479,7 +3585,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
         dest_dir = output_file # / rel_path
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        label = "RecordSet" if category == "tables" else self.target_class
+        label = self.target_class
 
         for name, module_content in generated:
             base_name = name[:-6] if name.endswith('_table') else name
@@ -4506,7 +3612,7 @@ class {class_name} : public RecordSet<{class_name}, {record_name}> {{
 def scan_and_generate(generator,
                       args: any,
                       output_dir: Path | None) -> int:
-    """Scan for *.yaml files, generate corresponding RS/Group/Page/WizardPage .ixx files."""
+    """Scan for *.yaml files, generate corresponding Group/Page/WizardPage .ixx files."""
 
     # Collect YAML files from all root directories
     yaml_files = []
@@ -4542,21 +3648,13 @@ def scan_and_generate(generator,
                   file=sys.stderr)
             return 1
 
-        rsdir = Path(output_dir / "rs")
         uidir = Path(output_dir / "ui")
-
-        rsdir.mkdir(parents=True, exist_ok=True)
         uidir.mkdir(parents=True, exist_ok=True)
 
     if len(roots) == 1:
         print(f"Processing classes in {len(yaml_files)} YAML files from one directory...")
     else:
         print(f"Processing classes in {len(yaml_files)} YAML files from {len(roots)} directories...")
-
-    # First pass: register every table from every YAML file before resolving any
-    # relationships, so a file processed early can still reference a table defined
-    # in a file processed later in the (sorted) list.
-    generator.collect_all_tables(yaml_files)
 
     for yf in yaml_files:
 
@@ -4583,7 +3681,6 @@ def main():
     parser.add_argument('--scan', type=Path, action='append', help='Scan this directory recursively for *.yaml (can be used multiple times)')
     parser.add_argument('-a', '--app-target', action='store', help='The CMake target name of the application')
     parser.add_argument('-c', '--cmake', type=Path, help='Update CMakeLists.txt file with generated modules')
-    parser.add_argument('-d', '--depth', type=int, default=3, help='Maximum depth for nested joins (default: 3)')
     parser.add_argument('-f', '--first-pagetype', action='store', help='First page type to generate')
     parser.add_argument('-o', '--output', type=Path, help='Output directory or file path')
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
@@ -4597,7 +3694,6 @@ def main():
     generator.be_quiet(args.quiet)
     generator.show_sizer_info(args.sizer_info)
     generator.export_var = args.export_var
-    generator.set_max_join_depth(args.depth)
 
     if args.impl_dir is not None:
         generator.impl_dir = args.impl_dir
