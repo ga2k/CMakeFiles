@@ -1283,7 +1283,7 @@ class CppGenerator:
         code.append(f'   explicit {cpp_class}(wxFrame *frame, std::string title, anymap args = {default_args_expr}) '
                     f': Wizard(frame, title, {ctor_args_expr}) {{')
         code.append('')
-        code.append('      TraceCall;')
+        code.append('      TraceCall();;')
         code.append('')
         code.extend(page_call_lines)
         if finally_body.strip():
