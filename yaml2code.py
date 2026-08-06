@@ -1574,20 +1574,38 @@ class CppGenerator:
 
                     md = item["control"]
                     var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: nested group "
-                              f"'{var}' (class={md.get('class')!r})")
-                    # Per-member verbatim (Placement: before addGroup)
+                    is_nested_group = bool(md.get('is_group', False)) or md.get('base_class') == 'Group'
+                    # Per-member verbatim (Placement: before addGroup/addControl)
                     controlset_verbatim = self._extract_verbatim_body(md)
-                    creation_code.extend(self._generate_single_group(
-                        member_name=var,
-                        member_def=md,
-                        control_name=identity,
-                        tool_tip=tool_tip,
-                        all_elements=element,  # pass element dict for labels (if nested in group later)
-                        yaml_file=yaml_file,
-                        parent_args_var=parent_args_var,
-                        controlset_verbatim=controlset_verbatim
-                    ))
+                    if is_nested_group:
+                        self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: nested group "
+                                  f"'{var}' (class={md.get('class')!r})")
+                        creation_code.extend(self._generate_single_group(
+                            member_name=var,
+                            member_def=md,
+                            control_name=identity,
+                            tool_tip=tool_tip,
+                            all_elements=element,  # pass element dict for labels (if nested in group later)
+                            yaml_file=yaml_file,
+                            parent_args_var=parent_args_var,
+                            controlset_verbatim=controlset_verbatim
+                        ))
+                    else:
+                        # A plain leaf control placed directly on a Page/WizardPage (not
+                        # wrapped in a Group) - needs the full control-generation path so
+                        # its label/validator/tooltip/dbInfo are actually wired up.
+                        self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: control "
+                                  f"'{var}' (class={md.get('class')!r})")
+                        creation_code.extend(self._generate_single_control(
+                            member_name=var,
+                            member_def=md,
+                            control_name=identity,
+                            tool_tip=tool_tip,
+                            all_elements=element,  # pass element dict for labels
+                            yaml_file=yaml_file,
+                            parent_args_var=parent_args_var,
+                            controlset_verbatim=controlset_verbatim
+                        ))
 
                 # Spacers carry no C++ object - just placement, resolved at runtime by
                 # Interface::loadLayout. Only validate the schema and (optionally) trace it.
@@ -1818,12 +1836,15 @@ class CppGenerator:
                 code.append(
                     f'      // Sizer information: Position: {sizer_properties.position}, Proportion: {sizer_properties.proportion}, Border: {sizer_properties.border}, Flags: {sizer_properties.flag}')
 
-        # Placement: per-member verbatim before addGroup
+        # Placement: per-member verbatim before addGroup/addControl
         if controlset_verbatim:
             for line in controlset_verbatim.rstrip().splitlines():
                 code.append(f"      {line}")
 
-        code.append(f"      addGroup({member_name});")
+        if is_group:
+            code.append(f"      addGroup({member_name});")
+        else:
+            code.append(f"      addControl({member_name});")
 
         # extract_after, once construction is done -- each entry names its own source
         # anymap/key explicitly, so no fallback to local_args_var/parent_args_var is needed
@@ -3221,7 +3242,7 @@ class CppGenerator:
                       file=sys.stderr)
                 continue
             ty_clean = ty.strip()
-            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES and self.debugging:
                 print(f"Warning: {ctx}.{key_name}[{i - 2}] unknown type '{ty_clean}' {yaml_file}",
                       file=sys.stderr)
             res.append((name_clean, ty_clean, v))
@@ -3277,7 +3298,7 @@ class CppGenerator:
                       file=sys.stderr)
                 continue
             ty_clean = ty.strip()
-            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES and self.debugging:
                 print(f"Warning: {ctx}.{key_name}[{i - 4}] unknown type '{ty_clean}' {yaml_file}", file=sys.stderr)
 
             if not isinstance(old_map, str) or not old_map.strip():
@@ -3349,7 +3370,7 @@ class CppGenerator:
                 ty_clean = ty_stripped
             else:
                 ty_clean = ty_stripped
-            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES and self.debugging:
                 print(f"Warning: {ctx}.{key_name}[{i - 5}] unknown type '{ty_clean}' {yaml_file}", file=sys.stderr)
 
             if not isinstance(var_name, str) or not var_name.strip():
@@ -3614,6 +3635,11 @@ class CppGenerator:
         """
 
         data = self.parse_yaml_file(yaml_file)
+
+        # 'no_scan: true' is a topmost key. If present, the entire file is skipped.
+        no_scan = bool(data.get('no_scan', False)) if isinstance(data, dict) else false
+        if no_scan == True:
+            return ""
 
         # 'debugging: true' is a topmost key in the YAML document, a sibling of
         # 'groups:'/'pages:'/'wizardpages:'/'book:'/'wizard:'/'tables:' - not nested
