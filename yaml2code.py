@@ -600,20 +600,20 @@ class CppGenerator:
         # The generated ctor parameter is always named 'args' (see ctor signature
         # emission below), regardless of whether this page/group declares its own
         # class_args.args_in factory. Children that don't supply their own
-        # 'control_args:' block must receive that same parameter unaltered, not a
+        # 'args:' block must receive that same parameter unaltered, not a
         # hardcoded nullanymap — so this is set unconditionally rather than only when
         # a factory is built.
         parent_args_var_for_children: Optional[str] = "args"
-        page_extract_inside_triplets: List[Tuple[str, str, Any, bool]] = []
+        page_extract_inside_entries: List[Tuple[str, str, bool, str, str, Any]] = []
 
-        # Class-level (class_args:) args map and extract_inside triplets at top of ctor
+        # Class-level (class_args:) args map and extract_inside entries at top of ctor
         page_args_factory: Optional[str] = None
         page_args_var: Optional[str] = None
         merge_helper_name: Optional[str] = None
         has_class_args = False
         packed_args_in = self._emit_page_scope_args(target_name, class_def, yaml_file)
         if packed_args_in is not None:
-            emplace_lines, page_args_var, page_extract_inside_triplets = packed_args_in
+            emplace_lines, page_args_var, page_extract_inside_entries = packed_args_in
             if emplace_lines:
                 has_class_args = True
                 # Clang 21 previously crashed (infinite recursion in getTypeInfoImpl) on
@@ -883,11 +883,11 @@ class CppGenerator:
             code.append(f"      this->Interface::mergeWithCreationArgs({page_args_factory}());")
 
         # class_args.extract_inside at ctor top
-        if page_extract_inside_triplets:
-            for name_out, type_out, default_out, no_auto in page_extract_inside_triplets:
-                lit = self._format_cpp_literal(default_out, type_out, string_style="construct")
+        if page_extract_inside_entries:
+            for var_name, ty, no_auto, map_name, entry_name, default in page_extract_inside_entries:
+                lit = self._format_cpp_literal(default, ty, string_style="construct")
                 prefix = "" if no_auto else "auto "
-                code.append(f'      {prefix}{name_out} = param({parent_args_var_for_children}, "{name_out}", {lit});')
+                code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
             # code.append("")
 
         # Layout boilerplate
@@ -1059,9 +1059,10 @@ class CppGenerator:
 
     def generate_wizard_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path,
                                output_dir: Optional[Path] = None) -> str:
-        """Generate a Wizard-container module: a fixed-signature Wizard subclass (matching the
-           DBManager.cpp call-site contract: ctor(wxFrame*, std::string, const anymap&)) that
-           chains a declared sequence of already-generated WizardPage classes in order.
+        """Generate a Wizard-container module: a Wizard subclass (ctor(wxFrame*, std::string,
+           anymap = <class default>), source-compatible with the DBManager.cpp call-site
+           contract, which always passes args explicitly) that chains a declared sequence of
+           already-generated WizardPage classes in order.
 
            Unlike groups/pages/wizardpages, a wizard's 'pages:' list describes class
            instantiations to chain together, not physical controls on a sizer grid, so this
@@ -1082,22 +1083,39 @@ class CppGenerator:
             export_module = f"{pascal_name}.Wizard"
         export_module = export_module.strip()
 
-        # class_args: only args_in is meaningful here — the ctor's own 'args' parameter IS
-        # the anymap (Wizard's ctor signature is fixed and never defaulted, unlike
-        # pages/groups there's no separate packed-defaults factory, merge, or
-        # mergeWithCreationArgs call for a wizard). Declared names are used only to
+        # class_args: args_in gets the same factory/merge treatment as Page/Group's class_args
+        # (see generate_ui_module) -- a private static '{arg_name}Default()' factory and
+        # '{arg_name}Merged(anymap&)' merge helper, with the ctor's 'args' parameter defaulted
+        # to the factory and merged in before the body (so page_call_lines below, and any
+        # if:/header.condition: param<bool>(args, ...) reads, see the merged result). Wizard
+        # doesn't derive from Interface (unlike Page/Group/WizardPage), so there's no
+        # mergeWithCreationArgs()/creationArgs() call to make here -- Wizard::args() (its own
+        # stored anymap) is fed straight from the ctor parameter instead.
+        # extract_inside/extract_before/extract_after are still not supported: wizard_class_args
+        # only allows arg_name/args_in (see _allowed_sets()["wizard_class_args_def"]) since a
+        # wizard's own body has no per-page scope to extract into -- extraction still belongs on
+        # each 'pages:' entry's own 'args:' block. Declared args_in names are also used to
         # validate 'if:'/header 'condition:' keys on page entries below.
         declared_arg_names: set[str] = set()
+        wizard_args_var: Optional[str] = None
+        wizard_args_factory: Optional[str] = None
+        wizard_merge_helper_name: Optional[str] = None
+        wizard_emplace_lines: List[str] = []
         args_node = class_def.get("class_args")
         if args_node is not None:
             if isinstance(args_node, dict) and any(
                     args_node.get(k) for k in ("extract_inside", "extract_before", "extract_after")):
                 print(f"Warning: wizard '{target_name}' class_args does not support extraction -- "
-                      f"Wizard's ctor has no default-args mechanism to merge/extract against "
-                      f"{yaml_file}", file=sys.stderr)
-            _, ins, _extracts = self._parse_args_block(args_node, f"wizard '{target_name}'", yaml_file,
-                                                        schema="wizard_class_args")
-            declared_arg_names = {n for n, _, _, _ in ins}
+                      f"a wizard's own body has no per-page scope to extract into; put "
+                      f"extract_before/extract_after on the individual page entry's own 'args:' "
+                      f"block instead {yaml_file}", file=sys.stderr)
+            wizard_args_var, ins, _translate, _extracts = self._parse_args_block(
+                args_node, f"wizard '{target_name}'", yaml_file, schema="wizard_class_args")
+            declared_arg_names = {n for n, _, _ in ins}
+            if wizard_args_var:
+                for name_in, type_in, default_in in ins:
+                    lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
+                    wizard_emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
@@ -1170,7 +1188,7 @@ class CppGenerator:
                 header_expr = '""s'
 
             page_args_lines: List[str] = []
-            raw_args = page.get("control_args", "args")
+            raw_args = page.get("args", "args")
             if isinstance(raw_args, dict):
                 page_args_lines, local_name, _extract_after = self._emit_item_args(
                     page, "args", yaml_file, f"wizard '{target_name}'.pages[{idx}]")
@@ -1233,6 +1251,21 @@ class CppGenerator:
         code.append('namespace wx {')
         code.append(f'export class {self.export_var} {cpp_class} : public Wizard {{')
 
+        has_class_args = bool(wizard_args_var) and bool(wizard_emplace_lines)
+        if has_class_args:
+            wizard_args_factory = f"{wizard_args_var}Default"
+            code.append(f"   static auto {wizard_args_factory}() -> anymap {{")
+            code.append("      anymap m;")
+            code.extend(wizard_emplace_lines)
+            code.append("      return m;")
+            code.append("   }")
+            wizard_merge_helper_name = f"{wizard_args_var}Merged"
+            code.append(f"   static auto {wizard_merge_helper_name}(anymap &a) -> anymap & {{")
+            code.append(f"      a.merge({wizard_args_factory}());")
+            code.append("      return a;")
+            code.append("   }")
+            code.append('')
+
         if cancel_message is not None:
             if not isinstance(cancel_message, dict):
                 print(f"Warning: wizard '{target_name}' 'cancel_message' must be a mapping "
@@ -1245,8 +1278,10 @@ class CppGenerator:
             code.append('')
 
         code.append(' public:')
-        code.append(f'   explicit {cpp_class}(wxFrame *frame, std::string title, const anymap &args) '
-                    f': Wizard(frame, title, args) {{')
+        default_args_expr = f"{wizard_args_factory}()" if has_class_args else "nullanymap"
+        ctor_args_expr = f"{wizard_merge_helper_name}(args)" if has_class_args else "args"
+        code.append(f'   explicit {cpp_class}(wxFrame *frame, std::string title, anymap args = {default_args_expr}) '
+                    f': Wizard(frame, title, {ctor_args_expr}) {{')
         code.append('')
         code.append('      TraceCall;')
         code.append('')
@@ -1307,12 +1342,13 @@ class CppGenerator:
            page. imageIndex is always -1 here - Book::loadLayout() assigns real image
            indexes at runtime from the paired form-layout file, not at construction.
 
-           A child's 'control_args:' may be either the original flat {key: literal/icon}
+           A child's 'args:' may be either the original flat {key: literal/icon}
            mapping (built fresh, no parent forwarding - still needed for container:false,
-           which has no incoming anymap at all), or, when it contains an 'arg_name' key,
-           the same arg_name/insert_or_translate schema control_args: blocks elsewhere use,
-           remapped from parent_args_var via _emit_item_args. The latter requires an anymap
-           actually be in scope at the call site (parent_args_var not None)."""
+           which has no incoming anymap at all), or, when it contains any args_def
+           key (arg_name/insert/translate/extract_before/extract_after), the same schema
+           args: blocks elsewhere use, remapped from parent_args_var via
+           _emit_item_args. The latter requires an anymap actually be in scope at the call
+           site (parent_args_var not None)."""
         allow = self._allowed_sets()
         lines: List[str] = []
         for idx, child in enumerate(children):
@@ -1350,15 +1386,15 @@ class CppGenerator:
             child_type = child_type.strip()
 
             args_expr = None
-            args_map = child.get("control_args")
-            if isinstance(args_map, dict) and "arg_name" in args_map:
+            args_map = child.get("args")
+            if isinstance(args_map, dict) and any(k in args_map for k in allow["args_def"]):
                 if parent_args_var:
                     arg_lines, local_name, _extract_after = self._emit_item_args(child, parent_args_var, yaml_file,
-                                                                                 f"{ctx} control_args")
+                                                                                 f"{ctx} args")
                     lines.extend(arg_lines)
                     args_expr = local_name
                 else:
-                    print(f"Warning: {ctx} 'control_args' uses the arg_name/insert_or_translate schema, but no "
+                    print(f"Warning: {ctx} 'args' uses the arg_name/insert/translate schema, but no "
                           f"parent anymap is available here (book container:false populate() takes no args); "
                           f"ignoring {yaml_file}", file=sys.stderr)
             elif isinstance(args_map, dict) and args_map:
@@ -1597,9 +1633,9 @@ class CppGenerator:
             raise ValueError(
                 f"control '{member_name}': 'class_args' is not valid inside a control: block "
                 f"(class_args is class-scope only -- page/group/wizardpage/wizard/book); "
-                f"did you mean 'control_args'? {yaml_file}")
+                f"did you mean 'args'? {yaml_file}")
 
-        # insert_or_translate/extract_before before allocation
+        # insert:/translate:/extract_before before allocation
         args_lines, local_args_var, extract_after = self._emit_item_args(member_def, parent_args_var, yaml_file,
                                                                          f"control '{member_name}'")
 
@@ -1722,14 +1758,14 @@ class CppGenerator:
         else:
             code.append(f"      addControl({member_name});")
 
-        # extract_after, once construction is done
+        # extract_after, once construction is done -- each entry names its own source
+        # anymap/key explicitly, so no fallback to local_args_var/parent_args_var is needed
         if extract_after:
-            arg_var = local_args_var or parent_args_var or "args"
             code.append("")
-            for n, ty, v, no_auto in extract_after:
-                lit = self._format_cpp_literal(v, ty, string_style="construct")
+            for var_name, ty, no_auto, map_name, entry_name, default in extract_after:
+                lit = self._format_cpp_literal(default, ty, string_style="construct")
                 prefix = "" if no_auto else "auto "
-                code.append(f'      {prefix}{n} = param({arg_var}, "{n}", {lit});')
+                code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
 
         code.append("")
 
@@ -1746,9 +1782,9 @@ class CppGenerator:
             raise ValueError(
                 f"control '{member_name}': 'class_args' is not valid inside a control: block "
                 f"(class_args is class-scope only -- page/group/wizardpage/wizard/book); "
-                f"did you mean 'control_args'? {yaml_file}")
+                f"did you mean 'args'? {yaml_file}")
 
-        # insert_or_translate/extract_before before allocation
+        # insert:/translate:/extract_before before allocation
         args_lines, local_args_var, extract_after = self._emit_item_args(member_def, parent_args_var, yaml_file,
                                                                          f"control '{member_name}'")
         code.extend(args_lines)
@@ -1789,13 +1825,13 @@ class CppGenerator:
 
         code.append(f"      addGroup({member_name});")
 
-        # extract_after, once construction is done
+        # extract_after, once construction is done -- each entry names its own source
+        # anymap/key explicitly, so no fallback to local_args_var/parent_args_var is needed
         if extract_after:
-            arg_var = local_args_var or parent_args_var or "args"
-            for n, ty, v, no_auto in extract_after:
-                lit = self._format_cpp_literal(v, ty, string_style="construct")
+            for var_name, ty, no_auto, map_name, entry_name, default in extract_after:
+                lit = self._format_cpp_literal(default, ty, string_style="construct")
                 prefix = "" if no_auto else "auto "
-                code.append(f'      {prefix}{n} = param({arg_var}, "{n}", {lit});')
+                code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
 
         code.append("")
         return code
@@ -1899,9 +1935,10 @@ class CppGenerator:
                 "arg_name",
                 "args_in",
             },
-            "control_args_def": {                # nested inside control: only
+            "args_def": {                # nested inside control: only
                 "arg_name",
-                "insert_or_translate",
+                "insert",
+                "translate",
                 "extract_before",
                 "extract_after",
             },
@@ -1935,7 +1972,7 @@ class CppGenerator:
             },
             "control_member_def": {
                 "alt_data_source",
-                "control_args",
+                "args",
                 "base_class",
                 "class",
                 "contains",
@@ -1993,7 +2030,7 @@ class CppGenerator:
                 "run_generator",
             },
             "wizard_page_entry": {
-                "control_args",
+                "args",
                 "class",
                 "header",
                 "if",
@@ -2002,7 +2039,7 @@ class CppGenerator:
                 "uicreateflags",
             },
             "book_page_entry": {
-                "control_args",
+                "args",
                 "class",
                 "module",
                 "name",
@@ -2770,13 +2807,13 @@ class CppGenerator:
         return value, value_is_literal
 
     def _emit_page_scope_args(self, page_key: str, page_def: Dict[str, Any], yaml_file: Path
-                              ) -> Optional[Tuple[List[str], str, List[Tuple[str, str, Any, bool]]]]:
+                              ) -> Optional[Tuple[List[str], str, List[Tuple[str, str, bool, str, str, Any]]]]:
         """
         Parse this class's class_args: block (if present) and prepare lines for a
         static factory function that builds the args_in default anymap via
         sequential .emplace() calls (see note at call site on why this avoids
         brace-aggregate-initializing an anymap). Returns (emplace_lines, arg_name,
-        extract_inside triplets), or None if there's no (valid) class_args: block at
+        extract_inside entries), or None if there's no (valid) class_args: block at
         all. emplace_lines may be empty even when non-None (a class_args block with
         only extract_inside and no args_in) -- callers must check emplace_lines
         themselves before treating this class as merge-enabled.
@@ -2784,19 +2821,19 @@ class CppGenerator:
         args_cfg = page_def.get("class_args")
         if args_cfg is None:
             return None
-        arg_name, ins, extracts = self._parse_args_block(args_cfg, page_key, yaml_file, schema="class_args")
+        arg_name, ins, _translate, extracts = self._parse_args_block(args_cfg, page_key, yaml_file, schema="class_args")
         if arg_name is None:
             return None
-        inside_triplets = extracts.get("inside", [])
+        inside_entries = extracts.get("inside", [])
 
         # Build .emplace() statement lines (one std::any construction per statement,
         # never inside a brace-init-list) for the factory function body.
         emplace_lines: List[str] = []
-        for name_in, type_in, default_in, _no_auto in ins:
+        for name_in, type_in, default_in in ins:
             lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
             emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
 
-        return emplace_lines, arg_name, inside_triplets
+        return emplace_lines, arg_name, inside_entries
 
     def parse_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
         """Parse the YAML file and return the group definitions."""
@@ -2839,37 +2876,67 @@ class CppGenerator:
         return ("\n         .").join(hooks)
 
     def _emit_item_args(self, member_def: Dict[str, Any], parent_args_var: Optional[str], yaml_file: Path,
-                        ctx: str) -> tuple[list[str], Optional[str], list[tuple[str, str, Any, bool]]]:
-        """If the item has a control_args: block, generate local anymap lines -- first
-           insert_or_translate (index-assignment, always before construction), then
-           extract_before (param() reads, also before construction) -- and return
-           (lines, local_map_name, extract_after triplets); extract_after is for the
-           caller to emit once construction is done, since 'before' and 'after' are
-           positioned relative to a construction call this function doesn't itself emit."""
+                        ctx: str) -> tuple[list[str], Optional[str], list[tuple[str, str, bool, str, str, Any]]]:
+        """If the item has an args: block, generate local anymap lines -- first insert:
+           (index-assignment from the parent args), then translate: (index-assignment via
+           param<T>() from each entry's own source anymap), then extract_before (param() reads
+           against each entry's own explicit anymap/key, also before construction) -- and return
+           (lines, local_map_name, extract_after entries); extract_after is for the caller to
+           emit once construction is done, since 'before' and 'after' are positioned relative to
+           a construction call this function doesn't itself emit.
+
+           arg_name only matters when insert/translate entries are present (it names the local
+           anymap that gets passed as the child's 'args' argument); extract_before/extract_after
+           entries carry their own source anymap/key explicitly and don't consult it, so an
+           args block containing only extract_before/extract_after doesn't need arg_name
+           at all -- local_name stays None and callers fall back to forwarding parent_args_var
+           unmodified."""
         lines: list[str] = []
         local_name: Optional[str] = None
-        extract_after: list[tuple[str, str, Any, bool]] = []
-        args_block = member_def.get("control_args")
+        extract_after: list[tuple[str, str, bool, str, str, Any]] = []
+        args_block = member_def.get("args")
         if isinstance(args_block, dict):
-            local_name, ins, extracts = self._parse_args_block(args_block, ctx, yaml_file, schema="control_args")
+            arg_name, ins, translate, extracts = self._parse_args_block(args_block, ctx, yaml_file,
+                                                                         schema="args")
             extract_after = extracts.get("after", [])
             base = parent_args_var if parent_args_var else "args"
-            if local_name and local_name == base:
-                print(f"Warning: {ctx}.control_args.arg_name '{local_name}' must not be the same as the "
-                      f"parent args variable '{base}' (would emit a self-shadowing 'anymap {base} = {base};'); "
-                      f"ignoring this control_args block and forwarding '{base}' unmodified {yaml_file}", file=sys.stderr)
-                return [], None, []
-            if local_name:
-                lines.append(f"      anymap {local_name} = {base} ;")
-                # insert_or_translate before allocation using type-aware literals
-                for n, ty, v, _no_auto in ins:
-                    lit = self._format_cpp_literal(v, ty, string_style="construct")
-                    lines.append(f"      {local_name}[\"{n}\"] = {lit};")
-                # extract_before -- read values out right before construction
-                for n, ty, v, no_auto in extracts.get("before", []):
-                    lit = self._format_cpp_literal(v, ty, string_style="construct")
-                    prefix = "" if no_auto else "auto "
-                    lines.append(f'      {prefix}{n} = param({local_name}, "{n}", {lit});')
+
+            if ins or translate:
+                if not arg_name:
+                    print(f"Warning: {ctx}.args has insert/translate entries but no 'arg_name'; "
+                          f"ignoring them and forwarding '{base}' unmodified {yaml_file}", file=sys.stderr)
+                elif arg_name == base:
+                    print(f"Warning: {ctx}.args.arg_name '{arg_name}' must not be the same as the "
+                          f"parent args variable '{base}' (would emit a self-shadowing 'anymap {base} = {base};'); "
+                          f"ignoring this args block and forwarding '{base}' unmodified {yaml_file}",
+                          file=sys.stderr)
+                else:
+                    local_name = arg_name
+                    if ins:
+                        lines.append(f"      anymap {local_name} = {base} ;")
+                    else:
+                        first_src = translate[0][2]
+                        lines.append(f"      anymap {local_name} = {first_src} ;")
+                    # insert: -- direct index-assignment using type-aware literals
+                    for n, ty, v in ins:
+                        lit = self._format_cpp_literal(v, ty, string_style="construct")
+                        lines.append(f"      {local_name}[\"{n}\"] = {lit};")
+                    # translate: -- index-assignment via param<T>() reading from each entry's
+                    # own source anymap/key
+                    for n, ty, src_map, src_key, default in translate:
+                        lit = self._format_cpp_literal(default, ty, string_style="literal")
+                        lines.append(f'      {local_name}["{n}"] = param<{ty}>({src_map}, "{src_key}", {lit});')
+            elif arg_name:
+                print(f"Warning: {ctx}.args 'arg_name' is set but there are no insert/translate "
+                      f"entries; ignoring it {yaml_file}", file=sys.stderr)
+
+            # extract_before -- read values out right before construction, from each entry's own
+            # explicit anymap/key (commonly local_name, once insert/translate have built it)
+            for var_name, ty, no_auto, map_name, entry_name, default in extracts.get("before", []):
+                lit = self._format_cpp_literal(default, ty, string_style="construct")
+                prefix = "" if no_auto else "auto "
+                lines.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
+
         return lines, local_name, extract_after
 
     def _signature_with_args(self, signature: str, args_var: Optional[str]) -> str:
@@ -3102,7 +3169,7 @@ class CppGenerator:
 
     # Which extract_* timing keys are valid for each args schema, and what YAML key
     # spells each one. class_args only offers "inside" (this class's own ctor body is
-    # the only code its own YAML can inject into); control_args only offers "before"/
+    # the only code its own YAML can inject into); args only offers "before"/
     # "after" (the referenced control's own ctor body -- if it even has one -- is owned
     # by a different YAML file's class_args, not by whoever references it here);
     # wizard_class_args offers none (Wizard's ctor has no default-args/merge mechanism
@@ -3110,76 +3177,59 @@ class CppGenerator:
     _TIMING_KEYS_BY_SCHEMA = {
         "class_args": {"inside": "extract_inside"},
         "wizard_class_args": {},
-        "control_args": {"before": "extract_before", "after": "extract_after"},
+        "args": {"before": "extract_before", "after": "extract_after"},
     }
 
-    def _parse_triplets(self, arr: Any, ctx: str, key_name: str, yaml_file: Path,
-                        allow_no_auto: bool) -> list[tuple[str, str, Any, bool]]:
-        """Parse a flat [name, type, value, name, type, value, ...] array into
-           (name, type, value, no_auto) tuples. An entry may optionally be followed
-           by the literal string "no_auto" as a 4th element (consuming 4 slots instead
-           of 3 for that one entry), meaning: assign into an already-declared variable/
-           member instead of declaring a fresh 'auto' local.
-        """
-        res: list[tuple[str, str, Any, bool]] = []
+    _KNOWN_ARG_TYPES = {
+        "bool", "hs_bool",
+        "string", "std::string",
+        "int", "long", "long long", "unsigned", "unsigned int",
+        "double", "float",
+    }
+
+    def _parse_triplets(self, arr: Any, ctx: str, key_name: str, yaml_file: Path) -> list[tuple[str, str, Any]]:
+        """Parse a flat [name, type, value, name, type, value, ...] array (insert:/args_in:)
+           into (name, type, value) tuples."""
+        res: list[tuple[str, str, Any]] = []
         if arr is None:
             return res
         if not isinstance(arr, list):
             print(f"Warning: {ctx}.{key_name} must be a list {yaml_file}", file=sys.stderr)
             return res
 
-        known_types = {
-            "bool", "hs_bool",
-            "string", "std::string",
-            "int", "long", "long long", "unsigned", "unsigned int",
-            "double", "float",
-        }
-
         i = 0
         n = len(arr)
         while i < n:
             if i + 2 >= n:
-                print(f"Warning: {ctx}.{key_name} has a trailing incomplete (name,type,value[,no_auto]) "
+                print(f"Warning: {ctx}.{key_name} has a trailing incomplete (name,type,value) "
                       f"entry starting at index {i} {yaml_file}", file=sys.stderr)
                 break
             entry_name, ty, v = arr[i], arr[i + 1], arr[i + 2]
-            no_auto = False
-            consumed = 3
-            if i + 3 < n and arr[i + 3] == "no_auto":
-                if allow_no_auto:
-                    no_auto = True
-                else:
-                    print(f"Warning: {ctx}.{key_name}[{i}] 'no_auto' is not valid here (only on "
-                          f"extract_before/extract_inside/extract_after entries); ignoring {yaml_file}",
-                          file=sys.stderr)
-                consumed = 4
+            i += 3
 
             if not isinstance(entry_name, str) or not entry_name.strip():
-                print(f"Warning: {ctx}.{key_name}[{i}] name must be a non-empty string {yaml_file}",
+                print(f"Warning: {ctx}.{key_name}[{i - 3}] name must be a non-empty string {yaml_file}",
                       file=sys.stderr)
-                i += consumed
                 continue
             name_clean = entry_name.strip()
             if not self._is_identifier(name_clean):
                 print(
-                    f"Warning: {ctx}.{key_name}[{i}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
+                    f"Warning: {ctx}.{key_name}[{i - 3}] '{name_clean}' is not an identifier; allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
                     file=sys.stderr)
             if not isinstance(ty, str) or not ty.strip():
-                print(f"Warning: {ctx}.{key_name}[{i + 1}] type must be a non-empty string {yaml_file}",
+                print(f"Warning: {ctx}.{key_name}[{i - 2}] type must be a non-empty string {yaml_file}",
                       file=sys.stderr)
-                i += consumed
                 continue
             ty_clean = ty.strip()
-            if ty_clean.lower() not in known_types:
-                print(f"Warning: {ctx}.{key_name}[{i + 1}] unknown type '{ty_clean}' {yaml_file}",
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+                print(f"Warning: {ctx}.{key_name}[{i - 2}] unknown type '{ty_clean}' {yaml_file}",
                       file=sys.stderr)
-            res.append((name_clean, ty_clean, v, no_auto))
-            i += consumed
+            res.append((name_clean, ty_clean, v))
 
         # duplicate detection within this list
         seen = set()
         dups = []
-        for entry_name, _, _, _ in res:
+        for entry_name, _, _ in res:
             if entry_name in seen:
                 dups.append(entry_name)
             else:
@@ -3189,41 +3239,210 @@ class CppGenerator:
                   file=sys.stderr)
         return res
 
+    def _parse_translate_entries(self, arr: Any, ctx: str, key_name: str, yaml_file: Path
+                                 ) -> list[tuple[str, str, str, str, Any]]:
+        """Parse a flat [new_arg_name, arg_type, old_anymap_name, old_arg_name, default_value, ...]
+           array (translate:) into (new_arg_name, arg_type, old_anymap_name, old_arg_name,
+           default_value) tuples. Each entry generates
+           `{xxx}["new_arg_name"] = param<arg_type>(old_anymap_name, "old_arg_name", default_value);`."""
+        res: list[tuple[str, str, str, str, Any]] = []
+        if arr is None:
+            return res
+        if not isinstance(arr, list):
+            print(f"Warning: {ctx}.{key_name} must be a list {yaml_file}", file=sys.stderr)
+            return res
+
+        i = 0
+        n = len(arr)
+        while i < n:
+            if i + 4 >= n:
+                print(f"Warning: {ctx}.{key_name} has a trailing incomplete (new_arg_name, arg_type, "
+                      f"old_anymap_name, old_arg_name, default_value) entry starting at index {i} {yaml_file}",
+                      file=sys.stderr)
+                break
+            name, ty, old_map, old_key, default = arr[i], arr[i + 1], arr[i + 2], arr[i + 3], arr[i + 4]
+            i += 5
+
+            if not isinstance(name, str) or not name.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 5}] new_arg_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            name_clean = name.strip()
+            if not self._is_identifier(name_clean):
+                print(f"Warning: {ctx}.{key_name}[{i - 5}] '{name_clean}' is not an identifier; "
+                      f"allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}", file=sys.stderr)
+
+            if not isinstance(ty, str) or not ty.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 4}] arg_type must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            ty_clean = ty.strip()
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+                print(f"Warning: {ctx}.{key_name}[{i - 4}] unknown type '{ty_clean}' {yaml_file}", file=sys.stderr)
+
+            if not isinstance(old_map, str) or not old_map.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 3}] old_anymap_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            old_map_clean = old_map.strip()
+
+            if not isinstance(old_key, str) or not old_key.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 2}] old_arg_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            old_key_clean = old_key.strip()
+
+            res.append((name_clean, ty_clean, old_map_clean, old_key_clean, default))
+
+        seen = set()
+        dups = []
+        for entry_name, _, _, _, _ in res:
+            if entry_name in seen:
+                dups.append(entry_name)
+            else:
+                seen.add(entry_name)
+        if dups:
+            print(f"Warning: {ctx}.{key_name} has duplicate names {sorted(set(dups))} {yaml_file}",
+                  file=sys.stderr)
+        return res
+
+    def _parse_extract_entries(self, arr: Any, ctx: str, key_name: str, yaml_file: Path
+                               ) -> list[tuple[str, str, bool, str, str, Any]]:
+        """Parse a flat [var_type[:no_auto], var_name, anymap_name, anymap_entry_name,
+           default_value, ...] array (extract_before:/extract_inside:/extract_after:) into
+           (var_name, var_type, no_auto, anymap_name, anymap_entry_name, default_value)
+           tuples. Each entry generates
+           `auto var_name = param(anymap_name, "anymap_entry_name", var_type{default_value});`
+           (or, with the ':no_auto' type suffix, assigns into an already-declared
+           local/member instead of declaring a fresh 'auto' local)."""
+        res: list[tuple[str, str, bool, str, str, Any]] = []
+        if arr is None:
+            return res
+        if not isinstance(arr, list):
+            print(f"Warning: {ctx}.{key_name} must be a list {yaml_file}", file=sys.stderr)
+            return res
+
+        i = 0
+        n = len(arr)
+        while i < n:
+            if i + 4 >= n:
+                print(f"Warning: {ctx}.{key_name} has a trailing incomplete (var_type[:no_auto], var_name, "
+                      f"anymap_name, anymap_entry_name, default_value) entry starting at index {i} {yaml_file}",
+                      file=sys.stderr)
+                break
+            ty_flag, var_name, map_name, entry_name, default = arr[i], arr[i + 1], arr[i + 2], arr[i + 3], arr[i + 4]
+            i += 5
+
+            if not isinstance(ty_flag, str) or not ty_flag.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 5}] var_type must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            ty_stripped = ty_flag.strip()
+            no_auto = False
+            if ty_stripped.endswith(":no_auto"):
+                no_auto = True
+                ty_clean = ty_stripped[:-len(":no_auto")].strip()
+            elif ":" in ty_stripped and not ty_stripped.startswith("std::"):
+                bad_flag = ty_stripped.rsplit(":", 1)[1]
+                print(f"Warning: {ctx}.{key_name}[{i - 5}] unknown var_type flag '{bad_flag}' "
+                      f"(expected 'no_auto') {yaml_file}", file=sys.stderr)
+                ty_clean = ty_stripped
+            else:
+                ty_clean = ty_stripped
+            if ty_clean.lower() not in self._KNOWN_ARG_TYPES:
+                print(f"Warning: {ctx}.{key_name}[{i - 5}] unknown type '{ty_clean}' {yaml_file}", file=sys.stderr)
+
+            if not isinstance(var_name, str) or not var_name.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 4}] var_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            var_name_clean = var_name.strip()
+            if not self._is_identifier(var_name_clean):
+                print(f"Warning: {ctx}.{key_name}[{i - 4}] '{var_name_clean}' is not an identifier; "
+                      f"allowed [A-Za-z_][A-Za-z0-9_]* {yaml_file}", file=sys.stderr)
+
+            if not isinstance(map_name, str) or not map_name.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 3}] anymap_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            map_name_clean = map_name.strip()
+
+            if not isinstance(entry_name, str) or not entry_name.strip():
+                print(f"Warning: {ctx}.{key_name}[{i - 2}] anymap_entry_name must be a non-empty string {yaml_file}",
+                      file=sys.stderr)
+                continue
+            entry_name_clean = entry_name.strip()
+
+            res.append((var_name_clean, ty_clean, no_auto, map_name_clean, entry_name_clean, default))
+
+        seen = set()
+        dups = []
+        for var_name, _, _, _, _, _ in res:
+            if var_name in seen:
+                dups.append(var_name)
+            else:
+                seen.add(var_name)
+        if dups:
+            print(f"Warning: {ctx}.{key_name} has duplicate var_names {sorted(set(dups))} {yaml_file}",
+                  file=sys.stderr)
+        return res
+
     def _parse_args_block(self, node: Any, ctx: str, yaml_file: Path, schema: str = "class_args",
                           require_out: bool = False) -> tuple[
-        Optional[str], list[tuple[str, str, Any, bool]], dict[str, list[tuple[str, str, Any, bool]]]]:
-        """Parse a class_args:/control_args: block: { arg_name: <str>, args_in|insert_or_translate:
-           [name, type, value, ...], extract_inside|extract_before|extract_after: [name, type, value,
-           [no_auto], ...] } -- the exact set of keys read/allowed depends on 'schema' (one of
-           "class_args", "wizard_class_args", "control_args" -- see _TIMING_KEYS_BY_SCHEMA and
-           _allowed_sets()). Validates keys, structure, duplicates, and type/name tokens. Returns
-           (arg_name, ins, extracts) where extracts is a dict keyed by "before"/"inside"/"after",
-           containing only the timings valid for this schema.
+        Optional[str], list[tuple[str, str, Any]], list[tuple[str, str, str, str, Any]],
+        dict[str, list[tuple[str, str, bool, str, str, Any]]]]:
+        """Parse a class_args:/args: block: { arg_name: <str>, args_in: [name, type, value, ...] }
+           (class_args/wizard_class_args) or { arg_name: <str>, insert: [name, type, value, ...],
+           translate: [name, type, old_anymap_name, old_arg_name, default_value, ...] } (args),
+           plus extract_inside|extract_before|extract_after: [var_type[:no_auto], var_name, anymap_name,
+           anymap_entry_name, default_value, ...] -- the exact set of keys read/allowed depends on
+           'schema' (one of "class_args", "wizard_class_args", "args" -- see
+           _TIMING_KEYS_BY_SCHEMA and _allowed_sets()). Validates keys, structure, duplicates, and
+           type/name tokens. Returns (arg_name, ins, translate, extracts) where extracts is a dict
+           keyed by "before"/"inside"/"after", containing only the timings valid for this schema.
+           arg_name is optional for args (only meaningful when insert/translate entries are
+           present) and required for class_args/wizard_class_args (names the args_in factory var).
         """
         if not isinstance(node, dict):
             print(f"Warning: {ctx}.{schema} must be a mapping {yaml_file}", file=sys.stderr)
-            return None, [], {}
+            return None, [], [], {}
 
         allow = self._allowed_sets()
         self._warn_unknown_keys(node, allow[f"{schema}_def"], f"{schema} block of '{ctx}'", yaml_file)
 
+        # arg_name names the local anymap that insert:/translate: build (args)
+        # or the class-scope factory var (class_args/wizard_class_args). It is not
+        # consulted by extract_before/extract_inside/extract_after -- those name their
+        # own source anymap/key per entry. args may omit it entirely when the
+        # block only carries extract_before/extract_after entries; class_args and
+        # wizard_class_args still require it (it names the args_in factory).
         arg_name = node.get("arg_name")
-        if not isinstance(arg_name, str) or not arg_name.strip():
-            print(f"Warning: {ctx}.{schema}.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
-            return None, [], {}
-        arg_name = arg_name.strip()
-        if not self._is_identifier(arg_name):
-            print(
-                f"Warning: {ctx}.{schema}.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
-                file=sys.stderr)
+        if arg_name is not None:
+            if not isinstance(arg_name, str) or not arg_name.strip():
+                print(f"Warning: {ctx}.{schema}.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
+                arg_name = None
+            else:
+                arg_name = arg_name.strip()
+                if not self._is_identifier(arg_name):
+                    print(
+                        f"Warning: {ctx}.{schema}.arg_name '{arg_name}' is not an identifier; consider using [A-Za-z_][A-Za-z0-9_]* {yaml_file}",
+                        file=sys.stderr)
 
-        ins_key = "insert_or_translate" if schema == "control_args" else "args_in"
-        ins = self._parse_triplets(node.get(ins_key), ctx, ins_key, yaml_file, allow_no_auto=False)
+        if schema != "args" and arg_name is None:
+            print(f"Warning: {ctx}.{schema}.arg_name must be a non-empty string {yaml_file}", file=sys.stderr)
+            return None, [], [], {}
+
+        if schema == "args":
+            ins = self._parse_triplets(node.get("insert"), ctx, "insert", yaml_file)
+            translate = self._parse_translate_entries(node.get("translate"), ctx, "translate", yaml_file)
+        else:
+            ins = self._parse_triplets(node.get("args_in"), ctx, "args_in", yaml_file)
+            translate = []
 
         timing_keys = self._TIMING_KEYS_BY_SCHEMA.get(schema, {})
-        extracts: dict[str, list[tuple[str, str, Any, bool]]] = {}
+        extracts: dict[str, list[tuple[str, str, bool, str, str, Any]]] = {}
         for timing, key in timing_keys.items():
-            extracts[timing] = self._parse_triplets(node.get(key), ctx, key, yaml_file, allow_no_auto=True)
+            extracts[timing] = self._parse_extract_entries(node.get(key), ctx, key, yaml_file)
 
         if require_out and not any(extracts.values()):
             print(f"Warning: {ctx}.{schema} is missing required extract entries for item-level args {yaml_file}",
@@ -3234,7 +3453,7 @@ class CppGenerator:
         # idiom (a key gets a class/translation default, then the same name is read
         # back out as a local for use elsewhere in the body), not a shadowing mistake.
 
-        return arg_name, ins, extracts
+        return arg_name, ins, translate, extracts
 
     def _validate_functions(self, functions_def: Any) -> Dict[str, Dict[str, Any]]:
         """Validate and normalize the functions section. Returns a dict of name -> def."""
