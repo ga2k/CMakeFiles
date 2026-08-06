@@ -627,6 +627,52 @@ function(project_install _Folder)
     endif ()
 
     # ============================================================
+    # 5.5 Stamp-gated "stage" target
+    # ============================================================
+
+    # `cmake --install` has no staleness tracking of its own: every invocation
+    # walks *all* install() rules from scratch, including the install(DIRECTORY)
+    # globs over third-party headers/.so/.dll above -- thousands of files on a
+    # project with wxWidgets/SOCI/etc as dependencies. Cheap on Linux, ~30s on a
+    # slow Windows machine. Gate the actual `cmake --install` call behind a stamp
+    # file so ninja's own (fast) timestamp check against a handful of DEPENDS
+    # decides whether the (slow) full install-manifest walk is worth doing at all.
+    set(_hs_stage_deps ${APP_NAME} ${_hs_install_targets})
+    if (APP_CREATES_PLUGINS)
+        list(APPEND _hs_stage_deps ${APP_CREATES_PLUGINS})
+    endif ()
+    if (EXISTS "${APP_YAML_PATH}")
+        list(APPEND _hs_stage_deps "${APP_YAML_PATH}")
+    endif ()
+    if (_local_resources_src AND EXISTS "${_local_resources_src}")
+        file(GLOB_RECURSE _hs_stage_resource_files "${_local_resources_src}/*")
+        list(APPEND _hs_stage_deps ${_hs_stage_resource_files})
+        unset(_hs_stage_resource_files)
+    endif ()
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+        list(APPEND _hs_stage_deps "${CMAKE_CURRENT_SOURCE_DIR}/docs/${APP_NAME}-UserGuide.md")
+    endif ()
+    if (LINUX)
+        file(GLOB _hs_stage_desktop_files "${_local_resources_src}/*.desktop")
+        list(APPEND _hs_stage_deps ${_hs_stage_desktop_files})
+        unset(_hs_stage_desktop_files)
+    endif ()
+
+    set(_hs_stage_stamp "${CMAKE_BINARY_DIR}/${APP_NAME}_stage.stamp")
+    add_custom_command(
+            OUTPUT "${_hs_stage_stamp}"
+            COMMAND ${CMAKE_COMMAND} -E env --unset=DESTDIR
+                ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E touch "${_hs_stage_stamp}"
+            DEPENDS ${_hs_stage_deps}
+            COMMENT "Staging ${APP_NAME} to ${CMAKE_INSTALL_PREFIX}"
+            VERBATIM
+    )
+    add_custom_target(${APP_NAME}_stage DEPENDS "${_hs_stage_stamp}")
+    unset(_hs_stage_deps)
+    unset(_hs_stage_stamp)
+
+    # ============================================================
     # 6. CPack safety (critical)
     # ============================================================
 
