@@ -41,22 +41,6 @@ function(project_install _Folder)
                 ${APP_NAME}
                 "${EXPORTS_VAR}"
                 "${APP_UI_IMPL_DIR}")
-
-        if (APP_GENERATE_RECORDSETS)
-#            generateRecordsets(
-#                    ${GEN_DEST_DIR}/rs
-#                    ${APP_GENERATE_RECORDSETS}
-#                    ${APP_NAME})
-        endif ()
-
-        if (APP_GENERATE_UI_CLASSES)
-#            generateUIClasses(
-#                    ${GEN_DEST_DIR}/ui
-#                    ${APP_GENERATE_UI_CLASSES}
-#                    ${APP_NAME}
-#                    "${EXPORTS_VAR}"
-#                    "${APP_UI_IMPL_DIR}")
-        endif ()
     endif ()
 
     # ============================================================

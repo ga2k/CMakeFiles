@@ -1399,7 +1399,7 @@ class CppGenerator:
                           f"ignoring {yaml_file}", file=sys.stderr)
             elif isinstance(args_map, dict) and args_map:
                 var_name = f"{self.to_camel_case(child_name)}Args"
-                lines.append(f'      anymap {var_name};')
+                lines.append(f'      anymap {var_name} = args;')
                 for key, val in args_map.items():
                     expr = self._book_child_arg_expr(val, f"{ctx} args.{key}", yaml_file)
                     lines.append(f'      {var_name}.emplace("{key}", {expr});')
@@ -1708,7 +1708,7 @@ class CppGenerator:
             member_accessor = '.'
 
         xfer_required = member_def.get('transfer', True)
-        xfer_method = "pushToCtrl(live_)"
+        xfer_method = "pushToCtrl()"
 
         validator = member_def.get('validator', {})
         if validator:
