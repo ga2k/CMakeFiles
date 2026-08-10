@@ -41,6 +41,12 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
         file(RENAME "${_wx_extracted}" "${_wx_local_src}")
         file(REMOVE_RECURSE "${_wx_tmp}")
         file(REMOVE "${_wx_tar}")
+        unset(patches)
+        list(APPEND patches
+                ${_wx_local_src}|${sourceDir}
+                "${_wx_local_src}/src|${sourceDir}/src"
+        )
+        replaceFiles(${_wx_local_src} "${patches}")
 
     else ()
 
