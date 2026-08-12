@@ -363,8 +363,11 @@ function(addLibrary)
                 endforeach()
                 unset(_hs_pch_dir_defs)
                 # Platform-specific CRT/codegen flags: MSVC runtime selection on
-                # Windows; PIC + the DEBUG define GUI targets carry on Linux.
-                if (WIN32)
+                # MSVC-ABI Windows; PIC + the DEBUG define GUI targets carry on Linux.
+                # MinGW-ABI Windows (WinX cross-compile, or native UCRT64/clang-gnu-driver
+                # builds like winllvm) has no msvcrtd/ucrtd import lib, so embedding a
+                # --dependent-lib= default-lib directive for it breaks the final link.
+                if (WIN32 AND NOT MINGW)
                     set(_hs_pch_crt_flags
                         "-D_DLL" "-D_MT"
                         "-Xclang"
