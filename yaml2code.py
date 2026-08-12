@@ -103,6 +103,7 @@ class CppGenerator:
             'IntTextCtrl': 'int',
             'MarkupText': 'std::string',
             'MaskedEdit': 'std::string',
+            'NotesCtrl': 'std::string',
             'RadioBox': 'int',
             'RadioButton': 'bool',
             'ScrollBar': 'int',
@@ -136,6 +137,7 @@ class CppGenerator:
             'IntTextCtrl': '0',
             'MarkupText': '""',
             'MaskedEdit': '""',
+            'NotesCtrl': '""',
             'RadioBox': '0',
             'RadioButton': 'false',
             'ScrollBar': '0',
@@ -171,6 +173,7 @@ class CppGenerator:
             'IntTextCtrl': True,
             'MarkupText': True,
             'MaskedEdit': True,
+            'NotesCtrl': True,
             'OutlineText': False,
             'Page': False,
             'RadioBox': True,
@@ -2683,6 +2686,8 @@ class CppGenerator:
                     default_key = 'sizeWizardPage'
                 elif control_class in ('StaticText', 'MarkupText'):
                     default_key = 'sizeLabel'
+                elif control_class == 'NotesCtrl':
+                    default_key = 'sizeNotes'
                 else:
                     default_key = 'sizeCtrl'
 

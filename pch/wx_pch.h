@@ -115,3 +115,6 @@
 #include <wx/aui/auibar.h>
 #include <wx/aui/auibook.h>
 #include <wx/webview.h>
+#include <wx/richtext/richtextctrl.h>
+#include <wx/richtext/richtextxml.h>
+#include <wx/richtext/richtextstyles.h>
