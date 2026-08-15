@@ -1118,7 +1118,7 @@ class CppGenerator:
             if wizard_args_var:
                 for name_in, type_in, default_in in ins:
                     lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
-                    wizard_emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
+                    wizard_emplace_lines.append(f'         hs_store(m["{name_in}"], {lit});')
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
@@ -1405,7 +1405,7 @@ class CppGenerator:
                 lines.append(f'      anymap {var_name} = args;')
                 for key, val in args_map.items():
                     expr = self._book_child_arg_expr(val, f"{ctx} args.{key}", yaml_file)
-                    lines.append(f'      {var_name}.emplace("{key}", {expr});')
+                    lines.append(f'      hs_store({var_name}["{key}"], {expr});')
                 args_expr = var_name
             elif args_map is not None:
                 print(f"Warning: {ctx} 'args' must be a mapping; ignoring {yaml_file}", file=sys.stderr)
