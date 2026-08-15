@@ -2953,12 +2953,12 @@ class CppGenerator:
                     # insert: -- direct index-assignment using type-aware literals
                     for n, ty, v in ins:
                         lit = self._format_cpp_literal(v, ty, string_style="construct")
-                        lines.append(f"      {local_name}[\"{n}\"] = {lit};")
+                        lines.append(f"      hs_store({local_name}[\"{n}\"], {lit});")
                     # translate: -- index-assignment via param<T>() reading from each entry's
                     # own source anymap/key
                     for n, ty, src_map, src_key, default in translate:
                         lit = self._format_cpp_literal(default, ty, string_style="literal")
-                        lines.append(f'      {local_name}["{n}"] = param<{ty}>({src_map}, "{src_key}", {lit});')
+                        lines.append(f'      hs_store({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
             elif arg_name:
                 print(f"Warning: {ctx}.args 'arg_name' is set but there are no insert/translate "
                       f"entries; ignoring it {yaml_file}", file=sys.stderr)
