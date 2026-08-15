@@ -2275,11 +2275,18 @@ class CppGenerator:
                 f"Error: control '{element_name}': both or neither 'table' and 'field' must be provided {yaml_file}",
                 file=sys.stderr)
         elif tbl is not None and fld is not None:
-            if isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip():
+            if isinstance(tbl, str) and tbl.strip():
                 table = f'db::TableName {{"{tbl.strip()}"}}'
+            elif isinstance(tbl, list) and tbl[0].strip():
+                table = f'db::TableName {{{tbl[0].strip()}}}'
+
+            if isinstance(fld, str) and fld.strip():
                 field = f'db::FieldName {{"{fld.strip()}"}}'
-            else:
-                print(f"Error: control '{element_name}': 'table' and 'field' must be non-empty strings {yaml_file}",
+            elif isinstance(fld, list) and fld[0].strip():
+                field = f'db::FieldName {{{fld[0].strip()}}}'
+
+            if table is None or field is None:
+                print(f"Error: control '{element_name}': 'table' and 'field' must be non-empty {yaml_file}",
                       file=sys.stderr)
 
         return table, field
