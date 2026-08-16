@@ -1118,7 +1118,7 @@ class CppGenerator:
             if wizard_args_var:
                 for name_in, type_in, default_in in ins:
                     lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
-                    wizard_emplace_lines.append(f'         hs_store(m["{name_in}"], {lit});')
+                    wizard_emplace_lines.append(f'         add_to_anymap(m["{name_in}"], {lit});')
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
@@ -1405,7 +1405,7 @@ class CppGenerator:
                 lines.append(f'      anymap {var_name} = args;')
                 for key, val in args_map.items():
                     expr = self._book_child_arg_expr(val, f"{ctx} args.{key}", yaml_file)
-                    lines.append(f'      hs_store({var_name}["{key}"], {expr});')
+                    lines.append(f'      add_to_anymap({var_name}["{key}"], {expr});')
                 args_expr = var_name
             elif args_map is not None:
                 print(f"Warning: {ctx} 'args' must be a mapping; ignoring {yaml_file}", file=sys.stderr)
@@ -2953,12 +2953,12 @@ class CppGenerator:
                     # insert: -- direct index-assignment using type-aware literals
                     for n, ty, v in ins:
                         lit = self._format_cpp_literal(v, ty, string_style="construct")
-                        lines.append(f"      hs_store({local_name}[\"{n}\"], {lit});")
+                        lines.append(f"      add_to_anymap({local_name}[\"{n}\"], {lit});")
                     # translate: -- index-assignment via param<T>() reading from each entry's
                     # own source anymap/key
                     for n, ty, src_map, src_key, default in translate:
                         lit = self._format_cpp_literal(default, ty, string_style="literal")
-                        lines.append(f'      hs_store({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
+                        lines.append(f'      add_to_anymap({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
             elif arg_name:
                 print(f"Warning: {ctx}.args 'arg_name' is set but there are no insert/translate "
                       f"entries; ignoring it {yaml_file}", file=sys.stderr)
