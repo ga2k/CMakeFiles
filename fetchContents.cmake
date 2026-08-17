@@ -106,12 +106,6 @@ function(fetchContents)
             msg(ALWAYS FATAL_ERROR "Internal error: FC02 - Package name mismatch \"${_uPackageName}\" vs \"${_sPackageName}\"")
         endif ()
 
-        if (_sKind STREQUAL "PLUGIN")
-            # We don't search for plugins this way, but still advise downstream users it is needed/available
-            list(APPEND _DefinesList USING_${_uPackageName})
-            continue()
-        endif ()
-
         # Where we manipulate the feature to be a union of the _uPackage requirements (if any)
         # and system requirements (if any)
 

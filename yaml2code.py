@@ -540,6 +540,22 @@ class CppGenerator:
         elif not module_list is None:
             required_imports.extend(module_list)
 
+        # Determine base class (Page/Group/WizardPage). A page with a recordset: block and no
+        # explicit base_class (or an explicit "Page") gets RecordSetPage instead -- it owns the
+        # m_rs/reloadTable()/refreshFromCurrent()/onSetActive() machinery this generator used to
+        # emit per-page, closing the same "accident of omission" gap a settings-style page author
+        # forgetting to change base_class: by hand would otherwise reopen. SplitterPage already
+        # derives from RecordSetPage, so an explicit "SplitterPage" is left unchanged.
+        _, top_base_class = self.extract_control_class(target_name, class_def, yaml_file)
+        implies_record_set_page = (self.target_type == "pages" and recordset is not None
+                                    and top_base_class == "Page")
+        if implies_record_set_page:
+            top_base_class = "RecordSetPage"
+            if "RecordSetPage" not in required_imports:
+                required_imports.append("RecordSetPage")
+            if "Page" in required_imports:
+                required_imports.remove("Page")
+
         true_imports = []
         for module in required_imports:
             if not module == export_module:
@@ -566,9 +582,6 @@ class CppGenerator:
             layout_category = "GeneratorSource"
         else:
             layout_category, layout_class_name = layout_class_name.split(':', 1)
-
-        # Determine base class (Page/Group/WizardPage)
-        _, top_base_class = self.extract_control_class(target_name, class_def, yaml_file)
 
         code.append(f"namespace {ns} {{")
         code.append("")
@@ -683,7 +696,11 @@ class CppGenerator:
                 note = "" if on_event is not None else f"  // Implemented in {stub_path}"
                 code.append(f"   auto onEvent(sig::RecordSetEvent event) -> void override;{note}")
             if refresh_ex_declared:
-                code.append(f"   auto refreshEx(const db::Row *rec) -> void;  // Implemented in {stub_path}")
+                # Pages: overrides RecordSetPage::refreshEx() (virtual, empty default).
+                # Groups: no common base owns a RowSet, so this is a plain (non-overriding)
+                # member function refreshFromCurrent(rec) itself calls directly.
+                refresh_ex_override = " override" if self.target_type == "pages" else ""
+                code.append(f"   auto refreshEx(const db::Row *rec) -> void{refresh_ex_override};  // Implemented in {stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -692,14 +709,9 @@ class CppGenerator:
         code.append("")
         code.append('\n'.join(control_decls) if control_decls else '   // No elements defined')
 
-        # RecordSet members (pages own the shared_ptr and the Move* subscription)
-        if recordset and self.target_type == "pages":
-            if not (kill_declared or set_declared):
-                code.append("")
-                code.append("protected:")
-            code.append(f"   using rs_t = std::shared_ptr<db::RowSet>;")
-            code.append(f"   rs_t m_rs;")
-            code.append( "   size_t m_moveHandle{};")
+        # m_rs/m_moveHandle and the Move*-subscribe/suspend/unsubscribe ctor/dtor boilerplate
+        # that used to be generated here for every recordset page now live on RecordSetPage
+        # (Gfx/src/interface/book/RecordSetPage.ixx/.cpp) -- nothing to emit.
 
         # Custom member variables (variables: block) — grouped under explicit access
         # specifiers so placement here is independent of whatever access level the
@@ -748,76 +760,58 @@ class CppGenerator:
                 )
             access_groups[fdef['access']].append(fn_text)
 
-        # Generated refreshFromCurrent(): pages read the current record from m_rs and fan
-        # out; groups receive the record and initialize their field-bound controls. Records
-        # are always db::Row -- there's no per-table generated struct, so every field read
-        # goes through get<T>(name), always wrapped in optional<> so a NULL column never
-        # throws (wx::initFromField already handles the optional-empty case by leaving the
-        # control untouched).
+        # Generated refresh scaffolding. Groups still get a full refreshFromCurrent(rec) (no
+        # common base to inherit one from -- Group doesn't own a RowSet). Pages now inherit a
+        # concrete refreshFromCurrent()/reloadTable() from RecordSetPage (null-check, refreshEx(),
+        # transferTheseToWindow(), the DB requery) -- only emit a bindRecordFields() override
+        # when this page actually has something page-specific to forward (direct bound controls
+        # and/or nested groups); a page with neither (the common case -- everything lives inside
+        # a Group) gets no override at all, relying on RecordSetPage's empty default. Records are
+        # always db::Row -- there's no per-table generated struct, so every field read goes
+        # through get<T>(name), always wrapped in optional<> so a NULL column never throws
+        # (wx::initFromField already handles the optional-empty case by leaving the control
+        # untouched).
         if recordset:
             bound_controls, group_members = self.collect_refresh_targets(elements, yaml_file)
-            rfc: List[str] = []
             if self.target_type == "pages":
-                rfc.append( "   auto refreshFromCurrent () -> void {")
-                rfc.append( "      const db::Row *rec = m_rs ? m_rs->current() : nullptr;")
-                rfc.append( "      if (!rec)")
-                rfc.append( "         return;")
-            else:  # groups
+                if bound_controls or group_members:
+                    bf: List[str] = ["   auto bindRecordFields (const db::Row *rec) -> void override {"]
+                    for var, fld, cpp_type in bound_controls:
+                        bf.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
+                        bf.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
+                    for var in group_members:
+                        bf.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                        bf.append(f"         {var}->refreshFromCurrent(rec);")
+                    bf.append("   }")
+                    access_groups['public'].append('\n'.join(bf))
+                if recordset.get('allow_add') is False:
+                    av: List[str] = ["   auto addValidationResult() -> db::RequestResult override {"]
+                    av.append('      return db::RequestResult::veto("Adding a record is not permitted here.");')
+                    av.append("   }")
+                    access_groups['public'].append('\n'.join(av))
+            else:  # groups: unchanged -- Group owns no RowSet of its own to inherit this from.
+                rfc: List[str] = []
                 rfc.append( "   auto refreshFromCurrent (const db::Row *rec) -> void {")
                 rfc.append( "      if (!rec)")
                 rfc.append( "         return;")
-            for var, fld, cpp_type in bound_controls:
-                rfc.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
-                # Retarget the control's commit() UPDATE at the current record
-                rfc.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
-            for var in group_members:
-                # Guarded: a nested group without its own recordset: is skipped instead of
-                # breaking the build.
-                rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
-                rfc.append(f"         {var}->refreshFromCurrent(rec);")
-            rfc.append("      refreshEx(rec);")
-            # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
-            # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
-            # cents -> "$123.45" formatting) only run via transferToWindow(), so re-run it
-            # here or freshly-displayed records show unformatted raw values until the user
-            # starts editing (which is the only other place transferToWindow() is invoked).
-            rfc.append("      ICtrl::transferTheseToWindow(controlMap());")
-            rfc.append("   }")
-            access_groups['public'].append('\n'.join(rfc))
-
-            # Method to reload the table from the physical db on disk
-
-            rt: List[str] = []
-            tbl = recordset['table']
-            order_by = recordset['order_by']
-
-            if self.target_type == "pages" and tbl is not None:
-                rt.append(f'   auto reloadTable (const std::string &t = "{tbl}") -> rs_t {{')
-                rt.append( '      auto db = db::db();')
-                rt.append( '      if (!db)')
-                rt.append( '         return nullptr;')
-                rt.append( '      auto table = db->getTable(t);')
-                rt.append( '      if (!table)')
-                rt.append( '         return nullptr;')
-                rt.append( '   ')
-                rt.append( '      auto rs = std::make_shared<db::RowSet>(*table);')
-                rt.append(''   )
-                rt.append( "      // Same order as select()'s list query, so the list's displayed order and the")
-                rt.append( "      // recordset's navigation order agree (clicking a row and Prev/Next-ing from it")
-                rt.append( "      // should walk the same sequence).")
-                rt.append(''   )
-                rt.append(f'      if (!rs->load("", "{order_by}")) {{ // false = the query itself failed')
-                rt.append( '         doutif(TraceLevel::Info) << "initial query failed: " << rs->lastError_ << std::endl;')
-                rt.append('          return nullptr;')
-                rt.append( '      }')
-                rt.append( '      const db::Row *rec = rs->moveLast(); // nullptr = rows_ is empty')
-                rt.append(f'      if (rec)')
-                rt.append( '          doutif(TraceLevel::Info) << "got record id " << rec->get<int>("id") << std::endl;')
-                rt.append( '')
-                rt.append(f'      db::rsInterface()->select(rs); // buttons now gate on the REAL recordset')
-                rt.append( '      return rs;')
-                rt.append( '   }')
-                access_groups['public'].append('\n'.join(rt))
+                for var, fld, cpp_type in bound_controls:
+                    rfc.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
+                    # Retarget the control's commit() UPDATE at the current record
+                    rfc.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
+                for var in group_members:
+                    # Guarded: a nested group without its own recordset: is skipped instead of
+                    # breaking the build.
+                    rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                    rfc.append(f"         {var}->refreshFromCurrent(rec);")
+                rfc.append("      refreshEx(rec);")
+                # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
+                # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
+                # cents -> "$123.45" formatting) only run via transferToWindow(), so re-run it
+                # here or freshly-displayed records show unformatted raw values until the user
+                # starts editing (which is the only other place transferToWindow() is invoked).
+                rfc.append("      ICtrl::transferTheseToWindow(controlMap());")
+                rfc.append("   }")
+                access_groups['public'].append('\n'.join(rfc))
 
         def format_access_block(access_name: str, fns: List[str]) -> str:
             if not fns:
@@ -834,11 +828,9 @@ class CppGenerator:
 
         code.append("")
         code.append("public:")
-        if recordset and self.target_type == "pages":
-            # The Subscribe lambda in the ctor captures 'this' — must unsubscribe.
-            code.append(f"   ~{cpp_class}() override {{ sig::recordSetSignal().Unsubscribe(m_moveHandle); }}")
-        else:
-            code.append(f"   ~{cpp_class}() override = default;")
+        # RecordSetPage's own dtor unsubscribes m_moveHandle/etc. now -- every generated page
+        # (recordset or not) can default this.
+        code.append(f"   ~{cpp_class}() override = default;")
         code.append("")
 
         # Constructor signature and base ctor call.
@@ -861,10 +853,16 @@ class CppGenerator:
             code.append(f"{pad1}PageType::Type type = PageType::{cpp_class},")
             code.append(f"{pad1}int imageIndex = -1,")
             code.append(f"{pad1}{args_param_type}args = {default_args_expr})")
-            if has_class_args:
-                code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, {merge_helper_name}(args)) {{")
+            args_expr = f"{merge_helper_name}(args)" if has_class_args else "args"
+            # RecordSetPage/SplitterPage both take (..., table, orderBy, imageIndex, args, ...) --
+            # baked in as literals from this page's own recordset: block, not new leaf-ctor
+            # parameters, so the generated ctor's own public signature stays unchanged.
+            if recordset is not None and recordset.get('table') is not None and top_base_class in ("RecordSetPage", "SplitterPage"):
+                tbl_lit = recordset['table']
+                ob_lit = recordset['order_by']
+                code.append(f'      : {top_base_class} (book, id, name, type, "{tbl_lit}", "{ob_lit}", imageIndex, {args_expr}) {{')
             else:
-                code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, args) {{")
+                code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, {args_expr}) {{")
         else:
             code.append(f"   explicit {cpp_class} ( UICreateFlags cflags, ")
             code.append(f"{pad1}std::string name, ")
@@ -947,16 +945,8 @@ class CppGenerator:
             self._dbg(f"'{target_name}': NO control creation code produced - class body will have an empty ctor")
             code.append('      // No control creation code\n')
 
-        # RecordSet Move* subscription: refresh the page when the RecordSetInterface
-        # navigates. Suspended until onSetActive resumes it (per-subscription).
-        if recordset and self.target_type == "pages":
-            code.append("")
-            code.append("      m_moveHandle = sig::recordSetSignal().Subscribe([this](auto) { refreshFromCurrent(); },")
-            code.append("                                                     sig::RecordSetEvent::MoveFirst, sig::RecordSetEvent::MovePrevious,")
-            code.append("                                                     sig::RecordSetEvent::MoveNext, sig::RecordSetEvent::MoveLast,")
-            code.append("                                                     sig::RecordSetEvent::MoveAbsolute);")
-            code.append("      sig::recordSetSignal().suspendSignals(m_moveHandle);")
-            code.append("")
+        # RecordSetPage's own ctor subscribes m_moveHandle (refresh on Move*, suspended until
+        # onSetActive() resumes it) -- nothing to emit here anymore.
 
         # Placement: finally (before loadLayout). Spliced in here, rather than at the
         # end of the ctor, so a finally block's effects (state/widgets it sets up) are
@@ -1968,7 +1958,8 @@ class CppGenerator:
             },
             "recordset_def": {
                 "table",
-                "order_by"
+                "order_by",
+                "allow_add"
             },
             "alt_data_source_def": {
                 "blank_text",
@@ -2313,7 +2304,11 @@ class CppGenerator:
         if self.debugging and tbl is None:
             print(f"Warning: '{element_name}': reloadTable() generation skipped (no 'table') {yaml_file}")
         order_by = rs.get('order_by', 'id')
-        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by}
+        allow_add = rs.get('allow_add', True)
+        if not isinstance(allow_add, bool):
+            print(f"Error: '{element_name}': 'recordset' 'allow_add' must be a bool {yaml_file}", file=sys.stderr)
+            allow_add = True
+        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by, 'allow_add': allow_add}
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
