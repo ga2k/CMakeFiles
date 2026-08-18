@@ -718,7 +718,8 @@ class CppGenerator:
         # preceding declarations left the class in.
         variable_access_groups = {'public': [], 'protected': [], 'private': []}
         for var_name, var_def in variables_block.items():
-            variable_access_groups[var_def['access']].append(self.format_variable_declaration(var_name, var_def))
+            variable_access_groups[var_def['access']].append(
+                self.format_variable_declaration(var_name, var_def, yaml_file))
 
         def format_variable_access_block(access_name: str, decls: List[str]) -> str:
             if not decls:
@@ -886,7 +887,8 @@ class CppGenerator:
         # class_args.extract_inside at ctor top
         if page_extract_inside_entries:
             for var_name, ty, no_auto, map_name, entry_name, default in page_extract_inside_entries:
-                lit = self._format_cpp_literal(default, ty, string_style="construct")
+                lit = self._resolve_default_literal(default, ty, yaml_file,
+                                                    f"class_args.extract_inside.'{entry_name}'")
                 prefix = "" if no_auto else "auto "
                 code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
             # code.append("")
@@ -1107,7 +1109,9 @@ class CppGenerator:
             declared_arg_names = {n for n, _, _ in ins}
             if wizard_args_var:
                 for name_in, type_in, default_in in ins:
-                    lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
+                    lit = self._resolve_default_literal(default_in, type_in, yaml_file,
+                                                        f"wizard '{target_name}'.class_args.args_in.'{name_in}'",
+                                                        allow_anymap=False)
                     wizard_emplace_lines.append(f'         add_to_anymap(m["{name_in}"], {lit});')
 
         cancel_message = class_def.get("cancel_message")
@@ -1159,19 +1163,22 @@ class CppGenerator:
 
             header = page.get("header", "")
             if isinstance(header, dict):
+                header_ctx = f"wizard '{target_name}'.pages[{idx}].header"
                 condition = header.get("condition")
-                if_true = self._cpp_string_literal(str(header.get("if_true", "")))
-                if_false = self._cpp_string_literal(str(header.get("if_false", "")))
-                if not isinstance(condition, str) or not condition.strip():
-                    print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition must be a non-empty "
-                          f"string naming an args_in key {yaml_file}", file=sys.stderr)
-                    header_expr = f'"{if_true}"s'
-                else:
-                    cond = condition.strip()
-                    if declared_arg_names and cond not in declared_arg_names:
-                        print(f"Warning: wizard '{target_name}'.pages[{idx}] header.condition '{cond}' is not "
-                              f"declared in this wizard's args_in {yaml_file}", file=sys.stderr)
-                    header_expr = f'(param<bool>(args, "{cond}", false) ? "{if_true}"s : "{if_false}"s)'
+                # header: has always resolved its condition against 'args' implicitly (before
+                # 'anymap:' existed as an explicit key) -- preserved via default_anymap so
+                # existing YAML that omits 'anymap:' keeps compiling unchanged.
+                header_expr = self._resolve_conditional(header, "string", yaml_file, header_ctx,
+                                                        string_style="literal", string_suffix=True,
+                                                        default_anymap="args")
+                if header_expr is None:
+                    print(f"Warning: {header_ctx} must have 'condition', 'if_true' and 'if_false' "
+                          f"{yaml_file}", file=sys.stderr)
+                    header_expr = '""s'
+                elif isinstance(condition, str) and condition.strip() and declared_arg_names \
+                        and condition.strip() not in declared_arg_names:
+                    print(f"Warning: {header_ctx} condition '{condition.strip()}' is not declared in "
+                          f"this wizard's args_in {yaml_file}", file=sys.stderr)
             elif isinstance(header, str):
                 header_expr = f'"{self._cpp_string_literal(header)}"s'
             else:
@@ -1774,7 +1781,8 @@ class CppGenerator:
         if extract_after:
             code.append("")
             for var_name, ty, no_auto, map_name, entry_name, default in extract_after:
-                lit = self._format_cpp_literal(default, ty, string_style="construct")
+                lit = self._resolve_default_literal(default, ty, yaml_file,
+                                                    f"control '{member_name}'.extract_after.'{entry_name}'")
                 prefix = "" if no_auto else "auto "
                 code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
 
@@ -1843,7 +1851,8 @@ class CppGenerator:
         # anymap/key explicitly, so no fallback to local_args_var/parent_args_var is needed
         if extract_after:
             for var_name, ty, no_auto, map_name, entry_name, default in extract_after:
-                lit = self._format_cpp_literal(default, ty, string_style="construct")
+                lit = self._resolve_default_literal(default, ty, yaml_file,
+                                                    f"control '{member_name}'.extract_after.'{entry_name}'")
                 prefix = "" if no_auto else "auto "
                 code.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
 
@@ -2059,6 +2068,12 @@ class CppGenerator:
                 "module",
                 "name",
                 "type",
+            },
+            "conditional_value": {
+                "condition",
+                "anymap",
+                "if_true",
+                "if_false",
             },
         }
 
@@ -2611,11 +2626,23 @@ class CppGenerator:
             }
         return result
 
-    def format_variable_declaration(self, var_name: str, var_def: Dict[str, Any]) -> str:
+    def format_variable_declaration(self, var_name: str, var_def: Dict[str, Any], yaml_file: Path) -> str:
         """Format one normalized 'variables:' entry as a class member declaration."""
         cpp_type = var_def['type']
         if var_def['has_default']:
-            lit = self._format_cpp_literal(var_def['default'], cpp_type, string_style="literal")
+            raw_default = var_def['default']
+            ctx = f"variables.'{var_name}'.default"
+            if isinstance(raw_default, dict) and 'anymap' in raw_default:
+                # A default member initializer runs before the constructor body, so the ctor's
+                # anymap parameter (e.g. 'args') isn't in scope here -- unlike style:/value:,
+                # which are resolved inside the ctor body itself.
+                print(f"Warning: {ctx} 'anymap:' is not supported here -- a class member's default "
+                      f"initializer has no constructor parameter in scope; ignoring 'anymap:' and "
+                      f"treating 'condition:' as a raw bool expression {yaml_file}", file=sys.stderr)
+                raw_default = {k: v for k, v in raw_default.items() if k != 'anymap'}
+            conditional = self._resolve_conditional(raw_default, cpp_type, yaml_file, ctx, string_style="literal")
+            lit = conditional if conditional is not None else \
+                self._format_cpp_literal(raw_default, cpp_type, string_style="literal")
             return f"   {cpp_type} {var_name} {{{lit}}};"
         return f"   {cpp_type} {var_name} {{}};"
 
@@ -2723,16 +2750,31 @@ class CppGenerator:
     def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         style = ''
         if 'style' in elements:
-            if isinstance(elements['style'], list):
-                style = '|'.join(elements['style'])
+            ctx = f"'{element_name}'.style"
+            whole_conditional = self._resolve_conditional(elements['style'], None, yaml_file, ctx)
+            if whole_conditional is not None:
+                style = whole_conditional
+            elif isinstance(elements['style'], list):
+                tokens: List[str] = []
+                for item in elements['style']:
+                    item_conditional = self._resolve_conditional(item, None, yaml_file, ctx)
+                    if item_conditional is not None:
+                        tokens.append(item_conditional)
+                    elif isinstance(item, list):
+                        expr, _ = self._resolve_rvalue_or_literal(item, None, yaml_file, ctx)
+                        tokens.append(expr)
+                    else:
+                        tokens.append(item)
+                style = '|'.join(tokens)
             elif isinstance(elements['style'], int):
                 ss = elements['style']
-                style = f'{{ss}}'
+                style = f'{ss}'
             elif isinstance(elements['style'], str):
                 style = elements['style']
             else:
                 print(
-                    f"Warning: 'style' for '{element_name}' must be a list, a string or an integer; {yaml_file}",
+                    f"Warning: 'style' for '{element_name}' must be a list, a string, an integer, or a "
+                    f"conditional mapping; {yaml_file}",
                     file=sys.stderr)
         else:
             # Default to wxTAB_TRAVERSAL for Groups and Pages to enable tab navigation
@@ -2742,31 +2784,61 @@ class CppGenerator:
                 style = '0'
         return style
 
+    def _normalize_uicf_flag_name(self, raw: str) -> str:
+        """Strip an already-present 'wx::UICreateFlags::'/'UICreateFlags::' qualifier so the bare
+           name can be safely re-prefixed exactly once."""
+        single_flag = raw.strip()
+        if single_flag.startswith('wx::UICreateFlags::'):
+            single_flag = single_flag[len('wx::UICreateFlags::'):]
+        elif single_flag.startswith('UICreateFlags::'):
+            single_flag = single_flag[len('UICreateFlags::'):]
+        return single_flag
+
+    def _resolve_uicf_branch(self, raw: Any, yaml_file: Path, ctx: str) -> str:
+        """Resolve one if_true/if_false branch of a conditional uicreateflags entry: a plain
+           flag name is qualified with UICreateFlags:: (same as any other uicreateflags entry);
+           '[ rvalue ]' is used verbatim (already a full expression, not a bare flag name)."""
+        if isinstance(raw, list):
+            expr, _ = self._resolve_rvalue_or_literal(raw, None, yaml_file, ctx)
+            return expr
+        if isinstance(raw, str) and raw.strip():
+            return f'UICreateFlags::{self._normalize_uicf_flag_name(raw)}'
+        print(f"Warning: {ctx} if_true/if_false must be a non-empty string or '[ rvalue ]'; "
+              f"defaulting to UICreateFlags::Null {yaml_file}", file=sys.stderr)
+        return 'UICreateFlags::Null'
+
     def extract_uicreate_flags(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[
         List[str], str, bool]:
         uicf_node = elements.get('uicreateflags', None)
         cflags_list: List[str] = []
+        # Conditional entries (ternaries) can't be membership-tested the way plain flag names in
+        # cflags_list can (see callers checking "Group" in cflags_list), so they're kept separate
+        # and appended to the final joined expression only -- cflags_list itself stays "bare names".
+        conditional_exprs: List[str] = []
+        ctx = f"'{element_name}'.uicreateflags"
 
         if isinstance(uicf_node, str):
             if uicf_node.strip():
-                single_flag = uicf_node.strip()
-                if single_flag.startswith('wx::UICreateFlags::'):
-                    single_flag = single_flag[slice(len('wx::UICreateFlags::'), len(single_flag))]
-                elif single_flag.startswith('UICreateFlags::'):
-                    single_flag = single_flag[slice(len('UICreateFlags::'), len(single_flag))]
-                cflags_list.append(single_flag)
+                cflags_list.append(self._normalize_uicf_flag_name(uicf_node))
             else:
                 print(f"Warning: 'uicreateflags' for '{element_name}' must be non-empty; {yaml_file}",
                       file=sys.stderr)
         elif isinstance(uicf_node, list):
             for f in uicf_node:
-                if isinstance(f, str) and f.strip():
-                    single_flag = f.strip()
-                    if single_flag.startswith('wx::UICreateFlags::'):
-                        single_flag = single_flag[slice(len('wx::UICreateFlags::'), len(single_flag))]
-                    elif single_flag.startswith('UICreateFlags::'):
-                        single_flag = single_flag[slice(len('UICreateFlags::'), len(single_flag))]
-                    cflags_list.append(single_flag)
+                if isinstance(f, dict) and "condition" in f:
+                    anymap_raw = f.get("anymap")
+                    anymap_name = anymap_raw.strip() if isinstance(anymap_raw, str) and anymap_raw.strip() else None
+                    self._warn_unknown_keys(f, self._allowed_sets()["conditional_value"], ctx, yaml_file)
+                    if "if_true" not in f or "if_false" not in f:
+                        print(f"Warning: {ctx} conditional entry must have 'condition', 'if_true' and "
+                              f"'if_false' {yaml_file}", file=sys.stderr)
+                        continue
+                    cond_expr = self._resolve_condition_expr(f.get("condition"), anymap_name, yaml_file, ctx)
+                    true_expr = self._resolve_uicf_branch(f.get("if_true"), yaml_file, ctx)
+                    false_expr = self._resolve_uicf_branch(f.get("if_false"), yaml_file, ctx)
+                    conditional_exprs.append(f'({cond_expr} ? {true_expr} : {false_expr})')
+                elif isinstance(f, str) and f.strip():
+                    cflags_list.append(self._normalize_uicf_flag_name(f))
                 else:
                     print(
                         f"Warning: 'uicreateflags' list contains non-string/empty value for '{element_name}' {yaml_file}",
@@ -2782,10 +2854,10 @@ class CppGenerator:
         if is_group and "Group" not in cflags_list:
             cflags_list.append("Group")
 
-        if cflags_list == []:
+        if cflags_list == [] and not conditional_exprs:
             cflags_list.append("Null")
 
-        cflags = " | ".join([f"UICreateFlags::{f}" for f in cflags_list])
+        cflags = " | ".join([f"UICreateFlags::{f}" for f in cflags_list] + conditional_exprs)
 
         return cflags_list, cflags, is_group
 
@@ -2801,7 +2873,12 @@ class CppGenerator:
         tp = self.extract_data_type(element_name, elements, yaml_file)
         # Get the initialization value (string) for the control, defaulting to '' if not present.
         if not tp is None and 'value' in elements:
-            if isinstance(elements['value'], list):
+            conditional = self._resolve_conditional(elements['value'], tp, yaml_file, f"'{element_name}'.value",
+                                                     string_style="construct")
+            if conditional is not None:
+                value = conditional
+                value_is_literal = False
+            elif isinstance(elements['value'], list):
                 # if presented as a list, it is taken to be a variable name
                 v = elements['value'][0].strip()
                 # value = self._format_cpp_literal(v, tp, string_style="construct")
@@ -2821,7 +2898,8 @@ class CppGenerator:
             # -> ID::Type { ID::Type::Null }).
             wrap_type = tp if tp is not None else self.control_value_mapping.get(
                 control_class, self.control_value_mapping.get(base_class, ""))
-            default_lit = self._format_cpp_literal(elements.get('default'), tp, string_style="construct")
+            default_lit = self._resolve_default_literal(elements.get('default'), tp, yaml_file,
+                                                         f"'{element_name}'.default")
             value = f'{wrap_type} {{ {default_lit} }}'
             value_is_literal = False
         else:
@@ -2858,7 +2936,9 @@ class CppGenerator:
         # never inside a brace-init-list) for the factory function body.
         emplace_lines: List[str] = []
         for name_in, type_in, default_in in ins:
-            lit = self._format_cpp_literal(default_in, type_in, string_style="construct")
+            lit = self._resolve_default_literal(default_in, type_in, yaml_file,
+                                                f"class_args.'{page_key}'.args_in.'{name_in}'",
+                                                allow_anymap=False)
             emplace_lines.append(f'         m.emplace("{name_in}", std::any({lit}));')
 
         return emplace_lines, arg_name, inside_entries
@@ -2947,12 +3027,13 @@ class CppGenerator:
                         lines.append(f"      anymap {local_name} = {first_src} ;")
                     # insert: -- direct index-assignment using type-aware literals
                     for n, ty, v in ins:
-                        lit = self._format_cpp_literal(v, ty, string_style="construct")
+                        lit = self._resolve_default_literal(v, ty, yaml_file, f"{ctx}.args.insert.'{n}'")
                         lines.append(f"      add_to_anymap({local_name}[\"{n}\"], {lit});")
                     # translate: -- index-assignment via param<T>() reading from each entry's
                     # own source anymap/key
                     for n, ty, src_map, src_key, default in translate:
-                        lit = self._format_cpp_literal(default, ty, string_style="literal")
+                        lit = self._resolve_default_literal(default, ty, yaml_file, f"{ctx}.args.translate.'{n}'",
+                                                             string_style="literal")
                         lines.append(f'      add_to_anymap({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
             elif arg_name:
                 print(f"Warning: {ctx}.args 'arg_name' is set but there are no insert/translate "
@@ -2961,7 +3042,7 @@ class CppGenerator:
             # extract_before -- read values out right before construction, from each entry's own
             # explicit anymap/key (commonly local_name, once insert/translate have built it)
             for var_name, ty, no_auto, map_name, entry_name, default in extracts.get("before", []):
-                lit = self._format_cpp_literal(default, ty, string_style="construct")
+                lit = self._resolve_default_literal(default, ty, yaml_file, f"{ctx}.extract_before.'{entry_name}'")
                 prefix = "" if no_auto else "auto "
                 lines.append(f'      {prefix}{var_name} = param({map_name}, "{entry_name}", {lit});')
 
@@ -3166,10 +3247,11 @@ class CppGenerator:
 
         if t in ("string", "std::string"):
             s = "" if val is None else str(val)
+            already_quoted = s.startswith('"') and s.endswith('"')
             if string_style == "construct":
-                inner = s if (s.startswith('"') and s.endswith('"')) else f'"{s}"'
+                inner = s if already_quoted else f'"{self._cpp_string_literal(s)}"'
                 return f'std::string{{{inner}}}'
-            return f'"{s}"'
+            return s if already_quoted else f'"{self._cpp_string_literal(s)}"'
 
         if t in ("double", "float"):
             try:
@@ -3194,6 +3276,109 @@ class CppGenerator:
             return str(val)
 
         return f'"{"" if val is None else str(val)}"'
+
+    def _resolve_rvalue_or_literal(self, raw: Any, ty: Optional[str], yaml_file: Path, ctx: str, *,
+                                   string_style: str = "literal") -> Tuple[str, bool]:
+        """Resolve one YAML-side value that may be either a plain literal or a single-element
+           list `[ rvalue ]` naming a C++ expression (variable, function call, ...) to use verbatim
+           instead of being formatted/quoted. Returns (expr, is_literal); is_literal is False for
+           the `[ rvalue ]` form so callers that need to know (e.g. to decide whether a string
+           literal suffix like `s` applies) can tell the two apart."""
+        if isinstance(raw, list):
+            if len(raw) != 1 or not isinstance(raw[0], str) or not raw[0].strip():
+                print(f"Warning: {ctx} '[ rvalue ]' form must be a single-element list containing a "
+                      f"non-empty expression; got {raw!r} {yaml_file}", file=sys.stderr)
+                return ("false" if ty in ("bool", "hs_bool") else "0"), True
+            return raw[0].strip(), False
+        return self._format_cpp_literal(raw, ty, string_style=string_style), True
+
+    def _resolve_condition_expr(self, cond_raw: Any, anymap_name: Optional[str], yaml_file: Path, ctx: str) -> str:
+        """Resolve a conditional's `condition:` field to a C++ bool expression.
+           - `[ rvalue ]` form: used verbatim as the boolean expression; `anymap:` is ignored
+             (there's nothing to look up -- the expression already evaluates to bool).
+           - Plain string form: if `anymap:` names an anymap variable, the string is treated as
+             a key into it (`param<bool>(anymap, "key", false)`); otherwise it's passed through
+             verbatim as a bare C++ boolean expression (e.g. a member variable name)."""
+        if isinstance(cond_raw, list):
+            if anymap_name:
+                print(f"Warning: {ctx} condition given in '[ rvalue ]' form; 'anymap:' is ignored "
+                      f"(the expression is used directly) {yaml_file}", file=sys.stderr)
+            if len(cond_raw) != 1 or not isinstance(cond_raw[0], str) or not cond_raw[0].strip():
+                print(f"Warning: {ctx} condition '[ rvalue ]' form must be a single-element list "
+                      f"containing a non-empty expression; got {cond_raw!r} {yaml_file}", file=sys.stderr)
+                return "false"
+            return cond_raw[0].strip()
+        if isinstance(cond_raw, str) and cond_raw.strip():
+            key = cond_raw.strip()
+            return f'param<bool>({anymap_name}, "{key}", false)' if anymap_name else key
+        print(f"Warning: {ctx} 'condition:' must be a non-empty string or '[ rvalue ]'; defaulting to "
+              f"'false' {yaml_file}", file=sys.stderr)
+        return "false"
+
+    def _resolve_conditional(self, raw: Any, ty: Optional[str], yaml_file: Path, ctx: str, *,
+                             string_style: str = "literal", string_suffix: bool = False,
+                             default_anymap: Optional[str] = None) -> Optional[str]:
+        """If `raw` is a `{condition, [anymap,] if_true, if_false}` mapping, resolve it to a C++
+           ternary expression `(cond ? true_expr : false_expr)`. Returns None if `raw` isn't such a
+           mapping, so callers fall back to their own plain-value handling.
+
+           `default_anymap` lets a call site preserve a pre-existing implicit anymap (e.g. wizard
+           page `header:` always resolved its condition against `args`, before `anymap:` existed
+           as an explicit key) when the YAML doesn't specify its own `anymap:`. New call sites
+           should leave this None -- an omitted `anymap:` then means "condition is a raw C++ bool
+           expression", per the general rule.
+
+           `string_suffix` appends the `s` (std::string_literals) suffix to any *literal* string
+           branch (not to a `[ rvalue ]` branch, which is already a typed expression) -- needed so
+           a ternary between two string branches has std::string as its common type."""
+        if not isinstance(raw, dict) or "condition" not in raw:
+            return None
+        self._warn_unknown_keys(raw, self._allowed_sets()["conditional_value"], ctx, yaml_file)
+        if "if_true" not in raw or "if_false" not in raw:
+            print(f"Warning: {ctx} conditional value must have 'condition', 'if_true' and 'if_false' "
+                  f"{yaml_file}", file=sys.stderr)
+            return None
+
+        anymap_name = raw.get("anymap", default_anymap)
+        if anymap_name is not None and (not isinstance(anymap_name, str) or not anymap_name.strip()):
+            print(f"Warning: {ctx} 'anymap:' must be a non-empty string; ignoring {yaml_file}", file=sys.stderr)
+            anymap_name = default_anymap
+        elif isinstance(anymap_name, str):
+            anymap_name = anymap_name.strip()
+
+        cond_expr = self._resolve_condition_expr(raw.get("condition"), anymap_name, yaml_file, ctx)
+        true_expr, true_is_literal = self._resolve_rvalue_or_literal(raw.get("if_true"), ty, yaml_file, ctx,
+                                                                      string_style=string_style)
+        false_expr, false_is_literal = self._resolve_rvalue_or_literal(raw.get("if_false"), ty, yaml_file, ctx,
+                                                                       string_style=string_style)
+        if string_suffix and ty in ("string", "std::string"):
+            if true_is_literal:
+                true_expr += "s"
+            if false_is_literal:
+                false_expr += "s"
+        return f'({cond_expr} ? {true_expr} : {false_expr})'
+
+    def _resolve_default_literal(self, raw: Any, ty: Optional[str], yaml_file: Path, ctx: str, *,
+                                 string_style: str = "construct", allow_anymap: bool = True) -> str:
+        """Resolve a 'default'-shaped YAML value -- plain literal, '[ rvalue ]', or a full
+           {condition, if_true, if_false} mapping -- to a C++ expression. Used at call sites that
+           previously only supported a plain literal via _format_cpp_literal() directly.
+
+           allow_anymap=False strips (with a warning) any 'anymap:' key before resolving -- for
+           call sites that build a static default-anymap factory (class_args/args_in/wizard
+           class_args), which run before the constructor exists, so no anymap parameter (e.g.
+           'args') is in scope to look values up in yet."""
+        working = raw
+        if not allow_anymap and isinstance(raw, dict) and 'anymap' in raw:
+            print(f"Warning: {ctx} 'anymap:' is not supported here -- this value is built before "
+                  f"the constructor exists, so no anymap parameter is in scope; ignoring 'anymap:' "
+                  f"and treating 'condition:' as a raw bool expression {yaml_file}", file=sys.stderr)
+            working = {k: v for k, v in raw.items() if k != 'anymap'}
+        conditional = self._resolve_conditional(working, ty, yaml_file, ctx, string_style=string_style)
+        if conditional is not None:
+            return conditional
+        expr, _ = self._resolve_rvalue_or_literal(working, ty, yaml_file, ctx, string_style=string_style)
+        return expr
 
     # Which extract_* timing keys are valid for each args schema, and what YAML key
     # spells each one. class_args only offers "inside" (this class's own ctor body is
