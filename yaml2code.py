@@ -606,6 +606,11 @@ class CppGenerator:
             code.append(f"   static auto value(const db::Row &r) -> {data_type} {{ return {value_expr}; }}")
             code.append(f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
             code.append(f'   static auto blankText() -> std::string {{ return "{alt_ds["blank_text"]}"; }}')
+            # textField()/locked() are only required by ELBoxDBSourceFor (ELBox's row-write-back
+            # concept, Gfx/src/ctrls/ELBox.ixx) -- harmless additions for Choice/Combo/ListBox,
+            # which only require DBSourceFor and never reference them.
+            code.append(f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"; }}')
+            code.append(f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
             code.append("};")
             code.append("")
 
@@ -2799,6 +2804,15 @@ class CppGenerator:
                                                                              base_class, False))
         # tp = elements.get('contains') if self.target_class == 'Group' else 'std::string'
         tp = self.extract_data_type(element_name, elements, yaml_file)
+        if control_class.split('<', 1)[0].strip() in self.multi_row_control_classes:
+            # Multi-row controls (ELBox/ListCtrl) don't take a T-typed initial value the way
+            # scalar controls do -- 'value:' is always the constructor's plain string label
+            # (e.g. ELBox's panel heading), independent of 'contains:' (which instead governs
+            # the row selection type via alt_data_source's synthesized DBSource). Formatting
+            # it per 'contains:' here would (and did) emit a bare, undefined identifier for
+            # any single-word label -- see ELBox.ixx/Ctrl.ixx for the C++-side half of this
+            # value/label split.
+            tp = 'std::string'
         # Get the initialization value (string) for the control, defaulting to '' if not present.
         if not tp is None and 'value' in elements:
             if isinstance(elements['value'], list):
