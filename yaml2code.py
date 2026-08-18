@@ -2686,8 +2686,37 @@ class CppGenerator:
             pos = elements.get('pos', pos)
         return pos
 
+    def _resolve_size_branch(self, raw: Any, yaml_file: Path, ctx: str) -> str:
+        """Resolve one if_true/if_false branch of a conditional 'size:' entry: a plain size
+           token is looked up in size_mapping (falling back to the token itself, same as a
+           plain 'size:' string); '[ rvalue ]' is used verbatim (already a full wxSize
+           expression, not a token name)."""
+        if isinstance(raw, list):
+            expr, _ = self._resolve_rvalue_or_literal(raw, None, yaml_file, ctx)
+            return expr
+        if isinstance(raw, str) and raw.strip():
+            token = raw.strip()
+            return self.size_mapping.get(token, token)
+        print(f"Warning: {ctx} if_true/if_false must be a non-empty string or '[ rvalue ]'; "
+              f"defaulting to wxDefaultSize {yaml_file}", file=sys.stderr)
+        return 'wxDefaultSize'
+
     def extract_size(self, element_name: str, elements: Dict[str, Any], control_class: str, yaml_file: Path) -> str:
         size: str = 'wxDefaultSize'
+        size_node = elements.get('size')
+        ctx = f"'{element_name}'.size"
+        if isinstance(size_node, dict) and 'condition' in size_node:
+            self._warn_unknown_keys(size_node, self._allowed_sets()["conditional_value"], ctx, yaml_file)
+            if "if_true" not in size_node or "if_false" not in size_node:
+                print(f"Warning: {ctx} conditional entry must have 'condition', 'if_true' and "
+                      f"'if_false' {yaml_file}", file=sys.stderr)
+                return size
+            anymap_raw = size_node.get("anymap")
+            anymap_name = anymap_raw.strip() if isinstance(anymap_raw, str) and anymap_raw.strip() else None
+            cond_expr = self._resolve_condition_expr(size_node.get("condition"), anymap_name, yaml_file, ctx)
+            true_expr = self._resolve_size_branch(size_node.get("if_true"), yaml_file, ctx)
+            false_expr = self._resolve_size_branch(size_node.get("if_false"), yaml_file, ctx)
+            return f'({cond_expr} ? {true_expr} : {false_expr})'
         if 'size' in elements and isinstance(elements['size'], list):
             size_a = elements['size']
             w = size_a[0] if len(size_a) > 0 else -1
@@ -2695,6 +2724,10 @@ class CppGenerator:
             size = f"wxSize{{{w}, {h if h != -1 else 'wxDefaultCoord'}}}"
         else:
             size_token = elements.get('size', "")
+            if isinstance(size_token, dict):
+                print(f"Warning: {ctx} mapping must be a conditional "
+                      f"{{condition, if_true, if_false}} entry; ignoring {yaml_file}", file=sys.stderr)
+                size_token = ""
             if size_token != "":
                 default_key = size_token
             else:
