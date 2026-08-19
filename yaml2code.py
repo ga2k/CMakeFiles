@@ -861,11 +861,15 @@ class CppGenerator:
             code.append(f"{pad1}{args_param_type}args = {default_args_expr})")
             args_expr = f"{merge_helper_name}(args)" if has_class_args else "args"
             # RecordSetPage/SplitterPage both take (..., table, orderBy, imageIndex, args, ...) --
-            # baked in as literals from this page's own recordset: block, not new leaf-ctor
-            # parameters, so the generated ctor's own public signature stays unchanged.
-            if recordset is not None and recordset.get('table') is not None and top_base_class in ("RecordSetPage", "SplitterPage"):
-                tbl_lit = recordset['table']
-                ob_lit = recordset['order_by']
+            # table/orderBy are mandatory positional parameters on both (no default value), so
+            # this branch must always supply them as literals once top_base_class is either one,
+            # even when recordset: omits 'table:' -- that's a *table-less coordinator page* (see
+            # RecordSetPage.ixx's class comment), not "generate the plain-Page ctor call" below;
+            # passing "" for both leaves reloadTable() a permanent no-op and refreshFromCurrent()
+            # always calling refreshEx() instead of gating on a current record.
+            if recordset is not None and top_base_class in ("RecordSetPage", "SplitterPage"):
+                tbl_lit = recordset.get('table') or ''
+                ob_lit = recordset.get('order_by') or ''
                 code.append(f'      : {top_base_class} (book, id, name, type, "{tbl_lit}", "{ob_lit}", imageIndex, {args_expr}) {{')
             else:
                 code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, {args_expr}) {{")
@@ -2785,25 +2789,66 @@ class CppGenerator:
 
         return layout
 
+    def _resolve_style_flag_list(self, items: List[Any], yaml_file: Path, ctx: str) -> str:
+        """Resolve a YAML list of style entries -- bare flag names, integers, or nested
+           {condition, if_true, if_false} mappings (each possibly OR-list-valued in turn)
+           -- into a single C++ '|'-joined expression."""
+        tokens: List[str] = []
+        for item in items:
+            item_conditional = self._resolve_style_conditional(item, yaml_file, ctx)
+            if item_conditional is not None:
+                tokens.append(item_conditional)
+            elif isinstance(item, str) and item.strip():
+                tokens.append(item.strip())
+            elif isinstance(item, int):
+                tokens.append(str(item))
+            else:
+                print(f"Warning: {ctx} list entries must be flag names, integers, or conditional "
+                      f"mappings; skipping {item!r} {yaml_file}", file=sys.stderr)
+        return '|'.join(tokens) if tokens else '0'
+
+    def _resolve_style_branch(self, raw: Any, yaml_file: Path, ctx: str) -> str:
+        """Resolve one if_true/if_false branch of a conditional style entry. Unlike the
+           generic conditional (_resolve_conditional), a list here means 'these flag names,
+           OR'd together' -- matching a top-level 'style:' list -- rather than a single
+           '[ rvalue ]' expression."""
+        if isinstance(raw, list):
+            return self._resolve_style_flag_list(raw, yaml_file, ctx)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        if isinstance(raw, int):
+            return str(raw)
+        print(f"Warning: {ctx} if_true/if_false must be a flag name, a list of flag names, or an "
+              f"integer; defaulting to 0 {yaml_file}", file=sys.stderr)
+        return '0'
+
+    def _resolve_style_conditional(self, raw: Any, yaml_file: Path, ctx: str) -> Optional[str]:
+        """Style-specific counterpart to _resolve_conditional(): resolves a {condition,
+           [anymap,] if_true, if_false} mapping where if_true/if_false may each be a list of
+           flag names to OR together. Returns None if `raw` isn't such a mapping."""
+        if not isinstance(raw, dict) or "condition" not in raw:
+            return None
+        self._warn_unknown_keys(raw, self._allowed_sets()["conditional_value"], ctx, yaml_file)
+        if "if_true" not in raw or "if_false" not in raw:
+            print(f"Warning: {ctx} conditional value must have 'condition', 'if_true' and 'if_false' "
+                  f"{yaml_file}", file=sys.stderr)
+            return None
+        anymap_raw = raw.get("anymap")
+        anymap_name = anymap_raw.strip() if isinstance(anymap_raw, str) and anymap_raw.strip() else None
+        cond_expr = self._resolve_condition_expr(raw.get("condition"), anymap_name, yaml_file, ctx)
+        true_expr = self._resolve_style_branch(raw.get("if_true"), yaml_file, ctx)
+        false_expr = self._resolve_style_branch(raw.get("if_false"), yaml_file, ctx)
+        return f'({cond_expr} ? {true_expr} : {false_expr})'
+
     def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         style = ''
         if 'style' in elements:
             ctx = f"'{element_name}'.style"
-            whole_conditional = self._resolve_conditional(elements['style'], None, yaml_file, ctx)
+            whole_conditional = self._resolve_style_conditional(elements['style'], yaml_file, ctx)
             if whole_conditional is not None:
                 style = whole_conditional
             elif isinstance(elements['style'], list):
-                tokens: List[str] = []
-                for item in elements['style']:
-                    item_conditional = self._resolve_conditional(item, None, yaml_file, ctx)
-                    if item_conditional is not None:
-                        tokens.append(item_conditional)
-                    elif isinstance(item, list):
-                        expr, _ = self._resolve_rvalue_or_literal(item, None, yaml_file, ctx)
-                        tokens.append(expr)
-                    else:
-                        tokens.append(item)
-                style = '|'.join(tokens)
+                style = self._resolve_style_flag_list(elements['style'], yaml_file, ctx)
             elif isinstance(elements['style'], int):
                 ss = elements['style']
                 style = f'{ss}'
