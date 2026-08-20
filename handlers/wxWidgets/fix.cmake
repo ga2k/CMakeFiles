@@ -4,6 +4,8 @@ function(wxWidgets_fix target tag sourceDir)
 
    cmake_policy(SET CMP0111 OLD)
 
+   message(FATAL_ERROR "sourceDir=${sourceDir}")
+   
 #   unset(patches)
 #   list(APPEND patches
 #           ${target}|${sourceDir}
