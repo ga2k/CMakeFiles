@@ -3,19 +3,19 @@ function(wxWidgets_set_build_options)
 
     # Common wxWidgets build options
     # @formatter:off
-    set(wxBUILD_DEMOS      OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_INSTALL    OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_MONOLITHIC  ON CACHE BOOL "" FORCE)
-    set(wxBUILD_SAMPLES    OFF CACHE BOOL "" FORCE)
-    set(wxBUILD_SHARED      ON CACHE BOOL "" FORCE)
-    set(wxBUILD_TESTS      OFF CACHE BOOL "" FORCE)
-    set(wxUSE_GRID          ON CACHE BOOL "" FORCE)
-    set(wxUSE_LEXILLA      OFF CACHE BOOL "" FORCE)
-    set(wxUSE_SCINTILLA    OFF CACHE BOOL "" FORCE)
-    set(wxUSE_STC          OFF CACHE BOOL "" FORCE)
-    set(wxUSE_LIBWEBP      OFF CACHE BOOL "" FORCE)
-    set(wxUSE_UNICODE       ON CACHE BOOL "" FORCE)
-
+    set(wxBUILD_DEMOS       OFF CACHE BOOL "" FORCE)
+    set(wxBUILD_INSTALL     OFF CACHE BOOL "" FORCE)
+    set(wxBUILD_MONOLITHIC   ON CACHE BOOL "" FORCE)
+    set(wxBUILD_SAMPLES     OFF CACHE BOOL "" FORCE)
+    set(wxBUILD_SHARED       ON CACHE BOOL "" FORCE)
+    set(wxBUILD_TESTS       OFF CACHE BOOL "" FORCE)
+    set(wxUSE_GRID           ON CACHE BOOL "" FORCE)
+    set(wxUSE_LEXILLA       OFF CACHE BOOL "" FORCE)
+    set(wxUSE_SCINTILLA     OFF CACHE BOOL "" FORCE)
+    set(wxUSE_STC           OFF CACHE BOOL "" FORCE)
+    set(wxUSE_LIBWEBP       OFF CACHE BOOL "" FORCE)
+    set(wxUSE_UNICODE        ON CACHE BOOL "" FORCE)
+    set(wxUSE_PRIVATE_FONTS  ON CACHE BOOL "" FORCE)
     # Core's COMMS feature now fetches curl for hs::SmtpClient. Once curl is discoverable,
     # wx's own build (build/cmake/init.cmake) auto-enables wxUSE_WEBREQUEST_CURL via
     # find_package(CURL), but its utility targets (e.g. wxrc) don't link curl themselves —
