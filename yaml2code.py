@@ -1240,7 +1240,7 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        code.append('#  "Core/Core.h"')
+        code.append('#include "Core/Core.h"')
         code.append('#include "Core/CoreData.h"')
         code.append('#include "Core/Util.h"')
         code.append('#include "Gfx/gfx_export.h"')
