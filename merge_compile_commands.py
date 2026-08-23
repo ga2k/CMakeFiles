@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-MODULES = ["Libs", "MyHealthGuru"]
+MODULES = ["Libs", "MyCare"]
 ROOT = Path(__file__).parent.parent.parent
 
 
