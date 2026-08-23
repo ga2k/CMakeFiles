@@ -472,7 +472,7 @@ class CppGenerator:
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         code.append('')
-        code.append(f'#include "Gfx/Sizes.h"')
+        code.append(f'#include "MyCare/Sizes.h"')
         code.append('')
         code.append('#include <unordered_set>')
         for directive in self.collect_variable_includes(variables_block):
