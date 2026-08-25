@@ -20,7 +20,7 @@ macro(_initializeVars)
     set(_DefinesList        ${${AUE_PREFIX}_DefinesList})
     set(_DependenciesList   ${${AUE_PREFIX}_DependenciesList})
 
-    set(_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList})
+    set(_IncludePathsList   ${${AUE_PREFIX}_SystemIncludePathsList})
     set(_LibrariesList      ${${AUE_PREFIX}_LibrariesList})
     set(_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList})
     set(_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList})
@@ -476,6 +476,10 @@ function(fetchContents)
                                     endif ()
 
                                     set(outStr)
+                                    # SYSTEM: treat this fetched package's own INTERFACE_INCLUDE_DIRECTORIES
+                                    # as system headers wherever it's linked, so warnings/-Werror never fire
+                                    # on vendored code (requires CMake >= 3.25; this project requires 3.28+).
+                                    list(APPEND outStr "SYSTEM")
                                     list(APPEND outStr "${SOURCE_KEYWORD}" "${this_git_repo}")
                                     if (use_src)
                                         list(APPEND outStr "SOURCE_DIR" "${use_src}")
@@ -775,7 +779,7 @@ macro(propegateUpwards whereWeAre REPORT)
 
     list(REMOVE_ITEM ${AUE_PREFIX}_DependenciesList ${removeFromDependencies})
 
-    list(APPEND ${AUE_PREFIX}_IncludePathsList   ${_IncludePathsList}   ${${AUE_PREFIX}_IncludePathsList})
+    list(APPEND ${AUE_PREFIX}_SystemIncludePathsList   ${_IncludePathsList}   ${${AUE_PREFIX}_SystemIncludePathsList})
     list(APPEND ${AUE_PREFIX}_LibrariesList      ${_LibrariesList}      ${${AUE_PREFIX}_LibrariesList})
     list(APPEND ${AUE_PREFIX}_LibraryPathsList   ${_LibraryPathsList}   ${${AUE_PREFIX}_LibraryPathsList})
     list(APPEND ${AUE_PREFIX}_LinkOptionsList    ${_LinkOptionsList}    ${${AUE_PREFIX}_LinkOptionsList})
@@ -791,7 +795,7 @@ macro(propegateUpwards whereWeAre REPORT)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_CompileOptionsList)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_DefinesList)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_DependenciesList)
-    list(REMOVE_DUPLICATES ${AUE_PREFIX}_IncludePathsList)
+    list(REMOVE_DUPLICATES ${AUE_PREFIX}_SystemIncludePathsList)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibrariesList)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_LibraryPathsList)
     list(REMOVE_DUPLICATES ${AUE_PREFIX}_LinkOptionsList)
@@ -808,6 +812,7 @@ macro(propegateUpwards whereWeAre REPORT)
     set(${AUE_PREFIX}_DefinesList        ${${AUE_PREFIX}_DefinesList}        PARENT_SCOPE)
     set(${AUE_PREFIX}_DependenciesList   ${${AUE_PREFIX}_DependenciesList}   PARENT_SCOPE)
     set(${AUE_PREFIX}_IncludePathsList   ${${AUE_PREFIX}_IncludePathsList}   PARENT_SCOPE)
+    set(${AUE_PREFIX}_SystemIncludePathsList ${${AUE_PREFIX}_SystemIncludePathsList} PARENT_SCOPE)
     set(${AUE_PREFIX}_LibrariesList      ${${AUE_PREFIX}_LibrariesList}      PARENT_SCOPE)
     set(${AUE_PREFIX}_LibraryPathsList   ${${AUE_PREFIX}_LibraryPathsList}   PARENT_SCOPE)
     set(${AUE_PREFIX}_LinkOptionsList    ${${AUE_PREFIX}_LinkOptionsList}    PARENT_SCOPE)
@@ -828,6 +833,7 @@ macro(propegateUpwards whereWeAre REPORT)
                 ${AUE_PREFIX}_DefinesList
                 ${AUE_PREFIX}_DependenciesList
                 ${AUE_PREFIX}_IncludePathsList
+                ${AUE_PREFIX}_SystemIncludePathsList
                 ${AUE_PREFIX}_LibrariesList
                 ${AUE_PREFIX}_LibraryPathsList
                 ${AUE_PREFIX}_LinkOptionsList
