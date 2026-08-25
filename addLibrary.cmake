@@ -226,6 +226,10 @@ function(addLibrary)
             PUBLIC
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
+    # Third-party/fetched package headers go in a separate SYSTEM call (the SYSTEM keyword only
+    # takes effect as the first argument to target_include_directories) so -Werror and warnings
+    # never fire on vendored code.
+    target_include_directories(${arg_NAME} SYSTEM PRIVATE ${HS_SystemIncludePathsList})
     target_link_directories(${arg_NAME}         PRIVATE $<BUILD_INTERFACE:${HS_LibraryPathsList}>)
     target_link_libraries(${arg_NAME}           PRIVATE ${arg_DEPENDS})
     target_link_options(${arg_NAME}             PUBLIC  ${HS_LinkOptionsList})
@@ -431,7 +435,7 @@ function(addLibrary)
         endif ()
 
         target_compile_options(${arg_NAME}      PRIVATE ${HS_wxCompilerOptions})
-        target_include_directories(${arg_NAME}  PRIVATE ${HS_wxIncludePaths})
+        target_include_directories(${arg_NAME}  SYSTEM PRIVATE ${HS_wxIncludePaths})
         target_link_directories(${arg_NAME}     PRIVATE ${HS_wxLibraryPaths})
         if(NOT (WIN32 AND GFX IN_LIST arg_USES))
             # On WIN32, GFX consumers get wx symbols from libhoffsoft_gfx.dll.a

@@ -82,6 +82,7 @@ function(soci_preDownload pkgname url tag srcDir)
     # creation bug (index-pack fails when pack/ dir doesn't exist yet).
     FetchContent_Declare(
         fmt
+        SYSTEM
         URL https://github.com/fmtlib/fmt/archive/refs/tags/12.1.0.tar.gz
     )
 

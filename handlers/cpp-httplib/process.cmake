@@ -6,6 +6,7 @@ function(cpp-httplib_process incs libs defs)
 
     if (NOT cpp-httplib_POPULATED)
         FetchContent_Declare(cpp-httplib
+                SYSTEM
                 GIT_REPOSITORY "https://github.com/yhirose/cpp-httplib.git"
                 GIT_TAG        "v0.18.5"
                 SOURCE_DIR     "${EXTERNALS_DIR}/cpp-httplib"

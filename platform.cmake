@@ -47,7 +47,10 @@ if (APPLE)
 
 elseif (LINUX)
 
-    list(APPEND extra_IncludePaths
+    # These are third-party system library headers (GTK4/glib/cairo/pango/etc backing the
+    # GTK3-toolkit wx build on Linux), so they go in extra_SystemIncludePaths (-isystem),
+    # not extra_IncludePaths, to keep warnings/-Werror from firing on vendored code.
+    list(APPEND extra_SystemIncludePaths
             /usr/include/bullshit
             /usr/include/gtk-4.0
             /usr/include/glib-2.0

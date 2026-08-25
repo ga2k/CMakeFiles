@@ -99,6 +99,7 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-declarations>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-lambda-capture>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-enum-enum-conversion>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-ignored-attributes>)
+add_compile_options(-Werror=return-type)
 
 include(${cmake_root}/platform.cmake)
 
