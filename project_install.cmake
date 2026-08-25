@@ -391,8 +391,12 @@ function(project_install _Folder)
     # libhoffsoft_* are excluded here: they are handled by install(TARGETS) above,
     # which also performs RPATH processing; a raw directory copy would produce
     # different byte content and cause CPack duplicate-file errors.
-    # When cross-compiling for Windows, dependency DLLs are staged to STAGE_DIR/bin/
-    # by the Core/Gfx builds, so scan both locations.
+    # Core/Gfx (and their transitive deps, e.g. wx's runtime DLL) are always
+    # consumed as staged, pre-built libraries via find_package — on *every*
+    # Windows build, not just cross-compiled ones — so their runtime DLLs only
+    # ever exist under STAGE_DIR/bin/, never in OUTPUT_DIR/bin/. Scan both
+    # locations unconditionally (previously gated on CMAKE_CROSSCOMPILING,
+    # which left native Windows builds without wx's DLL and unable to start).
     if (WIN32)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_BINDIR}/"
                 DESTINATION "${CMAKE_INSTALL_BINDIR}"
@@ -400,7 +404,7 @@ function(project_install _Folder)
                 FILES_MATCHING PATTERN "*.dll"
                 REGEX "libhoffsoft_" EXCLUDE
         )
-        if (CMAKE_CROSSCOMPILING AND DEFINED STAGE_DIR)
+        if (DEFINED STAGE_DIR)
             install(DIRECTORY "${STAGE_DIR}/${CMAKE_INSTALL_BINDIR}/"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                     COMPONENT ${APP_NAME}Runtime
