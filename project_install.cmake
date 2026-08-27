@@ -412,6 +412,49 @@ function(project_install _Folder)
                     REGEX "libhoffsoft_" EXCLUDE
             )
         endif ()
+
+        # The two directory copies above only pick up DLLs that a project/3rd-party
+        # build already dropped into a bin/ dir. They miss:
+        #   * the MSYS2/Clang toolchain runtime — libstdc++-6, libgcc_s_seh-1,
+        #     libwinpthread-1 — which live ONLY in the compiler's bin dir, and
+        #   * transitive 3rd-party DLLs (OpenSSL, curl's brotli/idn2/nghttp2/ssh2/
+        #     zstd/zlib/iconv/intl/unistring) pulled in indirectly.
+        # Without them the exe cannot start on a machine without MSYS2 — or, worse,
+        # if C:\msys64\mingw64\bin is on PATH the loader silently binds that
+        # environment's ABI-incompatible (msvcrt) copies of libstdc++/libgcc and
+        # the process dies during DLL init, before main.
+        # Resolve the real closure at install time and copy whatever is missing.
+        get_filename_component(_hs_toolchain_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        install(CODE "
+            if (POLICY CMP0207)
+                cmake_policy(SET CMP0207 NEW)
+            endif ()
+            set(_hs_toolchain_bin \"${_hs_toolchain_bin}\")
+            file(GLOB _hs_scan_bins
+                \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/*.dll\"
+                \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/*.exe\")
+            if (_hs_scan_bins)
+                file(GET_RUNTIME_DEPENDENCIES
+                    EXECUTABLES \${_hs_scan_bins}
+                    RESOLVED_DEPENDENCIES_VAR _hs_resolved
+                    UNRESOLVED_DEPENDENCIES_VAR _hs_unresolved
+                    DIRECTORIES \"\${_hs_toolchain_bin}\"
+                    PRE_EXCLUDE_REGEXES \"^api-ms-\" \"^ext-ms-\" \"^hvsifiletrust\" \"^pdmutilities\"
+                    POST_EXCLUDE_REGEXES \"[Ss]ystem32\" \"[Ss]ys[Ww][Oo][Ww]64\" \"[Ww]inSxS\"
+                )
+                foreach (_hs_dep IN LISTS _hs_resolved)
+                    file(INSTALL
+                        DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\"
+                        TYPE SHARED_LIBRARY
+                        FOLLOW_SYMLINK_CHAIN
+                        FILES \"\${_hs_dep}\")
+                endforeach ()
+                if (_hs_unresolved)
+                    message(STATUS
+                        \"Install(${APP_NAME}): assuming these are system DLLs: \${_hs_unresolved}\")
+                endif ()
+            endif ()
+        " COMPONENT ${APP_NAME}Runtime)
     endif ()
 
     if (UNIX AND NOT APPLE)
