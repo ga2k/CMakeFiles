@@ -198,6 +198,7 @@ class CppGenerator:
         self.multi_row_control_classes = {
             'ListCtrl',
             'ELBox',
+            'GridCtrl'
         }
         # self.control_to_module = {
         #     'Activity': 'Activity',
@@ -239,15 +240,24 @@ class CppGenerator:
 
         self.validator_class_mapping = {
             'CapsValidator': 'CapsValidator',
+            'CapsValidatorBase': 'CapsValidatorBase',
+            'ComplexComboBoxValidator': 'ComplexComboBoxValidator',
+            'CurrencyValidator': 'CurrencyValidator',
+            'DateValidator': 'DateValidator',
+            'DomainValidator': 'DomainValidator',
+            'ELBoxValidator': 'ELBoxValidator',
+            'EmailValidator': 'EmailValidator',
             'GenericValidator': 'GenericValidator',
-            'ComboLikeValidator': 'ComboLikeValidator'
+            'ListBasedCapsValidator': 'ListBasedCapsValidator',
+            'ListBasedValidator': 'ListBasedValidator',
+            'MaskValidator': 'MaskValidator',
+            'PhoneValidator': 'PhoneValidator',
+            'TextFilterValidator': 'TextFilterValidator'
         }
         # Validator to module mapping
         self.validator_to_module = {
             'CapsValidator': 'TextCtrl',
             'CapsValidatorBase': 'GenericValidator',
-            'ComboLikeCapsValidator': 'GenericValidator',
-            'ComboLikeValidator': 'GenericValidator',
             'ComplexComboBoxValidator': 'Ctrl.ComplexComboBox',
             'CurrencyValidator': 'TextCtrl',
             'DateValidator': 'Date',
@@ -255,28 +265,58 @@ class CppGenerator:
             'ELBoxValidator': 'EditableListBox',
             'EmailValidator': 'GenericValidator',
             'GenericValidator': 'GenericValidator',
+            'ListBasedCapsValidator': 'GenericValidator',
+            'ListBasedValidator': 'GenericValidator',
             'MaskValidator': 'MaskedEdit',
             'PhoneValidator': 'MaskedEdit',
             'TextFilterValidator': 'TextCtrl'
         }
-        # Size to wxSize mapping
+        # Size token -> emitted C++ expression.
+        #
+        # The width system now lives in Gfx (Gfx/FieldWidth.h + wx::Theming); the fw*
+        # tokens are façade objects whose operator()() consults Theming's per-app,
+        # per-platform ratio table at call time -- so a width change is a runtime
+        # <AppName>Layout.yaml edit, never a rebuild. The legacy fixed-pixel sizeCtrl*/
+        # sizeLabel* wxSize constants were removed with MyCare/include/MyCare/Sizes.h;
+        # any stray reference now collapses to wxDefaultSize (nothing in generator-source
+        # YAML still uses them -- everything migrated to fw*).
         self.size_mapping = {
-            'sizeCtrlButton': 'sizeCtrlButton',
-            'sizeCtrlCheckBox': 'sizeCtrlCheckBox',
-            'sizeCtrlELB': 'sizeCtrlELB',
-            'sizeCtrlLarge': 'sizeCtrlLarge',
-            'sizeCtrlMedium': 'sizeCtrlMedium',
-            'sizeCtrlMediumLarge': 'sizeCtrlMediumLarge',
-            'sizeCtrlSmall': 'sizeCtrlSmall',
-            'sizeCtrlSpin': 'sizeCtrlSpin',
-            'sizeNotes': 'sizeNotes',
-            'sizeLabel': 'sizeLabel',
-            'sizeLabelLarge': 'sizeLabelLarge',
-            'sizeLabelMedium': 'sizeLabelMedium',
-            'sizeLabelSmall': 'sizeLabelSmall',
-            'sizeGroup': 'wxDefaultSize',
-            'sizePage': 'wxDefaultSize',
-            'sizeWizardPage': 'wxDefaultSize'
+            'sizeDefault':          'wxDefaultSize',
+            'sizeGroup':            'wxDefaultSize',
+            'sizePage':             'wxDefaultSize',
+            'sizeWizardPage':       'wxDefaultSize',
+            'sizeCtrlButton':       'wxDefaultSize',
+            'sizeCtrlCheckBox':     'wxDefaultSize',
+            'sizeCtrlELB':          'wxDefaultSize',
+            'sizeCtrlLarge':        'wxDefaultSize',
+            'sizeCtrlMedium':       'wxDefaultSize',
+            'sizeCtrlMediumLarge':  'wxDefaultSize',
+            'sizeCtrlSmall':        'wxDefaultSize',
+            'sizeCtrlSpin':         'wxDefaultSize',
+            'sizeNotes':            'wxDefaultSize',
+            'sizeLabel':            'wxDefaultSize',
+            'sizeLabelLarge':       'wxDefaultSize',
+            'sizeLabelMedium':      'wxDefaultSize',
+            'sizeLabelSmall':       'wxDefaultSize',
+
+            # FieldWidth façades (Gfx/FieldWidth.h) -- operator()() returns a wxSize, so
+            # each maps to the '<name>()' call form, never the bare name.
+            'fwNative':             'fwNative()',
+            'fwCtrl':               'fwCtrl()',
+            'fwCtrlButton':         'fwCtrlButton()',
+            'fwCtrlELB':            'fwCtrlELB()',
+            'fwCtrlIntList':        'fwCtrlIntList()',
+            'fwCtrlLarge':          'fwCtrlLarge()',
+            'fwCtrlList':           'fwCtrlList()',
+            'fwCtrlMedium':         'fwCtrlMedium()',
+            'fwCtrlMediumLarge':    'fwCtrlMediumLarge()',
+            'fwCtrlSmall':          'fwCtrlSmall()',
+            'fwCtrlSpin':           'fwCtrlSpin()',
+            'fwNotes':              'fwNotes()',
+            'fwLabel':              'fwLabel()',
+            'fwLabelLarge':         'fwLabelLarge()',
+            'fwLabelMedium':        'fwLabelMedium()',
+            'fwLabelSmall':         'fwLabelSmall()',
         }
         self.event_mapping = {
 
@@ -472,7 +512,7 @@ class CppGenerator:
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         code.append('')
-        code.append(f'#include "MyCare/Sizes.h"')
+        code.append(f'#include "Gfx/FieldWidth.h"')
         code.append('')
         code.append('#include <unordered_set>')
         for directive in self.collect_variable_includes(variables_block):
@@ -1672,6 +1712,7 @@ class CppGenerator:
         cpp_class = self.resolve_member_cpp_type(member_name, member_def, yaml_file)
         pos = self.extract_position(member_name, member_def, yaml_file)
         size = self.extract_size(member_name, member_def, control_class, yaml_file)
+
         style = self.extract_style(member_name, member_def, yaml_file)
         data_type = self.extract_data_type(member_name, member_def, yaml_file)
         value, value_is_literal = self.extract_value(member_name, member_def, control_class, base_class, yaml_file)
@@ -1693,13 +1734,21 @@ class CppGenerator:
         # signature = member_def.get('signature', '{cflags}, "{name}", targetParent, nextID(), {value}, {size}, {style}')
         signature = member_def.get('signature', '{cflags}, "{name}", targetParent, {value}')
         signature = self._signature_with_args(signature, local_args_var or parent_args_var)
+        # Snapshot the un-substituted template text -- the 'did the signature already mention
+        # X' checks below (value/style/table/field) need to see literal placeholder names like
+        # '{value}', not whatever value/style/etc. happen to resolve to.
+        signature_template = signature
+        # Resolve the {cflags}/{name}/{value} placeholders now, while signature is still free
+        # of any literal C++ braces -- style/size (below) can themselves be brace-bearing
+        # expressions (e.g. 'wxSize{1, 2}'), and running format_map() over the string *after*
+        # splicing those in would misread those literal braces as unresolved placeholders.
+        signature = signature.format_map(locals())
         signature += f', {style}, {size})'
         if (member_name):
             out = f'      ({member_name} = new {cpp_class}({signature})'
         else:
             out = f'      (new {cpp_class}({signature})'
 
-        out = out.format_map(locals())
         code.append(out)
 
         if self.sizer_info:
@@ -1712,7 +1761,7 @@ class CppGenerator:
 
         # chain
         member_accessor = '->'
-        if value and not value == "hs::NullValue::Null" and signature.find('value') == -1:
+        if value and not value == "hs::NullValue::Null" and signature_template.find('value') == -1:
             code.append(f"         ->set <{data_type}> ({value if not value_is_literal else repr(value)})")
             member_accessor = '.'
 
@@ -1728,7 +1777,7 @@ class CppGenerator:
                 member_accessor = '.'
 
         # Labels from the element dict
-        label_code = self._generate_labels(all_elements, None)
+        label_code = self._generate_labels(all_elements, None, yaml_file)
         if label_code:
             label_code[0] = label_code[0].replace('.createLabel', f'{member_accessor}createLabel', 1)
             member_accessor = '.'
@@ -1738,18 +1787,25 @@ class CppGenerator:
             code.append(f"         {member_accessor}setToolTip(\"{tool_tip}\")")
             member_accessor = '.'
 
-        handlers = member_def.get('handlers', [])
-        for handler in handlers:
-            handler_code = self._generate_event_handler(handler, member_name, member_def)
-            if handler_code:
-                code.append(f"         {member_accessor}{handler_code}")
-                member_accessor = '.'
+        handlers = member_def.get('handlers', None)
+        if handlers is not None:
+            if not isinstance(handlers, list):
+                handlers = [handlers]
 
-        if style != '0' and signature.find('style') == -1:
+            for handler in handlers:
+                if not isinstance(handler, dict):
+                    raise ValueError(f"control '{member_name}': 'handlers' is not a list of dicts: {yaml_file}")
+
+                handler_code = self._generate_event_handler(handler, member_name, member_def)
+                if handler_code:
+                    code.append(f"         {member_accessor}{handler_code}")
+                    member_accessor = '.'
+
+        if style != '0' and signature_template.find('style') == -1:
             code.append(f"         {member_accessor}setWindowStyleFlags({style})")
             member_accessor = '.'
 
-        if table and field and not is_multi_row_control and signature.find('table') == -1 and signature.find('field') == -1:
+        if table and field and not is_multi_row_control and signature_template.find('table') == -1 and signature_template.find('field') == -1:
             db_chain = f'dbInfo({table}, {field})'
             code.append(f"         {member_accessor}{db_chain}")
             member_accessor = '.'
@@ -2726,46 +2782,17 @@ class CppGenerator:
             true_expr = self._resolve_size_branch(size_node.get("if_true"), yaml_file, ctx)
             false_expr = self._resolve_size_branch(size_node.get("if_false"), yaml_file, ctx)
             return f'({cond_expr} ? {true_expr} : {false_expr})'
-        if 'size' in elements and isinstance(elements['size'], list):
-            size_a = elements['size']
-            w = size_a[0] if len(size_a) > 0 else -1
-            h = size_a[1] if len(size_a) > 1 else -1
-            size = f"wxSize{{{w}, {h if h != -1 else 'wxDefaultCoord'}}}"
-        else:
-            size_token = elements.get('size', "")
-            if isinstance(size_token, dict):
-                print(f"Warning: {ctx} mapping must be a conditional "
-                      f"{{condition, if_true, if_false}} entry; ignoring {yaml_file}", file=sys.stderr)
-                size_token = ""
-            if size_token != "":
-                default_key = size_token
-            else:
-                # Choose default size token based on control class via size_mapping
-                if control_class in ('SpinCtrl', 'SpinCtrlDouble'):
-                    default_key = 'sizeCtrlSpin'
-                elif control_class in ('ComboBox', 'Choice'):
-                    default_key = 'sizeCtrlComboLike'
-                elif control_class in ('IntComboBox', 'IntChoice'):
-                    default_key = 'sizeCtrlIntComboLike'
-                elif control_class in ('Button', 'ToggleButton'):
-                    default_key = 'sizeCtrlButton'
-                elif self.target_class == 'Group':
-                    default_key = 'sizeGroup'
-                elif self.target_class == 'Page':
-                    default_key = 'sizePage'
-                elif self.target_class == 'WizardPage':
-                    default_key = 'sizeWizardPage'
-                elif control_class in ('StaticText', 'MarkupText'):
-                    default_key = 'sizeLabel'
-                elif control_class == 'NotesCtrl':
-                    default_key = 'sizeNotes'
-                else:
-                    default_key = 'sizeCtrl'
-
-            # Prefer mapped value, fall back to key token
-            size_token = self.size_mapping.get(default_key, default_key)
-            size = size_token
-
+        if isinstance(size_node, list):
+            # [ w, h ] -- a literal two-integer pair, not the '[ rvalue ]' single-expression
+            # form _resolve_size_branch()/if_true/if_false use.
+            w = size_node[0] if len(size_node) > 0 else -1
+            h = size_node[1] if len(size_node) > 1 else -1
+            size = f"wxSize{{{w if w != -1 else 'wxDefaultCoord'}, {h if h != -1 else 'wxDefaultCoord'}}}"
+        elif isinstance(size_node, str) and size_node.strip():
+            # A variable name holding a wxSize (or, for the 'fw*' names, a FieldWidth functor
+            # whose operator()() returns a wxSize directly -- size_mapping already maps those
+            # to the '<name>()' call form, no wrapping needed).
+            size = self.size_mapping.get(size_node.strip(), size_node.strip())
         return size
 
     def extract_sizer(self, elements: Dict[str, Any]) -> SizerProperties:
@@ -3201,7 +3228,7 @@ class CppGenerator:
             # All other types/controls: ignore transfer_model, keep original 2-arg form
             return f"addValidator(new {validator_class}({str(allow_empty).lower()}, {member_name}->liveAddr()))"
 
-    def _generate_labels(self, control_identity_or_element: Any, all_elements: Any) -> List[str]:
+    def _generate_labels(self, control_identity_or_element: Any, all_elements: Any, yaml_file: Path) -> List[str]:
         """Generate label creation code for the new list-based schema.
            Accepts either:
              - control_identity_or_element: identity string, with all_elements as the full elements list, or
@@ -3246,7 +3273,7 @@ class CppGenerator:
                     continue
                 label_key = entry.get('key')
                 if not isinstance(label_key, str) or not label_key:
-                    continue
+                    label_key = 'LIX::Main'
 
                 label_tag = entry.get('name')
                 if not isinstance(label_tag, str) or not label_tag:
@@ -3260,22 +3287,17 @@ class CppGenerator:
                 flags = entry.get('style', [])
                 flags_str = ' | '.join(flags) if flags else 'wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL'
 
-                if 'size' in entry and isinstance(entry['size'], list):
-                    size_a = entry['size']
-                    w = size_a[0] if len(size_a) > 0 else -1
-                    h = size_a[1] if len(size_a) > 1 else -1
-                    size_str = f"wxSize{{{w}, {h if h != -1 else 'wxDefaultCoord'}}}"
-                else:
-                    default_key = entry.get('size', '') or 'sizeLabel'
-                    size_token = self.size_mapping.get(default_key, default_key)
-                    size_str = size_token
+                # No 'size:' -> wxDefaultSize (a real args always follow it in createLabel()'s
+                # signature, so this can never be left as an undefined token like 'sizeLabel').
+                size_str = self.extract_size(label_tag, entry, "", yaml_file)
 
-                # NOTE NOTE: The below text is no longer true - size and style ARE emitted now
-
-                # NOTE: 'size' and 'style' on label entries are parsed above (size_str,
-                # flags_str) but are NOT valid for createLabel() and must not be emitted —
-                # see docs/yaml-ui-reference.md "Known limitations". Do not wire these back
-                # in without confirming why they were dropped.
+                # Phase-1 vs phase-2: the label's 'value' (caption), 'size', and cosmetic
+                # 'style' emitted here are the COMPILED-IN DEFAULTS. A matching entry in the
+                # runtime form-layout file (form-layouts/*.yaml) under
+                #   props: { value:, size:, style: }
+                # overrides any of them at load time -- see Interface::loadLayout()'s
+                # applyLayoutProps() and docs/yaml-ui-reference.md. Keep emitting them here;
+                # the override path is additive, not a replacement.
 
                 # Size added by adding extra default parameter to createLabel GH 21/7/2026
 
