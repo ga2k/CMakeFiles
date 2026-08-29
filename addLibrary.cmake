@@ -284,7 +284,7 @@ function(addLibrary)
     #         have been deployed there by a prior Gfx install step.
     # ────────────────────────────────────────────────────────────────────────────
 
-    if ((WIN32 OR LINUX) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
+    if ( 0 OR ((WIN32 OR LINUX) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES))
         # All WIN32/Linux GUI targets (Gfx main library, Gfx plugins, MyHealthGuru) must use
         # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
         # include the same PCH so Clang's module ODR checker sees consistent wx
@@ -405,7 +405,7 @@ function(addLibrary)
 
         unset(_hs_wx_I)
         unset(_hs_wx_D)
-    else ()
+    elseif (0)
         # Non-WIN32 or WIN32 non-GUI: STL-only PCH.
         target_precompile_headers(${arg_NAME} PRIVATE
             "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/pch/core_pch.h"
