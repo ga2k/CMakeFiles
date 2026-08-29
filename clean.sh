@@ -2,6 +2,16 @@
 
 go=0
 dc=0
+pch=0
+
+for arg in "$@"; do [[ ${arg,,} == --pch ]] && { pch=1; break; }; done
+if (( pch )); then
+
+  printf "Removing %3d %9s files...\n" $(ls -R1 "build/${1,,}/${2,,}/${3,,}/pch/wx_pch.gch" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "pch"
+  rm -f build/${1,,}/${2,,}/${3,,}/pch/wx_pch.gch
+  exit 0
+
+fi
 
 for arg in "$@"; do [[ ${arg,,} == --generated-only ]] && { go=1; break; }; done
 if (( go )); then
