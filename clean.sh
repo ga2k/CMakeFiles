@@ -1,29 +1,38 @@
 #!/bin/bash
 
-if [ $# -eq 4 ] && [ ${4,,} = '--generated-only' ]; then
+go=0
+dc=0
 
-  echo "Removing build/${1,,}/${2,,}/${3,,}/_deps/generated"
-  rm -rf build/${1,,}/${2,,}/${3,,}/_deps/generated
+for arg in "$@"; do [[ ${arg,,} == --generated-only ]] && { go=1; break; }; done
+if (( go )); then
+
+  printf "Removing %3d %9s files...\n" $(ls -R1 "build/${1,,}/${2,,}/${3,,}/_deps/generated" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "generated"
+  rm -rf "build/${1,,}/${2,,}/${3,,}/_deps/generated"
 
 else
 
-  echo "Removing stage/${1,,}/${2,,}/${3,,}"
-  rm -rf /home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}
+  printf "Removing %3d %9s files...\n" $(ls -R1 "build/${1,,}/${2,,}/${3,,}" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "build"
+  rm -rf "build/${1,,}/${2,,}/${3,,}"
 
-  echo "Recreating staging directory"
+  printf "Removing %3d %9s files...\n" $(ls -R1 "out/${1,,}/${2,,}/${3,,}" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "out"
+  rm -rf "out/${1,,}/${2,,}/${3,,}"
+
+  printf "Removing %3d %9s files...\n" $(ls -R1 "/home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "staged"
+  rm -rf /home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}
   mkdir -p /home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}
 
-  if [ $# -eq 4 ] && [ ${4,,} = '--deep-clean' ]; then
-    echo "Removing archives/${1,,}/${2,,}/${3,,}"
-    rm -rf /home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}
+  for arg in "$@"; do [[ ${arg,,} == --generated-only ]] && { dc=1; break; }; done
+  if (( dc )); then
 
-    echo "Recreating archives directory"
+    printf "Removing %3d %9s files...\n" $(ls -R1 "/home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "archived"
+    rm -rf /home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}
     mkdir -p /home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}
 
-    echo "Removing build/${1,,}/${2,,}/${3,,}/_deps/generated"
-    rm -rf build/${1,,}/${2,,}/${3,,}/_deps/generated
+  printf "Removing %3d %9s files...\n" $(ls -R1 "external/${1,,}/${2,,}/${3,,}" | sed -e "s/^.*:$//g" | sort | sed -e "s/ //g" | wc -l) "external"
+    rm -rf "external/${1,,}/${2,,}/${3,,}"
+
   fi
 fi
 
-echo "Done. Sleeping zzzzzz...."
+echo "Done.        Sleeping zzzzzz...."
 sleep 5

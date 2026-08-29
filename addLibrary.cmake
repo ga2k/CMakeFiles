@@ -284,7 +284,7 @@ function(addLibrary)
     #         have been deployed there by a prior Gfx install step.
     # ────────────────────────────────────────────────────────────────────────────
 
-    if ( 0 OR ((WIN32 OR LINUX) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES))
+    if ( 0 AND ((WIN32 OR LINUX) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES))
         # All WIN32/Linux GUI targets (Gfx main library, Gfx plugins, MyHealthGuru) must use
         # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
         # include the same PCH so Clang's module ODR checker sees consistent wx
