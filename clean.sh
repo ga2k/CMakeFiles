@@ -4,9 +4,15 @@ go=0
 dc=0
 pch=0
 
-for arg in "$@"; do [[ ${arg,,} == --pch ]]            && { pch=1; break; }; done
-for arg in "$@"; do [[ ${arg,,} == --generated-only ]] && { go=1;  break; }; done
-for arg in "$@"; do [[ ${arg,,} == --deep-clean ]]     && { dc=1;  break; }; done
+shopt -s nocasematch
+
+p1=$(tr '[:upper:]' '[:lower:]' <<< "$1")
+p2=$(tr '[:upper:]' '[:lower:]' <<< "$2")
+p3=$(tr '[:upper:]' '[:lower:]' <<< "$3")
+
+for arg in "$@"; do [[ $arg == --pch ]]            && { pch=1; break; }; done
+for arg in "$@"; do [[ $arg == --generated-only ]] && { go=1;  break; }; done
+for arg in "$@"; do [[ $arg == --deep-clean ]]     && { dc=1;  break; }; done
 
 f() {
     fc=0
@@ -20,7 +26,7 @@ f() {
 
 if (( pch || dc )); then
 
-  f "build/${1,,}/${2,,}/${3,,}/pch" pch
+  f "build/$p1/$p2/$p3/pch" pch
   if (( dc == 0 )); then
     echo "Done.           Sleeping zzzzzz...."
     sleep 5
@@ -30,7 +36,7 @@ fi
 
 if (( go || dc )); then
 
-  f "build/${1,,}/${2,,}/${3,,}/_deps/generated" "generated"
+  f "build/$p1/$p2/$p3/_deps/generated" "generated"
   if (( dc == 0 )); then
     echo "Done.           Sleeping zzzzzz...."
     sleep 5
@@ -38,16 +44,16 @@ if (( go || dc )); then
   fi
 fi
 
-f "build/${1,,}/${2,,}/${3,,}" "build"
-f "out/${1,,}/${2,,}/${3,,}"   "out"
-f "/home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}" "staged"
-mkdir -p /home/geoffrey/dev/stage/${1,,}/${2,,}/${3,,}
+f "build/$p1/$p2/$p3" "build"
+f "out/$p1/$p2/$p3"   "out"
+f "/home/geoffrey/dev/stage/$p1/$p2/$p3" "staged"
+mkdir -p ~/dev/stage/$p1/$p2/$p3
 
 if (( dc )); then
 
-  f "/home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}" "archived"
-  f "external/${1,,}/${2,,}/${3,,}" "external"
-  mkdir -p /home/geoffrey/dev/archives/${1,,}/${2,,}/${3,,}
+  f "/home/geoffrey/dev/archives/$p1/$p2/$p3" "archived"
+  f "external/$p1/$p2/$p3" "external"
+  mkdir -p ~/dev/archives/$p1/$p2/$p3
 
 fi
 
