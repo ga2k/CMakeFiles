@@ -10,11 +10,13 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
 
         # Download as a tarball — avoids the git ≥2.47 lazy objects/pack/ bug
         # that causes index-pack to fail on any fresh clone on this system.
-        message(STATUS "Downloading wxWidgets to ${_wx_local_src} (one-time)...")
+        # ${tag} is the pinned ref from standardPackageData.cmake's GIT_TAG (a commit SHA
+        # today); GitHub's archive endpoint resolves a SHA, tag, or branch name here.
+        message(STATUS "Downloading wxWidgets @ ${tag} to ${_wx_local_src} (one-time)...")
         file(MAKE_DIRECTORY "${ARCHIVE_DIR}/wxWidgets")
-        set(_wx_tar "${ARCHIVE_DIR}/wxWidgets/wxWidgets-master.tar.gz")
+        set(_wx_tar "${ARCHIVE_DIR}/wxWidgets/wxWidgets-${tag}.tar.gz")
         file(DOWNLOAD
-            "https://github.com/wxWidgets/wxWidgets/archive/refs/heads/master.tar.gz"
+            "https://github.com/wxWidgets/wxWidgets/archive/${tag}.tar.gz"
             "${_wx_tar}"
             STATUS _dl_status
         )
@@ -56,30 +58,35 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
 
     # Download wxWidgets submodules — GitHub tarballs don't include submodule content.
     # Skipped: src/stc/scintilla, src/stc/lexilla (wxUSE_STC OFF), 3rdparty/catch (tests only).
+    # Each entry is  path|repo|sentinel|sha  — sha PINS the repo's wx branch to a fixed commit
+    # so a fresh fetch is reproducible. These were captured together with the main wxWidgets
+    # pin (standardPackageData.cmake) on 2026-08-30 from the tip of each repo's wx branch;
+    # bump them as a set whenever the main pin moves.
     set(_wx_submodules
-        "src/zlib|zlib|CMakeLists.txt"
-        "src/png|libpng|CMakeLists.txt"
-        "src/expat|libexpat|expat/lib/expat.h"
-        "src/tiff|libtiff|CMakeLists.txt"
-        "src/jpeg|libjpeg-turbo|jconfig.h"
-        "3rdparty/pcre|pcre|CMakeLists.txt"
-        "3rdparty/nanosvg|nanosvg|CMakeLists.txt"
-        #    "3rdparty/libwebp|libwebp|CMakeLists.txt"
-        "3rdparty/lunasvg|lunasvg|CMakeLists.txt"
+        "src/zlib|zlib|CMakeLists.txt|62eba04c6ff5a91aff6ce9ffd50ff7a52994412c"
+        "src/png|libpng|CMakeLists.txt|3327853174bb3489b52380033a16a7af1c37cd03"
+        "src/expat|libexpat|expat/lib/expat.h|25cdb80756f1fcce8536b0980ec081612858eb50"
+        "src/tiff|libtiff|CMakeLists.txt|a40df5ddc406a958721ee4fc6faf5058460bc97b"
+        "src/jpeg|libjpeg-turbo|jconfig.h|88cf215c8eee225148e007a66ee1dea5916fc949"
+        "3rdparty/pcre|pcre|CMakeLists.txt|4f76619e6f20de93f77b5ef6213bf54e0399d166"
+        "3rdparty/nanosvg|nanosvg|CMakeLists.txt|5cefd9847949af6df13f65027fd43af5a7513633"
+        #    "3rdparty/libwebp|libwebp|CMakeLists.txt|<sha>"
+        "3rdparty/lunasvg|lunasvg|CMakeLists.txt|e6ebb8d1e00c2307bc6937020c34c47bccbadf29"
     )
     foreach (_wx_sub IN LISTS _wx_submodules)
         string(REPLACE "|" ";" _wx_sub_parts "${_wx_sub}")
         list(GET _wx_sub_parts 0 _wx_sub_path)
         list(GET _wx_sub_parts 1 _wx_sub_repo)
         list(GET _wx_sub_parts 2 _wx_sub_sentinel)
+        list(GET _wx_sub_parts 3 _wx_sub_sha)
         set(_wx_sub_dir "${_wx_local_src}/${_wx_sub_path}")
         if (NOT EXISTS "${_wx_sub_dir}/${_wx_sub_sentinel}")
-            message(STATUS "Downloading wxWidgets submodule: ${_wx_sub_path} (${_wx_sub_repo})...")
-            set(_wx_sub_tar "${ARCHIVE_DIR}/wxWidgets/${_wx_sub_repo}-wx.tar.gz")
+            message(STATUS "Downloading wxWidgets submodule: ${_wx_sub_path} (${_wx_sub_repo} @ ${_wx_sub_sha})...")
+            set(_wx_sub_tar "${ARCHIVE_DIR}/wxWidgets/${_wx_sub_repo}-${_wx_sub_sha}.tar.gz")
             set(_wx_sub_tmp "${ARCHIVE_DIR}/wxWidgets/_sub_tmp")
             file(MAKE_DIRECTORY "${_wx_sub_tmp}")
             file(DOWNLOAD
-                "https://github.com/wxWidgets/${_wx_sub_repo}/archive/refs/heads/wx.tar.gz"
+                "https://github.com/wxWidgets/${_wx_sub_repo}/archive/${_wx_sub_sha}.tar.gz"
                 "${_wx_sub_tar}"
                 STATUS _dl_status
             )
