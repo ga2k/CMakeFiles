@@ -323,6 +323,20 @@ function(addLibrary)
                 endif()
                 # Toolchain-provided sysroot/system-include flags (e.g. -nostdinc + -isystem)
                 separate_arguments(_hs_pch_cxx_flags UNIX_COMMAND "${CMAKE_CXX_FLAGS}")
+                # The PCH must be built with the same optimization level as its
+                # consumers.  Do not hard-code a Release level here: this project
+                # uses -O3 in CMAKE_CXX_FLAGS_RELEASE, and Clang records the level
+                # in the .gch metadata and rejects a consumer using another level.
+                # Debug has no explicit optimization flag by default, which is
+                # equivalent to -O0.
+                set(_hs_pch_release_opt "-O0")
+                if ("${CMAKE_CXX_FLAGS_RELEASE}" MATCHES "(^| )(-O[0-3s]|-Ofast|-Oz)( |$)")
+                    set(_hs_pch_release_opt "${CMAKE_MATCH_2}")
+                endif ()
+                set(_hs_pch_debug_opt "-O0")
+                if ("${CMAKE_CXX_FLAGS_DEBUG}" MATCHES "(^| )(-O[0-3s]|-Ofast|-Oz)( |$)")
+                    set(_hs_pch_debug_opt "${CMAKE_MATCH_2}")
+                endif ()
                 # Directory-level compile definitions (e.g. _UCRT, _WIN32_WINNT from toolchain
                 # add_compile_definitions — not in CMAKE_CXX_FLAGS)
                 get_directory_property(_hs_pch_dir_defs COMPILE_DEFINITIONS)
@@ -360,7 +374,7 @@ function(addLibrary)
                             ${_hs_pch_target_flag}
                             ${_hs_pch_cxx_flags}
                             "-std=c++23"
-                            "$<IF:$<CONFIG:Debug>,-O0,-O2>"
+                            "$<IF:$<CONFIG:Debug>,${_hs_pch_debug_opt},${_hs_pch_release_opt}>"
                             "-D$<IF:$<CONFIG:Debug>,_DEBUG,NDEBUG>"
                             ${_hs_pch_crt_flags}
                             ${_hs_pch_dir_D}
@@ -380,6 +394,8 @@ function(addLibrary)
                 )
                 unset(_hs_pch_target_flag)
                 unset(_hs_pch_cxx_flags)
+                unset(_hs_pch_debug_opt)
+                unset(_hs_pch_release_opt)
                 unset(_hs_pch_dir_D)
                 unset(_hs_pch_crt_flags)
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")

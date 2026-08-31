@@ -64,9 +64,92 @@ set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 macro(check_environment PROJECT_ROOT)
 
     if (NOT DEFINED ENV{buildPath})
-        message(WARNING "Preset env var buildPath is missing. Are you configuring with the expected preset?")
+
+        # The preset environment (buildPath / buildType / linkPath / ...) is only
+        # present during the initial `cmake --preset <name>` invocation. Any later
+        # reconfigure of an already-configured build directory arrives here with an
+        # empty environment:
+        #   * the automatic regen that `ninja` / `cmake --build <dir>` (no --preset)
+        #     triggers when a CMakeLists changes, or
+        #   * a bare `cmake` run inside the build directory.
+        #
+        # Previously this fell back to a HARD-CODED fixPresetMess("Linux" "Debug"
+        # "Shared"), which silently retargeted a Release tree to
+        # out/linux/debug/shared (and force-wrote buildType=Debug into its cache).
+        # Instead, recover the real layout from the cached stemPath that the
+        # original preset configure wrote — fixPresetMess never overwrites the
+        # cache entry, so it survives even a prior corrupting fallback.
+
+        set(_ce_stem "")
+        if (DEFINED CACHE{stemPath} AND NOT "$CACHE{stemPath}" STREQUAL "")
+            set(_ce_stem "$CACHE{stemPath}")
+        elseif (DEFINED stemPath AND NOT "${stemPath}" STREQUAL "")
+            set(_ce_stem "${stemPath}")
+        endif ()
+
+        if (NOT _ce_stem)
+            message(FATAL_ERROR
+                    "check_environment: no preset environment (buildPath is unset) and no "
+                    "cached stemPath to recover from. Configure with `cmake --preset <name>` "
+                    "(e.g. \"Linux Release Shared\") — not a bare `cmake` / `ninja` invocation.")
+        endif ()
+
+        # stemPath looks like "/linux/release/shared" -> host / build / link stems.
+        string(REGEX MATCHALL "[^/]+" _ce_parts "${_ce_stem}")
+        list(LENGTH _ce_parts _ce_parts_len)
+        if (_ce_parts_len LESS 3)
+            message(FATAL_ERROR
+                    "check_environment: cached stemPath='${_ce_stem}' cannot be parsed into "
+                    "<host>/<build>/<link>. Delete this build directory and reconfigure with "
+                    "`cmake --preset <name>`.")
+        endif ()
+        list(GET _ce_parts 0 _ce_host_lc)
+        list(GET _ce_parts 1 _ce_build_lc)
+        list(GET _ce_parts 2 _ce_link_lc)
+
+        # Map the lower-case path stems back to fixPresetMess's argument spelling.
+        if (_ce_host_lc STREQUAL "linux")
+            set(_ce_host "Linux")
+        elseif (_ce_host_lc STREQUAL "macos")
+            set(_ce_host "macOS")
+        elseif (_ce_host_lc MATCHES "^win")          # windows / winllvm / winx / winnative
+            set(_ce_host "Windows")
+        else ()
+            message(FATAL_ERROR "check_environment: unrecognised host stem '${_ce_host_lc}' in stemPath '${_ce_stem}'.")
+        endif ()
+
+        if (_ce_build_lc STREQUAL "debug")
+            set(_ce_build "Debug")
+        elseif (_ce_build_lc STREQUAL "release")
+            set(_ce_build "Release")
+        else ()
+            message(FATAL_ERROR "check_environment: unrecognised build stem '${_ce_build_lc}' in stemPath '${_ce_stem}'.")
+        endif ()
+
+        if (_ce_link_lc STREQUAL "shared")
+            set(_ce_link "Shared")
+        elseif (_ce_link_lc STREQUAL "static")
+            set(_ce_link "Static")
+        else ()
+            message(FATAL_ERROR "check_environment: unrecognised link stem '${_ce_link_lc}' in stemPath '${_ce_stem}'.")
+        endif ()
+
+        message(STATUS
+                "check_environment: preset environment absent (regen without --preset); "
+                "recovering layout ${_ce_host}/${_ce_build}/${_ce_link} from cached stemPath '${_ce_stem}'.")
+
         include("${cmake_root}/presetFallback.cmake")
-        fixPresetMess("Linux" "Debug" "Shared")
+        fixPresetMess("${_ce_host}" "${_ce_build}" "${_ce_link}")
+
+        unset(_ce_stem)
+        unset(_ce_parts)
+        unset(_ce_parts_len)
+        unset(_ce_host_lc)
+        unset(_ce_build_lc)
+        unset(_ce_link_lc)
+        unset(_ce_host)
+        unset(_ce_build)
+        unset(_ce_link)
     else ()
         include(CMakeFiles/tools.cmake)
     endif ()
