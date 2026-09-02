@@ -480,10 +480,10 @@ class CppGenerator:
             'EVT_MOUSEWHEEL': 'wxEVT_MOUSEWHEEL',
         }
 
-        # wxEVT_* token -> the concrete wx event class the handler receives. Used to give a
-        # handler's lambda parameter a precise type when the YAML omits 'handlers[].type:'
-        # (which otherwise defaults to the opaque wxEvent). An explicit 'type:' always wins,
-        # and a handler bound to several events of differing classes falls back to wxEvent.
+        # wxEVT_* token -> the concrete wx event class it delivers. The generated hook
+        # lambda always takes wxEvent&; this is the type the event is dynamic_cast<> to at
+        # the call into the handler function (see _generate_event_handler). An explicit
+        # 'type:' on the handler overrides it; an unmapped event is passed without a cast.
         self.event_to_class = {
             # @formatter:off
             'wxEVT_BUTTON':              'wxCommandEvent',
@@ -2223,6 +2223,7 @@ class CppGenerator:
             "handler_entry": {
                 "event",
                 "handler",
+                "type",
             },
             "validator_def": {
                 "allow_empty",
@@ -3274,32 +3275,99 @@ class CppGenerator:
                     print(f"  Context: {e.context}", file=sys.stderr)
             raise ValueError(f"Invalid YAML format in {yaml_file}: {e}")
 
+    # Multi-word wx tokens whose CamelCase can't be recovered by a plain .capitalize()
+    # of the underscore-split event name -- used by _derive_handler_name().
+    _EVENT_WORD_CASING = {
+        'checkbox':        'CheckBox',
+        'combobox':        'ComboBox',
+        'listbox':         'ListBox',
+        'togglebutton':    'ToggleButton',
+        'bitmapbutton':    'BitmapButton',
+        'radiobox':        'RadioBox',
+        'radiobutton':     'RadioButton',
+        'spinctrl':        'SpinCtrl',
+        'spinctrldouble':  'SpinCtrlDouble',
+        'scrollbar':       'ScrollBar',
+        'datepicker':      'DatePicker',
+        'mousewheel':      'MouseWheel',
+        'dclick':          'DClick',
+        'rclicked':        'RClicked',
+        'ui':              'UI',
+    }
+
+    def _derive_handler_name(self, wx_evt: str) -> str:
+        """Fallback member-function name for a handler with no explicit 'handler:' --
+        'on' + the CamelCased event name (minus the wxEVT_/EVT_/COMMAND_ noise) + 'Evt',
+        e.g. wxEVT_CHECKBOX -> onCheckBoxEvt, wxEVT_LIST_ITEM_SELECTED -> onListItemSelectedEvt."""
+        core = wx_evt
+        for prefix in ('wxEVT_', 'EVT_'):
+            if core.startswith(prefix):
+                core = core[len(prefix):]
+                break
+        if core.startswith('COMMAND_'):
+            core = core[len('COMMAND_'):]
+        parts = [p for p in core.split('_') if p]
+        cased = [self._EVENT_WORD_CASING.get(p.lower(), p.capitalize()) for p in parts]
+        return 'on' + ''.join(cased) + 'Evt'
+
+    def _event_class(self, wx_evt: str) -> Optional[str]:
+        """The concrete wx event class for a wxEVT_* token, tolerating the legacy
+        wxEVT_COMMAND_<widget>_<action> spelling (e.g. wxEVT_COMMAND_CHECKBOX_CLICKED ->
+        wxEVT_CHECKBOX -> wxCommandEvent). None when nothing maps."""
+        if wx_evt in self.event_to_class:
+            return self.event_to_class[wx_evt]
+        probe = wx_evt
+        if probe.startswith('wxEVT_COMMAND_'):
+            probe = 'wxEVT_' + probe[len('wxEVT_COMMAND_'):]
+        for suf in ('_CLICKED', '_SELECTED', '_TOGGLED', '_UPDATED', '_ENTER'):
+            if probe.endswith(suf):
+                probe = probe[:-len(suf)]
+                break
+        return self.event_to_class.get(probe)
+
+    # A 'handler:' value is treated as a hand-written body (emitted verbatim) rather than a
+    # bare function name when it contains any of: parens, statement punctuation, a scope
+    # qualifier, or whitespace -- a plain identifier has none of these.
+    _HANDLER_CODE_RE = re.compile(r'[()\[\]{};,\s]|::|->|\.')
+
     def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
-        """Generate event handler code."""
+        """Generate event handler code.
+
+        The lambda parameter is always 'wxEvent &event' (Ctrl<>::hookAndHandle takes a
+        wxEvent&-based callable). A bare 'handler:' identifier -- or an omitted 'handler:',
+        in which case the name is derived from the event (_derive_handler_name) -- is called
+        with the event down-cast to the concrete wx class the event delivers ('type:' wins
+        over that deduction; event_to_class supplies it otherwise; no cast when neither
+        knows better). A 'handler:' value that already looks like a statement/expression is
+        emitted verbatim as the body, unchanged."""
         event = handler.get('event', 'EVT_TEXT')
         explicit_type = handler.get('type')
         explicit_type = explicit_type.strip() if isinstance(explicit_type, str) and explicit_type.strip() else None
-        handler_code = handler.get('handler', 'event.Skip();')
-
-        # Normalize handler code - handle both \n escapes and actual newlines
-        if isinstance(handler_code, str):
-            handler_code = handler_code.replace('\\n', '\n')
-            lines = [line.strip() for line in handler_code.split('\n')]
-            handler_code = '\n         '.join(lines)
+        raw_handler = handler.get('handler')
+        raw_handler = raw_handler.strip() if isinstance(raw_handler, str) and raw_handler.strip() else None
 
         # Support a single event or a list of events
         events = event if isinstance(event, (list, tuple)) else [event]
         wx_events = [self._normalize_event_name(e) for e in events]
 
-        # Lambda parameter type: an explicit 'type:' wins for every hook; otherwise each
-        # hook gets the concrete wx event class its own event delivers (event_to_class),
-        # falling back to the opaque wxEvent for anything unmapped.
-        def _param_type(wx_evt: str) -> str:
-            return explicit_type or self.event_to_class.get(wx_evt, 'wxEvent')
+        verbatim_body = raw_handler if (raw_handler and self._HANDLER_CODE_RE.search(raw_handler)) else None
+        if verbatim_body is not None:
+            # legacy / hand-written body: normalize \n escapes and real newlines, emit as-is
+            verbatim_body = verbatim_body.replace('\\n', '\n')
+            verbatim_body = '\n         '.join(line.strip() for line in verbatim_body.split('\n'))
+
+        def _body(wx_evt: str) -> str:
+            if verbatim_body is not None:
+                return verbatim_body
+            fn = raw_handler or self._derive_handler_name(wx_evt)
+            cast_type = explicit_type or self._event_class(wx_evt)
+            if cast_type and cast_type != 'wxEvent':
+                return f"{fn}(dynamic_cast<{cast_type}&>(event));"
+            return f"{fn}(event);"
 
         # Generate one hook per event; caller decides whether to prefix with '->' or '.'
         hooks = [
-            f"hookAndHandle({wx_evt}, [this]({_param_type(wx_evt)} &event) {{\n            {handler_code}}})"
+            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {_body(wx_evt)}}})"
             for wx_evt in wx_events
         ]
 
