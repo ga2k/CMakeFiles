@@ -4205,6 +4205,20 @@ class CppGenerator:
             "",
         ]
 
+    def _impl_module_preamble(self, module_name: str) -> List[str]:
+        """The global-module-fragment + 'module <name>;' header every _impl.cpp needs to
+        be a valid module implementation unit (everything up to, but not including, the
+        'namespace {' line)."""
+        return [
+            "module;",
+            "// Module implementation unit — add includes your implementation needs.",
+            '#include "Core/Core.h"',
+            '#include <wx/event.h>',
+            "",
+            f"module {module_name};",
+            "",
+        ]
+
     def _write_impl_stub(self, impl_dir: Path, class_name: str, module_name: str,
                          ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
         """Write (or incrementally extend) a module implementation unit stub.
@@ -4214,66 +4228,79 @@ class CppGenerator:
         file, and only the functions not yet present get a new TODO stub appended —
         this lets a new function be added to a YAML that already has a hand-edited
         impl file without clobbering the existing implementations.
+
+        An existing file that is empty, or that has lost its 'module <name>;' header
+        (truncated, botched merge, hand-editing accident), is repaired: empty -> written
+        fresh with the full preamble; content-but-no-preamble -> the preamble is spliced
+        back on above the surviving code. A bare-stub file with no module header won't
+        compile, so this is always a strict improvement.
         """
         impl_dir.mkdir(parents=True, exist_ok=True)
         stub_path = impl_dir / f"{class_name}_impl.cpp"
 
-        if not stub_path.exists():
-            lines = [
-                "module;",
-                "// Module implementation unit — add includes your implementation needs.",
-                '#include "Core/Core.h"',
-                '#include <wx/event.h>',
-                "",
-                f"module {module_name};",
-                "",
-                f"namespace {ns} {{",
-                "",
-            ]
+        existed = stub_path.exists()
+        existing = stub_path.read_text(encoding="utf-8") if existed else ""
+
+        if not existing.strip():
+            lines = self._impl_module_preamble(module_name)
+            lines.append(f"namespace {ns} {{")
+            lines.append("")
             for fname, fdef in stub_fns.items():
                 lines.extend(self._render_impl_fn(class_name, fname, fdef))
             lines.append(f"}} // namespace {ns}")
             lines.append("")
 
             stub_path.write_text("\n".join(lines), encoding="utf-8")
-            print(f"{stub_path} : Created (stub)")
+            print(f"{stub_path} : {'Recreated empty' if existed else 'Created'} (stub)")
             return
 
-        existing = stub_path.read_text(encoding="utf-8")
+        preamble_restored = False
+        if not re.search(rf"(?m)^\s*module\s+{re.escape(module_name)}\s*;", existing):
+            existing = "\n".join(self._impl_module_preamble(module_name)) + "\n" + existing.lstrip("\n")
+            preamble_restored = True
+
         missing_fns = {
             fname: fdef for fname, fdef in stub_fns.items()
             if not re.search(rf"{re.escape(class_name)}\s*::\s*{re.escape(fname)}\s*\(", existing)
         }
-        if not missing_fns:
-            return  # every declared function already has a definition in the file
+        if not missing_fns and not preamble_restored:
+            return  # nothing to add, nothing to repair
 
         new_lines: List[str] = []
         for fname, fdef in missing_fns.items():
             new_lines.extend(self._render_impl_fn(class_name, fname, fdef))
 
-        # Insert the new stubs INSIDE the namespace: find the trailing
-        # '} // namespace <ns>' line (tolerating whitespace/comment-spacing/CRLF
-        # variations) and splice just above it.
-        existing_lines = existing.splitlines()
-        insert_at = None
-        for i in range(len(existing_lines) - 1, -1, -1):
-            stripped = existing_lines[i].strip()
-            if not stripped:
-                continue
-            if stripped.startswith("}") and "namespace" in stripped:
-                insert_at = i
-            break  # only the last non-blank line is a candidate
-        if insert_at is not None:
-            updated_lines = existing_lines[:insert_at] + [""] + new_lines + existing_lines[insert_at:]
-            updated = "\n".join(updated_lines).rstrip("\n") + "\n"
+        if new_lines:
+            # Insert the new stubs INSIDE the namespace: find the trailing
+            # '} // namespace <ns>' line (tolerating whitespace/comment-spacing/CRLF
+            # variations) and splice just above it.
+            existing_lines = existing.splitlines()
+            insert_at = None
+            for i in range(len(existing_lines) - 1, -1, -1):
+                stripped = existing_lines[i].strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("}") and "namespace" in stripped:
+                    insert_at = i
+                break  # only the last non-blank line is a candidate
+            if insert_at is not None:
+                updated_lines = existing_lines[:insert_at] + [""] + new_lines + existing_lines[insert_at:]
+                updated = "\n".join(updated_lines).rstrip("\n") + "\n"
+            else:
+                # No recognizable namespace close (heavily hand-edited) — reopen the
+                # namespace so the stubs still land inside it.
+                updated = (existing.rstrip("\n") + f"\n\nnamespace {ns} {{\n\n"
+                           + "\n".join(new_lines) + f"\n}} // namespace {ns}\n")
         else:
-            # No recognizable namespace close (heavily hand-edited) — reopen the
-            # namespace so the stubs still land inside it.
-            updated = (existing.rstrip("\n") + f"\n\nnamespace {ns} {{\n\n"
-                       + "\n".join(new_lines) + f"\n}} // namespace {ns}\n")
+            updated = existing.rstrip("\n") + "\n"  # preamble-only repair
 
         stub_path.write_text(updated, encoding="utf-8")
-        print(f"{stub_path} : Updated (added stub(s) for {', '.join(missing_fns.keys())})")
+        if missing_fns and preamble_restored:
+            print(f"{stub_path} : Repaired module preamble; added stub(s) for {', '.join(missing_fns.keys())}")
+        elif preamble_restored:
+            print(f"{stub_path} : Repaired module preamble")
+        else:
+            print(f"{stub_path} : Updated (added stub(s) for {', '.join(missing_fns.keys())})")
 
     def _format_noexcept(self, spec: Any) -> str:
         if spec is True:
