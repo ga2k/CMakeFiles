@@ -13,6 +13,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import datetime
 from dataclasses import dataclass
 
+
 def ensure_yaml():
     try:
         import yaml
@@ -40,6 +41,7 @@ _CPP_NUMERIC_LITERAL_RE = re.compile(r'^[+-]?(?:0[xX][0-9a-fA-F]+|\d+\.\d*|\.\d+
 # quoted piece of text -- recognized so named constants can be emitted verbatim
 # instead of being quoted as a string literal.
 _CPP_IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
+
 
 class CppGenerator:
     """
@@ -87,115 +89,124 @@ class CppGenerator:
 
     def __init__(self):
         self.control_value_mapping = {
-            'Activity': 'hs::NullValue',
-            'BitmapToggleButton': 'bool',
-            'Button': 'std::string',
-            'CheckBox': 'bool',
-            'Choice': 'ID::Type',
-            'Combo': 'ID::Type',
-            'ComplexComboBox': 'ID::Type',
-            'DatePicker': 'wxDateTime',
-            'ELBox': 'WhoCared',
-            'Gauge': 'int',
-            'GridCtrl': 'dunno',
-            'Group': 'std::string',
-            'InfoBar': 'hs::NullType',
-            'IntTextCtrl': 'int',
-            'MarkupText': 'std::string',
-            'MaskedEdit': 'std::string',
-            'NotesCtrl': 'std::string',
-            'PasswordCtrl': 'std::string',
-            'ConfirmedPasswordCtrl': 'std::string',
-            'RadioBox': 'int',
-            'RadioButton': 'bool',
-            'ScrollBar': 'int',
-            'SearchBar': 'std::string',
-            'SearchToolBar': 'std::string',
-            'Slider': 'int',
-            'SpinCtrl': 'int',
-            'SpinCtrlDouble': 'double',
-            'StaticBox': 'std::string',
-            'StaticLine': 'hs::NullValue',
-            'StaticText': 'std::string',
-            'TextCtrl': 'std::string',
-            'ToggleButton': 'bool',
-            'TreeCtrl': 'hs::NullValue',
+            # @formatter:off
+            'Activity':                 'hs::NullValue',
+            'BitmapToggleButton':       'bool',
+            'Button':                   'std::string',
+            'CheckBox':                 'bool',
+            'Choice':                   'ID::Type',
+            'Combo':                    'ID::Type',
+            'ComplexComboBox':          'ID::Type',
+            'ConfirmedPasswordCtrl':    'std::string',
+            'DatePicker':               'wxDateTime',
+            'ELBox':                    'ID::Type',
+            'ExpandingNotesCtrl':       'std::string',
+            'Gauge':                    'int',
+            'GridCtrl':                 'dunno',
+            'Group':                    'std::string',
+            'InfoBar':                  'hs::NullType',
+            'IntTextCtrl':              'int',
+            'MarkupText':               'std::string',
+            'MaskedEdit':               'std::string',
+            'NotesCtrl':                'std::string',
+            'PasswordCtrl':             'std::string',
+            'RadioBox':                 'int',
+            'RadioButton':              'bool',
+            'ScrollBar':                'int',
+            'SearchBar':                'std::string',
+            'SearchToolBar':            'std::string',
+            'Slider':                   'int',
+            'SpinCtrl':                 'int',
+            'SpinCtrlDouble':           'double',
+            'StaticBox':                'std::string',
+            'StaticLine':               'hs::NullValue',
+            'StaticText':               'std::string',
+            'TextCtrl':                 'std::string',
+            'ToggleButton':             'bool',
+            'TreeCtrl':                 'hs::NullValue'
+            # @Formatter:on
         }
 
         self.control_default_mapping = {
-            'Activity': 'hs::NullValue::Null',
-            'BitmapToggleButton': 'false',
-            'Button': '""',
-            'CheckBox': 'false',
-            'Choice': 'ID::Null',
-            'Combo': 'ID::Null',
-            'ComplexComboBox': 'ID::Null',
-            'DatePicker': 'nulldatetime',
-            'ELBox': 'WhoCared',
-            'Gauge': '0',
-            'GridCtrl': 'dunno',
-            'Group': '""',
-            'InfoBar': 'Null',
-            'IntTextCtrl': '0',
-            'MarkupText': '""',
-            'MaskedEdit': '""',
-            'NotesCtrl': '""',
-            'PasswordCtrl': '""',
-            'ConfirmedPasswordCtrl': '""',
-            'RadioBox': '0',
-            'RadioButton': 'false',
-            'ScrollBar': '0',
-            'SearchBar': '""',
-            'SearchToolBar': '""',
-            'Slider': '0',
-            'SpinCtrl': '0',
-            'SpinCtrlDouble': '0',
-            'StaticBox': '""',
-            'StaticLine': 'hs::NullValue::Null',
-            'StaticText': '""',
-            'TextCtrl': '""',
-            'ToggleButton': 'false',
-            'TreeCtrl': 'hs::NullValue::Null',
+            # @formatter:off
+            'Activity':                 'hs::NullValue::Null',
+            'BitmapToggleButton':       'false',
+            'Button':                   '""',
+            'CheckBox':                 'false',
+            'Choice':                   'ID::Null',
+            'Combo':                    'ID::Null',
+            'ComplexComboBox':          'ID::Null',
+            'DatePicker':               'nulldatetime',
+            'ELBox':                    'ID::Null',
+            'ExpandingNotesCtrl':       '""',
+            'Gauge':                    '0',
+            'GridCtrl':                 'dunno',
+            'Group':                    '""',
+            'InfoBar':                  'Null',
+            'IntTextCtrl':              '0',
+            'MarkupText':               '""',
+            'MaskedEdit':               '""',
+            'NotesCtrl':                '""',
+            'PasswordCtrl':             '""',
+            'ConfirmedPasswordCtrl':    '""',
+            'RadioBox':                 '0',
+            'RadioButton':              'false',
+            'ScrollBar':                '0',
+            'SearchBar':                '""',
+            'SearchToolBar':            '""',
+            'Slider':                   '0',
+            'SpinCtrl':                 '0',
+            'SpinCtrlDouble':           '0',
+            'StaticBox':                '""',
+            'StaticLine':               '""',
+            'StaticText':               '""',
+            'TextCtrl':                 '""',
+            'ToggleButton':             'false',
+            'TreeCtrl':                 '""',
+            # @Formatter:on
         }
 
         self.control_contains_value_mapping = {
-            'Activity': False,
-            'BitmapButton': False,
-            'BitmapToggleButton': False,
-            'Button': False,
-            'CheckBox': True,
-            'Choice': True,
-            'Combo': True,
-            'ComplexComboBox': True,
-            'DateCtrl': True,
-            'DatePicker': True,
-            'ELBox': True,
-            'Gauge': True,
-            'GridCtrl': True,
-            'Group': False,
-            'InfoBar': False,
-            'IntTextCtrl': True,
-            'MarkupText': True,
-            'MaskedEdit': True,
-            'NotesCtrl': True,
-            'PasswordCtrl': True,
-            'ConfirmedPasswordCtrl': True,
-            'OutlineText': False,
-            'Page': False,
-            'RadioBox': True,
-            'RadioButton': True,
-            'ScrollBar': True,
-            'SearchBar': False,
-            'SearchToolBar': False,
-            'Slider': True,
-            'SpinCtrl': True,
-            'SpinCtrlDouble': True,
-            'StaticBox': False,
-            'StaticLine': False,
-            'StaticText': True,
-            'TextCtrl': True,
-            'ToggleButton': False,
-            'TreeCtrl': False,
+            # @formatter:off
+            'Activity':                 False,
+            'BitmapButton':             False,
+            'BitmapToggleButton':       False,
+            'Button':                   False,
+            'CheckBox':                 True,
+            'Choice':                   True,
+            'Combo':                    True,
+            'ComplexComboBox':          True,
+            'ConfirmedPasswordCtrl':    True,
+            'DateCtrl':                 True,
+            'DatePicker':               True,
+            'ELBox':                    True,
+            'ExpandingNotesCtrl':       True,
+            'Gauge':                    True,
+            'GridCtrl':                 True,
+            'Group':                    False,
+            'InfoBar':                  False,
+            'IntTextCtrl':              True,
+            'MarkupText':               True,
+            'MaskedEdit':               True,
+            'NotesCtrl':                True,
+            'OutlineText':              False,
+            'Page':                     False,
+            'PasswordCtrl':             True,
+            'RadioBox':                 True,
+            'RadioButton':              True,
+            'ScrollBar':                True,
+            'SearchBar':                False,
+            'SearchToolBar':            False,
+            'Slider':                   True,
+            'SpinCtrl':                 True,
+            'SpinCtrlDouble':           True,
+            'StaticBox':                False,
+            'StaticLine':               False,
+            'StaticText':               True,
+            'TextCtrl':                 True,
+            'ToggleButton':             False,
+            'TreeCtrl':                 False,
+            # @Formatter:on
         }
 
         # Controls that hold a set of rows rather than one scalar value. The table/field
@@ -206,76 +217,98 @@ class CppGenerator:
             'ELBox',
             'GridCtrl'
         }
-        # self.control_to_module = {
-        #     'Activity': 'Activity',
-        #     'Button': 'Button',
-        #     'ToggleButton': 'Button',
-        #     'BitmapToggleButton': 'Button',
-        #     'CheckBox': 'CheckBox',
-        #     'Choice': 'Choice',
-        #     'IntChoice': 'Choice',
-        #     'ComboBox': 'Combo',
-        #     'IntComboBox': 'Combo',
-        #     'ComplexComboBox': 'Ctrl.ComplexComboBox',
-        #     'DatePicker': 'Date',
-        #     'DateCtrl': 'Date',
-        #     'ELBox': 'EditableListBox',
-        #     'Gauge': 'Gauge',
-        #     'GridCtrl': 'Grid',
-        #     'AuiInfoBar': 'InfoBar.Aui',
-        #     'InfoBar': 'InfoBar',
-        #     'MarkupText': 'Markup',
-        #     'MaskedEdit': 'MaskedEdit',
-        #     'OutlineText': 'OutlineText',
-        #     'RadioButton': 'RadioButton',
-        #     'RadioBox': 'RadioButton',
-        #     'ScrollBar': 'ScrollBar',
-        #     'SearchBar': 'Search.Bar',
-        #     'SearchToolBar': 'SearchToolBar',
-        #     'Slider': 'Slider',
-        #     'SpinCtrl': 'Spin',
-        #     'SpinCtrlDouble': 'Spin',
-        #     'StaticBox': 'StaticBox',
-        #     'StaticLine': 'StaticLine',
-        #     'StaticText': 'StaticText',
-        #     'TextCtrl': 'TextCtrl',
-        #     'Toolbar': 'Toolbar',
-        #     'TreeCtrl': 'Tree',
-        #     'UserBar': 'User.Bar'
-        # }
+        # Control class (or its base_class) -> the Gfx module that exports it. Consulted as a
+        # FALLBACK by get_required_imports() only when a control:/labels: entry omits an
+        # explicit 'module:' -- an explicit 'module:' (string or list) is always used verbatim
+        # and stays the right choice for a per-app subclass that needs companion modules
+        # (e.g. mc::TitlesChoice -> [ Titles.Choice, Choice, StaticText ]). Every value here
+        # is a real module name -- cross-checked against `grep '^export module' Libs/Gfx/src`.
+        # Keyed by both concrete widget names and the base_class names YAML commonly uses.
+        self.control_to_module = {
+            # @formatter:off
+            'Activity':                 'Activity',
+            'Button':                   'Button',
+            'ButtonPanel':              'Button',
+            'BitmapButton':             'Button',
+            'ToggleButton':             'Button',
+            'BitmapToggleButton':       'Button',
+            'CheckBox':                 'CheckBox',
+            'Choice':                   'Choice',
+            'IntChoice':                'Choice',
+            'Combo':                    'Combo',
+            'ComboBox':                 'Combo',
+            'IntComboBox':              'Combo',
+            'ComplexComboBox':          'ComplexComboBox',
+            'ConfirmedPasswordCtrl':    'PasswordCtrl',
+            'DatePicker':               'DatePicker',
+            'DateCtrl':                 'DatePicker',
+            'ELBox':                    'ELBox',
+            'ExpandingNotesCtrl':       'ExpandingNotesCtrl',
+            'Gauge':                    'Gauge',
+            'GridCtrl':                 'GridCtrl',
+            'AuiInfoBar':               'AuiInfoBar',
+            'InfoBar':                  'InfoBar',
+            'IntTextCtrl':              'TextCtrl',
+            'ListBox':                  'ListBox',
+            'ListCtrl':                 'ListCtrl',
+            'MarkupText':               'MarkupText',
+            'MaskedEdit':               'MaskedEdit.Ctrl',
+            'NotesCtrl':                'NotesCtrl',
+            'OutlineText':              'OutlineText',
+            'PasswordCtrl':             'PasswordCtrl',
+            'RadioButton':              'RadioButton.Ctrl',
+            'RadioBox':                 'RadioButton.Ctrl',
+            'ScrollBar':                'ScrollBar',
+            'SearchBar':                'Search.Bar',
+            'Slider':                   'Slider',
+            'SpinCtrl':                 'SpinCtrl',
+            'SpinCtrlDouble':           'SpinCtrl',
+            'StaticBox':                'StaticBox',
+            'StaticLine':               'StaticLine',
+            'StaticText':               'StaticText',
+            'TextCtrl':                 'TextCtrl',
+            'Toolbar':                  'Toolbar',
+            'TreeCtrl':                 'TreeCtrl',
+            'UserBar':                  'User.Bar'
+            # @Formatter:on
+        }
 
         self.validator_class_mapping = {
-            'CapsValidator': 'CapsValidator',
-            'CapsValidatorBase': 'CapsValidatorBase',
+            # @formatter:off
+            'CapsValidator':            'CapsValidator',
+            'CapsValidatorBase':        'CapsValidatorBase',
             'ComplexComboBoxValidator': 'ComplexComboBoxValidator',
-            'CurrencyValidator': 'CurrencyValidator',
-            'DateValidator': 'DateValidator',
-            'DomainValidator': 'DomainValidator',
-            'ELBoxValidator': 'ELBoxValidator',
-            'EmailValidator': 'EmailValidator',
-            'GenericValidator': 'GenericValidator',
-            'ListBasedCapsValidator': 'ListBasedCapsValidator',
-            'ListBasedValidator': 'ListBasedValidator',
-            'MaskValidator': 'MaskValidator',
-            'PhoneValidator': 'PhoneValidator',
-            'TextFilterValidator': 'TextFilterValidator'
+            'CurrencyValidator':        'CurrencyValidator',
+            'DateValidator':            'DateValidator',
+            'DomainValidator':          'DomainValidator',
+            'ELBoxValidator':           'ELBoxValidator',
+            'EmailValidator':           'EmailValidator',
+            'GenericValidator':         'GenericValidator',
+            'ListBasedCapsValidator':   'ListBasedCapsValidator',
+            'ListBasedValidator':       'ListBasedValidator',
+            'MaskValidator':            'MaskValidator',
+            'PhoneValidator':           'PhoneValidator',
+            'TextFilterValidator':      'TextFilterValidator'
+            # @Formatter:on
         }
         # Validator to module mapping
         self.validator_to_module = {
-            'CapsValidator': 'TextCtrl',
-            'CapsValidatorBase': 'GenericValidator',
+            # @formatter:off
+            'CapsValidator':            'TextCtrl',
+            'CapsValidatorBase':        'GenericValidator',
             'ComplexComboBoxValidator': 'Ctrl.ComplexComboBox',
-            'CurrencyValidator': 'TextCtrl',
-            'DateValidator': 'Date',
-            'DomainValidator': 'GenericValidator',
-            'ELBoxValidator': 'EditableListBox',
-            'EmailValidator': 'GenericValidator',
-            'GenericValidator': 'GenericValidator',
-            'ListBasedCapsValidator': 'GenericValidator',
-            'ListBasedValidator': 'GenericValidator',
-            'MaskValidator': 'MaskedEdit',
-            'PhoneValidator': 'MaskedEdit',
-            'TextFilterValidator': 'TextCtrl'
+            'CurrencyValidator':        'TextCtrl',
+            'DateValidator':            'Date',
+            'DomainValidator':          'GenericValidator',
+            'ELBoxValidator':           'EditableListBox',
+            'EmailValidator':           'GenericValidator',
+            'GenericValidator':         'GenericValidator',
+            'ListBasedCapsValidator':   'GenericValidator',
+            'ListBasedValidator':       'GenericValidator',
+            'MaskValidator':            'MaskedEdit',
+            'PhoneValidator':           'MaskedEdit',
+            'TextFilterValidator':      'TextCtrl'
+            # @Formatter:on
         }
         # Size token -> emitted C++ expression.
         #
@@ -287,6 +320,7 @@ class CppGenerator:
         # any stray reference now collapses to wxDefaultSize (nothing in generator-source
         # YAML still uses them -- everything migrated to fw*).
         self.size_mapping = {
+            # @formatter:off
             'sizeDefault':          'wxDefaultSize',
             'sizeGroup':            'wxDefaultSize',
             'sizePage':             'wxDefaultSize',
@@ -323,6 +357,7 @@ class CppGenerator:
             'fwLabelLarge':         'fwLabelLarge()',
             'fwLabelMedium':        'fwLabelMedium()',
             'fwLabelSmall':         'fwLabelSmall()',
+            # @Formatter:on
         }
         self.event_mapping = {
 
@@ -445,6 +480,77 @@ class CppGenerator:
             'EVT_MOUSEWHEEL': 'wxEVT_MOUSEWHEEL',
         }
 
+        # wxEVT_* token -> the concrete wx event class the handler receives. Used to give a
+        # handler's lambda parameter a precise type when the YAML omits 'handlers[].type:'
+        # (which otherwise defaults to the opaque wxEvent). An explicit 'type:' always wins,
+        # and a handler bound to several events of differing classes falls back to wxEvent.
+        self.event_to_class = {
+            # @formatter:off
+            'wxEVT_BUTTON':              'wxCommandEvent',
+            'wxEVT_TOGGLEBUTTON':        'wxCommandEvent',
+            'wxEVT_CHECKBOX':            'wxCommandEvent',
+            'wxEVT_CHOICE':              'wxCommandEvent',
+            'wxEVT_COMBOBOX':            'wxCommandEvent',
+            'wxEVT_COMBOBOX_DROPDOWN':   'wxCommandEvent',
+            'wxEVT_COMBOBOX_CLOSEUP':    'wxCommandEvent',
+            'wxEVT_LISTBOX':             'wxCommandEvent',
+            'wxEVT_LISTBOX_DCLICK':      'wxCommandEvent',
+            'wxEVT_RADIOBOX':            'wxCommandEvent',
+            'wxEVT_RADIOBUTTON':         'wxCommandEvent',
+            'wxEVT_SLIDER':              'wxCommandEvent',
+            'wxEVT_TEXT':                'wxCommandEvent',
+            'wxEVT_TEXT_ENTER':          'wxCommandEvent',
+            'wxEVT_TEXT_MAXLEN':         'wxCommandEvent',
+            'wxEVT_MENU':                'wxCommandEvent',
+            'wxEVT_TOOL':                'wxCommandEvent',
+            'wxEVT_TOOL_RCLICKED':       'wxCommandEvent',
+            'wxEVT_TEXT_URL':            'wxTextUrlEvent',
+            'wxEVT_SPIN':               'wxSpinEvent',
+            'wxEVT_SPINCTRL':           'wxSpinEvent',
+            'wxEVT_SPINCTRLDOUBLE':     'wxSpinDoubleEvent',
+            'wxEVT_SCROLL_TOP':         'wxScrollEvent',
+            'wxEVT_SCROLL_BOTTOM':      'wxScrollEvent',
+            'wxEVT_SCROLL_LINEUP':      'wxScrollEvent',
+            'wxEVT_SCROLL_LINEDOWN':    'wxScrollEvent',
+            'wxEVT_SCROLL_PAGEUP':      'wxScrollEvent',
+            'wxEVT_SCROLL_PAGEDOWN':    'wxScrollEvent',
+            'wxEVT_SCROLL_THUMBTRACK':  'wxScrollEvent',
+            'wxEVT_SCROLL_THUMBRELEASE':'wxScrollEvent',
+            'wxEVT_SCROLL_CHANGED':     'wxScrollEvent',
+            'wxEVT_DATE_CHANGED':       'wxDateEvent',
+            'wxEVT_SET_FOCUS':          'wxFocusEvent',
+            'wxEVT_KILL_FOCUS':         'wxFocusEvent',
+            'wxEVT_UPDATE_UI':          'wxUpdateUIEvent',
+            'wxEVT_SIZE':               'wxSizeEvent',
+            'wxEVT_MOVE':               'wxMoveEvent',
+            'wxEVT_PAINT':              'wxPaintEvent',
+            'wxEVT_IDLE':               'wxIdleEvent',
+            'wxEVT_TIMER':              'wxTimerEvent',
+            'wxEVT_KEY_DOWN':           'wxKeyEvent',
+            'wxEVT_KEY_UP':             'wxKeyEvent',
+            'wxEVT_CHAR':               'wxKeyEvent',
+            'wxEVT_CHAR_HOOK':          'wxKeyEvent',
+            'wxEVT_LEFT_DOWN':          'wxMouseEvent',
+            'wxEVT_LEFT_UP':            'wxMouseEvent',
+            'wxEVT_LEFT_DCLICK':        'wxMouseEvent',
+            'wxEVT_MIDDLE_DOWN':        'wxMouseEvent',
+            'wxEVT_MIDDLE_UP':          'wxMouseEvent',
+            'wxEVT_MIDDLE_DCLICK':      'wxMouseEvent',
+            'wxEVT_RIGHT_DOWN':         'wxMouseEvent',
+            'wxEVT_RIGHT_UP':           'wxMouseEvent',
+            'wxEVT_RIGHT_DCLICK':       'wxMouseEvent',
+            'wxEVT_MOTION':             'wxMouseEvent',
+            'wxEVT_ENTER_WINDOW':       'wxMouseEvent',
+            'wxEVT_LEAVE_WINDOW':       'wxMouseEvent',
+            'wxEVT_MOUSEWHEEL':         'wxMouseEvent',
+            # @Formatter:on
+        }
+        for _evt_alias, _wx_evt in self.event_mapping.items():
+            if _wx_evt.startswith('wxEVT_TREE_'):
+                self.event_to_class.setdefault(_wx_evt, 'wxTreeEvent')
+            elif _wx_evt.startswith('wxEVT_LIST_'):
+                self.event_to_class.setdefault(_wx_evt, 'wxListEvent')
+
     def be_quiet(self, _quiet: bool) -> None:
         self.quiet = bool(_quiet)
 
@@ -479,7 +585,7 @@ class CppGenerator:
             raise ValueError(f"Unknown target '{_targets}'")
 
     def generate_ui_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path, top_verbatim: str,
-                         output_dir: Optional[Path] = None) -> str:
+                           output_dir: Optional[Path] = None) -> str:
         """Generate the complete C++ group/page/wizardpage module file (list-based schema)."""
         self._dbg(f"generate_ui_module: '{target_name}' -> {self.target_class} "
                   f"(top-level keys: {list(class_def.keys()) if isinstance(class_def, dict) else class_def})")
@@ -581,9 +687,12 @@ class CppGenerator:
         module_name = self.extract_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         module_list = self.extract_needed_modules(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
         export_module = self.extract_export_module(self.to_pascal_case(target_name), class_def, cpp_class, yaml_file)
-        if not module_name is None and not module_name == export_module:
+        # 'module:' (singular) and 'modules:' (plural list) are independent extra-import
+        # keys -- a class may legitimately declare both, so these are separate ifs, not
+        # an if/elif (which silently dropped the list whenever a differing singular was set).
+        if module_name is not None and module_name != export_module:
             required_imports.append(module_name)
-        elif not module_list is None:
+        if module_list is not None:
             required_imports.extend(module_list)
 
         # Determine base class (Page/Group/WizardPage). A page with a recordset: block and no
@@ -594,7 +703,7 @@ class CppGenerator:
         # derives from RecordSetPage, so an explicit "SplitterPage" is left unchanged.
         _, top_base_class = self.extract_control_class(target_name, class_def, yaml_file)
         implies_record_set_page = (self.target_type == "pages" and recordset is not None
-                                    and top_base_class == "Page")
+                                   and top_base_class == "Page")
         if implies_record_set_page:
             top_base_class = "RecordSetPage"
             if "RecordSetPage" not in required_imports:
@@ -603,12 +712,16 @@ class CppGenerator:
                 required_imports.remove("Page")
 
         true_imports = []
+        seen_imports: set[str] = set()
         for module in required_imports:
-            if not module == export_module:
-                true_imports.append(module)
-            else:
+            if module == export_module:
                 print(f'export_module {export_module} cannot be imported: {target_name} {yaml_file}')
                 self._dbg(f"'{target_name}': import '{module}' DROPPED (same as this module's own export_module)")
+            elif module in seen_imports:
+                self._dbg(f"'{target_name}': import '{module}' DROPPED (duplicate)")
+            else:
+                seen_imports.add(module)
+                true_imports.append(module)
 
         self._dbg(f"'{target_name}': resolved imports: {true_imports}")
         imports_formatted = '\n'.join(f"import {module};" for module in true_imports)
@@ -648,15 +761,19 @@ class CppGenerator:
             value_expr = f"ID::Type({value_get})" if data_type == "ID::Type" else value_get
             code.append(f"struct {struct_name} {{")
             code.append(f'   static auto table() -> std::string {{ return "{alt_ds["table"]}"; }}')
-            code.append(f'   static auto displayText(const db::Row &r) -> std::string {{ return r.get<std::string>("{alt_ds["display_field"]}"); }}')
+            code.append(
+                f'   static auto displayText(const db::Row &r) -> std::string {{ return r.get<std::string>("{alt_ds["display_field"]}"); }}')
             code.append(f"   static auto value(const db::Row &r) -> {data_type} {{ return {value_expr}; }}")
-            code.append(f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
+            code.append(
+                f"   static constexpr auto includeBlank() -> bool {{ return {'true' if alt_ds['include_blank'] else 'false'}; }}")
             code.append(f'   static auto blankText() -> std::string {{ return "{alt_ds["blank_text"]}"; }}')
             # textField()/locked() are only required by ELBoxDBSourceFor (ELBox's row-write-back
             # concept, Gfx/src/ctrls/ELBox.ixx) -- harmless additions for Choice/Combo/ListBox,
             # which only require DBSourceFor and never reference them.
-            code.append(f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"; }}')
-            code.append(f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
+            code.append(
+                f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"; }}')
+            code.append(
+                f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
             code.append("};")
             code.append("")
 
@@ -724,7 +841,8 @@ class CppGenerator:
             impl_dir = yaml_file.parent / "impl"
         stub_path = impl_dir / f"{cpp_class}_impl.cpp"
 
-        kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def, yaml_file)
+        kill_declared, on_kill_active = self.extract_group_method_body('on_kill_active', target_name, class_def,
+                                                                       yaml_file)
         set_declared, on_set_active = self.extract_group_method_body('on_set_active', target_name, class_def, yaml_file)
         event_declared, on_event = self.extract_group_method_body('on_event', target_name, class_def, yaml_file)
         self._dbg(f"'{target_name}': on_kill_active declared={kill_declared} (has body={on_kill_active is not None}), "
@@ -751,7 +869,8 @@ class CppGenerator:
                 # Groups: no common base owns a RowSet, so this is a plain (non-overriding)
                 # member function refreshFromCurrent(rec) itself calls directly.
                 refresh_ex_override = " override" if self.target_type == "pages" else ""
-                code.append(f"   auto refreshEx(const db::Row *rec) -> void{refresh_ex_override};  // Implemented in {stub_path}")
+                code.append(
+                    f"   auto refreshEx(const db::Row *rec) -> void{refresh_ex_override};  // Implemented in {stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -843,9 +962,9 @@ class CppGenerator:
                     access_groups['public'].append('\n'.join(av))
             else:  # groups: unchanged -- Group owns no RowSet of its own to inherit this from.
                 rfc: List[str] = []
-                rfc.append( "   auto refreshFromCurrent (const db::Row *rec) -> void {")
-                rfc.append( "      if (!rec)")
-                rfc.append( "         return;")
+                rfc.append("   auto refreshFromCurrent (const db::Row *rec) -> void {")
+                rfc.append("      if (!rec)")
+                rfc.append("         return;")
                 for var, fld, cpp_type in bound_controls:
                     rfc.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
                     # Retarget the control's commit() UPDATE at the current record
@@ -916,7 +1035,8 @@ class CppGenerator:
             if recordset is not None and top_base_class in ("RecordSetPage", "SplitterPage"):
                 tbl_lit = recordset.get('table') or ''
                 ob_lit = recordset.get('order_by') or ''
-                code.append(f'      : {top_base_class} (book, id, name, type, "{tbl_lit}", "{ob_lit}", imageIndex, {args_expr}) {{')
+                code.append(
+                    f'      : {top_base_class} (book, id, name, type, "{tbl_lit}", "{ob_lit}", imageIndex, {args_expr}) {{')
             else:
                 code.append(f"      : {top_base_class} (book, id, name, type, imageIndex, {args_expr}) {{")
         else:
@@ -927,7 +1047,8 @@ class CppGenerator:
             code.append(f"{pad1}{args_param_type}args = {default_args_expr},")
             code.append(f"{pad1}long style = 0)")
             if has_class_args:
-                code.append(f"      : {top_base_class} (cflags, name, pParent, value, {merge_helper_name}(args), style) {{")
+                code.append(
+                    f"      : {top_base_class} (cflags, name, pParent, value, {merge_helper_name}(args), style) {{")
             else:
                 code.append(f"      : {top_base_class} (cflags, name, pParent, value, args, style) {{")
 
@@ -1252,7 +1373,7 @@ class CppGenerator:
                 args_expr = raw_args.strip() if isinstance(raw_args, str) and raw_args.strip() else "args"
 
             call_line = (f'addPage(new {page_class}({cflags}, "{page_name}", this, '
-                        f'{header_expr}, {args_expr}, 0L));')
+                         f'{header_expr}, {args_expr}, 0L));')
 
             if_key = page.get("if")
             if isinstance(if_key, str) and if_key.strip():
@@ -1326,7 +1447,8 @@ class CppGenerator:
                 print(f"Warning: wizard '{target_name}' 'cancel_message' must be a mapping "
                       f"{{sub_heading, body}} {yaml_file}", file=sys.stderr)
                 cancel_message = {}
-            sub_heading = self._cpp_string_literal(str(cancel_message.get("sub_heading", self._DEFAULT_CANCEL_SUB_HEADING)))
+            sub_heading = self._cpp_string_literal(
+                str(cancel_message.get("sub_heading", self._DEFAULT_CANCEL_SUB_HEADING)))
             body = self._cpp_string_literal(str(cancel_message.get("body", self._DEFAULT_CANCEL_BODY)))
             code.append('protected:')
             code.append('   [[nodiscard]] auto cancelMessage() const -> std::pair<std::string, std::string> override;')
@@ -1811,7 +1933,8 @@ class CppGenerator:
             code.append(f"         {member_accessor}setWindowStyleFlags({style})")
             member_accessor = '.'
 
-        if table and field and not is_multi_row_control and signature_template.find('table') == -1 and signature_template.find('field') == -1:
+        if table and field and not is_multi_row_control and signature_template.find(
+                'table') == -1 and signature_template.find('field') == -1:
             db_chain = f'dbInfo({table}, {field})'
             code.append(f"         {member_accessor}{db_chain}")
             member_accessor = '.'
@@ -2020,16 +2143,16 @@ class CppGenerator:
                 "flex",
                 "grid",
             },
-            "class_args_def": {                  # page / group / wizardpage / book(container:true)
+            "class_args_def": {  # page / group / wizardpage / book(container:true)
                 "arg_name",
                 "args_in",
                 "extract_inside",
             },
-            "wizard_class_args_def": {           # wizard: only -- reduced scope, no extraction
+            "wizard_class_args_def": {  # wizard: only -- reduced scope, no extraction
                 "arg_name",
                 "args_in",
             },
-            "args_def": {                # nested inside control: only
+            "args_def": {  # nested inside control: only
                 "arg_name",
                 "insert",
                 "translate",
@@ -2247,14 +2370,17 @@ class CppGenerator:
 
         if self.target_type == "groups":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator', 'wxTypes', 'wxUtil',
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator',
+                 'wxTypes', 'wxUtil',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes', 'wxUtil'])
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes',
+                 'wxUtil'])
         elif self.target_type == "wizardpages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil', 'wxTypes', 'wxUtil'])
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil',
+                 'wxTypes', 'wxUtil'])
 
         if not isinstance(elements, list):
             return sorted(used_modules)
@@ -2276,7 +2402,10 @@ class CppGenerator:
                 if control_map_key in item and isinstance(item[control_map_key], dict):
                     md = item[control_map_key]
 
-                    # modules
+                    # modules: an explicit 'module:' (string or list) is used verbatim; when it
+                    # is absent, fall back to control_to_module keyed on the control's class
+                    # (then its base_class) so a plain widget never needs to spell out an
+                    # import whose value its class already determines.
                     module_prop = md.get('module')
                     if isinstance(module_prop, str) and module_prop.strip():
                         used_modules.add(module_prop.strip())
@@ -2284,6 +2413,10 @@ class CppGenerator:
                         for m in module_prop:
                             if isinstance(m, str) and m.strip():
                                 used_modules.add(m.strip())
+                    else:
+                        inferred = self._infer_control_module(md, yaml_file)
+                        if inferred:
+                            used_modules.add(inferred)
 
                     # alt_data_source: control-level DB source for loadFromDB(), backed by
                     # the generic db::Row (DB.RowSet) -- no per-table module to add.
@@ -2303,7 +2436,36 @@ class CppGenerator:
                             if vclass in self.validator_to_module:
                                 used_modules.add(self.validator_to_module[vclass])
 
+                # labels: never carry a 'module:' key -- resolve the label widget's module
+                # from its 'class' (default MarkupText, matching _generate_labels) so a
+                # label-only section still imports what it instantiates instead of relying
+                # on the module being transitively reachable through Group/Ctrl.
+                labels_seq = item.get('labels')
+                if isinstance(labels_seq, list):
+                    for entry in labels_seq:
+                        if not isinstance(entry, dict):
+                            continue
+                        lcls = entry.get('class')
+                        lcls = lcls.strip() if isinstance(lcls, str) and lcls.strip() else 'MarkupText'
+                        lmod = self.control_to_module.get(lcls)
+                        if lmod:
+                            used_modules.add(lmod)
+
         return sorted(used_modules)
+
+    def _infer_control_module(self, member_def: Dict[str, Any], yaml_file: Path) -> Optional[str]:
+        """Fallback module for a control: block with no explicit 'module:' -- looked up in
+        control_to_module by the control's class, then its base_class (template tails like
+        '<T, TagDBSource>' stripped first). Returns None for a class the map doesn't know
+        (a custom subclass), leaving the author to declare 'module:' as before."""
+        control_class, base_class = self.extract_control_class(member_def.get('variable', ''), member_def, yaml_file)
+        for cand in (control_class, base_class):
+            if not isinstance(cand, str):
+                continue
+            key = cand.split('<', 1)[0].strip()
+            if key in self.control_to_module:
+                return self.control_to_module[key]
+        return None
 
     def extract_control_class(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[str, str]:
         """
@@ -2331,15 +2493,43 @@ class CppGenerator:
 
         return control_class, base_class
 
+    # control_value_mapping entries that are placeholders/sentinels rather than a usable
+    # C++ value type -- when 'contains:' is omitted these must NOT displace the std::string
+    # default (a bare 'dunno' etc. would be emitted as an undefined identifier downstream).
+    _NON_VALUE_CONTAINS = {'dunno', 'hs::NullValue', 'hs::NullType', 'hs::NullValue::Null', ''}
+
+    def resolve_contains(self, member_def: Dict[str, Any], control_class: str = "",
+                         base_class: str = "") -> str:
+        """The control's C++ value type ('contains:'). An explicit 'contains:' always wins;
+        otherwise it is inferred from control_value_mapping keyed on the control class (then
+        base_class) -- so a SpinCtrl is int, a CheckBox bool, a Choice ID::Type, etc. without
+        having to spell it out. Falls back to std::string when nothing better is known.
+        Pass control_class/base_class when the caller already has them (from
+        extract_control_class); they default to member_def's own 'class'/'base_class'."""
+        raw = member_def.get('contains')
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        control_class = control_class or (member_def.get('class') or "")
+        base_class = base_class or (member_def.get('base_class') or "")
+        for cand in (control_class, base_class):
+            if not isinstance(cand, str) or not cand:
+                continue
+            mapped = self.control_value_mapping.get(cand.split('<', 1)[0].strip())
+            if mapped and mapped not in self._NON_VALUE_CONTAINS:
+                return mapped
+        return 'std::string'
+
     def extract_data_type(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
-        data_type = elements.get('contains', 'std::string')
-        if not isinstance(data_type, str) and data_type is not None:
+        data_type = elements.get('contains')
+        if data_type is None:
+            control_class, base_class = self.extract_control_class(element_name, elements, yaml_file)
+            return self.resolve_contains(elements, control_class, base_class)
+        if not isinstance(data_type, str):
             print(f"Warning: 'data_type' for '{element_name}' must be a string; {yaml_file}",
                   file=sys.stderr)
-        else:
-            data_type = data_type.strip()
-
-        return data_type
+            control_class, base_class = self.extract_control_class(element_name, elements, yaml_file)
+            return self.resolve_contains(elements, control_class, base_class)
+        return data_type.strip()
 
     def extract_db_info(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> Tuple[str, str]:
         table = ''
@@ -2513,13 +2703,13 @@ class CppGenerator:
                 fld = md.get('field')
                 if not (isinstance(tbl, str) and tbl.strip() and isinstance(fld, str) and fld.strip()):
                     continue
-                control_class, _ = self.extract_control_class(var, md, yaml_file)
+                control_class, base_class = self.extract_control_class(var, md, yaml_file)
                 if control_class.split('<', 1)[0].strip() in self.multi_row_control_classes:
                     # A multi-row control's "value" (if any) is a selection, not a field
                     # value, and it shows the whole table rather than one row. Skip
                     # initFromField()/where() for it - see multi_row_control_classes.
                     continue
-                cpp_type = md.get('contains', 'std::string')
+                cpp_type = self.resolve_contains(md, control_class, base_class)
                 bound_controls.append((var, fld.strip(), cpp_type))
         return bound_controls, group_members
 
@@ -2582,12 +2772,13 @@ class CppGenerator:
     def extract_needed_modules(self, element_name: str, elements: Dict[str, Any], control_name: str,
                                yaml_file: Path) -> List[str] | None:
 
-        modules: List[str] = None
+        modules: Optional[List[str]] = None
         if 'modules' in elements:
-            if isinstance(elements['modules'], list):
-                modules = elements['modules']
-            elif isinstance(elements['modules'], str):
-                modules.append(elements.get('modules').strip())
+            raw = elements['modules']
+            if isinstance(raw, list):
+                modules = [m.strip() for m in raw if isinstance(m, str) and m.strip()]
+            elif isinstance(raw, str) and raw.strip():
+                modules = [raw.strip()]
             else:
                 print(f"Warning: 'modules' for '{element_name}' must be a list or a string; {yaml_file}",
                       file=sys.stderr)
@@ -2691,9 +2882,9 @@ class CppGenerator:
                 'has_default': 'default' in var_def,
                 'default': var_def.get('default'),
                 'modules': self._extract_str_or_list(var_def.get('module'), f"variables.'{var_name}'.module",
-                                                       yaml_file),
+                                                     yaml_file),
                 'includes': self._extract_str_or_list(var_def.get('include'), f"variables.'{var_name}'.include",
-                                                        yaml_file),
+                                                      yaml_file),
             }
         return result
 
@@ -2999,7 +3190,7 @@ class CppGenerator:
         # Get the initialization value (string) for the control, defaulting to '' if not present.
         if not tp is None and 'value' in elements:
             conditional = self._resolve_conditional(elements['value'], tp, yaml_file, f"'{element_name}'.value",
-                                                     string_style="construct")
+                                                    string_style="construct")
             if conditional is not None:
                 value = conditional
                 value_is_literal = False
@@ -3024,7 +3215,7 @@ class CppGenerator:
             wrap_type = tp if tp is not None else self.control_value_mapping.get(
                 control_class, self.control_value_mapping.get(base_class, ""))
             default_lit = self._resolve_default_literal(elements.get('default'), tp, yaml_file,
-                                                         f"'{element_name}'.default")
+                                                        f"'{element_name}'.default")
             value = f'{wrap_type} {{ {default_lit} }}'
             value_is_literal = False
         else:
@@ -3086,7 +3277,8 @@ class CppGenerator:
     def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
         """Generate event handler code."""
         event = handler.get('event', 'EVT_TEXT')
-        type = handler.get('type', 'wxEvent')
+        explicit_type = handler.get('type')
+        explicit_type = explicit_type.strip() if isinstance(explicit_type, str) and explicit_type.strip() else None
         handler_code = handler.get('handler', 'event.Skip();')
 
         # Normalize handler code - handle both \n escapes and actual newlines
@@ -3099,9 +3291,15 @@ class CppGenerator:
         events = event if isinstance(event, (list, tuple)) else [event]
         wx_events = [self._normalize_event_name(e) for e in events]
 
+        # Lambda parameter type: an explicit 'type:' wins for every hook; otherwise each
+        # hook gets the concrete wx event class its own event delivers (event_to_class),
+        # falling back to the opaque wxEvent for anything unmapped.
+        def _param_type(wx_evt: str) -> str:
+            return explicit_type or self.event_to_class.get(wx_evt, 'wxEvent')
+
         # Generate one hook per event; caller decides whether to prefix with '->' or '.'
         hooks = [
-            f"hookAndHandle({wx_evt}, [this]({type} &event) {{\n            {handler_code}}})"
+            f"hookAndHandle({wx_evt}, [this]({_param_type(wx_evt)} &event) {{\n            {handler_code}}})"
             for wx_evt in wx_events
         ]
 
@@ -3130,7 +3328,7 @@ class CppGenerator:
         args_block = member_def.get("args")
         if isinstance(args_block, dict):
             arg_name, ins, translate, extracts = self._parse_args_block(args_block, ctx, yaml_file,
-                                                                         schema="args")
+                                                                        schema="args")
             extract_after = extracts.get("after", [])
             base = parent_args_var if parent_args_var else "args"
 
@@ -3158,8 +3356,9 @@ class CppGenerator:
                     # own source anymap/key
                     for n, ty, src_map, src_key, default in translate:
                         lit = self._resolve_default_literal(default, ty, yaml_file, f"{ctx}.args.translate.'{n}'",
-                                                             string_style="literal")
-                        lines.append(f'      add_to_anymap({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
+                                                            string_style="literal")
+                        lines.append(
+                            f'      add_to_anymap({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
             elif arg_name:
                 print(f"Warning: {ctx}.args 'arg_name' is set but there are no insert/translate "
                       f"entries; ignoring it {yaml_file}", file=sys.stderr)
@@ -3186,9 +3385,6 @@ class CppGenerator:
         """Generate validator code."""
         validator_class = validator.get('class', 'GenericValidator')
         allow_empty = validator.get('allow_empty', True)
-
-        # Get the data type from the control's 'contains' property
-        data_type = member_def.get('contains', 'std::string')
 
         # Helper: map transfer_model yaml to C++ enum token
         def transfer_enum(val: str) -> str:
@@ -3468,7 +3664,7 @@ class CppGenerator:
 
         cond_expr = self._resolve_condition_expr(raw.get("condition"), anymap_name, yaml_file, ctx)
         true_expr, true_is_literal = self._resolve_rvalue_or_literal(raw.get("if_true"), ty, yaml_file, ctx,
-                                                                      string_style=string_style)
+                                                                     string_style=string_style)
         false_expr, false_is_literal = self._resolve_rvalue_or_literal(raw.get("if_false"), ty, yaml_file, ctx,
                                                                        string_style=string_style)
         if string_suffix and ty in ("string", "std::string"):
@@ -3831,7 +4027,7 @@ class CppGenerator:
             fdef.setdefault('return', 'void')
             fdef.setdefault('override', False)
             if 'body' not in fdef:
-                fdef['body'] = None   # sentinel: declaration-only, stub needed
+                fdef['body'] = None  # sentinel: declaration-only, stub needed
             fdef.setdefault('const', False)
             fdef.setdefault('static', False)
             fdef['access'] = access
@@ -3841,9 +4037,9 @@ class CppGenerator:
         return normalized
 
     def _render_impl_fn(self, class_name: str, fname: str, fdef: Dict[str, Any]) -> List[str]:
-        args            = fdef['args']
-        ret             = fdef['return']
-        const_suffix    = " const"    if fdef['const']    else ""
+        args = fdef['args']
+        ret = fdef['return']
+        const_suffix = " const" if fdef['const'] else ""
         noexcept_suffix = self._format_noexcept(fdef.get('noexcept', False))
         # 'override' is a virt-specifier: valid on the in-class declaration, but a
         # compile error on an out-of-line definition — never emit it here.
@@ -4134,7 +4330,7 @@ class CppGenerator:
         if not output_file:
             return ("\n\n").join(module for _, module in generated)
 
-        dest_dir = output_file # / rel_path
+        dest_dir = output_file  # / rel_path
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         label = self.target_class
@@ -4225,12 +4421,15 @@ def scan_and_generate(generator,
 
     return 0
 
+
 def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
         description='Generate C++ Group/Page/WizardPage modules from YAML form definitions')
-    parser.add_argument('--impl-dir', type=Path, help='Directory to write hand-editable _impl.cpp stubs to (default: alongside --output, or next to the source YAML)')
-    parser.add_argument('--scan', type=Path, action='append', help='Scan this directory recursively for *.yaml (can be used multiple times)')
+    parser.add_argument('--impl-dir', type=Path,
+                        help='Directory to write hand-editable _impl.cpp stubs to (default: alongside --output, or next to the source YAML)')
+    parser.add_argument('--scan', type=Path, action='append',
+                        help='Scan this directory recursively for *.yaml (can be used multiple times)')
     parser.add_argument('-a', '--app-target', action='store', help='The CMake target name of the application')
     parser.add_argument('-c', '--cmake', type=Path, help='Update CMakeLists.txt file with generated modules')
     parser.add_argument('-f', '--first-pagetype', action='store', help='First page type to generate')
@@ -4238,7 +4437,8 @@ def main():
     parser.add_argument('-q', '--quiet', action="store_true", help='Only report important information')
     parser.add_argument('-s', '--sizer-info', action='store_true', help='Show sizer info in the generated UI classes')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
-    parser.add_argument('-x', '--export-var', action='store', help='The name of the generated export variable like GFX_EXPORT')
+    parser.add_argument('-x', '--export-var', action='store',
+                        help='The name of the generated export variable like GFX_EXPORT')
     parser.add_argument('input_yaml', type=Path, nargs='?', help='Single input YAML file')
 
     args = parser.parse_args()
