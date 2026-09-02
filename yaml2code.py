@@ -551,6 +551,10 @@ class CppGenerator:
             elif _wx_evt.startswith('wxEVT_LIST_'):
                 self.event_to_class.setdefault(_wx_evt, 'wxListEvent')
 
+        # Handler function names whose call sites must pass the event uncast -- populated
+        # per class by generate_ui_module (see collect_handler_functions).
+        self._uncast_handler_fns: set[str] = set()
+
     def be_quiet(self, _quiet: bool) -> None:
         self.quiet = bool(_quiet)
 
@@ -905,6 +909,28 @@ class CppGenerator:
 
         # Functions (group/page level) inside class
         functions_all = self._validate_functions(class_def.get('functions'))
+
+        # Auto-declare any event-handler function a control's 'handlers:' block calls that
+        # the author didn't put in 'functions:' -- as a declaration-only entry, so it lands
+        # in this class body (below) AND in the _impl.cpp stub set (further down), exactly
+        # like a body-less 'functions:' entry. Done here, before either is emitted, so YAML
+        # ordering is irrelevant; an explicit 'functions:' entry of the same name always wins.
+        handler_fns = self.collect_handler_functions(elements, yaml_file)
+        # Names that had to widen to wxEvent& (bound to >1 event class, or a declared
+        # 'functions:' entry taking wxEvent&): their call sites must pass the event uncast.
+        self._uncast_handler_fns = {
+            fn for fn, pt in handler_fns.items()
+            if pt == 'wxEvent' or (fn in functions_all and 'wxEvent&' in functions_all[fn].get('args', ''))
+        }
+        for _hfn, _hparam in handler_fns.items():
+            if _hfn in functions_all:
+                continue
+            functions_all[_hfn] = {
+                'args': f'{_hparam}& event', 'return': 'void', 'body': None,
+                'const': False, 'static': False, 'override': False, 'access': 'protected',
+                'stub_body': ['    event.Skip();'],
+            }
+
         access_groups = {'public': [], 'protected': [], 'private': []}
         for fname, fdef in functions_all.items():
             args = fdef['args']
@@ -3330,49 +3356,91 @@ class CppGenerator:
     # qualifier, or whitespace -- a plain identifier has none of these.
     _HANDLER_CODE_RE = re.compile(r'[()\[\]{};,\s]|::|->|\.')
 
-    def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
-        """Generate event handler code.
-
-        The lambda parameter is always 'wxEvent &event' (Ctrl<>::hookAndHandle takes a
-        wxEvent&-based callable). A bare 'handler:' identifier -- or an omitted 'handler:',
-        in which case the name is derived from the event (_derive_handler_name) -- is called
-        with the event down-cast to the concrete wx class the event delivers ('type:' wins
-        over that deduction; event_to_class supplies it otherwise; no cast when neither
-        knows better). A 'handler:' value that already looks like a statement/expression is
-        emitted verbatim as the body, unchanged."""
+    def _iter_handler_bindings(self, handler: Dict[str, Any]):
+        """Yield (wx_evt, fn_name, cast_type, verbatim_body) for each event a single
+        'handlers:' entry binds. verbatim_body is set (fn_name/cast_type None) when the
+        'handler:' value is hand-written code; otherwise fn_name is the member function to
+        call -- the bare 'handler:' identifier, or, when 'handler:' is omitted, the name
+        derived from the event (_derive_handler_name) -- and cast_type is the concrete wx
+        event class to down-cast to at the call ('type:' wins; _event_class otherwise;
+        None/'wxEvent' means pass the event through uncast). Shared by
+        _generate_event_handler (emit) and collect_handler_functions (auto-declare)."""
         event = handler.get('event', 'EVT_TEXT')
+        events = event if isinstance(event, (list, tuple)) else [event]
         explicit_type = handler.get('type')
         explicit_type = explicit_type.strip() if isinstance(explicit_type, str) and explicit_type.strip() else None
         raw_handler = handler.get('handler')
         raw_handler = raw_handler.strip() if isinstance(raw_handler, str) and raw_handler.strip() else None
+        verbatim = raw_handler if (raw_handler and self._HANDLER_CODE_RE.search(raw_handler)) else None
+        for e in events:
+            wx_evt = self._normalize_event_name(e)
+            if verbatim is not None:
+                yield wx_evt, None, None, verbatim
+            else:
+                fn = raw_handler or self._derive_handler_name(wx_evt)
+                cast_type = explicit_type or self._event_class(wx_evt)
+                yield wx_evt, fn, cast_type, None
 
-        # Support a single event or a list of events
-        events = event if isinstance(event, (list, tuple)) else [event]
-        wx_events = [self._normalize_event_name(e) for e in events]
-
-        verbatim_body = raw_handler if (raw_handler and self._HANDLER_CODE_RE.search(raw_handler)) else None
-        if verbatim_body is not None:
-            # legacy / hand-written body: normalize \n escapes and real newlines, emit as-is
-            verbatim_body = verbatim_body.replace('\\n', '\n')
-            verbatim_body = '\n         '.join(line.strip() for line in verbatim_body.split('\n'))
-
-        def _body(wx_evt: str) -> str:
-            if verbatim_body is not None:
-                return verbatim_body
-            fn = raw_handler or self._derive_handler_name(wx_evt)
-            cast_type = explicit_type or self._event_class(wx_evt)
-            if cast_type and cast_type != 'wxEvent':
-                return f"{fn}(dynamic_cast<{cast_type}&>(event));"
-            return f"{fn}(event);"
-
-        # Generate one hook per event; caller decides whether to prefix with '->' or '.'
-        hooks = [
-            f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {_body(wx_evt)}}})"
-            for wx_evt in wx_events
-        ]
-
+    def _generate_event_handler(self, handler: Dict[str, Any], member_name: str, member_def: Dict[str, Any]) -> str:
+        """Generate event handler code. The hook lambda always takes 'wxEvent &event';
+        see _iter_handler_bindings for how the body is resolved."""
+        uncast = self._uncast_handler_fns
+        hooks: List[str] = []
+        for wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(handler):
+            if verbatim is not None:
+                body = verbatim.replace('\\n', '\n')
+                body = '\n         '.join(line.strip() for line in body.split('\n'))
+            elif cast_type and cast_type != 'wxEvent' and fn not in uncast:
+                body = f"{fn}(dynamic_cast<{cast_type}&>(event));"
+            else:
+                body = f"{fn}(event);"
+            hooks.append(f"hookAndHandle({wx_evt}, [this](wxEvent &event) {{\n            {body}}})")
         # If multiple, chain them with leading '.' for subsequent hooks (the first will be prefixed by caller)
         return ("\n         .").join(hooks)
+
+    def collect_handler_functions(self, elements: Any, yaml_file: Path) -> Dict[str, str]:
+        """Walk the control tree and return {handler_fn_name: 'wxEvent&'-style parameter
+        type} for every control 'handlers:' entry that resolves to a member-function call
+        (verbatim-code handlers contribute nothing -- they are inlined). Only controls that
+        actually go through _generate_single_control are considered (a nested group's own
+        handlers, if any, are never emitted). A name bound with two different event classes
+        widens to wxEvent& so every generated call site still type-checks. generate_ui_module
+        merges these into the functions map so a handler with no 'functions:' entry still
+        gets an in-class declaration + an _impl.cpp stub -- and a name the author *did*
+        declare in 'functions:' is left untouched (no duplicate)."""
+        found: Dict[str, str] = {}
+        if not isinstance(elements, list):
+            return found
+        for element in elements:
+            if not isinstance(element, dict):
+                continue
+            items = element.get('items', [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict) or not isinstance(item.get('control'), dict):
+                    continue
+                md = item['control']
+                if self.target_type in ('pages', 'wizardpages'):
+                    if bool(md.get('is_group', False)) or md.get('base_class') == 'Group':
+                        continue  # -> _generate_single_group, which emits no handlers
+                handlers = md.get('handlers')
+                if handlers is None:
+                    continue
+                if not isinstance(handlers, list):
+                    handlers = [handlers]
+                for h in handlers:
+                    if not isinstance(h, dict):
+                        continue
+                    for _wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(h):
+                        if fn is None:
+                            continue
+                        pt = cast_type if (cast_type and cast_type != 'wxEvent') else 'wxEvent'
+                        if fn not in found:
+                            found[fn] = pt
+                        elif found[fn] != pt:
+                            found[fn] = 'wxEvent'
+        return found
 
     def _emit_item_args(self, member_def: Dict[str, Any], parent_args_var: Optional[str], yaml_file: Path,
                         ctx: str) -> tuple[list[str], Optional[str], list[tuple[str, str, bool, str, str, Any]]]:
