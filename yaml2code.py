@@ -3321,10 +3321,26 @@ class CppGenerator:
         'ui':              'UI',
     }
 
-    def _derive_handler_name(self, wx_evt: str) -> str:
+    @staticmethod
+    def _handler_name_control_part(member_def: Dict[str, Any]) -> str:
+        """The control-identity fragment of a derived handler name: the control's
+        'variable:' with a leading m_/m prefix dropped and the first letter upper-cased
+        (m_familyName -> FamilyName, m_year -> Year). '' when there's no usable variable."""
+        var = member_def.get('variable')
+        var = var.strip() if isinstance(var, str) else ''
+        if var.startswith('m_'):
+            var = var[2:]
+        elif len(var) > 1 and var[0] == 'm' and var[1].isupper():
+            var = var[1:]
+        return (var[0].upper() + var[1:]) if var else ''
+
+    def _derive_handler_name(self, wx_evt: str, member_def: Optional[Dict[str, Any]] = None) -> str:
         """Fallback member-function name for a handler with no explicit 'handler:' --
-        'on' + the CamelCased event name (minus the wxEVT_/EVT_/COMMAND_ noise) + 'Evt',
-        e.g. wxEVT_CHECKBOX -> onCheckBoxEvt, wxEVT_LIST_ITEM_SELECTED -> onListItemSelectedEvt."""
+        'on' + <control variable, PascalCased> + <CamelCased event name, minus the
+        wxEVT_/EVT_/COMMAND_ noise> + 'Evt'. Folding in the control keeps two same-type
+        controls in one group from sharing a handler by default (m_familyName + EVT_CHECKBOX
+        -> onFamilyNameCheckBoxEvt); the event suffix keeps a single control's multiple
+        events distinct. A caller who *wants* a shared handler names it via 'handler:'."""
         core = wx_evt
         for prefix in ('wxEVT_', 'EVT_'):
             if core.startswith(prefix):
@@ -3334,7 +3350,8 @@ class CppGenerator:
             core = core[len('COMMAND_'):]
         parts = [p for p in core.split('_') if p]
         cased = [self._EVENT_WORD_CASING.get(p.lower(), p.capitalize()) for p in parts]
-        return 'on' + ''.join(cased) + 'Evt'
+        ctrl_part = self._handler_name_control_part(member_def) if member_def else ''
+        return 'on' + ctrl_part + ''.join(cased) + 'Evt'
 
     def _event_class(self, wx_evt: str) -> Optional[str]:
         """The concrete wx event class for a wxEVT_* token, tolerating the legacy
@@ -3356,14 +3373,14 @@ class CppGenerator:
     # qualifier, or whitespace -- a plain identifier has none of these.
     _HANDLER_CODE_RE = re.compile(r'[()\[\]{};,\s]|::|->|\.')
 
-    def _iter_handler_bindings(self, handler: Dict[str, Any]):
+    def _iter_handler_bindings(self, handler: Dict[str, Any], member_def: Dict[str, Any]):
         """Yield (wx_evt, fn_name, cast_type, verbatim_body) for each event a single
         'handlers:' entry binds. verbatim_body is set (fn_name/cast_type None) when the
         'handler:' value is hand-written code; otherwise fn_name is the member function to
         call -- the bare 'handler:' identifier, or, when 'handler:' is omitted, the name
-        derived from the event (_derive_handler_name) -- and cast_type is the concrete wx
-        event class to down-cast to at the call ('type:' wins; _event_class otherwise;
-        None/'wxEvent' means pass the event through uncast). Shared by
+        derived from the control + event (_derive_handler_name) -- and cast_type is the
+        concrete wx event class to down-cast to at the call ('type:' wins; _event_class
+        otherwise; None/'wxEvent' means pass the event through uncast). Shared by
         _generate_event_handler (emit) and collect_handler_functions (auto-declare)."""
         event = handler.get('event', 'EVT_TEXT')
         events = event if isinstance(event, (list, tuple)) else [event]
@@ -3377,7 +3394,7 @@ class CppGenerator:
             if verbatim is not None:
                 yield wx_evt, None, None, verbatim
             else:
-                fn = raw_handler or self._derive_handler_name(wx_evt)
+                fn = raw_handler or self._derive_handler_name(wx_evt, member_def)
                 cast_type = explicit_type or self._event_class(wx_evt)
                 yield wx_evt, fn, cast_type, None
 
@@ -3386,7 +3403,7 @@ class CppGenerator:
         see _iter_handler_bindings for how the body is resolved."""
         uncast = self._uncast_handler_fns
         hooks: List[str] = []
-        for wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(handler):
+        for wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(handler, member_def):
             if verbatim is not None:
                 body = verbatim.replace('\\n', '\n')
                 body = '\n         '.join(line.strip() for line in body.split('\n'))
@@ -3432,7 +3449,7 @@ class CppGenerator:
                 for h in handlers:
                     if not isinstance(h, dict):
                         continue
-                    for _wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(h):
+                    for _wx_evt, fn, cast_type, verbatim in self._iter_handler_bindings(h, md):
                         if fn is None:
                             continue
                         pt = cast_type if (cast_type and cast_type != 'wxEvent') else 'wxEvent'
