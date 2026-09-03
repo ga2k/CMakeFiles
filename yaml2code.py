@@ -43,6 +43,65 @@ _CPP_NUMERIC_LITERAL_RE = re.compile(r'^[+-]?(?:0[xX][0-9a-fA-F]+|\d+\.\d*|\.\d+
 _CPP_IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
 
 
+# --- Style-flag homes ------------------------------------------------------------
+#
+# Each kind of "style bit" has exactly one well-defined YAML home, and the token
+# sets that belong in each are enforced (see _enforce_build_style below and, at
+# runtime, Interface.cpp):
+#
+#   build_style  -- control:/labels: maps in generator-source YAML. Compiled-in
+#                   construction/window-style flags (wxTAB_TRAVERSAL,
+#                   wxTE_PROCESS_ENTER, wxSP_ARROW_KEYS, wxTE_MULTILINE, ...).
+#   visual_style -- props: map in the layout YAML. Cosmetic window-style flags
+#                   re-applied at load time via SetWindowStyleFlag().
+#   sizer_style  -- sizer: map. wxSizer::Add() item flags (wxALL, wxGROW, ...).
+#
+# _COSMETIC_STYLE_TOKENS mirrors Interface.cpp's cosmeticStyleFlag() map;
+# _SIZER_FLAG_TOKENS mirrors Interface.cpp's parseSizerFlags() flagMap. A token in
+# either set does not belong in a *control* build_style. For a *label* build_style
+# only the sizer-only tokens are rejected -- alignment / border / ellipsize bits
+# are legitimate construction styles for a static-text widget.
+_COSMETIC_STYLE_TOKENS = frozenset({
+    'wxALIGN_LEFT', 'wxALIGN_RIGHT', 'wxALIGN_TOP', 'wxALIGN_BOTTOM',
+    'wxALIGN_CENTER', 'wxALIGN_CENTRE',
+    'wxALIGN_CENTER_HORIZONTAL', 'wxALIGN_CENTRE_HORIZONTAL',
+    'wxALIGN_CENTER_VERTICAL', 'wxALIGN_CENTRE_VERTICAL',
+    'wxTE_LEFT', 'wxTE_CENTRE', 'wxTE_CENTER', 'wxTE_RIGHT',
+    'wxST_ELLIPSIZE_START', 'wxST_ELLIPSIZE_MIDDLE', 'wxST_ELLIPSIZE_END',
+    'wxST_NO_AUTORESIZE',
+    'wxBORDER_NONE', 'wxBORDER_SIMPLE', 'wxBORDER_SUNKEN', 'wxBORDER_RAISED',
+    'wxBORDER_STATIC', 'wxBORDER_THEME',
+})
+_SIZER_FLAG_TOKENS = frozenset({
+    'expanding_control', 'fixed_control', 'right_label', 'left_label',
+    'wxALIGN_BOTTOM', 'wxALIGN_CENTER', 'wxALIGN_CENTRE',
+    'wxALIGN_CENTER_HORIZONTAL', 'wxALIGN_CENTRE_HORIZONTAL',
+    'wxALIGN_CENTER_VERTICAL', 'wxALIGN_CENTRE_VERTICAL',
+    'wxALIGN_LEFT', 'wxALIGN_RIGHT', 'wxALIGN_TOP',
+    'wxALL', 'wxBOTTOM', 'wxDOWN', 'wxEXPAND', 'wxFIXED_MINSIZE', 'wxGROW',
+    'wxLEFT', 'wxRESERVE_SPACE_EVEN_IF_HIDDEN', 'wxRIGHT', 'wxSHAPED',
+    'wxSTRETCH_NOT', 'wxTOP', 'wxUP',
+})
+# Sizer flags that are *only* sizer flags (never a valid window style) -- the set
+# rejected from a label build_style.
+_SIZER_ONLY_TOKENS = _SIZER_FLAG_TOKENS - _COSMETIC_STYLE_TOKENS
+
+
+def _build_style_reject_home(tok: str, *, is_label: bool) -> Optional[str]:
+    """If bare flag `tok` does not belong in a control/label build_style, name the
+       home it does belong in ('visual_style' or 'sizer_style'). Returns None for
+       a legitimate build_style flag -- including any unknown wx* token, which
+       passes through untouched."""
+    bare = tok.strip()
+    if is_label:
+        return 'sizer_style' if bare in _SIZER_ONLY_TOKENS else None
+    if bare in _COSMETIC_STYLE_TOKENS:
+        return 'visual_style'
+    if bare in _SIZER_ONLY_TOKENS:
+        return 'sizer_style'
+    return None
+
+
 class CppGenerator:
     """
     Generates C++23 module (.ixx) files from YAML form definitions: wxWidgets
@@ -2154,6 +2213,7 @@ class CppGenerator:
                 "border",
                 "col_widths",
                 "cols",
+                "flags",  # deprecated alias for sizer_style
                 "growable_cols",
                 "growable_rows",
                 "hgap",
@@ -2162,6 +2222,7 @@ class CppGenerator:
                 "proportion",
                 "row_heights",
                 "rows",
+                "sizer_style",
                 "span",
                 "vgap",
             },
@@ -2218,6 +2279,7 @@ class CppGenerator:
                 "alt_data_source",
                 "args",
                 "base_class",
+                "build_style",
                 "class",
                 "contains",
                 "default",
@@ -2230,19 +2292,20 @@ class CppGenerator:
                 "signature",
                 "size",
                 "sizer",
-                "style",
+                "style",  # deprecated alias for build_style
                 "table",
                 "uicreateflags",
                 "validator",
                 "value",
             },
             "label_entry": {
+                "build_style",
                 "class",
                 "key",
                 "pos",
                 "size",
                 "sizer",
-                "style",
+                "style",  # deprecated alias for build_style
                 "name",
                 "value",
             },
@@ -3091,25 +3154,53 @@ class CppGenerator:
         false_expr = self._resolve_style_branch(raw.get("if_false"), yaml_file, ctx)
         return f'({cond_expr} ? {true_expr} : {false_expr})'
 
+    def _enforce_build_style(self, style: str, ctx: str, yaml_file: Path, *, is_label: bool) -> str:
+        """Filter a resolved build_style expression, dropping (with a warning) any
+           flag token that belongs in visual_style or sizer_style instead. A
+           conditional/ternary expression is left untouched -- those are hand-authored
+           and rare, and can't be safely split on '|'."""
+        if not style or style == '0':
+            return style or '0'
+        if '?' in style or '(' in style:
+            return style
+        kept: List[str] = []
+        for tok in (t.strip() for t in style.split('|')):
+            if not tok:
+                continue
+            home = _build_style_reject_home(tok, is_label=is_label)
+            if home:
+                print(f"Warning: {ctx}: '{tok}' is not a construction flag -- it belongs in "
+                      f"{home}; ignored {yaml_file}", file=sys.stderr)
+                continue
+            kept.append(tok)
+        return '|'.join(kept) if kept else '0'
+
     def extract_style(self, element_name: str, elements: Dict[str, Any], yaml_file: Path) -> str:
         style = ''
-        if 'style' in elements:
-            ctx = f"'{element_name}'.style"
-            whole_conditional = self._resolve_style_conditional(elements['style'], yaml_file, ctx)
+        style_node = elements.get('build_style')
+        key = 'build_style'
+        if style_node is None and 'style' in elements:
+            style_node = elements['style']
+            key = 'style'
+            print(f"Warning: '{element_name}': 'style:' is deprecated for a control/label -- "
+                  f"rename to 'build_style:' {yaml_file}", file=sys.stderr)
+        if style_node is not None:
+            ctx = f"'{element_name}'.{key}"
+            whole_conditional = self._resolve_style_conditional(style_node, yaml_file, ctx)
             if whole_conditional is not None:
                 style = whole_conditional
-            elif isinstance(elements['style'], list):
-                style = self._resolve_style_flag_list(elements['style'], yaml_file, ctx)
-            elif isinstance(elements['style'], int):
-                ss = elements['style']
-                style = f'{ss}'
-            elif isinstance(elements['style'], str):
-                style = elements['style']
+            elif isinstance(style_node, list):
+                style = self._resolve_style_flag_list(style_node, yaml_file, ctx)
+            elif isinstance(style_node, int):
+                style = f'{style_node}'
+            elif isinstance(style_node, str):
+                style = style_node
             else:
                 print(
-                    f"Warning: 'style' for '{element_name}' must be a list, a string, an integer, or a "
+                    f"Warning: '{key}' for '{element_name}' must be a list, a string, an integer, or a "
                     f"conditional mapping; {yaml_file}",
                     file=sys.stderr)
+            style = self._enforce_build_style(style, ctx, yaml_file, is_label=False)
         else:
             # Default to wxTAB_TRAVERSAL for Groups and Pages to enable tab navigation
             if self.target_type in ("groups", "pages", "wizardpages"):
@@ -3639,8 +3730,23 @@ class CppGenerator:
 
                 label_value = entry.get('value', "")
 
-                flags = entry.get('style', [])
-                flags_str = ' | '.join(flags) if flags else 'wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL'
+                flags = entry.get('build_style')
+                if flags is None and 'style' in entry:
+                    flags = entry['style']
+                    print(f"Warning: label '{label_tag}': 'style:' is deprecated -- rename to "
+                          f"'build_style:' {yaml_file}", file=sys.stderr)
+                if isinstance(flags, str):
+                    flags = [flags]
+                # LIX::Second labels (samples, right-hand annotations) are left-aligned by
+                # convention; LIX::Main labels are right-aligned against their control.
+                is_second = 'Second' in label_key
+                default_align = 'wxALIGN_LEFT' if is_second else 'wxALIGN_RIGHT'
+                flags_str = ' | '.join(flags) if flags else f'{default_align} | wxALIGN_CENTER_VERTICAL'
+                flags_str = self._enforce_build_style(
+                    flags_str.replace(' | ', '|'), f"label '{label_tag}'.build_style", yaml_file,
+                    is_label=True).replace('|', ' | ')
+                if is_second:
+                    flags_str = flags_str.replace('wxALIGN_RIGHT', 'wxALIGN_LEFT')
 
                 # No 'size:' -> wxDefaultSize (a real args always follow it in createLabel()'s
                 # signature, so this can never be left as an undefined token like 'sizeLabel').
