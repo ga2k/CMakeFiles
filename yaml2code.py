@@ -180,7 +180,7 @@ class CppGenerator:
             'StaticBox':                'std::string',
             'StaticLine':               'hs::NullValue',
             'StaticText':               'std::string',
-            'TestButton':               'std::string',
+            'TestButton':               'TestStatus',
             'TextCtrl':                 'std::string',
             'ToggleButton':             'bool',
             'TreeCtrl':                 'hs::NullValue'
@@ -220,7 +220,7 @@ class CppGenerator:
             'StaticBox':                '""',
             'StaticLine':               '""',
             'StaticText':               '""',
-            'TestButton':               'hs::TestStatus::Untested',
+            'TestButton':               'TestStatus::Untested',
             'TextCtrl':                 '""',
             'ToggleButton':             'false',
             'TreeCtrl':                 '""',
