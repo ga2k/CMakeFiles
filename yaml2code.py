@@ -59,8 +59,13 @@ _CPP_IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
 # _COSMETIC_STYLE_TOKENS mirrors Interface.cpp's cosmeticStyleFlag() map;
 # _SIZER_FLAG_TOKENS mirrors Interface.cpp's parseSizerFlags() flagMap. A token in
 # either set does not belong in a *control* build_style. For a *label* build_style
-# only the sizer-only tokens are rejected -- alignment / border / ellipsize bits
-# are legitimate construction styles for a static-text widget.
+# only the sizer-only tokens are rejected -- alignment / ellipsize bits are
+# legitimate construction styles for a static-text widget.
+#
+# The wxBORDER_* family is deliberately NOT cosmetic: a border is baked into the
+# peer widget at Create() time on wxGTK/wxMSW and cannot be changed afterwards, so
+# it belongs in build_style for every widget (control and label alike) and is
+# rejected from props.visual_style at runtime.
 _COSMETIC_STYLE_TOKENS = frozenset({
     'wxALIGN_LEFT', 'wxALIGN_RIGHT', 'wxALIGN_TOP', 'wxALIGN_BOTTOM',
     'wxALIGN_CENTER', 'wxALIGN_CENTRE',
@@ -69,8 +74,6 @@ _COSMETIC_STYLE_TOKENS = frozenset({
     'wxTE_LEFT', 'wxTE_CENTRE', 'wxTE_CENTER', 'wxTE_RIGHT',
     'wxST_ELLIPSIZE_START', 'wxST_ELLIPSIZE_MIDDLE', 'wxST_ELLIPSIZE_END',
     'wxST_NO_AUTORESIZE',
-    'wxBORDER_NONE', 'wxBORDER_SIMPLE', 'wxBORDER_SUNKEN', 'wxBORDER_RAISED',
-    'wxBORDER_STATIC', 'wxBORDER_THEME',
 })
 _SIZER_FLAG_TOKENS = frozenset({
     'expanding_control', 'fixed_control', 'right_label', 'left_label',
