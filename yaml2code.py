@@ -154,12 +154,15 @@ class CppGenerator:
             'Button':                   'std::string',
             'CheckBox':                 'bool',
             'Choice':                   'ID::Type',
+            'ColourChooser':            'hs::colour',
             'Combo':                    'ID::Type',
             'ComplexComboBox':          'ID::Type',
             'ConfirmedPasswordCtrl':    'std::string',
             'DatePicker':               'wxDateTime',
             'ELBox':                    'ID::Type',
             'ExpandingNotesCtrl':       'std::string',
+            'FontCombo':                'std::string',
+            'FontList':                 'std::string',
             'Gauge':                    'int',
             'GridCtrl':                 'dunno',
             'Group':                    'std::string',
@@ -194,12 +197,15 @@ class CppGenerator:
             'Button':                   '""',
             'CheckBox':                 'false',
             'Choice':                   'ID::Null',
+            'ColourChooser':            'hs::colour{}',
             'Combo':                    'ID::Null',
             'ComplexComboBox':          'ID::Null',
             'ConfirmedPasswordCtrl':    '""',
             'DatePicker':               'nulldatetime',
             'ELBox':                    'ID::Null',
             'ExpandingNotesCtrl':       '""',
+            'FontCombo':                '""',
+            'FontList':                 '""',
             'Gauge':                    '0',
             'GridCtrl':                 'dunno',
             'Group':                    '""',
@@ -235,6 +241,7 @@ class CppGenerator:
             'Button':                   False,
             'CheckBox':                 True,
             'Choice':                   True,
+            'ColourChooser':            True,
             'Combo':                    True,
             'ComplexComboBox':          True,
             'ConfirmedPasswordCtrl':    True,
@@ -242,6 +249,8 @@ class CppGenerator:
             'DatePicker':               True,
             'ELBox':                    True,
             'ExpandingNotesCtrl':       True,
+            'FontCombo':                True,
+            'FontList':                 True,
             'Gauge':                    True,
             'GridCtrl':                 True,
             'Group':                    False,
@@ -296,6 +305,7 @@ class CppGenerator:
             'ButtonPanel':              'Button',
             'CheckBox':                 'CheckBox',
             'Choice':                   'Choice',
+            'ColourChooser':            'ColourChooserPanel',
             'Combo':                    'Combo',
             'ComboBox':                 'Combo',
             'ComplexComboBox':          'ComplexComboBox',
@@ -304,6 +314,8 @@ class CppGenerator:
             'DatePicker':               'DatePicker',
             'ELBox':                    'ELBox',
             'ExpandingNotesCtrl':       'ExpandingNotesCtrl',
+            'FontCombo':                'FontCombo',
+            'FontList':                 'FontList',
             'Gauge':                    'Gauge',
             'GridCtrl':                 'GridCtrl',
             'InfoBar':                  'InfoBar',
@@ -1795,10 +1807,10 @@ class CppGenerator:
 
             identity = element.get('section') or element.get('Section') or ""
             tool_tip = element.get('tool_tip', '')
-            items = element.get('items', [])
-            if not isinstance(items, list):
-                self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]) 'items' is a "
-                          f"{type(items).__name__}, not a list - DROPPED, section produces nothing")
+            items = self._unit_entries(element)
+            if not items and element.get('unit') is not None and not isinstance(element.get('unit'), dict):
+                self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]) 'unit' is a "
+                          f"{type(element.get('unit')).__name__}, not a mapping - DROPPED, section produces nothing")
                 continue
 
             self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]): {len(items)} item(s)")
@@ -1814,7 +1826,7 @@ class CppGenerator:
 
             for item_idx, item in enumerate(items):
                 if not isinstance(item, dict):
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}] is a "
+                    self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}] is a "
                               f"{type(item).__name__}, not a mapping - DROPPED")
                     continue
 
@@ -1822,7 +1834,7 @@ class CppGenerator:
                 if self.target_type == "groups" and "control" in item and isinstance(item["control"], dict):
                     md = item["control"]
                     var = self.extract_member_variable(md, f"control '{identity}'", yaml_file)
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: control "
+                    self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: control "
                               f"'{var}' (class={md.get('class')!r})")
                     # Per-member verbatim (Placement: before addControl)
                     controlset_verbatim = self._extract_verbatim_body(md)
@@ -1846,7 +1858,7 @@ class CppGenerator:
                     # Per-member verbatim (Placement: before addGroup/addControl)
                     controlset_verbatim = self._extract_verbatim_body(md)
                     if is_nested_group:
-                        self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: nested group "
+                        self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: nested group "
                                   f"'{var}' (class={md.get('class')!r})")
                         creation_code.extend(self._generate_single_group(
                             member_name=var,
@@ -1862,7 +1874,7 @@ class CppGenerator:
                         # A plain leaf control placed directly on a Page/WizardPage (not
                         # wrapped in a Group) - needs the full control-generation path so
                         # its label/validator/tooltip/dbInfo are actually wired up.
-                        self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: control "
+                        self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: control "
                                   f"'{var}' (class={md.get('class')!r})")
                         creation_code.extend(self._generate_single_control(
                             member_name=var,
@@ -1878,7 +1890,7 @@ class CppGenerator:
                 # Spacers carry no C++ object - just placement, resolved at runtime by
                 # Interface::loadLayout. Only validate the schema and (optionally) trace it.
                 elif "spacer" in item and isinstance(item["spacer"], dict):
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: spacer")
+                    self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: spacer")
                     spacer_def = item["spacer"]
                     self._warn_unknown_keys(spacer_def, {"sizer"}, f"spacer '{identity}'", yaml_file)
                     if self.sizer_info and spacer_def.get('sizer'):
@@ -1887,7 +1899,7 @@ class CppGenerator:
                             f'      // Spacer: Position: {sp.position}, Border: {sp.border}')
 
                 elif "expanding_spacer" in item and isinstance(item["expanding_spacer"], dict):
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: expanding_spacer")
+                    self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: expanding_spacer")
                     spacer_def = item["expanding_spacer"]
                     self._warn_unknown_keys(spacer_def, {"sizer"}, f"expanding_spacer '{identity}'", yaml_file)
                     if self.sizer_info and spacer_def.get('sizer'):
@@ -1900,7 +1912,7 @@ class CppGenerator:
                     # recognizes here (e.g. a label-only item - those are picked up
                     # separately via _generate_labels()). Not an error, but silent
                     # unless traced.
-                    self._dbg(f"'{group_name}': section '{identity}'.items[{item_idx}]: no control/spacer "
+                    self._dbg(f"'{group_name}': section '{identity}'.unit[{item_idx}]: no control/spacer "
                               f"recognized for target_type '{self.target_type}' (keys: {list(item.keys())}) "
                               f"- contributes no creation code here")
 
@@ -2154,9 +2166,7 @@ class CppGenerator:
                 continue
             has_group = bool(element.get("has_group"))
             has_control = bool(element.get("has_control"))
-            items = element.get("items", [])
-            if not isinstance(items, list):
-                continue
+            items = self._unit_entries(element)
             for item in items:
                 if not isinstance(item, dict):
                     continue
@@ -2173,6 +2183,37 @@ class CppGenerator:
                     ctrl_class = self.resolve_member_cpp_type(var or "Ctrl", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
         return decls
+
+    # -------- element unit: helper --------
+    @staticmethod
+    def _unit_entries(element: Any) -> List[Dict[str, Any]]:
+        """Legacy-shaped list of item entries for an element, read from its `unit:`
+        mapping. `unit` sub-keys: `control` (map), `labels` (seq), `spacer` /
+        `expanding_spacer` / `expanding_sizer` (map), and `spacers` (seq of
+        single-key spacer maps, for a section with more than one filler). Returns
+        `[{'labels': [...]}, {'control': {...}}, {'expanding_spacer': {...}}, ...]`
+        so every downstream `for item in items:` loop keeps working unchanged."""
+        if not isinstance(element, dict):
+            return []
+        unit = element.get('unit')
+        if not isinstance(unit, dict):
+            return []
+        out: List[Dict[str, Any]] = []
+        if isinstance(unit.get('labels'), list):
+            out.append({'labels': unit['labels']})
+        if isinstance(unit.get('control'), dict):
+            out.append({'control': unit['control']})
+        if isinstance(unit.get('group'), dict):
+            out.append({'group': unit['group']})
+        for k in ('spacer', 'expanding_spacer', 'expanding_sizer'):
+            if isinstance(unit.get(k), dict):
+                out.append({k: unit[k]})
+        spacers = unit.get('spacers')
+        if isinstance(spacers, list):
+            for sp in spacers:
+                if isinstance(sp, dict):
+                    out.append(sp)
+        return out
 
     # -------- helpers for debugging unknown keys --------
     def _warn_unknown_keys(self, obj: Any, allowed: set[str], context: str, yamlfile: Path) -> None:
@@ -2269,17 +2310,20 @@ class CppGenerator:
             },
             "control_set": {
                 "section",
-                "items",
+                "unit",
                 "size",
                 "sizer",
                 "tool_tip",
                 "verbatim",
             },
-            "item_entry": {
+            "unit_entry": {
                 "labels",
                 "control",
+                "group",
                 "spacer",
                 "expanding_spacer",
+                "expanding_sizer",
+                "spacers",
             },
             "control_member_def": {
                 "alt_data_source",
@@ -2486,9 +2530,7 @@ class CppGenerator:
         for element in elements:
             if not isinstance(element, dict):
                 continue
-            items = element.get('items', [])
-            if not isinstance(items, list):
-                continue
+            items = self._unit_entries(element)
 
             for item in items:
                 if not isinstance(item, dict):
@@ -2751,9 +2793,7 @@ class CppGenerator:
         for element in elements:
             if not isinstance(element, dict):
                 continue
-            items = element.get("items", [])
-            if not isinstance(items, list):
-                continue
+            items = self._unit_entries(element)
             for item in items:
                 if not isinstance(item, dict) or "control" not in item or not isinstance(item["control"], dict):
                     continue
@@ -2781,9 +2821,7 @@ class CppGenerator:
         for element in elements:
             if not isinstance(element, dict):
                 continue
-            items = element.get("items", [])
-            if not isinstance(items, list):
-                continue
+            items = self._unit_entries(element)
             for item in items:
                 if not isinstance(item, dict) or "control" not in item or not isinstance(item["control"], dict):
                     continue
@@ -3528,9 +3566,7 @@ class CppGenerator:
         for element in elements:
             if not isinstance(element, dict):
                 continue
-            items = element.get('items', [])
-            if not isinstance(items, list):
-                continue
+            items = self._unit_entries(element)
             for item in items:
                 if not isinstance(item, dict) or not isinstance(item.get('control'), dict):
                     continue
@@ -3704,10 +3740,10 @@ class CppGenerator:
                       "DROPPED, no labels generated")
             return code
 
-        items = element.get('items', [])
-        if not isinstance(items, list):
+        items = self._unit_entries(element)
+        if not items and not isinstance(element.get('unit'), dict):
             self._dbg(f"_generate_labels: section '{element.get('section') or element.get('Section')}' "
-                      f"'items' is a {type(items).__name__}, not a list - DROPPED")
+                      f"'unit' is a {type(element.get('unit')).__name__}, not a mapping - DROPPED")
             return code
 
         for item in items:
