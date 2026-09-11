@@ -1066,6 +1066,16 @@ class CppGenerator:
                     av.append('      return db::RequestResult::veto("Adding a record is not permitted here.");')
                     av.append("   }")
                     access_groups['public'].append('\n'.join(av))
+                if recordset.get('allow_edit') is False:
+                    ev: List[str] = ["   auto editValidationResult() -> db::RequestResult override {"]
+                    ev.append('      return db::RequestResult::veto("Editing is not permitted here.");')
+                    ev.append("   }")
+                    access_groups['public'].append('\n'.join(ev))
+                if recordset.get('allow_delete') is False:
+                    dv: List[str] = ["   auto deleteValidationResult() -> db::RequestResult override {"]
+                    dv.append('      return db::RequestResult::veto("Deleting a record is not permitted here.");')
+                    dv.append("   }")
+                    access_groups['public'].append('\n'.join(dv))
             else:  # groups: unchanged -- Group owns no RowSet of its own to inherit this from.
                 rfc: List[str] = []
                 rfc.append("   auto refreshFromCurrent (const db::Row *rec) -> void {")
@@ -2299,7 +2309,9 @@ class CppGenerator:
             "recordset_def": {
                 "table",
                 "order_by",
-                "allow_add"
+                "allow_add",
+                "allow_edit",
+                "allow_delete",
             },
             "alt_data_source_def": {
                 "blank_text",
@@ -2701,10 +2713,13 @@ class CppGenerator:
 
     def extract_recordset(self, element_name: str, class_def: Dict[str, Any],
                           yaml_file: Path) -> Optional[Dict[str, str]]:
-        """Extract the 'recordset:' block: {table, order_by}. Reads/writes go through the
-        generic db::RowSet/db::Row (DB.RowSet) -- no generated per-table class needed.
-        'table' is only required to generate a page's reloadTable() -- a group's recordset:
-        (which only needs refreshFromCurrent()/refreshEx() scaffolding) can omit it."""
+        """Extract the 'recordset:' block: {table, order_by, allow_add, allow_edit, allow_delete}.
+        Reads/writes go through the generic db::RowSet/db::Row (DB.RowSet) -- no generated
+        per-table class needed. 'table' is only required to generate a page's reloadTable() --
+        a group's recordset: (which only needs refreshFromCurrent()/refreshEx() scaffolding) can
+        omit it. allow_add/allow_edit/allow_delete default true; false generates a blind-veto
+        addValidationResult()/editValidationResult()/deleteValidationResult() override (see
+        generate_ui_module)."""
         rs = class_def.get('recordset')
         if rs is None:
             return None
@@ -2721,11 +2736,19 @@ class CppGenerator:
         if self.debugging and tbl is None:
             print(f"Warning: '{element_name}': reloadTable() generation skipped (no 'table') {yaml_file}")
         order_by = rs.get('order_by', 'id')
-        allow_add = rs.get('allow_add', True)
-        if not isinstance(allow_add, bool):
-            print(f"Error: '{element_name}': 'recordset' 'allow_add' must be a bool {yaml_file}", file=sys.stderr)
-            allow_add = True
-        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by, 'allow_add': allow_add}
+
+        def _bool_flag(key: str) -> bool:
+            val = rs.get(key, True)
+            if not isinstance(val, bool):
+                print(f"Error: '{element_name}': 'recordset' '{key}' must be a bool {yaml_file}", file=sys.stderr)
+                return True
+            return val
+
+        allow_add = _bool_flag('allow_add')
+        allow_edit = _bool_flag('allow_edit')
+        allow_delete = _bool_flag('allow_delete')
+        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by,
+                'allow_add': allow_add, 'allow_edit': allow_edit, 'allow_delete': allow_delete}
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
