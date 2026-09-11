@@ -171,6 +171,7 @@ class CppGenerator:
             'Group':                    'std::string',
             'InfoBar':                  'hs::NullType',
             'IntTextCtrl':              'int',
+            'Label':                    'std::string',
             'MarkupText':               'std::string',
             'MaskedEdit':               'std::string',
             'NotesCtrl':                'std::string',
@@ -185,7 +186,6 @@ class CppGenerator:
             'SpinCtrlDouble':           'double',
             'StaticBox':                'std::string',
             'StaticLine':               'hs::NullValue',
-            'StaticText':               'std::string',
             'TestButton':               'TestStatus',
             'TextCtrl':                 'std::string',
             'ToggleButton':             'bool',
@@ -214,6 +214,7 @@ class CppGenerator:
             'Group':                    '""',
             'InfoBar':                  'Null',
             'IntTextCtrl':              '0',
+            'Label':                    '""',
             'MarkupText':               '""',
             'MaskedEdit':               '""',
             'NotesCtrl':                '""',
@@ -228,7 +229,6 @@ class CppGenerator:
             'SpinCtrlDouble':           '0',
             'StaticBox':                '""',
             'StaticLine':               '""',
-            'StaticText':               '""',
             'TestButton':               'TestStatus::Untested',
             'TextCtrl':                 '""',
             'ToggleButton':             'false',
@@ -259,6 +259,7 @@ class CppGenerator:
             'Group':                    False,
             'InfoBar':                  False,
             'IntTextCtrl':              True,
+            'Label':                    True,
             'MarkupText':               True,
             'MaskedEdit':               True,
             'NotesCtrl':                True,
@@ -275,7 +276,6 @@ class CppGenerator:
             'SpinCtrlDouble':           True,
             'StaticBox':                False,
             'StaticLine':               False,
-            'StaticText':               True,
             'TestButton':               False,
             'TextCtrl':                 True,
             'ToggleButton':             False,
@@ -295,7 +295,7 @@ class CppGenerator:
         # FALLBACK by get_required_imports() only when a control:/labels: entry omits an
         # explicit 'module:' -- an explicit 'module:' (string or list) is always used verbatim
         # and stays the right choice for a per-app subclass that needs companion modules
-        # (e.g. mc::TitlesChoice -> [ Titles.Choice, Choice, StaticText ]). Every value here
+        # (e.g. mc::TitlesChoice -> [ Titles.Choice, Choice, Label ]). Every value here
         # is a real module name -- cross-checked against `grep '^export module' Libs/Gfx/src`.
         # Keyed by both concrete widget names and the base_class names YAML commonly uses.
         self.control_to_module = {
@@ -325,6 +325,7 @@ class CppGenerator:
             'IntChoice':                'Choice',
             'IntComboBox':              'Combo',
             'IntTextCtrl':              'TextCtrl',
+            'Label':                    'Label',
             'ListBox':                  'ListBox',
             'ListCtrl':                 'ListCtrl',
             'MarkupText':               'MarkupText',
@@ -341,7 +342,6 @@ class CppGenerator:
             'SpinCtrlDouble':           'SpinCtrl',
             'StaticBox':                'StaticBox',
             'StaticLine':               'StaticLine',
-            'StaticText':               'StaticText',
             'TestButton':               'Button',
             'TextCtrl':                 'TextCtrl',
             'ToggleButton':             'Button',
@@ -1066,6 +1066,16 @@ class CppGenerator:
                     av.append('      return db::RequestResult::veto("Adding a record is not permitted here.");')
                     av.append("   }")
                     access_groups['public'].append('\n'.join(av))
+                if recordset.get('allow_edit') is False:
+                    ev: List[str] = ["   auto editValidationResult() -> db::RequestResult override {"]
+                    ev.append('      return db::RequestResult::veto("Editing is not permitted here.");')
+                    ev.append("   }")
+                    access_groups['public'].append('\n'.join(ev))
+                if recordset.get('allow_delete') is False:
+                    dv: List[str] = ["   auto deleteValidationResult() -> db::RequestResult override {"]
+                    dv.append('      return db::RequestResult::veto("Deleting a record is not permitted here.");')
+                    dv.append("   }")
+                    access_groups['public'].append('\n'.join(dv))
             else:  # groups: unchanged -- Group owns no RowSet of its own to inherit this from.
                 rfc: List[str] = []
                 rfc.append("   auto refreshFromCurrent (const db::Row *rec) -> void {")
@@ -1332,7 +1342,8 @@ class CppGenerator:
 
     def _cpp_string_literal(self, s: str) -> str:
         """Escape a Python string for embedding as a C++ string literal body (no surrounding quotes)."""
-        return str(s).replace("\\", "\\\\").replace('"', '\\"')
+        return (str(s).replace("\\", "\\\\").replace('"', '\\"')
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t"))
 
     def generate_wizard_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path,
                                output_dir: Optional[Path] = None) -> str:
@@ -2299,7 +2310,9 @@ class CppGenerator:
             "recordset_def": {
                 "table",
                 "order_by",
-                "allow_add"
+                "allow_add",
+                "allow_edit",
+                "allow_delete",
             },
             "alt_data_source_def": {
                 "blank_text",
@@ -2701,10 +2714,13 @@ class CppGenerator:
 
     def extract_recordset(self, element_name: str, class_def: Dict[str, Any],
                           yaml_file: Path) -> Optional[Dict[str, str]]:
-        """Extract the 'recordset:' block: {table, order_by}. Reads/writes go through the
-        generic db::RowSet/db::Row (DB.RowSet) -- no generated per-table class needed.
-        'table' is only required to generate a page's reloadTable() -- a group's recordset:
-        (which only needs refreshFromCurrent()/refreshEx() scaffolding) can omit it."""
+        """Extract the 'recordset:' block: {table, order_by, allow_add, allow_edit, allow_delete}.
+        Reads/writes go through the generic db::RowSet/db::Row (DB.RowSet) -- no generated
+        per-table class needed. 'table' is only required to generate a page's reloadTable() --
+        a group's recordset: (which only needs refreshFromCurrent()/refreshEx() scaffolding) can
+        omit it. allow_add/allow_edit/allow_delete default true; false generates a blind-veto
+        addValidationResult()/editValidationResult()/deleteValidationResult() override (see
+        generate_ui_module)."""
         rs = class_def.get('recordset')
         if rs is None:
             return None
@@ -2721,11 +2737,19 @@ class CppGenerator:
         if self.debugging and tbl is None:
             print(f"Warning: '{element_name}': reloadTable() generation skipped (no 'table') {yaml_file}")
         order_by = rs.get('order_by', 'id')
-        allow_add = rs.get('allow_add', True)
-        if not isinstance(allow_add, bool):
-            print(f"Error: '{element_name}': 'recordset' 'allow_add' must be a bool {yaml_file}", file=sys.stderr)
-            allow_add = True
-        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by, 'allow_add': allow_add}
+
+        def _bool_flag(key: str) -> bool:
+            val = rs.get(key, True)
+            if not isinstance(val, bool):
+                print(f"Error: '{element_name}': 'recordset' '{key}' must be a bool {yaml_file}", file=sys.stderr)
+                return True
+            return val
+
+        allow_add = _bool_flag('allow_add')
+        allow_edit = _bool_flag('allow_edit')
+        allow_delete = _bool_flag('allow_delete')
+        return {'table': tbl.strip() if isinstance(tbl, str) else None, 'order_by': order_by,
+                'allow_add': allow_add, 'allow_edit': allow_edit, 'allow_delete': allow_delete}
 
     def extract_alt_data_source(self, element_name: str, member_def: Dict[str, Any],
                                 yaml_file: Path) -> Optional[Dict[str, Any]]:
