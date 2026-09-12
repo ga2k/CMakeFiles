@@ -855,7 +855,7 @@ class CppGenerator:
             # concept, Gfx/src/ctrls/ELBox.ixx) -- harmless additions for Choice/Combo/ListBox,
             # which only require DBSourceFor and never reference them.
             code.append(
-                f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"; }}')
+                f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"sv; }}')
             code.append(
                 f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
             code.append("};")
