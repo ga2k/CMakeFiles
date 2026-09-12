@@ -272,27 +272,24 @@ function(addLibrary)
     #   appended explicitly).  This keeps the abi_tag state consistent across all TUs
     #   and avoids "definition with same mangled name" ODR conflicts in libc++ 21+.
     #
-    #   PCH binary location depends on role:
-    #     Builder (Gfx main lib / Gfx internal plugins): ${CMAKE_BINARY_DIR}/pch/
-    #       — lives in the build tree, isolated per preset; promoted to staging by
-    #         the install step.
-    #     Consumer (MyHealthGuru, targets with GFX in arg_USES): staged path
-    #       ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/ — the binary must
-    #         have been deployed there by a prior Gfx install step.
+    #   PCH binary location — ONE path for everyone:
+    #     ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch
+    #   Gfx (builder) writes the PCH DIRECTLY there; MyCare (consumer) reads it from
+    #   there.  Using the same path in both roles is mandatory: Clang embeds the PCH
+    #   path in every compiled BMI, and if a consumer provides the PCH at a different
+    #   path (even a bit-for-bit copy), Clang loads both PCH files simultaneously and
+    #   sees duplicate declarations for all STL/wx types → ODR errors.
     # ────────────────────────────────────────────────────────────────────────────
 
     if ( (WIN32 OR LINUX OR APPLE) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
-        # All WIN32/Linux/Apple GUI targets (Gfx main library, Gfx plugins, MyHealthGuru) must use
-        # the SAME shared PCH binary.  Every compilation that loads a Gfx BMI must
-        # include the same PCH so Clang's module ODR checker sees consistent wx
-        # class definitions across all translation units and BMIs.
-        if (GFX IN_LIST arg_USES)
-            # Consumer (MyHealthGuru / external plugins): find PCH staged by Gfx install
-            set(_hs_pch_dir "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}")
-        else()
-            # Builder (Gfx main library / Gfx internal plugins): build artifact → build tree
-            set(_hs_pch_dir "${CMAKE_BINARY_DIR}/pch")
-        endif()
+        # CRITICAL: all targets — builders (Gfx) AND consumers (MyCare) — must use the
+        # PCH at the SAME FILE PATH.  Clang embeds the PCH path in every BMI (.pcm).
+        # If consumers provide a PCH at a different path (even a binary-identical copy),
+        # Clang loads BOTH PCH files and sees duplicate declarations for all STL/wx types
+        # (e.g. std::basic_string_view) → "definition provided earlier" ODR errors.
+        # Fix: Gfx writes the PCH directly to the staged location; everyone references
+        # the same path.
+        set(_hs_pch_dir "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}")
         set(_hs_pch_bin "${_hs_pch_dir}/wx_pch.gch")
 
         if (NOT GFX IN_LIST arg_USES)
@@ -403,7 +400,7 @@ function(addLibrary)
                 add_custom_target(_hs_wx_pch DEPENDS "${_hs_pch_bin}")
                 message("_hs_pch_bin is ${_hs_pch_bin}")
 
-                install(FILES "${_hs_pch_bin}" DESTINATION "lib/cmake/pch/${APP_VENDOR}")
+                # PCH is written directly to the staged location; no separate install step.
             endif()
         endif()
 
