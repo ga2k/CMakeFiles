@@ -45,6 +45,14 @@ function(curl_preMakeAvailable pkgname)
 
     forceSet(CURL_DISABLE_SMTP "" OFF BOOL)
 
+    # Apple added pipe2() to the macOS 27 SDK with an availability attribute, so curl's
+    # feature-detection picks it up but Clang rejects the call when the deployment target
+    # is an earlier macOS version. Force HAVE_PIPE2 off so curl falls back to the
+    # pipe() + fcntl() + curlx_nonblock() path that worked on macOS all along.
+    if (APPLE)
+        forceSet(HAVE_PIPE2 "" OFF BOOL)
+    endif ()
+
     # curl's curl_internal_test macro uses the old positional try_compile(result bindir srcfile)
     # form deprecated in CMake 3.27 and broken in CMake 4.x: the generated temp project now
     # uses cmake_minimum_required(4.x) + target_sources, which rejects absolute paths outside

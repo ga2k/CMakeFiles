@@ -171,6 +171,7 @@ class CppGenerator:
             'Group':                    'std::string',
             'InfoBar':                  'hs::NullType',
             'IntTextCtrl':              'int',
+            'Label':                    'std::string',
             'MarkupText':               'std::string',
             'MaskedEdit':               'std::string',
             'NotesCtrl':                'std::string',
@@ -185,7 +186,6 @@ class CppGenerator:
             'SpinCtrlDouble':           'double',
             'StaticBox':                'std::string',
             'StaticLine':               'hs::NullValue',
-            'StaticText':               'std::string',
             'TestButton':               'TestStatus',
             'TextCtrl':                 'std::string',
             'ToggleButton':             'bool',
@@ -214,6 +214,7 @@ class CppGenerator:
             'Group':                    '""',
             'InfoBar':                  'Null',
             'IntTextCtrl':              '0',
+            'Label':                    '""',
             'MarkupText':               '""',
             'MaskedEdit':               '""',
             'NotesCtrl':                '""',
@@ -228,7 +229,6 @@ class CppGenerator:
             'SpinCtrlDouble':           '0',
             'StaticBox':                '""',
             'StaticLine':               '""',
-            'StaticText':               '""',
             'TestButton':               'TestStatus::Untested',
             'TextCtrl':                 '""',
             'ToggleButton':             'false',
@@ -259,6 +259,7 @@ class CppGenerator:
             'Group':                    False,
             'InfoBar':                  False,
             'IntTextCtrl':              True,
+            'Label':                    True,
             'MarkupText':               True,
             'MaskedEdit':               True,
             'NotesCtrl':                True,
@@ -275,7 +276,6 @@ class CppGenerator:
             'SpinCtrlDouble':           True,
             'StaticBox':                False,
             'StaticLine':               False,
-            'StaticText':               True,
             'TestButton':               False,
             'TextCtrl':                 True,
             'ToggleButton':             False,
@@ -295,7 +295,7 @@ class CppGenerator:
         # FALLBACK by get_required_imports() only when a control:/labels: entry omits an
         # explicit 'module:' -- an explicit 'module:' (string or list) is always used verbatim
         # and stays the right choice for a per-app subclass that needs companion modules
-        # (e.g. mc::TitlesChoice -> [ Titles.Choice, Choice, StaticText ]). Every value here
+        # (e.g. mc::TitlesChoice -> [ Titles.Choice, Choice, Label ]). Every value here
         # is a real module name -- cross-checked against `grep '^export module' Libs/Gfx/src`.
         # Keyed by both concrete widget names and the base_class names YAML commonly uses.
         self.control_to_module = {
@@ -325,6 +325,7 @@ class CppGenerator:
             'IntChoice':                'Choice',
             'IntComboBox':              'Combo',
             'IntTextCtrl':              'TextCtrl',
+            'Label':                    'Label',
             'ListBox':                  'ListBox',
             'ListCtrl':                 'ListCtrl',
             'MarkupText':               'MarkupText',
@@ -341,7 +342,6 @@ class CppGenerator:
             'SpinCtrlDouble':           'SpinCtrl',
             'StaticBox':                'StaticBox',
             'StaticLine':               'StaticLine',
-            'StaticText':               'StaticText',
             'TestButton':               'Button',
             'TextCtrl':                 'TextCtrl',
             'ToggleButton':             'Button',
@@ -1342,7 +1342,8 @@ class CppGenerator:
 
     def _cpp_string_literal(self, s: str) -> str:
         """Escape a Python string for embedding as a C++ string literal body (no surrounding quotes)."""
-        return str(s).replace("\\", "\\\\").replace('"', '\\"')
+        return (str(s).replace("\\", "\\\\").replace('"', '\\"')
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t"))
 
     def generate_wizard_module(self, target_name: str, class_def: Dict[str, Any], yaml_file: Path,
                                output_dir: Optional[Path] = None) -> str:
