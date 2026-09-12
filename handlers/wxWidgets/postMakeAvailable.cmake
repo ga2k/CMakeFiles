@@ -132,6 +132,20 @@ function(wxWidgets_postMakeAvailable sourceDir buildDir outDir buildType)
 
             if(NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
                 target_compile_options("${t}" PRIVATE -w)
+                if (APPLE)
+                    # macOS 27 SDK: Apple's float.h gates all macro definitions on
+                    # !__has_feature(modules). ObjC++ .mm compilation enables modules
+                    # implicitly for framework headers, so FLT_MAX/DBL_MAX etc. are
+                    # never defined — including in Apple's own NSWindow.h/NSStackView.h.
+                    # Pre-define them via compiler flags using Clang's always-available
+                    # predefined builtins, which survive the modules guard entirely.
+                    target_compile_options("${t}" PRIVATE
+                        "-DFLT_MAX=__FLT_MAX__"
+                        "-DFLT_MIN=__FLT_MIN__"
+                        "-DDBL_MAX=__DBL_MAX__"
+                        "-DDBL_MIN=__DBL_MIN__"
+                    )
+                endif ()
             endif()
 
             # Force wx shared libs to be relocatable within the stage/install tree.
