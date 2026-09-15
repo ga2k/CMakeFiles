@@ -438,10 +438,38 @@ function(project_install _Folder)
                     EXECUTABLES \${_hs_scan_bins}
                     RESOLVED_DEPENDENCIES_VAR _hs_resolved
                     UNRESOLVED_DEPENDENCIES_VAR _hs_unresolved
+                    CONFLICTING_DEPENDENCIES_PREFIX _hs_conflict
                     DIRECTORIES \"\${_hs_toolchain_bin}\"
                     PRE_EXCLUDE_REGEXES \"^api-ms-\" \"^ext-ms-\" \"^hvsifiletrust\" \"^pdmutilities\"
                     POST_EXCLUDE_REGEXES \"[Ss]ystem32\" \"[Ss]ys[Ww][Oo][Ww]64\" \"[Ww]inSxS\"
                 )
+                # The same DLL name can legitimately resolve to two different directories:
+                # once already staged in the install prefix (a dependency of an already-
+                # installed DLL), and once via the toolchain DIRECTORIES fallback (a
+                # transitive dependency of a DLL only found there). This isn't a real
+                # ambiguity -- Windows resolves each per depending file -- so pick one
+                # path per conflicting name instead of erroring: prefer the toolchain
+                # copy (current) over whatever happens to already be staged (may be stale).
+                foreach (_hs_cf_name IN LISTS _hs_conflict_FILENAMES)
+                    set(_hs_cf_pick \"\")
+                    foreach (_hs_cf_path IN LISTS _hs_conflict_\${_hs_cf_name})
+                        string(FIND \"\${_hs_cf_path}\" \"\${_hs_toolchain_bin}\" _hs_cf_idx)
+                        if (_hs_cf_idx EQUAL 0)
+                            set(_hs_cf_pick \"\${_hs_cf_path}\")
+                            break()
+                        endif ()
+                    endforeach ()
+                    if (NOT _hs_cf_pick)
+                        list(GET _hs_conflict_\${_hs_cf_name} 0 _hs_cf_pick)
+                    endif ()
+                    list(APPEND _hs_resolved \"\${_hs_cf_pick}\")
+                    message(STATUS
+                        \"Install(${APP_NAME}): resolved conflicting runtime dependency '\${_hs_cf_name}' -> \${_hs_cf_pick}\")
+                endforeach ()
+                unset(_hs_cf_name)
+                unset(_hs_cf_path)
+                unset(_hs_cf_pick)
+                unset(_hs_cf_idx)
                 foreach (_hs_dep IN LISTS _hs_resolved)
                     file(INSTALL
                         DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\"
