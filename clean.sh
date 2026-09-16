@@ -46,11 +46,11 @@ fi
 
 f "build/$p1/$p2/$p3" "build"
 f "out/$p1/$p2/$p3"   "out"
-f "/home/geoffrey/dev/stage/$p1/$p2/$p3" "staged"
 mkdir -p ~/dev/stage/$p1/$p2/$p3
 
 if (( dc )); then
 
+  f "/home/geoffrey/dev/stage/$p1/$p2/$p3" "staged"
   f "/home/geoffrey/dev/archives/$p1/$p2/$p3" "archived"
   f "external/$p1/$p2/$p3" "external"
   mkdir -p ~/dev/archives/$p1/$p2/$p3
