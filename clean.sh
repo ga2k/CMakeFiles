@@ -36,7 +36,7 @@ fi
 
 if (( go || dc )); then
 
-  f "build/$p1/$p2/$p3/_deps/generated" "generated"
+  f "generated/$p1/$p2/$p3" "generated"
   if (( dc == 0 )); then
     echo "Done.           Sleeping zzzzzz...."
     sleep 5
@@ -46,7 +46,6 @@ fi
 
 f "build/$p1/$p2/$p3" "build"
 f "out/$p1/$p2/$p3"   "out"
-mkdir -p ~/dev/stage/$p1/$p2/$p3
 
 if (( dc )); then
 
@@ -54,6 +53,7 @@ if (( dc )); then
   f "/home/geoffrey/dev/archives/$p1/$p2/$p3" "archived"
   f "external/$p1/$p2/$p3" "external"
   mkdir -p ~/dev/archives/$p1/$p2/$p3
+  mkdir -p ~/dev/stage/$p1/$p2/$p3
 
 fi
 
