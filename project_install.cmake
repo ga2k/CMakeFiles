@@ -28,7 +28,7 @@ function(project_install _Folder)
 
     if (APP_GENERATE_RECORDSETS OR APP_GENERATE_UI_CLASSES)
 
-        set(GEN_DEST_DIR ${BUILD_DIR}/generated)
+        set(GEN_DEST_DIR generated${stemPath})
         if ("${APP_TYPE}" MATCHES "Executable")
             set(EXPORTS_VAR "")
         else ()
