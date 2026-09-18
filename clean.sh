@@ -26,7 +26,8 @@ f() {
 
 if (( pch || dc )); then
 
-  f "build/$p1/$p2/$p3/pch" pch
+  f "~/dev/projects/Libs/build/$p1/$p2/$p3/pch" pch
+  f "~/dev/projects/MyCare/build/$p1/$p2/$p3/pch" pch
   if (( dc == 0 )); then
     echo "Done.           Sleeping zzzzzz...."
     sleep 5
@@ -36,7 +37,9 @@ fi
 
 if (( go || dc )); then
 
-  f "generated/$p1/$p2/$p3" "generated"
+  f "~/dev/projects/Libs/generated/$p1/$p2/$p3" "generated"
+  f "~/dev/projects/MyCare/generated/$p1/$p2/$p3" "generated"
+
   if (( dc == 0 )); then
     echo "Done.           Sleeping zzzzzz...."
     sleep 5
@@ -44,14 +47,17 @@ if (( go || dc )); then
   fi
 fi
 
-f "build/$p1/$p2/$p3" "build"
-f "out/$p1/$p2/$p3"   "out"
+f "~/dev/projects/Libs/build/$p1/$p2/$p3" "build"
+f "~/dev/projects/MyCare/build/$p1/$p2/$p3" "build"
+f "~/dev/projects/Libs/out/$p1/$p2/$p3"   "out"
+f "~/dev/projects/MyCare/out/$p1/$p2/$p3"   "out"
 
 if (( dc )); then
 
-  f "/home/geoffrey/dev/stage/$p1/$p2/$p3" "staged"
-  f "/home/geoffrey/dev/archives/$p1/$p2/$p3" "archived"
-  f "external/$p1/$p2/$p3" "external"
+  f "~/dev/stage/$p1/$p2/$p3" "staged"
+  f "~/dev/archives/$p1/$p2/$p3" "archived"
+  f "~/dev/projects/Libs/external/$p1/$p2/$p3" "external"
+  f "~/dev/projects/MyCare/external/$p1/$p2/$p3" "external"
   mkdir -p ~/dev/archives/$p1/$p2/$p3
   mkdir -p ~/dev/stage/$p1/$p2/$p3
 
