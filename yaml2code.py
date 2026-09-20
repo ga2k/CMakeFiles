@@ -1100,8 +1100,7 @@ class CppGenerator:
                         bf.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
                         bf.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
                     for var in group_members:
-                        bf.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
-                        bf.append(f"         {var}->refreshFromCurrent(rec);")
+                        bf.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
                     bf.append("   }")
                     access_groups['public'].append('\n'.join(bf))
                 if recordset.get('allow_add') is False:
@@ -1131,8 +1130,7 @@ class CppGenerator:
                 for var in group_members:
                     # Guarded: a nested group without its own recordset: is skipped instead of
                     # breaking the build.
-                    rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
-                    rfc.append(f"         {var}->refreshFromCurrent(rec);")
+                    rfc.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
                 rfc.append("      refreshEx(rec);")
                 # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
                 # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
