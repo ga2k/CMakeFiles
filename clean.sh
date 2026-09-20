@@ -1,7 +1,17 @@
 #!/bin/bash
 if [ "${PROJECTS}" == "" ]; then
   echo 'Set the envvar "PROJECTS" to your base projects folder'
-  return 1
+  exit 1
+fi
+
+us=$(basename $(pwd))
+if [ "$us" == "MyCare" ]; then
+  them="Libs"
+elif [ "$us" == "Libs" ]; then
+  them="MyCare"
+else
+  echo "Where am I? Current directory should be 'MyCare' or 'Libs'"
+  exit 1
 fi
 
 go=0
@@ -33,9 +43,11 @@ f() {
 if (( pch || dc )); then
 
   f "$PROJECTS/Libs/build/$p1/$p2/$p3/pch" pch
-  f "$PROJECTS/MyCare/build/$p1/$p2/$p3/pch" pch
-  if (( dc == 0 )); then
-    echo "Done.           $num files removed. Tired now. Sleeping zzzzzz...."
+
+  if (( dc )); then
+    f "$PROJECTS/$them/build/$p1/$p2/$p3/pch" pch
+  else      Removing .
+    printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
     sleep 5
     exit 0
   fi
@@ -43,32 +55,35 @@ fi
 
 if (( go || dc )); then
 
-  f "$PROJECTS/Libs/generated/$p1/$p2/$p3" "generated"
-  f "$PROJECTS/MyCare/generated/$p1/$p2/$p3" "generated"
+  f "$PROJECTS/$us/generated/$p1/$p2/$p3" "generated"
 
-  if (( dc == 0 )); then
-    echo "Done.           $num files removed. Tired now. Sleeping zzzzzz...."
+  if (( dc )); then
+    f "$PROJECTS/$them/generated/$p1/$p2/$p3" "generated"
+  else
+    printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
     sleep 5
     exit 0
   fi
 fi
 
-f "$PROJECTS/Libs/build/$p1/$p2/$p3" "build"
-f "$PROJECTS/MyCare/build/$p1/$p2/$p3" "build"
-f "$PROJECTS/Libs/out/$p1/$p2/$p3"   "out"
-f "$PROJECTS/MyCare/out/$p1/$p2/$p3"   "out"
+f "$PROJECTS/$us/build/$p1/$p2/$p3" "build"
+f "$PROJECTS/$us/out/$p1/$p2/$p3"   "out"
 
 if (( dc )); then
 
+  f "$PROJECTS/$them/build/$p1/$p2/$p3" "build"
+  f "$PROJECTS/$them/out/$p1/$p2/$p3"   "out"
+
   f "~/dev/stage/$p1/$p2/$p3" "staged"
   f "~/dev/archives/$p1/$p2/$p3" "archived"
-  f "$PROJECTS/Libs/external/$p1/$p2/$p3" "external"
-  f "$PROJECTS/MyCare/external/$p1/$p2/$p3" "external"
+  f "$PROJECTS/$us/external/$p1/$p2/$p3" "external"
+  f "$PROJECTS/$them/external/$p1/$p2/$p3" "external"
+
   mkdir -p ~/dev/archives/$p1/$p2/$p3
   mkdir -p ~/dev/stage/$p1/$p2/$p3
 
 fi
 
-echo "Done.           $num files removed. Tired now. Sleeping zzzzzz...."
+printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
 sleep 5
 
