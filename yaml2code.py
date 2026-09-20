@@ -31,6 +31,49 @@ def ensure_yaml():
 
 yaml = ensure_yaml()
 
+
+class _ReplaceMarker:
+    """A map or sequence parsed from a `!replace`-tagged YAML node -- merge_yaml_nodes()
+    replaces the base's value with this wholesale instead of extending/deep-merging it.
+    Mirrors the `!replace` tag check in Util::mergeYAMLNodes (Libs/Core/src/Util.cpp)."""
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+class _IncludeLoader(yaml.SafeLoader):
+    """SafeLoader plus the `!replace` tag used by CppGenerator.load_and_merge_yaml_file()."""
+
+
+def _construct_replace(loader: 'yaml.SafeLoader', node: 'yaml.Node'):
+    if isinstance(node, yaml.MappingNode):
+        return _ReplaceMarker(loader.construct_mapping(node, deep=True))
+    if isinstance(node, yaml.SequenceNode):
+        return _ReplaceMarker(loader.construct_sequence(node, deep=True))
+    return loader.construct_scalar(node)  # !replace on a scalar is a no-op, as in the C++ original
+
+
+_IncludeLoader.add_constructor('!replace', _construct_replace)
+
+
+def merge_yaml_nodes(base: Dict[str, Any], extension: Dict[str, Any]) -> None:
+    """Python port of Util::mergeYAMLNodes (Libs/Core/src/Util.cpp). Mutates `base` in
+    place, layering `extension` onto it: sequences extend (append) by default, maps
+    deep-merge key by key, a `!replace`-tagged map/sequence in `extension` replaces the
+    base's value wholesale, and any other value from `extension` (scalars) always wins."""
+    for key, value in extension.items():
+        if isinstance(value, _ReplaceMarker):
+            base[key] = value.value
+        elif isinstance(base.get(key), list) and isinstance(value, list):
+            base[key].extend(value)
+        elif isinstance(value, dict):
+            if not isinstance(base.get(key), dict):
+                base[key] = {}
+            merge_yaml_nodes(base[key], value)
+        else:
+            base[key] = value
+
 # A C++ numeric literal, optionally signed, optionally hex, optionally carrying an
 # integer/float suffix (-1L, 0x10u, 3.0f, 123ULL, .5, 5.). Recognized so it can be
 # emitted verbatim instead of being run through int()/float() (which chokes on the
@@ -3452,7 +3495,7 @@ class CppGenerator:
         """Parse the YAML file and return the group definitions."""
         try:
             with open(yaml_file, 'r', encoding='utf-8') as file:
-                return yaml.safe_load(file)
+                return yaml.load(file, Loader=_IncludeLoader)
         except yaml.YAMLError as e:
             # Try to provide more helpful error information
             if hasattr(e, 'problem_mark'):
@@ -3462,6 +3505,21 @@ class CppGenerator:
                 if hasattr(e, 'context'):
                     print(f"  Context: {e.context}", file=sys.stderr)
             raise ValueError(f"Invalid YAML format in {yaml_file}: {e}")
+
+    def load_and_merge_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
+        """Python port of Util::loadAndMergeYAML (Libs/Core/src/Util.cpp). If the parsed
+        document has a top-level 'include:' key, recursively loads and merges that file's
+        content into this one via merge_yaml_nodes(). A relative include path is resolved
+        against yaml_file's own directory, not the process cwd."""
+        root = self.parse_yaml_file(yaml_file)
+        if isinstance(root, dict) and root.get('include'):
+            include_path = Path(root['include'])
+            if not include_path.is_absolute():
+                include_path = yaml_file.parent / include_path
+            included = self.load_and_merge_yaml_file(include_path)
+            if isinstance(included, dict):
+                merge_yaml_nodes(root, included)
+        return root
 
     # Multi-word wx tokens whose CamelCase can't be recovered by a plain .capitalize()
     # of the underscore-split event name -- used by _derive_handler_name().
@@ -4497,12 +4555,16 @@ class CppGenerator:
         "<table>_detail" view per table with relationships.
         """
 
-        data = self.parse_yaml_file(yaml_file)
-
-        # 'no_scan: true' is a topmost key. If present, the entire file is skipped.
-        no_scan = bool(data.get('no_scan', False)) if isinstance(data, dict) else false
-        if no_scan == True:
+        # 'no_scan: true' is a topmost key. If present, the entire file is skipped. It is
+        # read from the file's own unmerged content, before following 'include:' -- a
+        # fragment's 'no_scan: true' (needed so the fragment isn't independently scanned)
+        # must never leak into files that include it and disable them too.
+        raw = self.parse_yaml_file(yaml_file)
+        no_scan = bool(raw.get('no_scan', False)) if isinstance(raw, dict) else False
+        if no_scan:
             return ""
+
+        data = self.load_and_merge_yaml_file(yaml_file)
 
         # 'debugging: true' is a topmost key in the YAML document, a sibling of
         # 'groups:'/'pages:'/'wizardpages:'/'book:'/'wizard:'/'tables:' - not nested
