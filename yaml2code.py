@@ -206,6 +206,7 @@ class CppGenerator:
             'CheckedPasswordCtrl':      'std::string',
             'DatePicker':               'wxDateTime',
             'ELBox':                    'ID::Type',
+            'ELGrid':                   'ID::Type',
             'ExpandingNotesCtrl':       'std::string',
             'FontCombo':                'std::string',
             'FontList':                 'std::string',
@@ -249,6 +250,7 @@ class CppGenerator:
             'CheckedPasswordCtrl':      '""',
             'DatePicker':               'nulldatetime',
             'ELBox':                    'ID::Null',
+            'ELGrid':                   'ID::Null',
             'ExpandingNotesCtrl':       '""',
             'FontCombo':                '""',
             'FontList':                 '""',
@@ -294,6 +296,7 @@ class CppGenerator:
             'DateCtrl':                 True,
             'DatePicker':               True,
             'ELBox':                    True,
+            'ELGrid':                   True,
             'ExpandingNotesCtrl':       True,
             'FontCombo':                True,
             'FontList':                 True,
@@ -332,6 +335,7 @@ class CppGenerator:
         self.multi_row_control_classes = {
             'ListCtrl',
             'ELBox',
+            'ELGrid',
             'GridCtrl'
         }
         # Control class (or its base_class) -> the Gfx module that exports it. Consulted as a
@@ -359,6 +363,7 @@ class CppGenerator:
             'DateCtrl':                 'DatePicker',
             'DatePicker':               'DatePicker',
             'ELBox':                    'ELBox',
+            'ELGrid':                   'ELGrid',
             'ExpandingNotesCtrl':       'ExpandingNotesCtrl',
             'FontCombo':                'FontCombo',
             'FontList':                 'FontList',
@@ -901,6 +906,17 @@ class CppGenerator:
                 f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"sv; }}')
             code.append(
                 f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
+            # fields()/values() are only required by ELGridDBSourceFor (ELGrid's multi-column
+            # row-write-back concept, Gfx/src/ctrls/ELGrid.ixx) -- harmless additions for every
+            # other alt_data_source consumer (Choice/Combo/ListBox/ELBox), which only require
+            # DBSourceFor and never reference them. This synthesizes a single-column grid off the
+            # same display_field; alt_data_source: has no syntax for declaring more than one
+            # column, so a genuine multi-column ELGrid still needs a hand-written DBSource.
+            code.append(
+                f'   static auto fields() -> std::vector<std::pair<std::string, std::string>> '
+                f'{{ return {{{{"{alt_ds["display_field"]}", "{alt_ds["display_field"]}"}}}}; }}')
+            code.append(
+                f'   static auto values(const db::Row &r) -> std::vector<std::string> {{ return {{ displayText(r) }}; }}')
             code.append("};")
             code.append("")
 
