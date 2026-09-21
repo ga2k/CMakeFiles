@@ -65,13 +65,14 @@ set(extra_LibraryPaths)
 set(extra_LinkOptions)
 
 # std::stacktrace (C++23) needs a runtime backend, not just the header.
-# On Linux we build against libstdc++'s implementation (even under Clang), whose
-# symbols (std::__stacktrace_impl::...) live in libstdc++exp, a static archive
-# shipped next to libstdc++ itself and already on the compiler's library search
-# path -- it bundles its own copy of libbacktrace, so nothing else is needed.
+# On Linux and Windows (MSYS2/MinGW) we build against libstdc++'s implementation
+# (even under Clang), whose symbols (std::__stacktrace_impl::...) live in
+# libstdc++exp, a static archive shipped next to libstdc++ itself and already on
+# the compiler's library search path -- it bundles its own copy of libbacktrace,
+# so nothing else is needed.
 # HS_STACKTRACE_AVAILABLE gates the <stacktrace> usage in Core/include/Core/Core.h;
 # without it PRINT_STACKTRACE()/VERIFY_MSG()/ASSERT_MSG() fall back to a stub.
-if (LINUX)
+if (LINUX OR WIN32)
     execute_process(
             COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libstdc++exp.a
             OUTPUT_VARIABLE STDCXXEXP_LIB

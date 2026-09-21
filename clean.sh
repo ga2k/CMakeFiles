@@ -4,10 +4,11 @@ if [ "${PROJECTS}" == "" ]; then
   exit 1
 fi
 
-us=$(basename $(pwd))
-if [ "$us" == "MyCare" ]; then
+us=$(basename "$(pwd)")
+us_lc=$(tr '[:upper:]' '[:lower:]' <<< "$us")
+if [ "$us_lc" == "mycare" ]; then
   them="Libs"
-elif [ "$us" == "Libs" ]; then
+elif [ "$us_lc" == "libs" ]; then
   them="MyCare"
 else
   echo "Where am I? Current directory should be 'MyCare' or 'Libs'"
@@ -19,15 +20,18 @@ dc=0
 pch=0
 num=0
 
-shopt -s nocasematch
-
 p1=$(tr '[:upper:]' '[:lower:]' <<< "$1")
 p2=$(tr '[:upper:]' '[:lower:]' <<< "$2")
 p3=$(tr '[:upper:]' '[:lower:]' <<< "$3")
 
-for arg in "$@"; do [[ $arg == --pch ]]            && { pch=1; break; }; done
-for arg in "$@"; do [[ $arg == --generated-only ]] && { go=1;  break; }; done
-for arg in "$@"; do [[ $arg == --deep-clean ]]     && { dc=1;  break; }; done
+for arg in "$@"; do
+  arg_lc=$(tr '[:upper:]' '[:lower:]' <<< "$arg")
+  case "$arg_lc" in
+    --pch)            pch=1 ;;
+    --generated-only) go=1 ;;
+    --deep-clean)     dc=1 ;;
+  esac
+done
 
 f() {
     fc=0
@@ -35,7 +39,7 @@ f() {
     printf "Removing %5d %9s files from %s...\n" $fc $2 $1
     if (( fc > 0 )); then
         num=$((num + fc))
-        rm -rf $1
+        rm -rf "$1"
     fi
     return 0
 }
@@ -46,7 +50,7 @@ if (( pch || dc )); then
 
   if (( dc )); then
     f "$PROJECTS/$them/build/$p1/$p2/$p3/pch" pch
-  else      Removing .
+  else
     printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
     sleep 5
     exit 0
@@ -74,16 +78,15 @@ if (( dc )); then
   f "$PROJECTS/$them/build/$p1/$p2/$p3" "build"
   f "$PROJECTS/$them/out/$p1/$p2/$p3"   "out"
 
-  f "~/dev/stage/$p1/$p2/$p3" "staged"
-  f "~/dev/archives/$p1/$p2/$p3" "archived"
+  f "$HOME/dev/stage/$p1/$p2/$p3" "staged"
+  f "$HOME/dev/archives/$p1/$p2/$p3" "archived"
   f "$PROJECTS/$us/external/$p1/$p2/$p3" "external"
   f "$PROJECTS/$them/external/$p1/$p2/$p3" "external"
 
-  mkdir -p ~/dev/archives/$p1/$p2/$p3
-  mkdir -p ~/dev/stage/$p1/$p2/$p3
+  mkdir -p "$HOME/dev/archives/$p1/$p2/$p3"
+  mkdir -p "$HOME/dev/stage/$p1/$p2/$p3"
 
 fi
 
 printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
 sleep 5
-
