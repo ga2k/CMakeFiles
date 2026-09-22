@@ -191,12 +191,31 @@ function(addLibrary)
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
             CXX_EXTENSIONS              OFF
+            CXX_MODULE_STD              ON
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
             OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
             POSITION_INDEPENDENT_CODE   ON
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
+    )
+
+    # CMake's CXX_MODULE_STD support (still experimental as of 4.x) creates a
+    # synthetic "__cmake_cxx_std_23" target per directory scope that builds the
+    # `std`/`std.compat` BMIs, and correctly wires `-fmodule-file=std=...` into
+    # any TU in THIS SAME CMake project that (transitively) imports a module
+    # using `import std;`. It does NOT do this for a module consumed from an
+    # ALREADY-INSTALLED package via find_package() (e.g. MyCare importing one
+    # of Core's/Gfx's modules that internally uses `import std;`) -- the
+    # cross-package dependency scan doesn't see into the already-built BMI to
+    # discover the std dependency, so the consumer's compile fails with
+    # "failed to find module file for module 'std'". Verified by hand: adding
+    # this flag explicitly fixes it; CMake's own scanner just never adds it
+    # for this case. Harmless to add unconditionally -- a TU that doesn't
+    # reference `std` simply ignores an unused -fmodule-file. Revisit once
+    # CMake's cross-package import-std propagation matures.
+    target_compile_options(${arg_NAME} PRIVATE
+            "-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/__cmake_cxx_std_23.dir/std.pcm"
     )
 
     # VERSION drives CMake's versioned-filename + symlink behavior on its own,
