@@ -259,9 +259,51 @@ macro(check_environment PROJECT_ROOT)
         if (NOT PRESERVE_DIRS)
             # @formatter:off
 
-            set(HOME_DIR "$ENV{HOME}")
-            if(NOT HOME_DIR AND WIN32)
-                set(HOME_DIR "$ENV{USERPROFILE}")
+            set(HOME_DIR "")
+            if (WIN32)
+                # $ENV{HOME} is not a reliable signal here: a real MSYS2 terminal
+                # reports the MSYS2 home (e.g. C:/msys64/home/<user>), but Git Bash,
+                # an IDE's bundled cmake.exe (CLion ships its own, launched with no
+                # MSYS2 environment at all), or a plain Windows shell all report the
+                # real Windows profile (C:/Users/<user>) instead -- via $ENV{HOME}
+                # itself on some of those (not just the old $ENV{USERPROFILE}
+                # fallback below), so trusting $ENV{HOME} first silently picks up
+                # the wrong root depending on what launched the configure. This
+                # project's dev/stage and dev/archives layout is anchored under the
+                # MSYS2 home unconditionally, so derive it from the toolchain
+                # instead: the compiler is always installed under
+                # <msys2 root>/<env>/bin/clang++.exe, so walk up from
+                # CMAKE_CXX_COMPILER to the MSYS2 root and use <root>/home/<user>.
+                if (DEFINED CMAKE_CXX_COMPILER AND NOT "${CMAKE_CXX_COMPILER}" STREQUAL "")
+                    get_filename_component(_ce_msys_bin  "${CMAKE_CXX_COMPILER}" DIRECTORY) # .../ucrt64/bin
+                    get_filename_component(_ce_msys_env  "${_ce_msys_bin}"       DIRECTORY) # .../ucrt64
+                    get_filename_component(_ce_msys_root "${_ce_msys_env}"       DIRECTORY) # .../msys64
+
+                    set(_ce_username "$ENV{USERNAME}")
+                    if (NOT _ce_username)
+                        set(_ce_username "$ENV{USER}")
+                    endif ()
+
+                    if (_ce_msys_root AND _ce_username AND EXISTS "${_ce_msys_root}/home/${_ce_username}")
+                        set(HOME_DIR "${_ce_msys_root}/home/${_ce_username}")
+                    endif ()
+
+                    unset(_ce_msys_bin)
+                    unset(_ce_msys_env)
+                    unset(_ce_msys_root)
+                    unset(_ce_username)
+                endif ()
+
+                if (NOT HOME_DIR)
+                    # Toolchain isn't MSYS2-shaped (or compiler unset this early) --
+                    # fall back to whatever the environment reports.
+                    set(HOME_DIR "$ENV{HOME}")
+                    if (NOT HOME_DIR)
+                        set(HOME_DIR "$ENV{USERPROFILE}")
+                    endif ()
+                endif ()
+            else ()
+                set(HOME_DIR "$ENV{HOME}")
             endif ()
 
             cmake_path(CONVERT "${HOME_DIR}" TO_CMAKE_PATH_LIST HOME_DIR NORMALIZE)

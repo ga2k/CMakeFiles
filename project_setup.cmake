@@ -107,19 +107,18 @@ macro(project_setup _Folder)
         else ()
             set(_ps_base "${HOME_DIR}/dev/stage${stemPath}")
         endif ()
-        if (CMAKE_CROSSCOMPILING)
-            set(STAGE_DIR "${_ps_base}/AppData/Roaming/${APP_VENDOR}")
-        else ()
-            if (DEFINED ENV{APPDATA})
-                set(_ps_win_appdata "$ENV{APPDATA}")
-            else ()
-                set(_ps_win_appdata "$ENV{USERPROFILE}/AppData/Roaming")
-            endif ()
-            string(REGEX REPLACE "^[A-Za-z]:" "" _ps_win_noroot "${_ps_win_appdata}")
-            set(STAGE_DIR "${_ps_base}${_ps_win_noroot}/${APP_VENDOR}")
-            unset(_ps_win_appdata)
-            unset(_ps_win_noroot)
-        endif ()
+        # Always append the literal "AppData/Roaming/<vendor>" tail, regardless of
+        # CMAKE_CROSSCOMPILING. The previous non-crosscompiling branch instead took
+        # the FULL absolute $ENV{APPDATA} path (e.g. C:/Users/geoff/AppData/Roaming)
+        # and stripped only its drive letter, leaving "/Users/geoff/AppData/Roaming"
+        # -- then concatenated that onto _ps_base, which is ALREADY a full absolute
+        # path (${HOME_DIR}/dev/stage${stemPath}). That doubled up the user segment
+        # (".../dev/stage/winllvm/debug/shared/Users/geoff/AppData/Roaming/...")
+        # instead of the intended ".../dev/stage/winllvm/debug/shared/AppData/...".
+        # $ENV{APPDATA}'s actual value/shape was never relevant here -- this project's
+        # stage layout is always "<stage root>/AppData/Roaming/<vendor>", independent
+        # of where the real Windows profile happens to live.
+        set(STAGE_DIR "${_ps_base}/AppData/Roaming/${APP_VENDOR}")
         unset(_ps_base)
         get_filename_component(STAGE_DIR "${STAGE_DIR}" ABSOLUTE)
     endif ()

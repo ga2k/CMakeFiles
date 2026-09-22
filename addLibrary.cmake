@@ -404,9 +404,24 @@ function(addLibrary)
             endif()
         endif()
 
-        # Apply shared PCH to ALL WIN32/Linux GUI targets via target_compile_options
-        # (bypasses SKIP_PRECOMPILE_HEADERS, reaches .ixx files too).
-        target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
+        # Apply shared PCH to this target's .cpp SOURCES only -- NOT target-wide via
+        # target_compile_options, and NOT to .ixx MODULES. Clang requires PCH-identical
+        # state between an importer and any BMI it imports; a target-wide PRIVATE
+        # -include-pch makes CMake's cross-target C++20 module support treat every
+        # module this target imports from elsewhere (e.g. Core) as "incompatible",
+        # silently recompiling the exporting side's module under this target's PCH.
+        # For a Core module Gfx imports, that shadow recompile inherits Gfx's PCH
+        # requirement but not Gfx's wx include path (Core rightly has none), so it
+        # fails to resolve wx/wx.h -- and even when it doesn't fail outright, it's a
+        # wx-tainted recompile of code that's supposed to be unconditionally
+        # GUI-free. Scoping the PCH to SOURCES via set_source_files_properties keeps
+        # it off the module-interface compile entirely, so no such shadow recompile
+        # is ever triggered for imported modules.
+        if (arg_SOURCES)
+            set_source_files_properties(${arg_SOURCES} PROPERTIES
+                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
+            )
+        endif()
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
             # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
