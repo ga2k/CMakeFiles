@@ -1466,7 +1466,7 @@ class CppGenerator:
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
-                                      "Util", "DDT", "Types"}
+                                      "Util", "DDT", "Types", "wxCore"}
         modules_extra = class_def.get("modules")
         if isinstance(modules_extra, list):
             required_imports.update(m.strip() for m in modules_extra if isinstance(m, str) and m.strip())
@@ -1808,7 +1808,7 @@ class CppGenerator:
         export_module = export_module.strip()
 
         children = class_def.get("pages", [])
-        required_imports: set[str] = {"Book", "wxTypes", "Util", "DDT", "Types"}
+        required_imports: set[str] = {"Book", "wxTypes", "wxCore", "Util", "DDT", "Types"}
         for child in children:
             if isinstance(child, dict):
                 mod = child.get("module")
@@ -2584,16 +2584,16 @@ class CppGenerator:
         if self.target_type == "groups":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator',
-                 'wxTypes', 'wxUtil',
+                 'wxTypes', 'wxUtil', 'wxCore',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes',
-                 'wxUtil'])
+                 'wxUtil', 'wxCore'])
         elif self.target_type == "wizardpages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil',
-                 'wxTypes', 'wxUtil'])
+                 'wxTypes', 'wxUtil', 'wxCore'])
 
         if not isinstance(elements, list):
             return sorted(used_modules)
