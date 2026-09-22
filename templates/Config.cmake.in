@@ -381,19 +381,23 @@ if(NOT WIN32)
     endif()
 endif()
 
-# On WIN32, propagate the shared wx PCH to consumers so that all compilations
-# that import this target's BMIs use the same PCH binary, sharing Clang SLOC.
-# This prevents the "ran out of source locations" error (Clang 2GB SLOC limit).
-if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND TARGET "@APP_VENDOR@::@APP_NAME@")
-    if(_hs_want_gui)
-        set(_hs_pch_bin "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/pch/@APP_VENDOR@/wx_pch.gch")
-        if(EXISTS "${_hs_pch_bin}")
-            set_property(TARGET "@APP_VENDOR@::@APP_NAME@" APPEND PROPERTY
-                INTERFACE_COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}")
-        endif()
-        unset(_hs_pch_bin)
-    endif()
-endif()
+# Historical note: this used to APPEND "-include-pch;<wx_pch.gch>" to this
+# target's INTERFACE_COMPILE_OPTIONS on WIN32/Clang, so every consumer shared
+# the same PCH binary as the BMIs they import from this package -- meant to
+# avoid the "ran out of source locations" error (Clang 2GB SLOC limit) by not
+# re-preprocessing wx/STL headers once per consumer.
+#
+# That's no longer needed and was actively counterproductive: addLibrary()'s
+# own PCH handling now scopes -include-pch to this target's .cpp SOURCES only
+# (never its .ixx MODULES -- see addLibrary.cmake), so @APP_NAME@'s installed
+# BMIs carry no PCH state at all. Propagating -include-pch here just forced it
+# a second time onto every consumer's .cpp files (visible as a literal
+# duplicate "-include-pch ... -include-pch ..." on the compile line) AND onto
+# the consumer's OWN .ixx module files target-wide, via INTERFACE_COMPILE_OPTIONS
+# -- reintroducing, one level down, exactly the SLOC duplication this was
+# written to prevent. Consumers that need wx symbols in their own .ixx files
+# should `import wxCore;` (or the relevant wx-wrapper module) instead of
+# relying on a forced PCH.
 
 # Convenience variables
 set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
