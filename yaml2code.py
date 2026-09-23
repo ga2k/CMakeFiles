@@ -744,9 +744,19 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        code.append('#include "Core/Core.h"')
-        code.append('#include "Core/CoreData.h"')
-        code.append('#include "Core/Util.h"')
+        # Core/Core.h, Core/CoreData.h, Core/Util.h omitted intentionally: same SLoc-budget
+        # reasoning as the wx/wx.h note below -- textually #include-ing them in every
+        # generated module's global fragment duplicates their SLoc cost non-deduplicated
+        # across every BMI. CoreMacros.h is the lean, macro-only subset that's actually
+        # needed here (VERIFY_MSG/ASSERT_MSG/etc -- #define's can't be `import`ed); the real
+        # declarations (CoreData, UIType, IconSize, add_to_anymap, param<T>, ...) come via
+        # `import CoreData;`/`import Util;` below instead. See project-wx-sloc-migration.md.
+        code.append('#include "Core/CoreMacros.h"')
+        # Core/Types.h textually, not via `import Types;`: it #define's `anymap` (a real
+        # macro, can't be exported) and declares `nullanymap` as `static inline` (internal
+        # linkage, can't be referenced from outside the TU that sees it either way). It's
+        # lean -- no <windows.h>/<iostream>/<filesystem> -- so this isn't the SLoc problem.
+        code.append('#include "Core/Types.h"')
         code.append('')
         # wx/wx.h omitted intentionally: including it in every generated module's
         # global fragment multiplies its SLoc entries by the number of BMIs, exhausting
@@ -758,7 +768,15 @@ class CppGenerator:
         code.append('')
         code.append(f'#include "Gfx/FieldWidth.h"')
         code.append('')
-        code.append('#include <unordered_set>')
+        # wx/defs.h (not the full wx/wx.h) for window-style macros used directly in generated
+        # bodies -- wxTAB_TRAVERSAL (the default Group/Page build_style) chief among them.
+        # These are #define's, so they can't be re-exported via `import wxCore;` the way real
+        # declarations (wxSize, wxEVT_BUTTON, ...) are; defs.h is the narrow, guarded header
+        # that was already the fix for this same class of issue elsewhere (see wxNOT_FOUND /
+        # wxICON_* / wxTheApp in the hand-written Gfx sources).
+        code.append('#include <wx/defs.h>')
+        code.append('')
+        code.append('// #include <unordered_set>  -- covered by `import std;` below')
         for directive in self.collect_variable_includes(variables_block):
             code.append(f'#include {directive}')
         code.append('')
@@ -1466,7 +1484,7 @@ class CppGenerator:
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
-                                      "Util", "DDT", "Types", "wxCore"}
+                                      "Util", "CoreData", "DDT", "Types", "wxCore", "std"}
         modules_extra = class_def.get("modules")
         if isinstance(modules_extra, list):
             required_imports.update(m.strip() for m in modules_extra if isinstance(m, str) and m.strip())
@@ -1581,9 +1599,10 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        code.append('#include "Core/Core.h"')
-        code.append('#include "Core/CoreData.h"')
-        code.append('#include "Core/Util.h"')
+        # See the groups/pages/wizardpages preamble for why Core.h/CoreData.h/Util.h are
+        # replaced by CoreMacros.h + Core/Types.h here -- same SLoc-budget reasoning.
+        code.append('#include "Core/CoreMacros.h"')
+        code.append('#include "Core/Types.h"')
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         # nid:: notification IDs (used by a 'finally:' body, e.g. ctrlSignal().Notify(...))
@@ -1808,7 +1827,7 @@ class CppGenerator:
         export_module = export_module.strip()
 
         children = class_def.get("pages", [])
-        required_imports: set[str] = {"Book", "wxTypes", "wxCore", "Util", "DDT", "Types"}
+        required_imports: set[str] = {"Book", "wxTypes", "wxCore", "Util", "CoreData", "DDT", "Types", "std"}
         for child in children:
             if isinstance(child, dict):
                 mod = child.get("module")
@@ -1830,9 +1849,10 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        code.append('#include "Core/Core.h"')
-        code.append('#include "Core/CoreData.h"')
-        code.append('#include "Core/Util.h"')
+        # See the groups/pages/wizardpages preamble for why Core.h/CoreData.h/Util.h are
+        # replaced by CoreMacros.h + Core/Types.h here -- same SLoc-budget reasoning.
+        code.append('#include "Core/CoreMacros.h"')
+        code.append('#include "Core/Types.h"')
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         code.append('')
@@ -2525,12 +2545,13 @@ class CppGenerator:
         s = ev.strip()
         if not s:
             return 'wxEVT_TEXT'
-        # If already a wxEVT_* constant, keep as-is
-        if s.startswith('wxEVT_'):
-            return s
 
-        # Canonicalize input a bit
+        # Canonicalize input a bit, working in 'EVT_...' space even when a 'wx' prefix was
+        # already given, so the COMMAND_* modernization below (step 2) also applies to exact
+        # 'wxEVT_COMMAND_...' input -- YAML sources spell it that way -- not just bare aliases.
         up = s.upper().replace('-', '_').replace(' ', '_')
+        if up.startswith('WXEVT_'):
+            up = up[2:]
 
         # Allow bare tokens like "TEXT", "BUTTON" -> prefix EVT_
         if not up.startswith('EVT_'):
@@ -2541,12 +2562,24 @@ class CppGenerator:
         if mapped:
             return mapped
 
-        # 2) Try modernizing legacy COMMAND_* aliases by dropping "COMMAND_"
+        # 2) Try modernizing legacy EVT_COMMAND_<WIDGET>_<ACTION> aliases (e.g.
+        # wxEVT_COMMAND_BUTTON_CLICKED, the deprecated wx2.x spelling still used in some YAML
+        # sources): drop "COMMAND_", then also try dropping a trailing action suffix, since the
+        # modern names (wxEVT_BUTTON, wxEVT_CHECKBOX, ...) drop that too. The deprecated macro
+        # aliases only exist via <wx/event.h>, which generated modules deliberately don't
+        # include (SLoc-budget blow-up across ~70 BMIs); the modern names are real declarations
+        # already reachable via `import wxCore;`.
         if 'EVT_COMMAND_' in up:
             try2 = up.replace('EVT_COMMAND_', 'EVT_', 1)
             mapped2 = self.event_mapping.get(try2)
             if mapped2:
                 return mapped2
+            for suf in ('_CLICKED', '_SELECTED', '_TOGGLED', '_UPDATED', '_ENTER'):
+                if try2.endswith(suf):
+                    mapped3 = self.event_mapping.get(try2[:-len(suf)])
+                    if mapped3:
+                        return mapped3
+                    break
             # As a last attempt, synthesize wxEVT_COMMAND_* directly (some projects prefer these)
             return 'wx' + up  # e.g., EVT_COMMAND_BUTTON_CLICKED -> wxEVT_COMMAND_BUTTON_CLICKED
 
@@ -2584,16 +2617,16 @@ class CppGenerator:
         if self.target_type == "groups":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator',
-                 'wxTypes', 'wxUtil', 'wxCore',
+                 'wxTypes', 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes',
-                 'wxUtil', 'wxCore'])
+                 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types'])
         elif self.target_type == "wizardpages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil',
-                 'wxTypes', 'wxUtil', 'wxCore'])
+                 'wxTypes', 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types'])
 
         if not isinstance(elements, list):
             return sorted(used_modules)
