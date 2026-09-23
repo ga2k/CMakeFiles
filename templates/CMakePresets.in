@@ -121,6 +121,7 @@
         "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
         "CMAKE_LINKER": "C:/Program Files/LLVM/bin/ld.lld.exe",
         "CMAKE_RC_COMPILER": "C:/Program Files/LLVM/bin/llvm-rc.exe",
+        "CMAKE_RC_FLAGS": "--preprocessor=${sourceDir}/CMakeFiles/clang_rc_preprocessor.cmd",
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_SYSTEM_PROCESSOR": "AMD64",
         "OPENSSL_ROOT_DIR": "C:/Program Files/OpenSSL-Win64"

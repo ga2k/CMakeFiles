@@ -59,6 +59,7 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
             --export-var "${EXPORT_VAR}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${CLASSES_STAMP}"
             DEPENDS ${CLASS_DEPENDENCIES} "${cmake_root}/${generator}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             COMMENT "Generating ixx files from YAML specs (batch mode)"
             VERBATIM
     )
