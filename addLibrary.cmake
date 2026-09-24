@@ -201,22 +201,54 @@ function(addLibrary)
     )
 
     # CMake's CXX_MODULE_STD support (still experimental as of 4.x) creates a
-    # synthetic "__cmake_cxx_std_23" target per directory scope that builds the
-    # `std`/`std.compat` BMIs, and correctly wires `-fmodule-file=std=...` into
-    # any TU in THIS SAME CMake project that (transitively) imports a module
-    # using `import std;`. It does NOT do this for a module consumed from an
-    # ALREADY-INSTALLED package via find_package() (e.g. MyCare importing one
-    # of Core's/Gfx's modules that internally uses `import std;`) -- the
-    # cross-package dependency scan doesn't see into the already-built BMI to
-    # discover the std dependency, so the consumer's compile fails with
-    # "failed to find module file for module 'std'". Verified by hand: adding
-    # this flag explicitly fixes it; CMake's own scanner just never adds it
-    # for this case. Harmless to add unconditionally -- a TU that doesn't
-    # reference `std` simply ignores an unused -fmodule-file. Revisit once
-    # CMake's cross-package import-std propagation matures.
+    # real "@cmake_cxx_std" STATIC_LIBRARY target (lib@cmake_cxx_std.a, BMI at
+    # CMakeFiles/@cmake_cxx_std.dir/std.pcm in this CMake/generator version)
+    # that builds the `std`/`std.compat` BMIs, and correctly wires
+    # `-fmodule-file=std=...` (via the per-TU dyndep-generated modmap) into any
+    # TU in THIS SAME CMake project that directly writes `import std;`. It
+    # does NOT do this for a module consumed from an ALREADY-INSTALLED package
+    # via find_package() (e.g. MyCare importing one of Core's/Gfx's modules
+    # that internally uses `import std;`) -- the cross-package dependency scan
+    # doesn't see into the already-built BMI to discover the std dependency,
+    # so the consumer's compile fails with "failed to find module file for
+    # module 'std'" for any TU that doesn't itself write `import std;` (e.g.
+    # one that only does `export import Database;`). Two things are needed to
+    # fix that case: (1) the explicit `-fmodule-file=std=...` flag below,
+    # since CMake's own scanner never adds it for a transitively-only
+    # dependency; and (2) an explicit build-order dependency on `@cmake_cxx_std`
+    # itself, since the flag alone races against that target's compile of
+    # std.cc/std.compat.cc -- without it, a TU whose own dyndep scan doesn't
+    # request `std` (so gets no order-only edge onto the real BMI) can start
+    # compiling before std.pcm exists. Harmless to add unconditionally -- a TU
+    # that doesn't reference `std` simply ignores an unused -fmodule-file.
+    #
+    # KNOWN REMAINING ISSUE (2026-09-24): this flag/dependency only fixes the
+    # ordering/existence problem. It does NOT fix module-BMI *identity*
+    # mismatches: CMake's per-directory-scope std synthesis is not reproducible
+    # across separate compiles of the same input (verified by hand: sha256 of
+    # the "std" BMI differed across per-scope copies within a single Libs
+    # build), and Clang's module deserializer crashes (ASTDeclReader::UpdateDecl,
+    # SIGSEGV) rather than erroring cleanly when a consumer is hand a different
+    # "std" instance than a dependency was actually compiled against. This
+    # surfaces as an intermittent crash in MyCare compiling .ixx files that
+    # transitively touch Core/Gfx modules (e.g. DBase.ixx importing Database).
+    # See the wip/shared-std-module branch in this repo for an in-progress fix
+    # (a single explicit shared "std" target instead of relying on
+    # CXX_MODULE_STD's per-scope synthesis) -- not yet complete: it resolves
+    # this for Core's own modules but Gfx's cross-target import of Core's
+    # OTHER modules hits an analogous mismatch via a different CMake mechanism.
+    #
+    # Revisit once CMake's cross-package import-std propagation matures, and
+    # re-verify the "@cmake_cxx_std.dir" path/target name against whatever
+    # CMake version is in use -- both are internal/undocumented and have
+    # already changed once across CMake versions (previously
+    # "__cmake_cxx_std_23.dir", silently broken by a CMake upgrade).
     target_compile_options(${arg_NAME} PRIVATE
-            "-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/__cmake_cxx_std_23.dir/std.pcm"
+            "-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/@cmake_cxx_std.dir/std.pcm"
     )
+    if (TARGET "@cmake_cxx_std")
+        add_dependencies(${arg_NAME} "@cmake_cxx_std")
+    endif ()
 
     # VERSION drives CMake's versioned-filename + symlink behavior on its own,
     # independent of SOVERSION/NO_SONAME, so it must stay off executable targets.
@@ -423,24 +455,51 @@ function(addLibrary)
             endif()
         endif()
 
-        # Apply shared PCH to this target's .cpp SOURCES only -- NOT target-wide via
-        # target_compile_options, and NOT to .ixx MODULES. Clang requires PCH-identical
-        # state between an importer and any BMI it imports; a target-wide PRIVATE
-        # -include-pch makes CMake's cross-target C++20 module support treat every
-        # module this target imports from elsewhere (e.g. Core) as "incompatible",
-        # silently recompiling the exporting side's module under this target's PCH.
-        # For a Core module Gfx imports, that shadow recompile inherits Gfx's PCH
-        # requirement but not Gfx's wx include path (Core rightly has none), so it
-        # fails to resolve wx/wx.h -- and even when it doesn't fail outright, it's a
-        # wx-tainted recompile of code that's supposed to be unconditionally
-        # GUI-free. Scoping the PCH to SOURCES via set_source_files_properties keeps
-        # it off the module-interface compile entirely, so no such shadow recompile
-        # is ever triggered for imported modules.
+        # Apply shared PCH to this target's .cpp SOURCES always. Do NOT apply it to
+        # .ixx MODULES via target-wide target_compile_options -- Clang requires
+        # PCH-identical state between an importer and any BMI it imports, and a
+        # target-wide PRIVATE -include-pch makes CMake's cross-target C++20 module
+        # support treat every module this target imports from an IN-TREE CMake
+        # target (e.g. Gfx importing Core, both built by the SAME configure) as
+        # "incompatible", silently recompiling the exporting side's module under
+        # this target's PCH. For a Core module Gfx imports, that shadow recompile
+        # inherits Gfx's PCH requirement but not Gfx's wx include path (Core rightly
+        # has none), so it fails to resolve wx/wx.h -- and even when it doesn't fail
+        # outright, it's a wx-tainted recompile of code that's supposed to be
+        # unconditionally GUI-free.
+        #
+        # That risk is specific to in-tree module imports within THIS configure
+        # (i.e. building Libs itself, where Gfx imports Core's .ixx as CMake
+        # targets in the same build graph). It does NOT apply to a downstream
+        # consumer project (MyCare, or any other app) importing Core's/Gfx's
+        # modules -- those are already-built, staged BMIs found via
+        # -fprebuilt-module-path, not in-tree CMake targets CMake's scanner could
+        # ever shadow-recompile. For such a consumer, excluding .ixx from the PCH
+        # left it exposed to exactly the failure the PCH exists to prevent: empirically,
+        # Clang 22 segfaults deserializing a cross-package BMI (e.g. Core's Database.pcm)
+        # from a MyCare .ixx with no PCH applied ("Clang's 2 GB SLoc limit" per the
+        # comment above), and the crash disappears once -include-pch is added to that
+        # same .ixx compile -- SOMETIMES: see the KNOWN REMAINING ISSUE note above the
+        # -fmodule-file=std= flag earlier in this function. This PCH fix and that flag
+        # both help but neither is a complete fix on its own; the BMI-identity mismatch
+        # is the real root cause and is being addressed on wip/shared-std-module.
+        # So scope the .ixx exclusion to Libs' own build only.
+        set(_hs_pch_to_ixx OFF)
+        if (NOT CMAKE_PROJECT_NAME STREQUAL "Libs")
+            set(_hs_pch_to_ixx ON)
+        endif ()
         if (arg_SOURCES)
             set_source_files_properties(${arg_SOURCES} PROPERTIES
                     COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
             )
         endif()
+        if (arg_MODULES AND _hs_pch_to_ixx)
+            set_source_files_properties(${arg_MODULES} PROPERTIES
+                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
+                    SKIP_PRECOMPILE_HEADERS OFF
+            )
+        endif()
+        unset(_hs_pch_to_ixx)
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
             # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
