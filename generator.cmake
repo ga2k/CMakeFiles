@@ -60,20 +60,20 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
             COMMAND "${CMAKE_COMMAND}" -E touch "${CLASSES_STAMP}"
             DEPENDS ${CLASS_DEPENDENCIES} "${cmake_root}/${generator}"
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Generating ixx files from YAML specs (batch mode)"
+            COMMENT "Generating .h files from YAML specs (batch mode)"
             VERBATIM
     )
 
-    # 3) Add generated RS.ixx to your target
+    # 3) Add generated headers to your target
     #    Do an initial glob after the configure-time generation. yaml2code.py nests output
     #    under record_sets/{rs,ui}/ and user_interface/ui/, so this must recurse.
     file(GLOB_RECURSE CLASS_FILES
             LIST_DIRECTORIES false
-            "${OUT_DIR}/*Group.ixx"
-            "${OUT_DIR}/*Page.ixx"
-            "${OUT_DIR}/*RS.ixx"
-            "${OUT_DIR}/*Wizard.ixx"
-            "${OUT_DIR}/*Book.ixx"
+            "${OUT_DIR}/*Group.h"
+            "${OUT_DIR}/*Page.h"
+            "${OUT_DIR}/*RS.h"
+            "${OUT_DIR}/*Wizard.h"
+            "${OUT_DIR}/*Book.h"
     )
 
     add_custom_target(generate_classes ALL DEPENDS "${CLASSES_STAMP}")
@@ -81,20 +81,13 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
     # Ensure your target waits for the generation step
     add_dependencies(${TRRGET} generate_classes)
 
-    target_sources(${TRRGET}
-            PUBLIC FILE_SET CXX_MODULES
-            BASE_DIRS "${OUT_DIR}"
-            FILES ${CLASS_FILES}
-    )
-    set_source_files_properties(${CLASS_FILES} PROPERTIES
-            SKIP_PRECOMPILE_HEADERS ON
-            CXX_SCAN_FOR_MODULES ON
-    )
-
+    # Plain headers now -- no target_sources()/FILE_SET registration needed for the
+    # build to work, just the include path so "#include <ui/Foo.h>"-style references
+    # from impl.cpp stubs and other generated headers resolve.
     target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
 
-    # Hand-written module implementation stubs (created by generator; existing
-    # function bodies are never overwritten, only missing functions get appended)
+    # Hand-written implementation stubs (created by generator; existing function
+    # bodies are never overwritten, only missing functions get appended)
     file(GLOB_RECURSE CLASS_IMPL_FILES
             CONFIGURE_DEPENDS
             LIST_DIRECTORIES false
@@ -102,10 +95,6 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
     )
     if (CLASS_IMPL_FILES)
         target_sources(${TRRGET} PRIVATE ${CLASS_IMPL_FILES})
-        set_source_files_properties(${CLASS_IMPL_FILES} PROPERTIES
-                CXX_SCAN_FOR_MODULES ON
-                SKIP_PRECOMPILE_HEADERS ON
-        )
     endif()
 
 endfunction()
