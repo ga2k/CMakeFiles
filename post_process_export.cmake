@@ -25,14 +25,17 @@ string(JOIN "" _cxx_inc "${_cxx_inc}" "${_vendor}/${_libname}" [=[/cxx-modules-]
 string(REPLACE "${_cxx_inc}" "# (cxx-modules include removed by post_process_export)" outvar "${outvar}")
 unset(_cxx_inc)
 
-# Remove the entire "if(cmake >= 3.28) target_sources(... FILE_SET CXX_MODULES
-# ...) else() message(...) endif()" block. Leaving a bare
+# Remove EVERY "if(cmake >= 3.28) target_sources(... FILE_SET CXX_MODULES
+# ...) else() message(...) endif()" block -- a target file can legitimately
+# contain more than one (e.g. one per exported target that has its own
+# FILE_SET CXX_MODULES, such as Core plus the shared HoffSoftCxxStd target),
+# so this loops rather than handling only the first. Leaving a bare
 # "target_sources(Target\n)" behind (as an earlier version of this script did)
 # is itself invalid: CMake rejects target_sources() called with only a target
 # name and no PUBLIC/PRIVATE/INTERFACE keyword ("incorrect number of
 # arguments"), which breaks consumers on newer CMake.
 string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] _foundAt)
-if(NOT _foundAt EQUAL -1)
+while(NOT _foundAt EQUAL -1)
     string(SUBSTRING "${outvar}" 0 ${_foundAt} _firstBit)
     string(FIND "${_firstBit}" [=[if(NOT CMAKE_VERSION VERSION_LESS "3.28.0")]=] _ifAt REVERSE)
     string(SUBSTRING "${outvar}" 0 ${_ifAt} _firstBit)
@@ -49,7 +52,8 @@ if(NOT _foundAt EQUAL -1)
     unset(_endifAt)
     unset(_endifLen)
     unset(_afterEndif)
-endif()
+    string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] _foundAt)
+endwhile()
 unset(_foundAt)
 
 # Strip FetchContent-only deps that are statically embedded in the shared
