@@ -51,7 +51,7 @@ if (( pch || dc )); then
   if (( dc )); then
     f "$PROJECTS/$them/build/$p1/$p2/$p3/pch" pch
   else
-    printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
+    printf "Removed  %5d %9s files. I'm tired now. Sleeping. Zzzzzz...." $num " "
     sleep 5
     exit 0
   fi
@@ -64,7 +64,7 @@ if (( go || dc )); then
   if (( dc )); then
     f "$PROJECTS/$them/generated/$p1/$p2/$p3" "generated"
   else
-    printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
+    printf "Removed  %5d %9s files. I'm tired now. Sleeping. Zzzzzz...." $num " "
     sleep 5
     exit 0
   fi
@@ -88,5 +88,5 @@ if (( dc )); then
 
 fi
 
-printf "Done.    %5d files removed. I'm tired now. Sleeping. Zzzzzz...." $num
+printf "Removed  %5d %9s files. I'm tired now. Sleeping. Zzzzzz...." $num " "
 sleep 5
