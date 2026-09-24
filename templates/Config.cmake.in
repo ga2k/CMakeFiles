@@ -94,19 +94,32 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     string(JOIN "" firstBit "${firstBit}" "@APP_VENDOR@/@APP_NAME@" [=[/cxx-modules-]=] "@APP_NAME@" [=[Target.cmake")]=])
     string(REPLACE "${firstBit}" "# No we don't" outvar "${outvar}")
 
-    # Remove any montion of the module files from the INTERFACE
+    # Remove any montion of the module files from the INTERFACE.
+    #
+    # This strips EVERY "if(cmake >= 3.28) target_sources(... FILE_SET
+    # CXX_MODULES ...) else() message(...) endif()" block -- a target file can
+    # legitimately contain more than one (e.g. one per exported target that has
+    # its own FILE_SET CXX_MODULES, such as Core plus the shared HoffSoftCxxStd
+    # target), so this loops rather than handling only the first -- rather than
+    # leaving a bare "target_sources(Target\n)" behind: CMake rejects
+    # target_sources() called with only a target name and no
+    # PUBLIC/PRIVATE/INTERFACE keyword ("incorrect number of arguments"), which
+    # broke consumers on newer CMake.
     string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] foundAt)
-    if(NOT foundAt EQUAL -1)
-        # Walk back to find the INTERFACE keyword before FILE_SET "CXX_MODULES"
+    while(NOT foundAt EQUAL -1)
+        # Walk back to find the "if(cmake >= 3.28)" line guarding this block.
         string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
         string(FIND "${firstBit}" "INTERFACE" interfaceAt REVERSE)
         string(SUBSTRING "${outvar}" 0 ${interfaceAt} firstBit)
         set(firstBit "${firstBit})")
         string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
-        string(FIND "${lastBit}" "else()" elseBit)
-        string(SUBSTRING "${lastBit}" ${elseBit} -1 finally)
-        set(outvar "${firstBit}\n${finally}")
-    endif()
+        string(FIND "${lastBit}" "endif()" endifAt)
+        string(LENGTH "endif()" endifLen)
+        math(EXPR afterEndif "${endifAt} + ${endifLen}")
+        string(SUBSTRING "${lastBit}" ${afterEndif} -1 finally)
+        set(outvar "${firstBit}# (cxx-modules target_sources block removed by Config.cmake.in)${finally}")
+        string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] foundAt)
+    endwhile()
     # Use regex to strip the add_library(...) and set_target_properties(...) blocks for the stripped targets.
     # This MUST run before the bare string(REPLACE) fc_dep loop below, because the bare replacement
     # removes target names from inside add_library() calls first, leaving "add_library(SHARED IMPORTED)"
