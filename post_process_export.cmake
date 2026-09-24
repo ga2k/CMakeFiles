@@ -25,22 +25,30 @@ string(JOIN "" _cxx_inc "${_cxx_inc}" "${_vendor}/${_libname}" [=[/cxx-modules-]
 string(REPLACE "${_cxx_inc}" "# (cxx-modules include removed by post_process_export)" outvar "${outvar}")
 unset(_cxx_inc)
 
-# Remove FILE_SET "CXX_MODULES" from the INTERFACE property block.
+# Remove the entire "if(cmake >= 3.28) target_sources(... FILE_SET CXX_MODULES
+# ...) else() message(...) endif()" block. Leaving a bare
+# "target_sources(Target\n)" behind (as an earlier version of this script did)
+# is itself invalid: CMake rejects target_sources() called with only a target
+# name and no PUBLIC/PRIVATE/INTERFACE keyword ("incorrect number of
+# arguments"), which breaks consumers on newer CMake.
 string(FIND "${outvar}" [=[FILE_SET "CXX_MODULES"]=] _foundAt)
 if(NOT _foundAt EQUAL -1)
     string(SUBSTRING "${outvar}" 0 ${_foundAt} _firstBit)
-    string(FIND "${_firstBit}" "INTERFACE" _interfaceAt REVERSE)
-    string(SUBSTRING "${outvar}" 0 ${_interfaceAt} _firstBit)
-    set(_firstBit "${_firstBit})")
+    string(FIND "${_firstBit}" [=[if(NOT CMAKE_VERSION VERSION_LESS "3.28.0")]=] _ifAt REVERSE)
+    string(SUBSTRING "${outvar}" 0 ${_ifAt} _firstBit)
     string(SUBSTRING "${outvar}" ${_foundAt} -1 _lastBit)
-    string(FIND "${_lastBit}" "else()" _elseBit)
-    string(SUBSTRING "${_lastBit}" ${_elseBit} -1 _finally)
-    set(outvar "${_firstBit}\n${_finally}")
+    string(FIND "${_lastBit}" "endif()" _endifAt)
+    string(LENGTH "endif()" _endifLen)
+    math(EXPR _afterEndif "${_endifAt} + ${_endifLen}")
+    string(SUBSTRING "${_lastBit}" ${_afterEndif} -1 _finally)
+    set(outvar "${_firstBit}# (cxx-modules target_sources block removed by post_process_export)${_finally}")
     unset(_firstBit)
     unset(_lastBit)
     unset(_finally)
-    unset(_interfaceAt)
-    unset(_elseBit)
+    unset(_ifAt)
+    unset(_endifAt)
+    unset(_endifLen)
+    unset(_afterEndif)
 endif()
 unset(_foundAt)
 
