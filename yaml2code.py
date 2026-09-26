@@ -31,49 +31,6 @@ def ensure_yaml():
 
 yaml = ensure_yaml()
 
-
-class _ReplaceMarker:
-    """A map or sequence parsed from a `!replace`-tagged YAML node -- merge_yaml_nodes()
-    replaces the base's value with this wholesale instead of extending/deep-merging it.
-    Mirrors the `!replace` tag check in Util::mergeYAMLNodes (Libs/Core/src/Util.cpp)."""
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-
-class _IncludeLoader(yaml.SafeLoader):
-    """SafeLoader plus the `!replace` tag used by CppGenerator.load_and_merge_yaml_file()."""
-
-
-def _construct_replace(loader: 'yaml.SafeLoader', node: 'yaml.Node'):
-    if isinstance(node, yaml.MappingNode):
-        return _ReplaceMarker(loader.construct_mapping(node, deep=True))
-    if isinstance(node, yaml.SequenceNode):
-        return _ReplaceMarker(loader.construct_sequence(node, deep=True))
-    return loader.construct_scalar(node)  # !replace on a scalar is a no-op, as in the C++ original
-
-
-_IncludeLoader.add_constructor('!replace', _construct_replace)
-
-
-def merge_yaml_nodes(base: Dict[str, Any], extension: Dict[str, Any]) -> None:
-    """Python port of Util::mergeYAMLNodes (Libs/Core/src/Util.cpp). Mutates `base` in
-    place, layering `extension` onto it: sequences extend (append) by default, maps
-    deep-merge key by key, a `!replace`-tagged map/sequence in `extension` replaces the
-    base's value wholesale, and any other value from `extension` (scalars) always wins."""
-    for key, value in extension.items():
-        if isinstance(value, _ReplaceMarker):
-            base[key] = value.value
-        elif isinstance(base.get(key), list) and isinstance(value, list):
-            base[key].extend(value)
-        elif isinstance(value, dict):
-            if not isinstance(base.get(key), dict):
-                base[key] = {}
-            merge_yaml_nodes(base[key], value)
-        else:
-            base[key] = value
-
 # A C++ numeric literal, optionally signed, optionally hex, optionally carrying an
 # integer/float suffix (-1L, 0x10u, 3.0f, 123ULL, .5, 5.). Recognized so it can be
 # emitted verbatim instead of being run through int()/float() (which chokes on the
@@ -206,7 +163,6 @@ class CppGenerator:
             'CheckedPasswordCtrl':      'std::string',
             'DatePicker':               'wxDateTime',
             'ELBox':                    'ID::Type',
-            'ELGrid':                   'ID::Type',
             'ExpandingNotesCtrl':       'std::string',
             'FontCombo':                'std::string',
             'FontList':                 'std::string',
@@ -250,7 +206,6 @@ class CppGenerator:
             'CheckedPasswordCtrl':      '""',
             'DatePicker':               'nulldatetime',
             'ELBox':                    'ID::Null',
-            'ELGrid':                   'ID::Null',
             'ExpandingNotesCtrl':       '""',
             'FontCombo':                '""',
             'FontList':                 '""',
@@ -292,11 +247,10 @@ class CppGenerator:
             'ColourChooser':            True,
             'Combo':                    True,
             'ComplexComboBox':          True,
-            'CheckedPasswordCtrl':      True,
+            'CheckedPasswordCtrl':    True,
             'DateCtrl':                 True,
             'DatePicker':               True,
             'ELBox':                    True,
-            'ELGrid':                   True,
             'ExpandingNotesCtrl':       True,
             'FontCombo':                True,
             'FontList':                 True,
@@ -335,7 +289,6 @@ class CppGenerator:
         self.multi_row_control_classes = {
             'ListCtrl',
             'ELBox',
-            'ELGrid',
             'GridCtrl'
         }
         # Control class (or its base_class) -> the Gfx module that exports it. Consulted as a
@@ -363,7 +316,6 @@ class CppGenerator:
             'DateCtrl':                 'DatePicker',
             'DatePicker':               'DatePicker',
             'ELBox':                    'ELBox',
-            'ELGrid':                   'ELGrid',
             'ExpandingNotesCtrl':       'ExpandingNotesCtrl',
             'FontCombo':                'FontCombo',
             'FontList':                 'FontList',
@@ -744,19 +696,9 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        # Core/Core.h, Core/CoreData.h, Core/Util.h omitted intentionally: same SLoc-budget
-        # reasoning as the wx/wx.h note below -- textually #include-ing them in every
-        # generated module's global fragment duplicates their SLoc cost non-deduplicated
-        # across every BMI. CoreMacros.h is the lean, macro-only subset that's actually
-        # needed here (VERIFY_MSG/ASSERT_MSG/etc -- #define's can't be `import`ed); the real
-        # declarations (CoreData, UIType, IconSize, add_to_anymap, param<T>, ...) come via
-        # `import CoreData;`/`import Util;` below instead. See project-wx-sloc-migration.md.
-        code.append('#include "Core/CoreMacros.h"')
-        # Core/Types.h textually, not via `import Types;`: it #define's `anymap` (a real
-        # macro, can't be exported) and declares `nullanymap` as `static inline` (internal
-        # linkage, can't be referenced from outside the TU that sees it either way). It's
-        # lean -- no <windows.h>/<iostream>/<filesystem> -- so this isn't the SLoc problem.
-        code.append('#include "Core/Types.h"')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
         code.append('')
         # wx/wx.h omitted intentionally: including it in every generated module's
         # global fragment multiplies its SLoc entries by the number of BMIs, exhausting
@@ -768,15 +710,7 @@ class CppGenerator:
         code.append('')
         code.append(f'#include "Gfx/FieldWidth.h"')
         code.append('')
-        # wx/defs.h (not the full wx/wx.h) for window-style macros used directly in generated
-        # bodies -- wxTAB_TRAVERSAL (the default Group/Page build_style) chief among them.
-        # These are #define's, so they can't be re-exported via `import wxCore;` the way real
-        # declarations (wxSize, wxEVT_BUTTON, ...) are; defs.h is the narrow, guarded header
-        # that was already the fix for this same class of issue elsewhere (see wxNOT_FOUND /
-        # wxICON_* / wxTheApp in the hand-written Gfx sources).
-        code.append('#include <wx/defs.h>')
-        code.append('')
-        code.append('// #include <unordered_set>  -- covered by `import std;` below')
+        code.append('#include <unordered_set>')
         for directive in self.collect_variable_includes(variables_block):
             code.append(f'#include {directive}')
         code.append('')
@@ -924,17 +858,6 @@ class CppGenerator:
                 f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"sv; }}')
             code.append(
                 f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
-            # fields()/values() are only required by ELGridDBSourceFor (ELGrid's multi-column
-            # row-write-back concept, Gfx/src/ctrls/ELGrid.ixx) -- harmless additions for every
-            # other alt_data_source consumer (Choice/Combo/ListBox/ELBox), which only require
-            # DBSourceFor and never reference them. This synthesizes a single-column grid off the
-            # same display_field; alt_data_source: has no syntax for declaring more than one
-            # column, so a genuine multi-column ELGrid still needs a hand-written DBSource.
-            code.append(
-                f'   static auto fields() -> std::vector<std::pair<std::string, std::string>> '
-                f'{{ return {{{{"{alt_ds["display_field"]}", "{alt_ds["display_field"]}"}}}}; }}')
-            code.append(
-                f'   static auto values(const db::Row &r) -> std::vector<std::string> {{ return {{ displayText(r) }}; }}')
             code.append("};")
             code.append("")
 
@@ -1134,7 +1057,8 @@ class CppGenerator:
                         bf.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
                         bf.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
                     for var in group_members:
-                        bf.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
+                        bf.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                        bf.append(f"         {var}->refreshFromCurrent(rec);")
                     bf.append("   }")
                     access_groups['public'].append('\n'.join(bf))
                 if recordset.get('allow_add') is False:
@@ -1164,7 +1088,8 @@ class CppGenerator:
                 for var in group_members:
                     # Guarded: a nested group without its own recordset: is skipped instead of
                     # breaking the build.
-                    rfc.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
+                    rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
+                    rfc.append(f"         {var}->refreshFromCurrent(rec);")
                 rfc.append("      refreshEx(rec);")
                 # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
                 # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
@@ -1484,7 +1409,7 @@ class CppGenerator:
 
         cancel_message = class_def.get("cancel_message")
         required_imports: set[str] = {"Wizard", "WizardPage", "Ctrl", "CtrlSignals", "InterfaceController",
-                                      "Util", "CoreData", "DDT", "Types", "wxCore", "std"}
+                                      "Util", "DDT", "Types"}
         modules_extra = class_def.get("modules")
         if isinstance(modules_extra, list):
             required_imports.update(m.strip() for m in modules_extra if isinstance(m, str) and m.strip())
@@ -1599,10 +1524,9 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        # See the groups/pages/wizardpages preamble for why Core.h/CoreData.h/Util.h are
-        # replaced by CoreMacros.h + Core/Types.h here -- same SLoc-budget reasoning.
-        code.append('#include "Core/CoreMacros.h"')
-        code.append('#include "Core/Types.h"')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         # nid:: notification IDs (used by a 'finally:' body, e.g. ctrlSignal().Notify(...))
@@ -1827,7 +1751,7 @@ class CppGenerator:
         export_module = export_module.strip()
 
         children = class_def.get("pages", [])
-        required_imports: set[str] = {"Book", "wxTypes", "wxCore", "Util", "CoreData", "DDT", "Types", "std"}
+        required_imports: set[str] = {"Book", "wxTypes", "Util", "DDT", "Types"}
         for child in children:
             if isinstance(child, dict):
                 mod = child.get("module")
@@ -1849,10 +1773,9 @@ class CppGenerator:
         code.append('')
         code.append('// Make any changes there. This file will be overwritten.')
         code.append('')
-        # See the groups/pages/wizardpages preamble for why Core.h/CoreData.h/Util.h are
-        # replaced by CoreMacros.h + Core/Types.h here -- same SLoc-budget reasoning.
-        code.append('#include "Core/CoreMacros.h"')
-        code.append('#include "Core/Types.h"')
+        code.append('#include "Core/Core.h"')
+        code.append('#include "Core/CoreData.h"')
+        code.append('#include "Core/Util.h"')
         code.append('#include "Gfx/gfx_export.h"')
         code.append('#include "Gfx/WidgetsFwd.h"')
         code.append('')
@@ -2545,13 +2468,12 @@ class CppGenerator:
         s = ev.strip()
         if not s:
             return 'wxEVT_TEXT'
+        # If already a wxEVT_* constant, keep as-is
+        if s.startswith('wxEVT_'):
+            return s
 
-        # Canonicalize input a bit, working in 'EVT_...' space even when a 'wx' prefix was
-        # already given, so the COMMAND_* modernization below (step 2) also applies to exact
-        # 'wxEVT_COMMAND_...' input -- YAML sources spell it that way -- not just bare aliases.
+        # Canonicalize input a bit
         up = s.upper().replace('-', '_').replace(' ', '_')
-        if up.startswith('WXEVT_'):
-            up = up[2:]
 
         # Allow bare tokens like "TEXT", "BUTTON" -> prefix EVT_
         if not up.startswith('EVT_'):
@@ -2562,24 +2484,12 @@ class CppGenerator:
         if mapped:
             return mapped
 
-        # 2) Try modernizing legacy EVT_COMMAND_<WIDGET>_<ACTION> aliases (e.g.
-        # wxEVT_COMMAND_BUTTON_CLICKED, the deprecated wx2.x spelling still used in some YAML
-        # sources): drop "COMMAND_", then also try dropping a trailing action suffix, since the
-        # modern names (wxEVT_BUTTON, wxEVT_CHECKBOX, ...) drop that too. The deprecated macro
-        # aliases only exist via <wx/event.h>, which generated modules deliberately don't
-        # include (SLoc-budget blow-up across ~70 BMIs); the modern names are real declarations
-        # already reachable via `import wxCore;`.
+        # 2) Try modernizing legacy COMMAND_* aliases by dropping "COMMAND_"
         if 'EVT_COMMAND_' in up:
             try2 = up.replace('EVT_COMMAND_', 'EVT_', 1)
             mapped2 = self.event_mapping.get(try2)
             if mapped2:
                 return mapped2
-            for suf in ('_CLICKED', '_SELECTED', '_TOGGLED', '_UPDATED', '_ENTER'):
-                if try2.endswith(suf):
-                    mapped3 = self.event_mapping.get(try2[:-len(suf)])
-                    if mapped3:
-                        return mapped3
-                    break
             # As a last attempt, synthesize wxEVT_COMMAND_* directly (some projects prefer these)
             return 'wx' + up  # e.g., EVT_COMMAND_BUTTON_CLICKED -> wxEVT_COMMAND_BUTTON_CLICKED
 
@@ -2617,16 +2527,16 @@ class CppGenerator:
         if self.target_type == "groups":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator',
-                 'wxTypes', 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types',
+                 'wxTypes', 'wxUtil',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes',
-                 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types'])
+                 'wxUtil'])
         elif self.target_type == "wizardpages":
             used_modules.update(
                 ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil',
-                 'wxTypes', 'wxUtil', 'wxCore', 'std', 'Util', 'CoreData', 'Types'])
+                 'wxTypes', 'wxUtil'])
 
         if not isinstance(elements, list):
             return sorted(used_modules)
@@ -3542,7 +3452,7 @@ class CppGenerator:
         """Parse the YAML file and return the group definitions."""
         try:
             with open(yaml_file, 'r', encoding='utf-8') as file:
-                return yaml.load(file, Loader=_IncludeLoader)
+                return yaml.safe_load(file)
         except yaml.YAMLError as e:
             # Try to provide more helpful error information
             if hasattr(e, 'problem_mark'):
@@ -3552,21 +3462,6 @@ class CppGenerator:
                 if hasattr(e, 'context'):
                     print(f"  Context: {e.context}", file=sys.stderr)
             raise ValueError(f"Invalid YAML format in {yaml_file}: {e}")
-
-    def load_and_merge_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
-        """Python port of Util::loadAndMergeYAML (Libs/Core/src/Util.cpp). If the parsed
-        document has a top-level 'include:' key, recursively loads and merges that file's
-        content into this one via merge_yaml_nodes(). A relative include path is resolved
-        against yaml_file's own directory, not the process cwd."""
-        root = self.parse_yaml_file(yaml_file)
-        if isinstance(root, dict) and root.get('include'):
-            include_path = Path(root['include'])
-            if not include_path.is_absolute():
-                include_path = yaml_file.parent / include_path
-            included = self.load_and_merge_yaml_file(include_path)
-            if isinstance(included, dict):
-                merge_yaml_nodes(root, included)
-        return root
 
     # Multi-word wx tokens whose CamelCase can't be recovered by a plain .capitalize()
     # of the underscore-split event name -- used by _derive_handler_name().
@@ -4602,16 +4497,12 @@ class CppGenerator:
         "<table>_detail" view per table with relationships.
         """
 
-        # 'no_scan: true' is a topmost key. If present, the entire file is skipped. It is
-        # read from the file's own unmerged content, before following 'include:' -- a
-        # fragment's 'no_scan: true' (needed so the fragment isn't independently scanned)
-        # must never leak into files that include it and disable them too.
-        raw = self.parse_yaml_file(yaml_file)
-        no_scan = bool(raw.get('no_scan', False)) if isinstance(raw, dict) else False
-        if no_scan:
-            return ""
+        data = self.parse_yaml_file(yaml_file)
 
-        data = self.load_and_merge_yaml_file(yaml_file)
+        # 'no_scan: true' is a topmost key. If present, the entire file is skipped.
+        no_scan = bool(data.get('no_scan', False)) if isinstance(data, dict) else false
+        if no_scan == True:
+            return ""
 
         # 'debugging: true' is a topmost key in the YAML document, a sibling of
         # 'groups:'/'pages:'/'wizardpages:'/'book:'/'wizard:'/'tables:' - not nested

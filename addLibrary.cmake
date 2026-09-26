@@ -5,7 +5,7 @@ function(addLibrary)
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES;BASE_DIRS;CXX_BASE_DIRS"
             ${ARGN}
     )
-    get_filename_component(LIB_PATH "${CMAKE_CURRENT_LIST_DIR}" DIRECTORY)
+    get_filename_component(LIB_PATH ${CMAKE_CURRENT_LIST_DIR} DIRECTORY)
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
 
     if (NOT arg_HEADERS_FILE_SET)
@@ -191,7 +191,6 @@ function(addLibrary)
     # @formatter:off
     set_target_properties(${arg_NAME} PROPERTIES
             CXX_EXTENSIONS              OFF
-            CXX_MODULE_STD              OFF
             CXX_STANDARD                23
             CXX_STANDARD_REQUIRED       ON
             OUTPUT_NAME                 ${LIB_OUTPUT_NAME}
@@ -199,27 +198,6 @@ function(addLibrary)
             PREFIX                      "${LIB_PRE}"
             SUFFIX                      "${LIB_SUF}"
     )
-
-    # `std`/`std.compat` are provided by ONE explicit, shared target
-    # (HoffSoftCxxStd, see cxxStdModule.cmake) instead of CMake's automatic
-    # CXX_MODULE_STD synthesis (disabled above). CXX_MODULE_STD creates a
-    # SEPARATE synthesized "std" BMI compile per directory scope that requests
-    # it, and empirically these are NOT byte-identical across separate
-    # compiles of the exact same input (verified by hand: sha256 of the "std"
-    # BMI differed across per-scope copies within a single Libs build).
-    # Clang's module deserializer isn't robust against a consumer being handed
-    # a DIFFERENT (even if nominally equivalent) "std" BMI than the one a
-    # dependency (e.g. Core's Database.pcm) was actually compiled against --
-    # it segfaults in ASTDeclReader::UpdateDecl instead of erroring cleanly.
-    # HoffSoftCxxStd is built once (by Core) and shared exactly the way this
-    # project already shares other fetched dependencies (yaml-cpp, soci, ...):
-    # linking it PUBLIC propagates its BMI transitively through Core -> Gfx ->
-    # MyCare via CMake's normal C++ modules dependency machinery, so every
-    # consumer -- in-tree or an external package via find_package() -- resolves
-    # "std" to the exact same file.
-    if (TARGET HoffSoftCxxStd)
-        target_link_libraries(${arg_NAME} PUBLIC HoffSoftCxxStd)
-    endif ()
 
     # VERSION drives CMake's versioned-filename + symlink behavior on its own,
     # independent of SOVERSION/NO_SONAME, so it must stay off executable targets.
@@ -426,47 +404,9 @@ function(addLibrary)
             endif()
         endif()
 
-        # Apply shared PCH to this target's .cpp SOURCES always. Do NOT apply it to
-        # .ixx MODULES via target-wide target_compile_options -- Clang requires
-        # PCH-identical state between an importer and any BMI it imports, and a
-        # target-wide PRIVATE -include-pch makes CMake's cross-target C++20 module
-        # support treat every module this target imports from an IN-TREE CMake
-        # target (e.g. Gfx importing Core, both built by the SAME configure) as
-        # "incompatible", silently recompiling the exporting side's module under
-        # this target's PCH. For a Core module Gfx imports, that shadow recompile
-        # inherits Gfx's PCH requirement but not Gfx's wx include path (Core rightly
-        # has none), so it fails to resolve wx/wx.h -- and even when it doesn't fail
-        # outright, it's a wx-tainted recompile of code that's supposed to be
-        # unconditionally GUI-free.
-        #
-        # That risk is specific to in-tree module imports within THIS configure
-        # (i.e. building Libs itself, where Gfx imports Core's .ixx as CMake
-        # targets in the same build graph). It does NOT apply to a downstream
-        # consumer project (MyCare, or any other app) importing Core's/Gfx's
-        # modules -- those are already-built, staged BMIs found via
-        # -fprebuilt-module-path, not in-tree CMake targets CMake's scanner could
-        # ever shadow-recompile. For such a consumer, excluding .ixx from the PCH
-        # left it exposed to exactly the failure the PCH exists to prevent: empirically,
-        # Clang 22 segfaults deserializing a cross-package BMI (e.g. Core's Database.pcm)
-        # from a MyCare .ixx with no PCH applied ("Clang's 2 GB SLoc limit" per the
-        # comment above), and the crash disappears once -include-pch is added to that
-        # same .ixx compile. So scope the .ixx exclusion to Libs' own build only.
-        set(_hs_pch_to_ixx OFF)
-        if (NOT CMAKE_PROJECT_NAME STREQUAL "Libs")
-            set(_hs_pch_to_ixx ON)
-        endif ()
-        if (arg_SOURCES)
-            set_source_files_properties(${arg_SOURCES} PROPERTIES
-                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
-            )
-        endif()
-        if (arg_MODULES AND _hs_pch_to_ixx)
-            set_source_files_properties(${arg_MODULES} PROPERTIES
-                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
-                    SKIP_PRECOMPILE_HEADERS OFF
-            )
-        endif()
-        unset(_hs_pch_to_ixx)
+        # Apply shared PCH to ALL WIN32/Linux GUI targets via target_compile_options
+        # (bypasses SKIP_PRECOMPILE_HEADERS, reaches .ixx files too).
+        target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
             # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
