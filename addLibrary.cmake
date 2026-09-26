@@ -404,8 +404,6 @@ function(addLibrary)
             endif()
         endif()
 
-        # Apply shared PCH to ALL WIN32/Linux GUI targets via target_compile_options
-        # (bypasses SKIP_PRECOMPILE_HEADERS, reaches .ixx files too).
         target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
