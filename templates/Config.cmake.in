@@ -109,9 +109,13 @@ if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.
     while(NOT foundAt EQUAL -1)
         # Walk back to find the "if(cmake >= 3.28)" line guarding this block.
         string(SUBSTRING "${outvar}" 0 ${foundAt} firstBit)
-        string(FIND "${firstBit}" "INTERFACE" interfaceAt REVERSE)
-        string(SUBSTRING "${outvar}" 0 ${interfaceAt} firstBit)
-        set(firstBit "${firstBit})")
+    
+        string(FIND "${firstBit}" "if(NOT CMAKE_VERSION VERSION_LESS \"3.28.0\")" blockStart REVERSE)
+        if(blockStart EQUAL -1)
+            message(FATAL_ERROR "Cannot locate CXX_MODULES conditional block")
+        endif()
+        string(SUBSTRING "${outvar}" 0 ${blockStart} firstBit)    
+    
         string(SUBSTRING "${outvar}" ${foundAt} -1 lastBit)
         string(FIND "${lastBit}" "endif()" endifAt)
         string(LENGTH "endif()" endifLen)
