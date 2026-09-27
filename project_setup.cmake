@@ -5,7 +5,11 @@ macro(project_setup _Folder)
 
     get_filename_component(_Target "${_Folder}" NAME)
     if(NOT APP_NAME)
-        include("${_Folder}/AppSpecific.cmake")
+        if (EXISTS "${_Folder}/AppSpecific.cmake")
+            include("${_Folder}/AppSpecific.cmake")
+        elseif (EXISTS "${CMAKE_SOURCE_DIR}/AppSpecific.cmake")
+            include("${CMAKE_SOURCE_DIR}/AppSpecific.cmake")
+        endif ()
     endif ()
     msg(NOTICE "Processing project: ${APP_NAME}")
 

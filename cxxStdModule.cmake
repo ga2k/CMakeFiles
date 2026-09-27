@@ -102,9 +102,9 @@ function(provideCxxStdModule)
     # with a plain install(DIRECTORY) copy of the whole ".dir/" build output
     # (see project_install.cmake) -- do the same here for std.pcm/std.compat.pcm.
     install(TARGETS HoffSoftCxxStd
-            EXPORT CoreTarget
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT CoreDevelopment
-            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/Core COMPONENT CoreDevelopment
+            EXPORT ${APP_NAME}Target
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${APP_NAME}Development
+            FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME} COMPONENT ${APP_NAME}Development
     )
     # Stage the ACTUAL BMI every Core/Gfx module was compiled against, not
     # HoffSoftCxxStd's own "real" library compile of std.cc/std.compat.cc.
@@ -123,8 +123,8 @@ function(provideCxxStdModule)
     # some consumer's build has actually triggered the scan that creates them.
     install(CODE
             "set(_hs_cxxstd_synth_dir \"${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles\")
-             set(_hs_cxxstd_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/Core\")
+             set(_hs_cxxstd_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/bmi/${APP_VENDOR}/${APP_NAME}\")
              include(\"${cmake_root}/installCxxStdBmi.cmake\")"
-            COMPONENT CoreDevelopment
+            COMPONENT ${APP_NAME}Development
     )
 endfunction()

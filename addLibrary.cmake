@@ -359,7 +359,7 @@ function(addLibrary)
                     set(_hs_pch_crt_flags
                         "$<IF:$<CONFIG:Debug>,-DDEBUG,-DNDEBUG>"
                         "-fPIC")
-                    if (APPLE)
+                    if (APPLE OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
                         # PCH must match the BMI compile flags: Gfx compiles with _LIBCPP_NO_ABI_TAG
                         # (PRIVATE target define, not captured in _hs_pch_dir_D), so add it explicitly.
                         list(APPEND _hs_pch_crt_flags "-D_LIBCPP_NO_ABI_TAG")
@@ -404,7 +404,7 @@ function(addLibrary)
             endif()
         endif()
 
-        target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
+        set_property(SOURCE ${arg_SOURCES} ${arg_MODULES} APPEND PROPERTY COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}")
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
             # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
