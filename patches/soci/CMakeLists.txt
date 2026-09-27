@@ -9,7 +9,6 @@ soci_parse_version(
         ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
         OUTPUT_VARIABLE SOCI_VERSION
 )
-
 project(SOCI
         VERSION ${SOCI_VERSION}
         DESCRIPTION "C++ database access library"

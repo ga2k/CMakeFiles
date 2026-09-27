@@ -409,7 +409,7 @@ function(addLibrary)
                     set(_hs_pch_crt_flags
                         "$<IF:$<CONFIG:Debug>,-DDEBUG,-DNDEBUG>"
                         "-fPIC")
-                    if (APPLE)
+                    if (APPLE OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
                         # PCH must match the BMI compile flags: Gfx compiles with _LIBCPP_NO_ABI_TAG
                         # (PRIVATE target define, not captured in _hs_pch_dir_D), so add it explicitly.
                         list(APPEND _hs_pch_crt_flags "-D_LIBCPP_NO_ABI_TAG")
@@ -454,51 +454,7 @@ function(addLibrary)
             endif()
         endif()
 
-        # Apply shared PCH to this target's .cpp SOURCES always. Do NOT apply it to
-        # .ixx MODULES via target-wide target_compile_options -- Clang requires
-        # PCH-identical state between an importer and any BMI it imports, and a
-        # target-wide PRIVATE -include-pch makes CMake's cross-target C++20 module
-        # support treat every module this target imports from an IN-TREE CMake
-        # target (e.g. Gfx importing Core, both built by the SAME configure) as
-        # "incompatible", silently recompiling the exporting side's module under
-        # this target's PCH. For a Core module Gfx imports, that shadow recompile
-        # inherits Gfx's PCH requirement but not Gfx's wx include path (Core rightly
-        # has none), so it fails to resolve wx/wx.h -- and even when it doesn't fail
-        # outright, it's a wx-tainted recompile of code that's supposed to be
-        # unconditionally GUI-free.
-        #
-        # That risk is specific to in-tree module imports within THIS configure
-        # (i.e. building Libs itself, where Gfx imports Core's .ixx as CMake
-        # targets in the same build graph). It does NOT apply to a downstream
-        # consumer project (MyCare, or any other app) importing Core's/Gfx's
-        # modules -- those are already-built, staged BMIs found via
-        # -fprebuilt-module-path, not in-tree CMake targets CMake's scanner could
-        # ever shadow-recompile. For such a consumer, excluding .ixx from the PCH
-        # left it exposed to exactly the failure the PCH exists to prevent: empirically,
-        # Clang 22 segfaults deserializing a cross-package BMI (e.g. Core's Database.pcm)
-        # from a MyCare .ixx with no PCH applied ("Clang's 2 GB SLoc limit" per the
-        # comment above), and the crash disappears once -include-pch is added to that
-        # same .ixx compile -- SOMETIMES: see the KNOWN REMAINING ISSUE note above the
-        # -fmodule-file=std= flag earlier in this function. This PCH fix and that flag
-        # both help but neither is a complete fix on its own; the BMI-identity mismatch
-        # is the real root cause and is being addressed on wip/shared-std-module.
-        # So scope the .ixx exclusion to Libs' own build only.
-        set(_hs_pch_to_ixx OFF)
-        if (NOT CMAKE_PROJECT_NAME STREQUAL "Libs")
-            set(_hs_pch_to_ixx ON)
-        endif ()
-        if (arg_SOURCES)
-            set_source_files_properties(${arg_SOURCES} PROPERTIES
-                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
-            )
-        endif()
-        if (arg_MODULES AND _hs_pch_to_ixx)
-            set_source_files_properties(${arg_MODULES} PROPERTIES
-                    COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}"
-                    SKIP_PRECOMPILE_HEADERS OFF
-            )
-        endif()
-        unset(_hs_pch_to_ixx)
+        set_property(SOURCE ${arg_SOURCES} ${arg_MODULES} APPEND PROPERTY COMPILE_OPTIONS "-include-pch;${_hs_pch_bin}")
         if (LINUX)
             # The shared PCH is built -fPIC (Gfx is a shared library). Executable
             # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
