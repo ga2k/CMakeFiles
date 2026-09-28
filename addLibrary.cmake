@@ -221,32 +221,27 @@ function(addLibrary)
     # compiling before std.pcm exists. Harmless to add unconditionally -- a TU
     # that doesn't reference `std` simply ignores an unused -fmodule-file.
     #
-    # KNOWN REMAINING ISSUE (2026-09-24): this flag/dependency only fixes the
-    # ordering/existence problem. It does NOT fix module-BMI *identity*
-    # mismatches: CMake's per-directory-scope std synthesis is not reproducible
-    # across separate compiles of the same input (verified by hand: sha256 of
-    # the "std" BMI differed across per-scope copies within a single Libs
-    # build), and Clang's module deserializer crashes (ASTDeclReader::UpdateDecl,
-    # SIGSEGV) rather than erroring cleanly when a consumer is hand a different
-    # "std" instance than a dependency was actually compiled against. This
-    # surfaces as an intermittent crash in MyCare compiling .ixx files that
-    # transitively touch Core/Gfx modules (e.g. DBase.ixx importing Database).
-    # See the wip/shared-std-module branch in this repo for an in-progress fix
-    # (a single explicit shared "std" target instead of relying on
-    # CXX_MODULE_STD's per-scope synthesis) -- not yet complete: it resolves
-    # this for Core's own modules but Gfx's cross-target import of Core's
-    # OTHER modules hits an analogous mismatch via a different CMake mechanism.
-    #
-    # Revisit once CMake's cross-package import-std propagation matures, and
-    # re-verify the "@cmake_cxx_std.dir" path/target name against whatever
-    # CMake version is in use -- both are internal/undocumented and have
-    # already changed once across CMake versions (previously
-    # "__cmake_cxx_std_23.dir", silently broken by a CMake upgrade).
-    target_compile_options(${arg_NAME} PRIVATE
-            "-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/@cmake_cxx_std.dir/std.pcm"
-    )
+    # When @cmake_cxx_std exists (CXX_MODULE_STD ON), use its freshly-built
+    # std.pcm.  When it does NOT exist (MyCare consuming pre-built Core/Gfx),
+    # fall back to the std.pcm shipped in Core's staged BMI directory, which
+    # is already on -fprebuilt-module-path.  The fallback path is resolved at
+    # configure time from the staged location; if the file is absent the flag
+    # is silently skipped so the build still works.
     if (TARGET "@cmake_cxx_std")
+        target_compile_options(${arg_NAME} PRIVATE
+                "-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/@cmake_cxx_std.dir/std.pcm"
+        )
         add_dependencies(${arg_NAME} "@cmake_cxx_std")
+    else ()
+        # Consumer of pre-built Core/Gfx: point to the std.pcm that Core
+        # compiled against, so BMI identity matches.
+        set(_hs_staged_std "${CMAKE_INSTALL_PREFIX}/lib/cmake/bmi/${APP_VENDOR}/Core/std.pcm")
+        if (EXISTS "${_hs_staged_std}")
+            target_compile_options(${arg_NAME} PRIVATE
+                    "-fmodule-file=std=${_hs_staged_std}"
+            )
+        endif ()
+        unset(_hs_staged_std)
     endif ()
 
     # VERSION drives CMake's versioned-filename + symlink behavior on its own,

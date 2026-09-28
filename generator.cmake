@@ -86,6 +86,27 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
     # from impl.cpp stubs and other generated headers resolve.
     target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
 
+    # Generated C++ module interface units (.ixx) — these export the module that
+    # _impl.cpp files implement.  They must be registered as CXX_MODULES FILE_SET
+    # sources so CMake compiles them as module interfaces (producing .pcm files)
+    # before any _impl.cpp that declares `module <name>;` tries to consume them.
+    file(GLOB_RECURSE CLASS_MODULE_FILES
+            LIST_DIRECTORIES false
+            "${OUT_DIR}/*.ixx"
+    )
+    if (CLASS_MODULE_FILES)
+        target_sources(${TRRGET}
+                PUBLIC
+                FILE_SET CXX_MODULES TYPE CXX_MODULES
+                BASE_DIRS "${OUT_DIR}"
+                FILES ${CLASS_MODULE_FILES}
+        )
+        set_source_files_properties(${CLASS_MODULE_FILES} PROPERTIES
+                SKIP_PRECOMPILE_HEADERS ON
+                CXX_SCAN_FOR_MODULES ON
+        )
+    endif()
+
     # Hand-written implementation stubs (created by generator; existing function
     # bodies are never overwritten, only missing functions get appended)
     file(GLOB_RECURSE CLASS_IMPL_FILES

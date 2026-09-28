@@ -7,7 +7,6 @@ Generates C++ Group module files from YAML form definitions.
 import sys
 import subprocess
 import argparse
-import json
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
@@ -31,6 +30,49 @@ def ensure_yaml():
 
 
 yaml = ensure_yaml()
+
+
+class _ReplaceMarker:
+    """A map or sequence parsed from a `!replace`-tagged YAML node -- merge_yaml_nodes()
+    replaces the base's value with this wholesale instead of extending/deep-merging it.
+    Mirrors the `!replace` tag check in Util::mergeYAMLNodes (Libs/Core/src/Util.cpp)."""
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+class _IncludeLoader(yaml.SafeLoader):
+    """SafeLoader plus the `!replace` tag used by CppGenerator.load_and_merge_yaml_file()."""
+
+
+def _construct_replace(loader: 'yaml.SafeLoader', node: 'yaml.Node'):
+    if isinstance(node, yaml.MappingNode):
+        return _ReplaceMarker(loader.construct_mapping(node, deep=True))
+    if isinstance(node, yaml.SequenceNode):
+        return _ReplaceMarker(loader.construct_sequence(node, deep=True))
+    return loader.construct_scalar(node)  # !replace on a scalar is a no-op, as in the C++ original
+
+
+_IncludeLoader.add_constructor('!replace', _construct_replace)
+
+
+def merge_yaml_nodes(base: Dict[str, Any], extension: Dict[str, Any]) -> None:
+    """Python port of Util::mergeYAMLNodes (Libs/Core/src/Util.cpp). Mutates `base` in
+    place, layering `extension` onto it: sequences extend (append) by default, maps
+    deep-merge key by key, a `!replace`-tagged map/sequence in `extension` replaces the
+    base's value wholesale, and any other value from `extension` (scalars) always wins."""
+    for key, value in extension.items():
+        if isinstance(value, _ReplaceMarker):
+            base[key] = value.value
+        elif isinstance(base.get(key), list) and isinstance(value, list):
+            base[key].extend(value)
+        elif isinstance(value, dict):
+            if not isinstance(base.get(key), dict):
+                base[key] = {}
+            merge_yaml_nodes(base[key], value)
+        else:
+            base[key] = value
 
 # A C++ numeric literal, optionally signed, optionally hex, optionally carrying an
 # integer/float suffix (-1L, 0x10u, 3.0f, 123ULL, .5, 5.). Recognized so it can be
@@ -151,26 +193,6 @@ class CppGenerator:
         size: Optional[Tuple[int, int]] = None
 
     def __init__(self):
-        # module_name -> "<Lib>/relative/path.h" for every hand-written Core/Gfx/MyCare
-        # module (a static snapshot taken when those libraries were converted from C++
-        # modules to plain headers -- see module_header_map.json's own directory for
-        # the conversion script that produced it). If Core/Gfx/MyCare's own header
-        # layout changes later, this file needs regenerating by hand; there's no
-        # longer a live "export module" to scan since those are all plain .h now.
-        map_path = Path(__file__).parent / "module_header_map.json"
-        with open(map_path, encoding="utf-8") as f:
-            self.static_module_header_map: Dict[str, str] = json.load(f)
-        # (generated_module_name -> "ui/PascalNameSuffix.h") filled in once ALL yaml
-        # files have been scanned (see _flush_pending_writes) -- generated classes can
-        # reference each other, so their paths aren't known until every file has been
-        # through at least the name-computing part of generation.
-        self.generated_module_header_map: Dict[str, str] = {}
-        # (module_content, out_path) pairs -- populated by _write_or_concat instead of
-        # writing to disk immediately, so that by the time we actually write (and do
-        # the import/export-module -> #include/#pragma-once substitution), every
-        # generated class's own header path is already known.
-        self._pending_writes: List[Tuple[str, Path]] = []
-
         self.control_value_mapping = {
             # @formatter:off
             'Activity':                 'hs::NullValue',
@@ -184,6 +206,7 @@ class CppGenerator:
             'CheckedPasswordCtrl':      'std::string',
             'DatePicker':               'wxDateTime',
             'ELBox':                    'ID::Type',
+            'ELGrid':                   'ID::Type',
             'ExpandingNotesCtrl':       'std::string',
             'FontCombo':                'std::string',
             'FontList':                 'std::string',
@@ -227,6 +250,7 @@ class CppGenerator:
             'CheckedPasswordCtrl':      '""',
             'DatePicker':               'nulldatetime',
             'ELBox':                    'ID::Null',
+            'ELGrid':                   'ID::Null',
             'ExpandingNotesCtrl':       '""',
             'FontCombo':                '""',
             'FontList':                 '""',
@@ -268,10 +292,11 @@ class CppGenerator:
             'ColourChooser':            True,
             'Combo':                    True,
             'ComplexComboBox':          True,
-            'CheckedPasswordCtrl':    True,
+            'CheckedPasswordCtrl':      True,
             'DateCtrl':                 True,
             'DatePicker':               True,
             'ELBox':                    True,
+            'ELGrid':                   True,
             'ExpandingNotesCtrl':       True,
             'FontCombo':                True,
             'FontList':                 True,
@@ -310,6 +335,7 @@ class CppGenerator:
         self.multi_row_control_classes = {
             'ListCtrl',
             'ELBox',
+            'ELGrid',
             'GridCtrl'
         }
         # Control class (or its base_class) -> the Gfx module that exports it. Consulted as a
@@ -337,6 +363,7 @@ class CppGenerator:
             'DateCtrl':                 'DatePicker',
             'DatePicker':               'DatePicker',
             'ELBox':                    'ELBox',
+            'ELGrid':                   'ELGrid',
             'ExpandingNotesCtrl':       'ExpandingNotesCtrl',
             'FontCombo':                'FontCombo',
             'FontList':                 'FontList',
@@ -879,6 +906,17 @@ class CppGenerator:
                 f'   static constexpr auto textField() -> std::string_view {{ return "{alt_ds["display_field"]}"sv; }}')
             code.append(
                 f'   static auto locked(const db::Row &r) -> bool {{ return r.get<hs_bool>("bLocked").get(); }}')
+            # fields()/values() are only required by ELGridDBSourceFor (ELGrid's multi-column
+            # row-write-back concept, Gfx/src/ctrls/ELGrid.ixx) -- harmless additions for every
+            # other alt_data_source consumer (Choice/Combo/ListBox/ELBox), which only require
+            # DBSourceFor and never reference them. This synthesizes a single-column grid off the
+            # same display_field; alt_data_source: has no syntax for declaring more than one
+            # column, so a genuine multi-column ELGrid still needs a hand-written DBSource.
+            code.append(
+                f'   static auto fields() -> std::vector<std::pair<std::string, std::string>> '
+                f'{{ return {{{{"{alt_ds["display_field"]}", "{alt_ds["display_field"]}"}}}}; }}')
+            code.append(
+                f'   static auto values(const db::Row &r) -> std::vector<std::string> {{ return {{ displayText(r) }}; }}')
             code.append("};")
             code.append("")
 
@@ -1078,8 +1116,7 @@ class CppGenerator:
                         bf.append(f'      wx::initFromField({var}, rec->get<std::optional<{cpp_type}>>("{fld}"));')
                         bf.append(f'      {var}->where("id = " + std::to_string(rec->get<int>("id")));')
                     for var in group_members:
-                        bf.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
-                        bf.append(f"         {var}->refreshFromCurrent(rec);")
+                        bf.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
                     bf.append("   }")
                     access_groups['public'].append('\n'.join(bf))
                 if recordset.get('allow_add') is False:
@@ -1109,8 +1146,7 @@ class CppGenerator:
                 for var in group_members:
                     # Guarded: a nested group without its own recordset: is skipped instead of
                     # breaking the build.
-                    rfc.append(f"      if constexpr (requires {{ {var}->refreshFromCurrent(rec); }})")
-                    rfc.append(f"         {var}->refreshFromCurrent(rec);")
+                    rfc.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
                 rfc.append("      refreshEx(rec);")
                 # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
                 # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
@@ -3473,7 +3509,7 @@ class CppGenerator:
         """Parse the YAML file and return the group definitions."""
         try:
             with open(yaml_file, 'r', encoding='utf-8') as file:
-                return yaml.safe_load(file)
+                return yaml.load(file, Loader=_IncludeLoader)
         except yaml.YAMLError as e:
             # Try to provide more helpful error information
             if hasattr(e, 'problem_mark'):
@@ -3483,6 +3519,21 @@ class CppGenerator:
                 if hasattr(e, 'context'):
                     print(f"  Context: {e.context}", file=sys.stderr)
             raise ValueError(f"Invalid YAML format in {yaml_file}: {e}")
+
+    def load_and_merge_yaml_file(self, yaml_file: Path) -> Dict[str, Any]:
+        """Python port of Util::loadAndMergeYAML (Libs/Core/src/Util.cpp). If the parsed
+        document has a top-level 'include:' key, recursively loads and merges that file's
+        content into this one via merge_yaml_nodes(). A relative include path is resolved
+        against yaml_file's own directory, not the process cwd."""
+        root = self.parse_yaml_file(yaml_file)
+        if isinstance(root, dict) and root.get('include'):
+            include_path = Path(root['include'])
+            if not include_path.is_absolute():
+                include_path = yaml_file.parent / include_path
+            included = self.load_and_merge_yaml_file(include_path)
+            if isinstance(included, dict):
+                merge_yaml_nodes(root, included)
+        return root
 
     # Multi-word wx tokens whose CamelCase can't be recovered by a plain .capitalize()
     # of the underscore-split event name -- used by _derive_handler_name().
@@ -4401,25 +4452,23 @@ class CppGenerator:
             "",
         ]
 
-    def _impl_header_preamble(self, class_name: str) -> List[str]:
-        """The #include block every _impl.cpp needs (everything up to, but not including,
-        the 'namespace {' line). class_name is the generated class's own PascalCase name
-        (e.g. "BriefUserGroup"), which is also its generated header's basename
-        ("ui/BriefUserGroup.h" -- OUT_DIR/ui is where _write_or_concat/_flush_pending_writes
-        puts every generated header, and OUT_DIR is on the target's include path; see
-        generator.cmake's target_include_directories())."""
+    def _impl_module_preamble(self, module_name: str) -> List[str]:
+        """The global-module-fragment + 'module <name>;' header every _impl.cpp needs to
+        be a valid module implementation unit (everything up to, but not including, the
+        'namespace {' line)."""
         return [
-            "#pragma once",
+            "module;",
             "// Module implementation unit — add includes your implementation needs.",
             '#include "Core/Core.h"',
             '#include <wx/event.h>',
-            f'#include "ui/{class_name}.h"',
+            "",
+            f"module {module_name};",
             "",
         ]
 
     def _write_impl_stub(self, impl_dir: Path, class_name: str, module_name: str,
                          ns: str, stub_fns: Dict[str, Dict[str, Any]]) -> None:
-        """Write (or incrementally extend) an implementation-file stub.
+        """Write (or incrementally extend) a module implementation unit stub.
 
         Hand-written function bodies are never touched: each function in stub_fns
         is checked for an existing 'ClassName::fname (' definition anywhere in the
@@ -4427,15 +4476,11 @@ class CppGenerator:
         this lets a new function be added to a YAML that already has a hand-edited
         impl file without clobbering the existing implementations.
 
-        An existing file that is empty, or that has lost its own-header #include
+        An existing file that is empty, or that has lost its 'module <name>;' header
         (truncated, botched merge, hand-editing accident), is repaired: empty -> written
         fresh with the full preamble; content-but-no-preamble -> the preamble is spliced
-        back on above the surviving code. A bare-stub file with no #include of its own
-        header won't compile, so this is always a strict improvement.
-
-        module_name (the class's former C++ module name, e.g. "BriefUser.Group") is no
-        longer used for anything -- kept as a parameter so call sites don't all need
-        updating -- the self-include is derived purely from class_name now.
+        back on above the surviving code. A bare-stub file with no module header won't
+        compile, so this is always a strict improvement.
         """
         impl_dir.mkdir(parents=True, exist_ok=True)
         stub_path = impl_dir / f"{class_name}_impl.cpp"
@@ -4444,7 +4489,7 @@ class CppGenerator:
         existing = stub_path.read_text(encoding="utf-8") if existed else ""
 
         if not existing.strip():
-            lines = self._impl_header_preamble(class_name)
+            lines = self._impl_module_preamble(module_name)
             lines.append(f"namespace {ns} {{")
             lines.append("")
             for fname, fdef in stub_fns.items():
@@ -4457,8 +4502,8 @@ class CppGenerator:
             return
 
         preamble_restored = False
-        if not re.search(rf'(?m)^\s*#include\s*"ui/{re.escape(class_name)}\.h"\s*$', existing):
-            existing = "\n".join(self._impl_header_preamble(class_name)) + "\n" + existing.lstrip("\n")
+        if not re.search(rf"(?m)^\s*module\s+{re.escape(module_name)}\s*;", existing):
+            existing = "\n".join(self._impl_module_preamble(module_name)) + "\n" + existing.lstrip("\n")
             preamble_restored = True
 
         missing_fns = {
@@ -4524,12 +4569,16 @@ class CppGenerator:
         "<table>_detail" view per table with relationships.
         """
 
-        data = self.parse_yaml_file(yaml_file)
-
-        # 'no_scan: true' is a topmost key. If present, the entire file is skipped.
-        no_scan = bool(data.get('no_scan', False)) if isinstance(data, dict) else false
-        if no_scan == True:
+        # 'no_scan: true' is a topmost key. If present, the entire file is skipped. It is
+        # read from the file's own unmerged content, before following 'include:' -- a
+        # fragment's 'no_scan: true' (needed so the fragment isn't independently scanned)
+        # must never leak into files that include it and disable them too.
+        raw = self.parse_yaml_file(yaml_file)
+        no_scan = bool(raw.get('no_scan', False)) if isinstance(raw, dict) else False
+        if no_scan:
             return ""
+
+        data = self.load_and_merge_yaml_file(yaml_file)
 
         # 'debugging: true' is a topmost key in the YAML document, a sibling of
         # 'groups:'/'pages:'/'wizardpages:'/'book:'/'wizard:'/'tables:' - not nested
@@ -4707,117 +4756,36 @@ class CppGenerator:
 
     def _write_or_concat(self, generated: List[Tuple[str, str]], suffix: str, rel_path: Path,
                          output_file: Optional[Path], category: str) -> str:
-        """Queue (name, module_content) pairs for writing later - only touching files whose
-           content actually changed, to avoid unnecessary rebuilds - or return them concatenated.
-
-           Deferred rather than written immediately: the module-syntax -> #include
-           conversion (done in _flush_pending_writes) needs to know the header path of
-           every OTHER generated class too, for cross-references (e.g. a Group that
-           imports a Page defined in a different YAML file) -- and that isn't known
-           until every YAML file has been through this method at least once."""
+        """Write (name, module_content) pairs to disk - only touching files whose content
+           actually changed, to avoid unnecessary rebuilds - or return them concatenated."""
         if not output_file:
             return ("\n\n").join(module for _, module in generated)
 
         dest_dir = output_file  # / rel_path
         dest_dir.mkdir(parents=True, exist_ok=True)
 
+        label = self.target_class
+
         for name, module_content in generated:
             base_name = name[:-6] if name.endswith('_table') else name
             pascal = self.to_pascal_case(base_name)
-            out_path = dest_dir / f"{pascal}{suffix}.h"
-            self._pending_writes.append((module_content, out_path))
+            out_path = dest_dir / f"{pascal}{suffix}.ixx"
 
-        return generated[-1][1]
-
-    _MODULE_DECL_RE = re.compile(r'^export\s+module\s+([\w.]+)(?::([\w.]+))?\s*;\s*$')
-    _IMPORT_RE = re.compile(r'^(\s*)(export\s+)?import\s+(:)?([\w.]+)\s*;\s*(//.*)?$')
-    _MODULE_PREAMBLE_RE = re.compile(r'^module;\s*$')
-    _EXPORT_PREFIX_RE = re.compile(r'^(\s*)export\s+(.*)$')
-
-    def _resolve_module_header(self, current_primary: str, ref: str, is_partition: bool) -> Optional[str]:
-        key = f"{current_primary}:{ref}" if is_partition else ref
-        return (self.generated_module_header_map.get(key)
-                or self.static_module_header_map.get(key))
-
-    def _convert_module_content_to_header(self, content: str, own_header_path: str) -> str:
-        """Post-process one generated class's module-syntax content into a plain header:
-        drop 'module;'/'export module NAME;', convert 'import Y;'/'export import Y;' to
-        '#include \"...\"' via the combined static + generated module map (dropping
-        'import std;' entirely -- standard headers arrive via the existing includes/PCH,
-        same policy as the hand-written Core/Gfx/MyCare conversion), and strip leading
-        'export ' tokens (everything at namespace scope in a header is implicitly
-        visible). Mirrors convert_modules.py's convert_file_lines() -- see that script
-        (used to convert Core/Gfx/MyCare's hand-written modules) for the original."""
-        lines = content.splitlines()
-        primary = own_header_path  # only used as a key for ':partition' imports; generated
-                                    # classes don't use partitions, so this is never hit in
-                                    # practice, but keeps the helper signature uniform.
-        out: List[str] = ["#pragma once", ""]
-        for line in lines:
-            stripped = line.strip()
-            if self._MODULE_PREAMBLE_RE.match(stripped):
-                continue
-            if self._MODULE_DECL_RE.match(stripped):
-                continue
-            imp = self._IMPORT_RE.match(line)
-            if imp:
-                indent, _export_kw, is_partition, ref = imp.group(1), imp.group(2), imp.group(3), imp.group(4)
-                if ref in ("std", "std.compat"):
-                    continue
-                header = self._resolve_module_header(primary, ref, bool(is_partition))
-                if header is None:
-                    out.append(f'{indent}// TODO: unresolved module import: {("::" if is_partition else "") + ref}')
-                else:
-                    out.append(f'{indent}#include "{header}"')
-                continue
-            exp = self._EXPORT_PREFIX_RE.match(line)
-            if exp:
-                out.append(f"{exp.group(1)}{exp.group(2)}")
-                continue
-            out.append(line)
-        return "\n".join(out) + ("\n" if content.endswith("\n") else "")
-
-    def _flush_pending_writes(self) -> None:
-        """Second pass: now that every YAML file has queued its generated classes, build
-        the generated-class name -> header-path map, then convert and write every queued
-        file. See _write_or_concat for why this is deferred rather than done inline."""
-        # Build the generated-class map first, from the RAW (still module-syntax) content,
-        # so every class's own export_module name is known before ANY file does its
-        # import -> #include substitution (which needs to resolve references to classes
-        # generated from a *different* YAML file).
-        base_dir = None
-        for content, out_path in self._pending_writes:
-            m = self._MODULE_DECL_RE.match(next(
-                (l.strip() for l in content.splitlines() if l.strip().startswith("export module ")), ""))
-            if not m:
-                print(f"Warning: could not find 'export module' in content destined for {out_path}; "
-                      f"cross-references to it will fail to resolve", file=sys.stderr)
-                continue
-            primary, partition = m.group(1), m.group(2)
-            full_name = f"{primary}:{partition}" if partition else primary
-            if base_dir is None:
-                # out_path is <OUT_DIR>/ui/Name.h; the include path consumers use is
-                # relative to OUT_DIR (which is on the include path -- see generator.cmake).
-                base_dir = out_path.parent.parent
-            rel = out_path.relative_to(base_dir)
-            self.generated_module_header_map[full_name] = rel.as_posix()
-
-        for content, out_path in self._pending_writes:
-            new_content = self._convert_module_content_to_header(content, "")
             try:
                 existing = out_path.read_text(encoding='utf-8') if out_path.exists() else None
             except Exception:
                 existing = None
 
-            if existing != new_content:
+            if existing != module_content:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(out_path, 'w', encoding='utf-8') as f:
-                    f.write(new_content)
-                print(f"{out_path} : OK ({'created' if existing is None else 'updated'})")
+                    f.write(module_content)
+                print(f"{out_path} : {label} OK ({'created' if existing is None else 'updated'})")
             else:
-                print(f"{out_path} : OK (unchanged)")
+                # Keep timestamp untouched when no changes
+                print(f"{out_path} : {label} OK (unchanged)")
 
-        self._pending_writes = []
+        return generated[-1][1]
 
 
 def scan_and_generate(generator,
@@ -4882,8 +4850,6 @@ def scan_and_generate(generator,
             print(f"Error reading {yf}: {e}", file=sys.stderr)
             return 1
 
-    generator._flush_pending_writes()
-
     return 0
 
 
@@ -4937,8 +4903,6 @@ def main():
 
     try:
         result = generator.generate_from_yaml(args.input_yaml, Path("."), args.output)
-        if args.output:
-            generator._flush_pending_writes()
 
         if not args.output:
             print(result)
