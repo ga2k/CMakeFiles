@@ -421,6 +421,14 @@ set(@APP_NAME@_INCLUDE_DIR  "${_incdir}" )
 set(@APP_NAME@_LIBRARIES    "@APP_VENDOR@::@APP_NAME@" )
 set(@APP_NAME@_LIBRARY_DIR  "${_libdir}" )
 
+# Shared wx PCH file (empty if this package was built without GUI support).
+# When non-empty, downstream consumers can use it with -include-pch to share
+# the same PCH binary that the BMIs were compiled against, avoiding Clang's
+# SLoc address space exhaustion when loading many BMIs.
+# All consumers must reference the same file path; Clang embeds the PCH path
+# in every BMI, so a different path (even a bit-identical copy) causes ODR errors.
+set(@APP_NAME@_PCH_FILE "@HS_PCH_PATH@")
+
 # Plugin and resource directories
 if (NOT "@APP_CREATES_PLUGINS@" STREQUAL "")
     set(PLUGIN_DIR "${_libdir}")

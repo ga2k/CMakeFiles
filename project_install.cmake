@@ -231,6 +231,14 @@ function(project_install _Folder)
             COMPATIBILITY SameMajorVersion
     )
 
+    # Shared wx PCH path: downstream consumers need to know where the PCH lives
+    # so they can use -include-pch with the same file the BMIs were compiled against.
+    # Only set for GUI packages on platforms that use the shared PCH mechanism.
+    set(HS_PCH_PATH "")
+    if ((WIN32 OR LINUX OR APPLE) AND GUI IN_LIST APP_FEATURES)
+        set(HS_PCH_PATH "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch")
+    endif()
+
     configure_package_config_file(
             ${cmake_root}/templates/Config.cmake.in
             "${OUTPUT_DIR}/${APP_NAME}Config.cmake"

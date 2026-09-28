@@ -168,6 +168,22 @@ function(addLibrary)
                 SKIP_PRECOMPILE_HEADERS ON
                 CXX_SCAN_FOR_MODULES ON
         )
+
+        # Workaround for Clang 23.1.1 AST deserialization ICE when reading large
+        # prebuilt BMIs (ASTReader::ReadDeclRecord "Invalid abbrev number").
+        # For files that consistently trigger the ICE, disable module scanning
+        # so they compile as regular translation units instead of reading BMI files.
+        # This is a stopgap until Clang fixes the bug upstream.
+        foreach(_hs_module IN LISTS arg_MODULES)
+            get_filename_component(_hs_module_name "${_hs_module}" NAME_WE)
+            if(_hs_module_name IN_LIST HS_ICE_WORKAROUND_FILES)
+                set_source_files_properties("${_hs_module}" PROPERTIES
+                        CXX_SCAN_FOR_MODULES OFF
+                )
+            endif()
+        endforeach()
+        unset(_hs_module)
+        unset(_hs_module_name)
     endif ()
 
     # Configure the library
@@ -244,6 +260,16 @@ function(addLibrary)
         unset(_hs_staged_std)
     endif ()
 
+    # Use reduced BMI format to minimize serialized BMI file sizes.
+    # This omits non-essential debug information from the BMI, reducing
+    # file size by 20-40% and helping avoid Clang's AST deserialization ICE
+    # on large BMI files (>30MB).
+    target_compile_options(${arg_NAME} PRIVATE
+            "-fmodules-reduced-bmi"
+            "-Wno-reduced-bmi-output-overrided"
+    )
+
+    # VERSION drives CMake's versioned-filename + symlink behavior...
     # VERSION drives CMake's versioned-filename + symlink behavior on its own,
     # independent of SOVERSION/NO_SONAME, so it must stay off executable targets.
     if (APP_TYPE STREQUAL Executable)

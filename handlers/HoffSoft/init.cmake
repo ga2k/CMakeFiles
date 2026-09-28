@@ -63,6 +63,21 @@ function(FindCore_init dry_run)
     commonInit (Core ${dry_run})
 endfunction()
 
+function(Core_postMakeAvailable src build outDir buildType)
+    if(APP_NAME STREQUAL "Core")
+        return()
+    endif()
+
+    # Ensure reduced BMI format is used for all HoffSoft module BMI compilation.
+    # CMake 4.4+ builds synthetic BMI targets using the consumer's COMPILE_OPTIONS,
+    # so adding it here ensures the flag is present when BMIs are compiled.
+    target_compile_options(HoffSoft::Core INTERFACE
+            "-fmodules-reduced-bmi"
+            "-Wno-reduced-bmi-output-overrided"
+    )
+    set(HANDLED ON PARENT_SCOPE)
+endfunction()
+
 ########################################################################################################################
 
 function(addGfxFeatures dry_run)
@@ -91,6 +106,15 @@ function(Gfx_postMakeAvailable src build outDir buildType)
     if(APP_NAME STREQUAL "Gfx")
         return()
     endif()
+
+    # Ensure reduced BMI format is used for all HoffSoft module BMI compilation.
+    # CMake 4.4+ builds synthetic BMI targets using the consumer's COMPILE_OPTIONS,
+    # so adding it here ensures the flag is present when BMIs are compiled.
+    target_compile_options(HoffSoft::Gfx INTERFACE
+            "-fmodules-reduced-bmi"
+            "-Wno-reduced-bmi-output-overrided"
+    )
+
     if(TARGET "HoffSoft::wxmono")
         get_target_property(_wxm_incs "HoffSoft::wxmono" INTERFACE_INCLUDE_DIRECTORIES)
         if(_wxm_incs)

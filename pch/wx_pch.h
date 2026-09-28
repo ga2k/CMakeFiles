@@ -23,10 +23,7 @@
 #include <algorithm>
 #include <any>
 #include <array>
-// <fstream> removed from PCH: in libc++ 22 it transitively includes <__filesystem/path.h>,
-// causing Clang's type merger to produce incompatible basic_string<char> nodes when a
-// module implementation unit imports a BMI compiled with this PCH.  Files that need
-// fstream include it directly in their own global module fragment or translation unit.
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <list>
