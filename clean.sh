@@ -31,7 +31,7 @@ go=0
 dc=0
 pch=0
 num=0
-dry_run=1
+dry_run=
 
 platform=""
 build=""
@@ -108,7 +108,7 @@ f() {
 }
 
 bye() {
-    printf "Removed  %5d %9s files. I'm tired boss..." $num " "
+    printf "Removed  %5d %9s files. I'm tired boss..." $num "total"
     exit 0
 }
 
