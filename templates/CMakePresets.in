@@ -73,6 +73,7 @@
         ]
       },
       "toolset": "host=x64",
+      "generator": "Visual Studio 17 2022",
       "environment": {
         "hostType": "Windows",
         "hostPath": "/windows",
@@ -104,6 +105,7 @@
           }
         ]
       },
+      "generator": "Ninja",
       "environment": {
         "hostType": "Windows",
         "hostPath": "/winllvm",
@@ -114,6 +116,11 @@
       "cacheVariables": {
         "BUILD_WX_FROM_SOURCE": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
+        "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS": "C:/Program Files/LLVM/bin/clang-scan-deps.exe",
+        "CMAKE_C_COMPILER": "C:/Program Files/LLVM/bin/clang.exe",
+        "CMAKE_LINKER": "C:/Program Files/LLVM/bin/ld.lld.exe",
+        "CMAKE_RC_COMPILER": "C:/Program Files/LLVM/bin/llvm-rc.exe",
         "CMAKE_SYSTEM_NAME": "Windows",
         "CMAKE_SYSTEM_PROCESSOR": "AMD64",
         "OPENSSL_ROOT_DIR": "C:/Program Files/OpenSSL-Win64"
@@ -148,6 +155,10 @@
       },
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_OSX_SYSROOT": "macosx",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
         "CMAKE_SHARED_LINKER_FLAGS": "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
         "CMAKE_EXE_LINKER_FLAGS":    "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
         "BUILD_WX_FROM_SOURCE": "ON"
@@ -182,6 +193,8 @@
       },
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
         "BUILD_WX_FROM_SOURCE": "ON"
       }
     },
@@ -237,6 +250,30 @@
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
+        "Release",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows (VS Debug Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}/ninja"
+     },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}/vs",
+      "inherits": [
+        "Windows VS",
+        "Debug",
+        "Shared"
+      ]
+    },
+    {
+      "name": "Windows (VS Release Shared)",
+      "cacheVariables": {
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}/vs",
+      "inherits": [
+        "Windows VS",
         "Release",
         "Shared"
       ]
