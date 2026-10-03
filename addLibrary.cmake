@@ -1,3 +1,19 @@
+# Called once (deferred) after all project_setup() invocations complete.
+# Adds _hs_wx_pch as an order-only dependency to every C++ module-providing
+# target so their @synth_N counterparts (which inherit Gfx's -include-pch
+# flag) don't race against the PCH build on a clean checkout.
+function(_hs_apply_pch_order_to_module_providers)
+    if (NOT TARGET _hs_wx_pch)
+        return()
+    endif()
+    get_property(_providers GLOBAL PROPERTY _HS_CXX_MODULE_TARGETS)
+    foreach(_prov IN LISTS _providers)
+        if (TARGET "${_prov}")
+            add_dependencies("${_prov}" _hs_wx_pch)
+        endif()
+    endforeach()
+endfunction()
+
 function(addLibrary)
     cmake_parse_arguments(arg
             "STATIC;SHARED;MULTI_LIBS;PRIMARY;EXECUTABLE"
@@ -168,6 +184,18 @@ function(addLibrary)
                 SKIP_PRECOMPILE_HEADERS ON
                 CXX_SCAN_FOR_MODULES ON
         )
+
+        # Track every module-providing target so the PCH ordering hook (below)
+        # can retroactively add _hs_wx_pch as a build prerequisite.  CMake
+        # generates @synth_N targets for module providers that are consumed by
+        # GUI targets; those synthetic targets inherit Gfx's -include-pch flag
+        # but do NOT inherit add_dependencies(), so they race against the PCH
+        # build on a clean checkout.  We fix this by adding _hs_wx_pch to the
+        # upstream provider target itself, which propagates via:
+        #   cmake_object_order_depends_target_Core@synth_N
+        #     → cmake_object_order_depends_target_Core
+        #       → Gfx/_hs_wx_pch
+        set_property(GLOBAL APPEND PROPERTY _HS_CXX_MODULE_TARGETS "${arg_NAME}")
     endif ()
 
     # Configure the library
@@ -401,6 +429,14 @@ function(addLibrary)
                 message("_hs_pch_bin is ${_hs_pch_bin}")
 
                 # PCH is written directly to the staged location; no separate install step.
+
+                # Deferred until after all project_setup() calls in the top-level
+                # CMakeLists.txt so that all module-providing targets already exist.
+                # Adds _hs_wx_pch as an order-only dep to every registered module
+                # provider, propagating through cmake_object_order_depends_target_X
+                # to any @synth_N target CMake generates for that provider.
+                cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+                    CALL _hs_apply_pch_order_to_module_providers)
             endif()
         endif()
 
