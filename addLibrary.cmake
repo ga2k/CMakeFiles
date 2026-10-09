@@ -1,7 +1,8 @@
+
 # Called once (deferred) after all project_setup() invocations complete.
 # Adds _hs_wx_pch as an order-only dependency to every C++ module-providing
-# target so their @synth_N counterparts (which inherit Gfx's -include-pch
-# flag) don't race against the PCH build on a clean checkout.
+# target.  Even though the per-source PCH approach eliminates Core@synth_0,
+# this is kept as a safety net for any future @synth targets that might arise.
 function(_hs_apply_pch_order_to_module_providers)
     if (NOT TARGET _hs_wx_pch)
         return()
@@ -435,23 +436,47 @@ function(addLibrary)
                 # Adds _hs_wx_pch as an order-only dep to every registered module
                 # provider, propagating through cmake_object_order_depends_target_X
                 # to any @synth_N target CMake generates for that provider.
+                # Both deferred functions run once after all CMakeLists.txt files
+                # Runs once after all CMakeLists.txt so all module-providing targets exist.
                 cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
                     CALL _hs_apply_pch_order_to_module_providers)
             endif()
         endif()
 
-        # Apply shared PCH to ALL WIN32/Linux GUI targets via target_compile_options
-        # (bypasses SKIP_PRECOMPILE_HEADERS, reaches .ixx files too).
-        target_compile_options(${arg_NAME} PRIVATE "-include-pch;${_hs_pch_bin}")
+        # Apply -include-pch to every source file of this GUI target.
+        # WHY per-source COMPILE_FLAGS rather than target_compile_options(PRIVATE):
+        #   target_compile_options PRIVATE puts the flag in the target's COMPILE_OPTIONS,
+        #   which CMake copies into any @synth_N synthetic target generated for upstream
+        #   module providers.  @synth inherits the consumer's PRIVATE compile options but
+        #   NOT its PRIVATE include directories, so Core@synth_0 would get -include-pch
+        #   without wx search paths → clang-scan-deps fatal: 'wx/wx.h' not found.
+        #   Per-source COMPILE_FLAGS are NOT part of the target-level context CMake uses
+        #   to decide whether @synth is needed; no Core@synth_0 is created.
+        # WHY COMPILE_FLAGS (deprecated) instead of COMPILE_OPTIONS (list):
+        #   In CMake 4.x/Ninja, COMPILE_OPTIONS source-file property is NOT reflected in
+        #   the per-build-statement FLAGS for targets using the scanned CXX compilation
+        #   rule.  COMPILE_FLAGS IS included in FLAGS for both scanned and unscanned
+        #   compilation.  Verified on CMake 4.4.3.
+        # WHY called here (not deferred):
+        #   cmake_language(DEFER CALL) from inside a function does not expand variable
+        #   references at registration time in CMake 4.x.  More critically, properties
+        #   set from a deferred call (running in CMAKE_SOURCE_DIR scope) are not picked
+        #   up by the Ninja generator for Gfx's per-build-statement FLAGS.  Setting the
+        #   property directly here (in the caller's directory scope) does work.
+        set(_hs_pch_flags "-include-pch ${_hs_pch_bin}")
         if (LINUX)
-            # The shared PCH is built -fPIC (Gfx is a shared library). Executable
-            # TUs default to -fPIE and Clang's PCH validation rejects the PIC/PIE
-            # LangOpts mismatch ("is pie differs").  Appending -fPIC here (after
-            # CMake's -fPIE, so it wins) normalizes every PCH consumer to PIC;
-            # the executable is still linked -pie, and PIC objects link fine
-            # into a PIE binary.
-            target_compile_options(${arg_NAME} PRIVATE "-fPIC")
+            # The PCH is built -fPIC (shared library).  Executable TUs default to
+            # -fPIE and Clang's LangOpts check rejects the PCH ("is pie differs").
+            string(APPEND _hs_pch_flags " -fPIC")
         endif()
+        set(_hs_all_pch_srcs ${arg_MODULES} ${arg_SOURCES} ${arg_SOURCE})
+        if (_hs_all_pch_srcs)
+            set_source_files_properties(${_hs_all_pch_srcs}
+                PROPERTIES COMPILE_FLAGS "${_hs_pch_flags}")
+        endif()
+        unset(_hs_all_pch_srcs)
+        unset(_hs_pch_flags)
+
         if (TARGET _hs_wx_pch)
             add_dependencies(${arg_NAME} _hs_wx_pch)
         endif()
