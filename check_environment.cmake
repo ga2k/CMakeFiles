@@ -110,9 +110,9 @@ macro(check_environment PROJECT_ROOT)
         # Map the lower-case path stems back to fixPresetMess's argument spelling.
         if (_ce_host_lc STREQUAL "linux")
             set(_ce_host "Linux")
-        elseif (_ce_host_lc STREQUAL "macos")
-            set(_ce_host "macOS")
-        elseif (_ce_host_lc MATCHES "^win")          # windows / winllvm / winx / winnative
+        elseif (_ce_host_lc STREQUAL "darwin")
+            set(_ce_host "Darwin")
+        elseif (_ce_host_lc MATCHES "windows")
             set(_ce_host "Windows")
         else ()
             message(FATAL_ERROR "check_environment: unrecognised host stem '${_ce_host_lc}' in stemPath '${_ce_stem}'.")
@@ -269,6 +269,7 @@ macro(check_environment PROJECT_ROOT)
             forceSet(HOME_DIR       "" "${HOME_DIR}"                            FILEPATH)
 
             forceSet(BUILD_DIR      "" "${PROJECT_ROOT}/build${stemPath}/_deps" FILEPATH)
+            forceSet(GENERATED_DIR  "" "${PROJECT_ROOT}/generated${stemPath}"   FILEPATH)
             forceSet(OUTPUT_DIR     "" "${PROJECT_ROOT}/out${stemPath}"         FILEPATH)
             forceSet(EXTERNALS_DIR  "" "${PROJECT_ROOT}/external${stemPath}"    FILEPATH)
             forceSet(ARCHIVE_DIR    "" "${HOME_DIR}/dev/archives${stemPath}"    FILEPATH)
@@ -285,20 +286,13 @@ macro(check_environment PROJECT_ROOT)
             endif ()
 
             if (WIN32)
-                if (CMAKE_CROSSCOMPILING)
-                    # Cross-compiling for Windows from Linux — use Linux-style staging layout
-                    # so both builds share ~/dev/stage/usr/local/ without C:\ path nonsense
-                    set(SYSTEM_PATH "/AppData/Roaming/${APP_VENDOR}")
-                    set(_SYSPATH "${SYSTEM_PATH}")
+                if (DEFINED ENV{APPDATA})
+                    set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
                 else ()
-                    if (DEFINED ENV{APPDATA})
-                        set(SYSTEM_PATH "$ENV{APPDATA}/${APP_VENDOR}")
-                    else ()
-                        set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/${APP_VENDOR}")
-                    endif ()
-
-                    string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _SYSPATH)
+                    set(SYSTEM_PATH "$ENV{USERPROFILE}/AppData/Roaming/${APP_VENDOR}")
                 endif ()
+
+                string(SUBSTRING "${SYSTEM_PATH}" 2 -1 _SYSPATH)
 
             else ()
 
@@ -317,7 +311,7 @@ macro(check_environment PROJECT_ROOT)
             endif ()
         endif ()
 
-        log(LISTS stemPath buildPath _PATH HOME_DIR BUILD_DIR OUTPUT_DIR EXTERNALS_DIR STAGE_DIR ARCHIVE_DIR)
+        log(LISTS stemPath buildPath _PATH HOME_DIR BUILD_DIR OUTPUT_DIR EXTERNALS_DIR STAGE_DIR ARCHIVE_DIR GENERATED_DIR)
 
         if (NOT DEFINED CMAKE_CXX_STANDARD)
             set(CMAKE_CXX_STANDARD 23)
