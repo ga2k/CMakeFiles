@@ -127,9 +127,9 @@
       }
     },
     {
-      "name": "macOS",
+      "name": "Darwin",
       "hidden": true,
-      "description": "macOS build for arm64 processors",
+      "description": "Darwin build for arm64 processors",
       "condition": {
         "type": "allOf",
         "conditions": [
@@ -147,8 +147,8 @@
       },
       "generator": "Ninja",
       "environment": {
-        "hostType": "macOS",
-        "hostPath": "/macos",
+        "hostType": "Darwin",
+        "hostPath": "/Darwin",
         "archType": "arm64",
         "archPath": "/arm64",
         "CMAKE_NINJA_FLAGS": "-k 0"
@@ -157,7 +157,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
-        "CMAKE_OSX_SYSROOT": "macosx",
+        "CMAKE_OSX_SYSROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
         "CMAKE_SHARED_LINKER_FLAGS": "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
         "CMAKE_EXE_LINKER_FLAGS":    "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
@@ -279,49 +279,49 @@
       ]
     },
     {
-      "name": "macOS (Debug Static)",
+      "name": "Darwin (Debug Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "macOS",
+        "Darwin",
         "Debug",
         "Static"
       ]
     },
     {
-      "name": "macOS (Debug Shared)",
+      "name": "Darwin (Debug Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "macOS",
+        "Darwin",
         "Debug",
         "Shared"
       ]
     },
     {
-      "name": "macOS (Release Static)",
+      "name": "Darwin (Release Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "macOS",
+        "Darwin",
         "Release",
         "Static"
       ]
     },
     {
-      "name": "macOS (Release Shared)",
+      "name": "Darwin (Release Shared)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
-        "macOS",
+        "Darwin",
         "Release",
         "Shared"
       ]
@@ -377,20 +377,20 @@
       "configurePreset": "Windows (VS Release Shared)"
     },
     {
-      "name": "macOS (Debug Static)",
-      "configurePreset": "macOS (Debug Static)"
+      "name": "Darwin (Debug Static)",
+      "configurePreset": "Darwin (Debug Static)"
     },
     {
-      "name": "macOS (Debug Shared)",
-      "configurePreset": "macOS (Debug Shared)"
+      "name": "Darwin (Debug Shared)",
+      "configurePreset": "Darwin (Debug Shared)"
     },
     {
-      "name": "macOS (Release Static)",
-      "configurePreset": "macOS (Release Static)"
+      "name": "Darwin (Release Static)",
+      "configurePreset": "Darwin (Release Static)"
     },
     {
-      "name": "macOS (Release Shared)",
-      "configurePreset": "macOS (Release Shared)"
+      "name": "Darwin (Release Shared)",
+      "configurePreset": "Darwin (Release Shared)"
     },
     {
       "name": "Linux (Debug Shared)",

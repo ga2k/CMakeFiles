@@ -132,19 +132,14 @@ def read_json(file_path):
 
 def is_cross_compile_preset(preset):
     """
-    Returns True if this preset is a cross-compile preset that should always
-    be visible on the current host (e.g. WinX presets on Linux).
-    Cross-compile presets are identified by having 'Cross' in their name.
+    Returns False - cross-compiling is no longer supported
     """
-    return "Cross" in preset.get("name", "")
+    return False
 
 
 def process_presets(presets):
     """
     Process presets to separate hidden, conditional, and inherited conditions.
-    Cross-compile presets (e.g. 'WinX') are always included on the
-    current host platform regardless of their condition, since they are
-    intentionally run from a different host OS.
     """
     hidden_presets = []
     conditional_presets = {}
@@ -293,7 +288,6 @@ def main(in_file, out_file):
     # the platform prefix, replacing "Platform (Variant)" with "Platform Variant".
     # Examples:
     #   "Linux (Debug Shared)"          -> "Linux Debug Shared"
-    #   "WinX (Debug Shared)"           -> "WinX Debug Shared"
     #   "macOS (Staged Release Shared)" -> "macOS Staged Release Shared"
     #   "Windows (VS Debug Shared)"     -> "Windows VS Debug Shared"
     # We also keep a name mapping to update buildPresets accordingly.
