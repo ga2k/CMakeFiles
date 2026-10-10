@@ -41,26 +41,31 @@ me=$(basename "$(pwd)")
 us=""
 them=""
 ht=0
-
-for arg in "$@"; do
+while (( $# != 0 )); do
+  arg=$1
+  arg2=$2
   arg_lc=$(tr '[:upper:]' '[:lower:]' <<< "$arg")
+  shift
   case "$arg_lc" in
-    --pch)            pch=1     ;;
-    --generated-only) go=1      ;;
-    --deep-clean)     dc=1      ;;
-    --dry-run)        dry_run=1 ;;
-    --help)           help      ;;
-    --folders=*)      IFS=',' read -ra fo <<< "${arg#--folders=}"    ;;
-    --platform=*)     IFS=',' read -ra pl <<< "${arg#--platform=}"   ;;
-    --build-type=*)   IFS=',' read -ra bt <<< "${arg#--build-type=}" ;;
-    --link-type=*)    IFS=',' read -ra lt <<< "${arg#--link-type=}"  ;;
-    *)                n=${#pl[@]}; (( n == 0 )) && pl[0]=${arg} && continue;
-                      n=${#bt[@]}; (( n == 0 )) && bt[0]=${arg} && continue;
-                      n=${#lt[@]}; (( n == 0 )) && lt[0]=${arg} && continue;
-                      help "Unknown or duplicate argument '${arg}'";;
+    --pch)            pch=1;;
+    --generated-only) go=1;;
+    --deep-clean)     dc=1;;
+    --dry-run)        dry_run=1;;
+    --help)           help;;
+    --folders=*)      IFS=',' read -ra fo <<< "${arg#--folders=}";;
+    --folders)        IFS=',' read -ra fo <<< "${arg2#--folders=}";     shift;;
+    --platform=*)     IFS=',' read -ra pl <<< "${arg#--platform=}";;
+    --platform)       IFS=',' read -ra pl <<< "${arg2#--platform=}";    shift;;
+    --build-type=*)   IFS=',' read -ra bt <<< "${arg#--build-type=}";;
+    --build-type)     IFS=',' read -ra bt <<< "${arg2#--build-type=}";  shift;;
+    --link-type=*)    IFS=',' read -ra lt <<< "${arg#--link-type=}";;
+    --link-type)      IFS=',' read -ra lt <<< "${arg2#--link-type=}";   shift;;
+    *)                n=${#pl[@]}; (( n == 0 )) && pl[0]=$arg && continue;
+                      n=${#bt[@]}; (( n == 0 )) && bt[0]=$arg && continue;
+                      n=${#lt[@]}; (( n == 0 )) && lt[0]=$arg && continue;
+                      help "Unknown or duplicate argument '$arg'";;
   esac
 done
-
 (( ${#fo[@]} == 0 || ${#fo[@]} == 2 ))    || help "If provided, folders must have two folders"
 (( ${#pl[@]} <= 1 )) && platform=${pl[0]} || help "Only one platform can be specified. Omit it to delete all"
 (( ${#bt[@]} <= 1 )) && build=${bt[0]}    || help "Only one build-type can be specified. Omit it to delete all build-types"
@@ -108,7 +113,7 @@ f() {
 }
 
 bye() {
-    printf "Removed  %5d %9s files. I'm tired boss..." $num "total"
+    printf "Removed  %5d %9s files. I'm tired boss...\n" $num "total"
     exit 0
 }
 
@@ -136,7 +141,7 @@ if (( dc )); then
   f "$PROJECTS/$us/external$ppath"  "external"
 
   (( ht )) && f "$PROJECTS/$them/build$ppath"     "build"
-  (( ht )) && f "$PROJECTS/$them/out/$ppath"      "out"
+  (( ht )) && f "$PROJECTS/$them/out$ppath"       "out"
   (( ht )) && f "$PROJECTS/$them/external$ppath"  "external"
 
   f "$HOME/dev/stage$ppath"         "stage"
