@@ -90,6 +90,35 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
             CXX_SCAN_FOR_MODULES ON
     )
 
+    # Apply the shared wx PCH to all generated files (both .ixx and _impl.cpp),
+    # matching what addLibrary.cmake does for explicitly-listed modules via COMPILE_FLAGS.
+    # Without this, generated files parse Core/Core.h (and other GMF headers) fresh —
+    # producing a second copy of each declaration relative to imported modules compiled
+    # with the PCH — causing "reference to X is ambiguous" in Clang 22.
+    #
+    # DIRECTORY is required: generateClasses() runs from the top-level
+    # CMAKE_CURRENT_SOURCE_DIR, but source-file properties must be set in the
+    # directory scope where the target was defined for the Ninja generator to pick
+    # them up in the per-build-statement FLAGS (CMake 3.18+ scoped properties).
+    set(_gen_pch_flags "")
+    set(_gen_tgt_src_dir "")
+    if ((WIN32 OR LINUX OR APPLE) AND APP_VENDOR)
+        set(_gen_pch_bin "${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch")
+        if (EXISTS "${_gen_pch_bin}")
+            set(_gen_pch_flags "-include-pch ${_gen_pch_bin}")
+            if (LINUX)
+                string(APPEND _gen_pch_flags " -fPIC")
+            endif()
+            get_target_property(_gen_tgt_src_dir ${TRRGET} SOURCE_DIR)
+            if (CLASS_FILES)
+                set_source_files_properties(${CLASS_FILES}
+                    DIRECTORY "${_gen_tgt_src_dir}"
+                    PROPERTIES COMPILE_FLAGS "${_gen_pch_flags}")
+            endif()
+        endif()
+        unset(_gen_pch_bin)
+    endif()
+
     target_include_directories(${TRRGET} PRIVATE "${OUT_DIR}")
 
     # Hand-written module implementation stubs (created by generator; existing
@@ -105,6 +134,13 @@ function(generateClasses OUT_DIR SRCDIR TRRGET EXPORT_VAR)
                 CXX_SCAN_FOR_MODULES ON
                 SKIP_PRECOMPILE_HEADERS ON
         )
+        if (_gen_pch_flags)
+            set_source_files_properties(${CLASS_IMPL_FILES}
+                DIRECTORY "${_gen_tgt_src_dir}"
+                PROPERTIES COMPILE_FLAGS "${_gen_pch_flags}")
+        endif()
     endif()
+    unset(_gen_pch_flags)
+    unset(_gen_tgt_src_dir)
 
 endfunction()

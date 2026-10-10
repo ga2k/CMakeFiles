@@ -758,7 +758,10 @@ class CppGenerator:
         code.append('')
         code.append(f'#include "Gfx/FieldWidth.h"')
         code.append('')
-        code.append('#include <unordered_set>')
+        # <unordered_set>/<string>/<iostream> omitted: all covered transitively by Core/Core.h
+        # and Core/Util.h, which are already in the GMF. Emitting them again duplicates
+        # declarations relative to any imported module that also includes those headers,
+        # producing "reference to X is ambiguous" errors in Clang 22.
         for directive in self.collect_variable_includes(variables_block):
             code.append(f'#include {directive}')
         code.append('')
