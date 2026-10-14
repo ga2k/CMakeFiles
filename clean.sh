@@ -76,7 +76,7 @@ done
 [[ -n $link  ]] && [[ -z $platform ]]     && help "Can't have a link-type without a platform"
 
 if (( ${#fo[@]} == 0 )); then
-  us=${me}
+ us=${me}
 else
   if [[ "${fo[0]}" == "${me}" ]]; then
     us="${fo[0]}"
@@ -130,6 +130,7 @@ echo
 # --generated-only or --deep-clean
 (( go || dc )) && f "$PROJECTS/$us/generated$ppath" "generated"
 (( go || dc )) && [[ -n "$them" ]] && f "$PROJECTS/$them/generated$ppath" "generated"
+(( go )) && bye
 
 # Always
 f "$PROJECTS/$us/build$ppath" "build"

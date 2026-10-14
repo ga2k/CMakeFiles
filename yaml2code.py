@@ -1016,7 +1016,7 @@ class CppGenerator:
                 # member function refreshFromCurrent(rec) itself calls directly.
                 refresh_ex_override = " override" if self.target_type == "pages" else ""
                 code.append(
-                    f"   auto refreshEx(const db::Row *rec) -> void{refresh_ex_override};  // Implemented in {stub_path}")
+                    f"   auto refreshEx(const db::Row *rec) -> bool{refresh_ex_override};  // Implemented in {stub_path}")
 
         # Declarations
         control_decls = self.generate_control_declarations(elements, yaml_file)
@@ -1149,14 +1149,14 @@ class CppGenerator:
                 for var in group_members:
                     # Guarded: a nested group without its own recordset: is skipped instead of
                     # breaking the build.
-                    rfc.append(f"      wx::refreshFromCurrentIfSupported({var}, rec);")
-                rfc.append("      refreshEx(rec);")
+                    rfc.append(f"      auto rex = wx::refreshFromCurrentIfSupported({var}, rec);")
+                rfc.append("      auto rex = refreshEx(rec);")
                 # initFromField()/pushToCtrl() above only paint the raw ValueT (e.g. cents
                 # as a plain int) onto the native control; validators (e.g. CurrencyValidator's
                 # cents -> "$123.45" formatting) only run via transferToWindow(), so re-run it
                 # here or freshly-displayed records show unformatted raw values until the user
                 # starts editing (which is the only other place transferToWindow() is invoked).
-                rfc.append("      ICtrl::transferTheseToWindow(controlMap());")
+                rfc.append("      if (! rex) ICtrl::transferTheseToWindow(controlMap());")
                 rfc.append("   }")
                 access_groups['public'].append('\n'.join(rfc))
 
@@ -1382,9 +1382,12 @@ class CppGenerator:
             }
         if refresh_ex_declared:
             stub_fns['refreshEx'] = {
-                'args': "const db::Row *rec", 'return': 'void', 'const': False, 'override': False,
+                'args': "const db::Row *rec", 'return': 'bool', 'const': False, 'override': False,
                 'stub_body': [
                     "    // Tweak values set by refreshFromCurrent() here.",
+                    "    // Return true  if we called ICtrl::transferTheseToWindow(controlMap())",
+                    "    // Return false if we didn't and our caller should",
+                    "    return false;",
                 ],
             }
         if stub_fns:
