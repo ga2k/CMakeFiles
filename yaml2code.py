@@ -22,6 +22,14 @@ def ensure_yaml():
         print("pyyaml not found, attempting to install...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "--break-system-packages"])
+            # A freshly installed --user package may land in a site-packages
+            # directory that didn't exist when this interpreter started (common
+            # on a brand-new machine), so it was never added to sys.path. Make
+            # sure it's visible before retrying the import.
+            import site
+            import importlib
+            site.addsitedir(site.getusersitepackages())
+            importlib.invalidate_caches()
             import yaml
             return yaml
         except Exception as e:
