@@ -111,7 +111,7 @@ function(createStandardPackageData dryRun)
     # a re-download. GIT_TAG accepts any ref the GitHub archive endpoint understands (a full
     # commit SHA, or e.g. "v3.3.3.1" for a stable release).
     addPackageData(OPTIONAL FEATURE "GUI" PKGNAME "wxWidgets" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "v3.3.4" # 615556792254306efe793d9317f0e9d1b7d8f582"
+            GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "v3.3.4"
             COMPONENTS wxmono
             ARG REQUIRED DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY
             SRCDIR ${ARCHIVE_DIR}/wxWidgets/source
