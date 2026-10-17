@@ -84,6 +84,23 @@ if (_hs_want_gui)
   # exist before GfxTarget.cmake (or any wx-bearing target file) is included.
   # OPTIONAL_COMPONENTS so this doesn't fail on platforms without EGL/GLX (e.g. macOS).
   find_dependency(OpenGL OPTIONAL_COMPONENTS OpenGL EGL GLX)
+
+  # A wxQt build links Qt6::* (and SDL3) through HoffSoft::wxmono; resolve whichever
+  # of those the exported target file references before it is included.
+  if(EXISTS "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake")
+    file(READ "${PACKAGE_PREFIX_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/@APP_NAME@Target.cmake" _hs_tgt)
+    string(REGEX MATCHALL "Qt6::[A-Za-z0-9_]+" _hs_qt "${_hs_tgt}")
+    if(_hs_qt)
+      list(TRANSFORM _hs_qt REPLACE "^Qt6::" "")
+      list(REMOVE_DUPLICATES _hs_qt)
+      find_dependency(Qt6 COMPONENTS ${_hs_qt})
+    endif()
+    if(_hs_tgt MATCHES "SDL3::")
+      find_dependency(SDL3)
+    endif()
+    unset(_hs_tgt)
+    unset(_hs_qt)
+  endif()
   include("${_cmakedir}/WX_Helper.cmake" OPTIONAL)
 endif()
 
