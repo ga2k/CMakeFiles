@@ -1884,14 +1884,17 @@ class CppGenerator:
                           f"DROPPED")
                 continue
 
-            # Element-level verbatim (Placement: before this element's items)
-            elements_verbatim = self._extract_verbatim_body(element)
-            if elements_verbatim:
-                for line in elements_verbatim.rstrip().splitlines():
-                    creation_code.append(f"      {line}")
-
-            identity = element.get('section') or element.get('Section') or ""
-            tool_tip = element.get('tool_tip', '')
+            unit_map = element.get('unit') if isinstance(element.get('unit'), dict) else {}
+            ctl_map = unit_map.get('control') if isinstance(unit_map.get('control'), dict) else {}
+            identity = str(ctl_map.get('name') or f"elements[{idx}]")
+            for dead in ('section', 'Section', 'verbatim', 'size', 'sizer'):
+                if dead in element:
+                    print(f"Warning: '{group_name}' {identity}: element-level '{dead}' is no longer supported "
+                          f"and is ignored (move it under 'unit:' / 'unit.control:') {yaml_file}", file=sys.stderr)
+            if 'tool_tip' in element:
+                print(f"Warning: '{group_name}' {identity}: element-level 'tool_tip' is deprecated; "
+                      f"move it under 'unit:' {yaml_file}", file=sys.stderr)
+            tool_tip = unit_map.get('tool_tip', element.get('tool_tip', ''))
             items = self._unit_entries(element)
             if not items and element.get('unit') is not None and not isinstance(element.get('unit'), dict):
                 self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]) 'unit' is a "
@@ -2396,14 +2399,10 @@ class CppGenerator:
                 "verbatim",
             },
             "control_set": {
-                "section",
                 "unit",
-                "size",
-                "sizer",
-                "tool_tip",
-                "verbatim",
             },
             "unit_entry": {
+                "tool_tip",
                 "labels",
                 "control",
                 "group",
@@ -3844,7 +3843,8 @@ class CppGenerator:
         elif isinstance(control_identity_or_element, str) and isinstance(all_elements, list):
             ident = control_identity_or_element
             for el in all_elements:
-                if isinstance(el, dict) and (el.get("section") == ident or el.get("Section") == ident):
+                el_ctl = (el.get("unit") or {}).get("control") if isinstance(el, dict) else None
+                if isinstance(el_ctl, dict) and el_ctl.get("name") == ident:
                     element = el
                     break
 
@@ -3855,14 +3855,14 @@ class CppGenerator:
 
         items = self._unit_entries(element)
         if not items and not isinstance(element.get('unit'), dict):
-            self._dbg(f"_generate_labels: section '{element.get('section') or element.get('Section')}' "
+            self._dbg(f"_generate_labels: element "
                       f"'unit' is a {type(element.get('unit')).__name__}, not a mapping - DROPPED")
             return code
 
         for item in items:
             if not isinstance(item, dict) or 'labels' not in item:
                 continue
-            self._dbg(f"_generate_labels: section '{element.get('section') or element.get('Section')}': "
+            self._dbg(f"_generate_labels: element: "
                       f"found 'labels' item with {len(item['labels']) if isinstance(item['labels'], list) else 0} entr(y/ies)")
 
             labels_seq = item['labels']
