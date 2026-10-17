@@ -64,14 +64,14 @@ function(wxWidgets_preDownload pkgname url tag srcDir)
     # bump them as a set whenever the main pin moves.
     set(_wx_submodules
         "src/zlib|zlib|CMakeLists.txt|62eba04c6ff5a91aff6ce9ffd50ff7a52994412c"
-        "src/png|libpng|CMakeLists.txt|3327853174bb3489b52380033a16a7af1c37cd03"
-        "src/expat|libexpat|expat/lib/expat.h|25cdb80756f1fcce8536b0980ec081612858eb50"
-        "src/tiff|libtiff|CMakeLists.txt|a40df5ddc406a958721ee4fc6faf5058460bc97b"
+        "src/png|libpng|CMakeLists.txt|08e02464a8af6eaee70d2c74d4cdc733b79c8835"
+        "src/expat|libexpat|expat/lib/expat.h|8cd47186fd078e301268d9201fe87f48d330fe2b"
+        "src/tiff|libtiff|CMakeLists.txt|a99682c8a614b53073abde44a171dc9fdf8d423e"
         "src/jpeg|libjpeg-turbo|jconfig.h|88cf215c8eee225148e007a66ee1dea5916fc949"
-        "3rdparty/pcre|pcre|CMakeLists.txt|4f76619e6f20de93f77b5ef6213bf54e0399d166"
-        "3rdparty/nanosvg|nanosvg|CMakeLists.txt|5cefd9847949af6df13f65027fd43af5a7513633"
+        "3rdparty/pcre|pcre|CMakeLists.txt|f6cffb7301f1ec9522837c3d5a79f560e7928e48"
+        "3rdparty/nanosvg|nanosvg|CMakeLists.txt|dc698a92aa4a1a67c72f2c97e244e957af49e60d"
         #    "3rdparty/libwebp|libwebp|CMakeLists.txt|<sha>"
-        "3rdparty/lunasvg|lunasvg|CMakeLists.txt|e6ebb8d1e00c2307bc6937020c34c47bccbadf29"
+        "3rdparty/lunasvg|lunasvg|CMakeLists.txt|fd6a499e1f75680a1b05329b3f53b3af7e7d3991"
     )
     foreach (_wx_sub IN LISTS _wx_submodules)
         string(REPLACE "|" ";" _wx_sub_parts "${_wx_sub}")
