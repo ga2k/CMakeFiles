@@ -333,6 +333,12 @@ function(addLibrary)
                 endforeach()
                 set(_hs_wx_D "")
                 foreach(_def IN LISTS HS_wxDefines)
+                    # wxQt's imported Qt6::Test carries $<TARGET_PROPERTY:prop> genexes
+                    # (QT_SKIP_DEFAULT_TESTCASE_DIRS) that are only valid on a real target,
+                    # not in add_custom_command. Irrelevant to the PCH, so skip them.
+                    if("${_def}" MATCHES "\\$<")
+                        continue()
+                    endif()
                     if(NOT "${_def}" MATCHES "^-D")
                         list(APPEND _hs_wx_D "-D${_def}")
                     else()

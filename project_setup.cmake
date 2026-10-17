@@ -1,6 +1,47 @@
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+function(registerPackageCallback fn dry_run)
+    if(NOT COMMAND "${fn}")
+        message(FATAL_ERROR "registerPackageCallback(): '${fn}' is not a command")
+    endif()
+    columnarTextOut("default" "package" "callback" "registered" "for" "handler" "${fn}"
+            "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
+    globalObjAppendUnique("HS_REG_PKG_CALLBACKS" "${fn}")
+endfunction()
+
+function(runPackageCallbacks)
+    globalObjGet("HS_REG_PKG_CALLBACKS" _cbs)
+    foreach(cb IN LISTS _cbs)
+        cmake_language(CALL "${cb}" "${ARGV}") # pass-through args if you want
+    endforeach()
+endfunction()
+
+function(registerLibrary libID namespace libName path)
+    string(TOUPPER ${libID} LIBID)
+    globalObjAppendUnique("HS_REG_LIB_${LIBID}_NAMESPACE" "${namespace}")
+    globalObjAppendUnique("HS_REG_LIB_${LIBID}_NAME"      "${libName}")
+    globalObjAppendUnique("HS_REG_LIB_${LIBID}_PATH"      "${path}")
+    if(NOT EXISTS "${path}")
+        msg(ALWAYS FATAL_ERROR "library registration path \"${RED}${BOLD}${path}${NC}\" does not exist")
+    else ()
+        msg("Library registration path \"${path}\" ${GREEN}successful${NC}")
+    endif ()
+    include("${path}")
+endfunction()
+
+function(getLibraryInfo libID obj)
+    string(TOUPPER ${libID} LIBID)
+    globalObjGet("HS_REG_LIB_${LIBID}" local_object)
+    set(${obj} ${local_object} PARENT_SCOPE)
+endfunction()
+
+function(registerPlugin pi dry_run)
+    globalObjAppendUnique(HS_REG_PI_LIST "${pi}")
+    columnarTextOut("default" "plugin library" "${pi}" "registered" "" "" ""
+            "[FIELD0:R][FIELD1:L][FIELD2:R][FIELD3:L][FIELD4:R][FIELD5:L]" ${dry_run})
+endfunction()
+
 macro(project_setup _Folder)
 
     get_filename_component(_Target "${_Folder}" NAME)
@@ -141,3 +182,57 @@ macro(project_setup _Folder)
     project_install(${_Folder})
 
 endmacro()
+
+
+function(commonInit pkg discovery_phase)
+
+    string(TOUPPER "${pkg}" _PKG)
+    set(findex -1)
+    set(foundFind -1)
+    set(foundUse -1)
+
+    globalObjGet(GLOBAL_FEATURES _FEATURES)
+    if(discovery_phase)
+
+        foreach (feet IN LISTS _FEATURES)
+            math(EXPR findex "${findex} + 1")
+
+            separate_arguments(_feet NATIVE_COMMAND "${feet}")
+            cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
+            if (AAZ_UNPARSED_ARGUMENTS)
+                list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
+                if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
+                    set(foundFind ${findex})
+                elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
+                    set(foundUse ${findex})
+                endif ()
+            endif ()
+        endforeach ()
+
+        if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
+            list(REMOVE_AT _FEATURES ${foundFind})
+            if (foundUse GREATER_EQUAL 0)
+                list(REMOVE_AT _FEATURES ${foundUse})
+            endif ()
+        elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
+            list(REMOVE_AT _FEATURES ${foundUse})
+            if(foundFind GREATER_EQUAL 0)
+                list(REMOVE_AT _FEATURES ${foundFind})
+            endif ()
+        else ()
+            # They can only be the same if they are both -1, and in that case we do nothing
+        endif ()
+
+        if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
+            list(INSERT _FEATURES ${foundFind} "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+            #            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+        endif ()
+
+        globalObjSet(GLOBAL_FEATURES "${_FEATURES}")
+
+        set(fn "add${pkg}Features")
+        cmake_language(CALL registerPackageCallback "${fn}" ${discovery_phase})
+    endif ()
+    set(HANDLED ON)
+
+endfunction()
