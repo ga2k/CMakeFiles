@@ -47,28 +47,31 @@ if (APPLE)
 
 elseif (LINUX)
 
-    # These are third-party system library headers (GTK4/glib/cairo/pango/etc backing the
-    # GTK3-toolkit wx build on Linux), so they go in extra_SystemIncludePaths (-isystem),
-    # not extra_IncludePaths, to keep warnings/-Werror from firing on vendored code.
-    list(APPEND extra_SystemIncludePaths
-            /usr/include/bullshit
-            /usr/include/gtk-4.0
-            /usr/include/glib-2.0
-            /usr/lib64/glib-2.0/include
-            /usr/include/cairo
-            /usr/include/pango-1.0
-            /usr/include/harfbuzz
-            /usr/include/gdk-pixbuf-2.0
-            /usr/include/graphene-1.0
-            /usr/lib64/graphene-1.0/include
-    )
-
     if (NOT CMAKE_INSTALL_LIBDIR)
         set(CMAKE_INSTALL_LIBDIR "lib64")
     endif ()
 
-    list(APPEND extra_Definitions __WXGTK__ __WXGTK3__)
-    set(wxBUILD_TOOLKIT gtk3 CACHE STRING "" FORCE)
+    if (APP_GUI)
+        if ("${APP_LINUX_BUILD_TOOLKIT}" STREQUAL "QT")
+        else ()
+            # These are third-party system library headers (GTK4/glib/cairo/pango/etc backing the
+            # GTK3-toolkit wx build on Linux), so they go in extra_SystemIncludePaths (-isystem),
+            # not extra_IncludePaths, to keep warnings/-Werror from firing on vendored code.
+            list(APPEND extra_SystemIncludePaths
+                    /usr/include/gtk-4.0
+                    /usr/include/glib-2.0
+                    /usr/lib64/glib-2.0/include
+                    /usr/include/cairo
+                    /usr/include/pango-1.0
+                    /usr/include/harfbuzz
+                    /usr/include/gdk-pixbuf-2.0
+                    /usr/include/graphene-1.0
+                    /usr/lib64/graphene-1.0/include
+            )
+            list(APPEND extra_Definitions __WXGTK__ __WXGTK3__)
+            set(wxBUILD_TOOLKIT gtk3 CACHE STRING "" FORCE)
+        endif ()
+    endif ()
     list(APPEND extra_CompileOptions -fvisibility=default)
 
     set(DYN_FLAG dl)

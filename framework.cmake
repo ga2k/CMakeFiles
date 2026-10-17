@@ -1,14 +1,14 @@
 include_guard(GLOBAL)
 
-# Shared feature/platform setup and environment checks
-include(${cmake_root}/tools.cmake)
-include(${cmake_root}/fetchContents.cmake)
-include(${cmake_root}/addLibrary.cmake)
-include(${cmake_root}/check_environment.cmake)
-include(${cmake_root}/sqlish.cmake)
-
-# The environment check validates OUTPUT_DIR etc.; call once globally
-check_environment("${CMAKE_SOURCE_DIR}")
+## Shared feature/platform setup and environment checks
+#include(${cmake_root}/tools.cmake)
+#include(${cmake_root}/fetchContents.cmake)
+#include(${cmake_root}/addLibrary.cmake)
+#include(${cmake_root}/check_environment.cmake)
+#include(${cmake_root}/sqlish.cmake)
+#
+## The environment check validates OUTPUT_DIR etc.; call once globally
+#check_environment("${CMAKE_SOURCE_DIR}")
 
 # Generate the ABI version from the major version, unless already set from APP_SOVERSION
 if(APP_SOVERSION)
@@ -101,8 +101,8 @@ add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-lambda-capture>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-enum-enum-conversion>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-ignored-attributes>)
 add_compile_options(-Werror=return-type)
-
-include(${cmake_root}/platform.cmake)
+#
+#include(${cmake_root}/platform.cmake)
 
 # Make CMake find_package prefer our install libdir
 list(PREPEND CMAKE_MODULE_PATH
@@ -110,56 +110,56 @@ list(PREPEND CMAKE_MODULE_PATH
 
 # Testing helpers available globally
 include(GoogleTest)
-
-function(commonInit pkg discovery_phase)
-
-    string(TOUPPER "${pkg}" _PKG)
-    set(findex -1)
-    set(foundFind -1)
-    set(foundUse -1)
-
-    globalObjGet(GLOBAL_FEATURES _FEATURES)
-    if(discovery_phase)
-
-        foreach (feet IN LISTS _FEATURES)
-            math(EXPR findex "${findex} + 1")
-
-            separate_arguments(_feet NATIVE_COMMAND "${feet}")
-            cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
-            if (AAZ_UNPARSED_ARGUMENTS)
-                list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
-                if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
-                    set(foundFind ${findex})
-                elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
-                    set(foundUse ${findex})
-                endif ()
-            endif ()
-        endforeach ()
-
-        if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
-            list(REMOVE_AT _FEATURES ${foundFind})
-            if (foundUse GREATER_EQUAL 0)
-                list(REMOVE_AT _FEATURES ${foundUse})
-            endif ()
-        elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
-            list(REMOVE_AT _FEATURES ${foundUse})
-            if(foundFind GREATER_EQUAL 0)
-                list(REMOVE_AT _FEATURES ${foundFind})
-            endif ()
-        else ()
-            # They can only be the same if they are both -1, and in that case we do nothing
-        endif ()
-
-        if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
-            list(INSERT _FEATURES ${foundFind} "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
-#            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
-        endif ()
-
-        globalObjSet(GLOBAL_FEATURES "${_FEATURES}")
-
-        set(fn "add${pkg}Features")
-        cmake_language(CALL registerPackageCallback "${fn}" ${discovery_phase})
-    endif ()
-    set(HANDLED ON)
-
-endfunction()
+#
+#function(commonInit pkg discovery_phase)
+#
+#    string(TOUPPER "${pkg}" _PKG)
+#    set(findex -1)
+#    set(foundFind -1)
+#    set(foundUse -1)
+#
+#    globalObjGet(GLOBAL_FEATURES _FEATURES)
+#    if(discovery_phase)
+#
+#        foreach (feet IN LISTS _FEATURES)
+#            math(EXPR findex "${findex} + 1")
+#
+#            separate_arguments(_feet NATIVE_COMMAND "${feet}")
+#            cmake_parse_arguments("AAZ" "REQUIRED;OPTIONAL" "PACKAGE;NAMESPACE" "PATHS;HINTS" ${_feet})
+#            if (AAZ_UNPARSED_ARGUMENTS)
+#                list(GET AAZ_UNPARSED_ARGUMENTS 0 AAZ_FEATURE)
+#                if (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL Find${pkg})
+#                    set(foundFind ${findex})
+#                elseif (AAZ_FEATURE STREQUAL _PKG AND AAZ_PACKAGE STREQUAL ${pkg})
+#                    set(foundUse ${findex})
+#                endif ()
+#            endif ()
+#        endforeach ()
+#
+#        if(foundFind GREATER_EQUAL 0 AND foundFind GREATER foundUse)
+#            list(REMOVE_AT _FEATURES ${foundFind})
+#            if (foundUse GREATER_EQUAL 0)
+#                list(REMOVE_AT _FEATURES ${foundUse})
+#            endif ()
+#        elseif(foundUse GREATER_EQUAL 0 AND foundUse GREATER foundFind)
+#            list(REMOVE_AT _FEATURES ${foundUse})
+#            if(foundFind GREATER_EQUAL 0)
+#                list(REMOVE_AT _FEATURES ${foundFind})
+#            endif ()
+#        else ()
+#            # They can only be the same if they are both -1, and in that case we do nothing
+#        endif ()
+#
+#        if (foundFind GREATER_EQUAL 0 AND foundUse LESS 0)
+#            list(INSERT _FEATURES ${foundFind} "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+##            list(PREPEND _FEATURES "${_PKG} PACKAGE ${pkg} ARGS PATHS {${pkg}}")
+#        endif ()
+#
+#        globalObjSet(GLOBAL_FEATURES "${_FEATURES}")
+#
+#        set(fn "add${pkg}Features")
+#        cmake_language(CALL registerPackageCallback "${fn}" ${discovery_phase})
+#    endif ()
+#    set(HANDLED ON)
+#
+#endfunction()
