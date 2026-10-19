@@ -53,6 +53,8 @@ elseif (LINUX)
 
     if (APP_GUI)
         if ("${APP_LINUX_BUILD_TOOLKIT}" STREQUAL "QT")
+            list(APPEND extra_Definitions __WXQT__)
+            set(wxBUILD_TOOLKIT gtk3 CACHE STRING "" FORCE)
         else ()
             # These are third-party system library headers (GTK4/glib/cairo/pango/etc backing the
             # GTK3-toolkit wx build on Linux), so they go in extra_SystemIncludePaths (-isystem),
