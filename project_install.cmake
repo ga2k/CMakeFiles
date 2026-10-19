@@ -5,7 +5,7 @@ include(CMakePackageConfigHelpers)
 
 message(STATUS "=== Configuring Components ===")
 
-file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
+# file(MAKE_DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake")
 
 function(project_install _Folder)
 
