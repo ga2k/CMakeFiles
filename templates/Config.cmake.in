@@ -21,8 +21,14 @@ list(APPEND _searchDirs
     "${_ppdir}@stemPath@/${CMAKE_INSTALL_LIBDIR}"
     "${_ppdir}@stemPath@/${CMAKE_INSTALL_BINDIR}"
 )
+  
+set (linux_build_toolkit_ "")
+if("@LINUX@" EQUALS 1 AND NOT "@APP_LINUX_BUILD_TOOLKIT@" STREQUAL "")
+  string (TOLOWER "@APP_LINUX_BUILD_TOOLKIT@" linux_build_toolkit_)
+  set(linux_build_toolkit_ "${linux_build_toolkit_}_")
+endif ()
 
-set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_SHARED_LIBRARY_SUFFIX@")
+set(_actualLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@${linux_build_toolkit_}@CMAKE_SHARED_LIBRARY_SUFFIX@")
 set(_winImpLibName "@CMAKE_SHARED_LIBRARY_PREFIX@@APP_VENDOR_LC@_@APP_NAME_LC@@CMAKE_IMPORT_LIBRARY_SUFFIX@")
 
 foreach(_dir IN LISTS _searchDirs)
