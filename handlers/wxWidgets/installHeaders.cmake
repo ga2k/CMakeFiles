@@ -2,8 +2,8 @@
 
 function(wxmono_installHeaders targetName installIncludeDir sourceDir buildDir)
     wxWidgets_installHeaders("${targetName}" "${installIncludeDir}"
-        "${ARCHIVE_DIR}/wxWidgets/source"
-        "${ARCHIVE_DIR}/wxWidgets/build")
+            "${ARCHIVE_DIR}/wxWidgets/source"
+            "${ARCHIVE_DIR}/wxWidgets/build")
 endfunction()
 
 function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDir)
@@ -21,16 +21,14 @@ function(wxWidgets_installHeaders targetName installIncludeDir sourceDir buildDi
     # Make sure we grab the platform specific setup.h
     file(GLOB WX_SETUP_H DIRECTORIES false RELATIVE "${buildDir}/lib" "${buildDir}/lib/wx/include/*/wx/setup.h")
     if (WX_SETUP_H)
-        get_filename_component(WX_SETUP_DIR "${WX_SETUP_H}"   PATH)
-        get_filename_component(WX_SETUP_DIR "${WX_SETUP_DIR}" PATH)
-        install(DIRECTORY "${buildDir}/lib/${WX_SETUP_DIR}/"
-                DESTINATION "${CMAKE_INSTALL_LIBDIR}/${WX_SETUP_DIR}"
-                COMPONENT ${APP_NAME}Development)
-        # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3/wx/setup.h  << Realsies
-        # /home/geoffrey/dev/stage/usr/local/include/wx-3.3
-        # /home/geoffrey/dev/stage/usr/local/lib64/wx/include/qt-unicode-3.3"
-        #                                          wx/include/qt-unicode-3.3/wx/setup.h
+        foreach (_setup_h IN LISTS WX_SETUP_H)
+            get_filename_component(_setup_dir "${_setup_h}" PATH)
+            get_filename_component(_setup_dir "${_setup_dir}" PATH)
+            install(DIRECTORY "${buildDir}/lib/${_setup_dir}/"
+                    DESTINATION "${CMAKE_INSTALL_LIBDIR}/${_setup_dir}"
+                    COMPONENT ${APP_NAME}Development)
+        endforeach ()
     endif ()
 
-set(HANDLED ON PARENT_SCOPE)
+    set(HANDLED ON PARENT_SCOPE)
 endfunction()

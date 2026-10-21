@@ -486,11 +486,15 @@ function(project_install _Folder)
     endif ()
 
     if (UNIX AND NOT APPLE)
+        # libmycare_<gtk|qt>.so is the app itself (install(TARGETS) above); excluding it here
+        # avoids a duplicate-file error in CPack.
+        string(TOLOWER "${APP_NAME}" _hs_app_lc)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"
                 DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.so*"
                 REGEX "libhoffsoft_" EXCLUDE
+                REGEX "lib${_hs_app_lc}_(gtk|qt)\\.so" EXCLUDE
         )
     endif ()
 

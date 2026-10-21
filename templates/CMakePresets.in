@@ -166,6 +166,28 @@
       }
     },
     {
+      "name": "GTK",
+      "hidden": true,
+      "description": "Build against wxGTK (Linux only)",
+      "cacheVariables": {
+        "GFX_BACKEND": "GTK"
+      },
+      "environment": {
+        "toolkitPath": "/gtk"
+      }
+    },
+    {
+      "name": "Qt",
+      "hidden": true,
+      "description": "Build against wxQt (Linux only)",
+      "cacheVariables": {
+        "GFX_BACKEND": "QT"
+      },
+      "environment": {
+        "toolkitPath": "/qt"
+      }
+    },
+    {
       "name": "Windows (Debug Static)",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}",
@@ -270,27 +292,55 @@
       ]
     },
     {
-      "name": "Linux (Debug Shared)",
+      "name": "Linux (Debug Shared GTK)",
       "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}"
       },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}",
       "inherits": [
         "Linux",
         "Debug",
-        "Shared"
+        "Shared",
+        "GTK"
       ]
     },
     {
-      "name": "Linux (Release Shared)",
+      "name": "Linux (Debug Shared Qt)",
       "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}"
       },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}",
+      "inherits": [
+        "Linux",
+        "Debug",
+        "Shared",
+        "Qt"
+      ]
+    },
+    {
+      "name": "Linux (Release Shared GTK)",
+      "cacheVariables": {
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}",
       "inherits": [
         "Linux",
         "Release",
-        "Shared"
+        "Shared",
+        "GTK"
+      ]
+    },
+    {
+      "name": "Linux (Release Shared Qt)",
+      "cacheVariables": {
+        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}"
+      },
+      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}$env{toolkitPath}",
+      "inherits": [
+        "Linux",
+        "Release",
+        "Shared",
+        "Qt"
       ]
     }
   ],
@@ -328,12 +378,20 @@
       "configurePreset": "Darwin (Release Shared)"
     },
     {
-      "name": "Linux (Debug Shared)",
-      "configurePreset": "Linux (Debug Shared)"
+      "name": "Linux (Debug Shared GTK)",
+      "configurePreset": "Linux (Debug Shared GTK)"
     },
     {
-      "name": "Linux (Release Shared)",
-      "configurePreset": "Linux (Release Shared)"
+      "name": "Linux (Debug Shared Qt)",
+      "configurePreset": "Linux (Debug Shared Qt)"
+    },
+    {
+      "name": "Linux (Release Shared GTK)",
+      "configurePreset": "Linux (Release Shared GTK)"
+    },
+    {
+      "name": "Linux (Release Shared Qt)",
+      "configurePreset": "Linux (Release Shared Qt)"
     }
   ]
 }

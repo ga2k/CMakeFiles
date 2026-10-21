@@ -100,12 +100,20 @@ macro(check_environment PROJECT_ROOT)
         if (_ce_parts_len LESS 3)
             message(FATAL_ERROR
                     "check_environment: cached stemPath='${_ce_stem}' cannot be parsed into "
-                    "<host>/<build>/<link>. Delete this build directory and reconfigure with "
+                    "<host>/<build>/<link>[/<toolkit>]. Delete this build directory and reconfigure with "
                     "`cmake --preset <name>`.")
         endif ()
         list(GET _ce_parts 0 _ce_host_lc)
         list(GET _ce_parts 1 _ce_build_lc)
         list(GET _ce_parts 2 _ce_link_lc)
+        # Optional 4th stem: the Linux GUI toolkit ("gtk" or "qt").
+        set(_ce_toolkit_lc "")
+        if (_ce_parts_len GREATER 3)
+            list(GET _ce_parts 3 _ce_toolkit_lc)
+            if (NOT _ce_toolkit_lc MATCHES "^(gtk|qt)$")
+                message(FATAL_ERROR "check_environment: unrecognised toolkit stem '${_ce_toolkit_lc}' in stemPath '${_ce_stem}'.")
+            endif ()
+        endif ()
 
         # Map the lower-case path stems back to fixPresetMess's argument spelling.
         if (_ce_host_lc STREQUAL "linux")
@@ -139,7 +147,7 @@ macro(check_environment PROJECT_ROOT)
                 "recovering layout ${_ce_host}/${_ce_build}/${_ce_link} from cached stemPath '${_ce_stem}'.")
 
         include("${cmake_root}/presetFallback.cmake")
-        fixPresetMess("${_ce_host}" "${_ce_build}" "${_ce_link}")
+        fixPresetMess("${_ce_host}" "${_ce_build}" "${_ce_link}" "${_ce_toolkit_lc}")
 
         unset(_ce_stem)
         unset(_ce_parts)
@@ -147,6 +155,7 @@ macro(check_environment PROJECT_ROOT)
         unset(_ce_host_lc)
         unset(_ce_build_lc)
         unset(_ce_link_lc)
+        unset(_ce_toolkit_lc)
         unset(_ce_host)
         unset(_ce_build)
         unset(_ce_link)
