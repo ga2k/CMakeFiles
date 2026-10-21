@@ -206,7 +206,12 @@ function(addLibrary)
     else ()
         set(LIB_PRE ${CMAKE_${arg_LINK}_LIBRARY_PREFIX})
         set(LIB_SUF ${CMAKE_${arg_LINK}_LIBRARY_SUFFIX})
-        set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${arg_NAME_LC}")
+        set(APP_LINUX_BUILD_TOOLKIT_LC "")
+        if(LINUX AND arg_PRIMARY AND APP_LINUX_BUILD_TOOLKIT)
+            string (TOLOWER "${APP_LINUX_BUILD_TOOLKIT}" APP_LINUX_BUILD_TOOLKIT_LC)
+            set(APP_LINUX_BUILD_TOOLKIT_LC "${APP_LINUX_BUILD_TOOLKIT_LC}_")
+        endif ()
+        set(LIB_OUTPUT_NAME "${arg_VENDOR_LC}_${APP_LINUX_BUILD_TOOLKIT_LC}${arg_NAME_LC}")
     endif ()
 
     # SO_VERSION may be empty if framework.cmake ran before AppSpecific.cmake set APP_VERSION
