@@ -1,6 +1,7 @@
-VERSION := 4.0.0
-# MCA build driver for HoffSoft Libs (Core + Gfx) and MyCare, one complete build per GUI toolkit
-# (gtk | qt). Linux only. The same file works from Libs/ and from MyCare/ (they are siblings).
+VERSION := 4.1.0
+# MCA build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
+# (gtk | qt); MyCare itself is toolkit-neutral (libmycare.so links only Core), so it is built once, under
+# the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (they are siblings).
 #
 # This file is maintained in the shared CMakeFiles repo; each project keeps a copy that
 # `make update` keeps current (see the update mechanism below). Edit it in CMakeFiles/.
@@ -8,8 +9,8 @@ VERSION := 4.0.0
 #   make help        full target list
 #   make all         configure + build + stage, Libs then app, both toolkits
 #
-# Order matters and is handled: the app needs the *staged* Gfx/Core of the same toolkit, so Libs
-# always goes first. The build is deliberately serial (.NOTPARALLEL): module compiles peak at
+# Order matters and is handled: the app needs the *staged* Core of its toolkit's tree (and the
+# run needs each toolkit's staged Gfx), so Libs always goes first. The build is deliberately serial (.NOTPARALLEL): module compiles peak at
 # 2-4 GB each, and the ordering above is not expressed per-file.
 
 SHELL := /bin/bash
@@ -49,6 +50,9 @@ else ifneq ($(filter $(TK),gtk qt),)
 else
   $(error TK must be gtk, qt or both, not '$(TK)')
 endif
+# libmycare.so and the launcher are identical under either toolkit, so the app is built (and staged) once:
+# under gtk when both toolkits are selected. `make merge` then combines it with both toolkits' Gfx.
+APPTKS := $(firstword $(TKS))
 
 # Locate the two projects from wherever make was started.
 THIS := $(abspath $(CURDIR))
@@ -179,7 +183,7 @@ clean-$(1)-$(2):
 configure-$(1)-$(2): $(call DIR,$(1))/CMakePresets.json
 	@printf "$(GREEN)== configure $(1) ($(2), $(BT))$(NC)\n"
 	@test -d "$(call DIR,$(1))" || { echo "$(call DIR,$(1)) not found"; exit 1; }
-$(if $(filter app,$(1)),	@test -f "$(call STAGE,$(2))/usr/local/lib64/cmake/GfxConfig.cmake" || { echo "Gfx for $(2) is not staged in $(call STAGE,$(2)). Run: make stage-libs-$(2)"; exit 1; })
+$(if $(filter app,$(1)),	@test -f "$(call STAGE,$(2))/usr/local/lib64/cmake/CoreConfig.cmake" || { echo "Core for $(2) is not staged in $(call STAGE,$(2)). Run: make stage-libs-$(2)"; exit 1; })
 	cd "$(call DIR,$(1))" && cmake --preset "$(call PRESET,$(2))"
 
 _cfg-$(1)-$(2): $(call DIR,$(1))/CMakePresets.json
@@ -201,9 +205,11 @@ $(foreach w,libs app,$(foreach t,gtk qt,$(eval $(call TK_RULES,$(w),$(t)))))
 # ---------------------------------------------------------------------------------------------
 PHASES := clean configure build stage
 
+# Libs goes through every selected toolkit; the (toolkit-neutral) app only through APPTKS, except `clean`,
+# which removes the app's tree under every selected toolkit (an older per-toolkit build may linger there).
 define AGG_RULES
 .PHONY: $(1)-$(2)
-$(1)-$(2): $(foreach t,$(TKS),$(1)-$(2)-$(t))
+$(1)-$(2): $(foreach t,$(if $(and $(filter app,$(2)),$(filter-out clean,$(1))),$(APPTKS),$(TKS)),$(1)-$(2)-$(t))
 endef
 $(foreach p,$(PHASES),$(foreach w,libs app,$(eval $(call AGG_RULES,$(p),$(w)))))
 
@@ -212,7 +218,7 @@ $(foreach p,$(PHASES),$(eval $(p)-all: $(p)-libs $(p)-app))
 
 all: stage-all
 
-# Staging the app for both toolkits also assembles the combined runtime tree.
+# Staging for both toolkits also assembles the combined runtime tree (the app from gtk + both Gfx).
 stage-app:
 	$(if $(filter both,$(TK)),@$(MAKE) --no-print-directory merge)
 
@@ -228,7 +234,7 @@ LAUNCHER = $(if $(filter runtime,$(RUN)),$(RUNTIME),$(call STAGE,$(RUN)))/usr/lo
 run:
 	@case "$(RUN)" in gtk|qt|runtime) ;; *) echo "RUN must be gtk, qt or runtime"; exit 1;; esac
 	@case "$(GUI)" in auto|gtk|qt) ;; *) echo "GUI must be auto, gtk or qt"; exit 1;; esac
-	@test -x "$(LAUNCHER)" || { echo "$(LAUNCHER) not found: make stage-app$(if $(filter runtime,$(RUN)), (both toolkits),-$(RUN))"; exit 1; }
+	@test -x "$(LAUNCHER)" || { echo "$(LAUNCHER) not found: $(if $(filter runtime,$(RUN)),make stage-libs stage-app (TK=both),make stage-libs-$(RUN) stage-app-$(RUN))"; exit 1; }
 	WhatsNew=1 exec "$(LAUNCHER)" $(RUN_ARGS) --gui=$(GUI)
 
 smoke:
@@ -241,9 +247,10 @@ help:
 	@printf '  make all                             configure + build + stage everything (Libs first)\n'
 	@printf '  make <phase>-<what>[-<tk>]           phase: clean configure build stage\n'
 	@printf '                                       what:  libs app all     tk: gtk qt (default: TK=)\n'
+	@printf '                                       (the app is toolkit-neutral: built once, under $(APPTKS))\n'
 	@printf '      e.g. make build-app-qt   make stage-libs   make clean-all   make configure-all TK=gtk\n'
 	@printf '  make clean-all DEEP=1                also remove external/ and ~/dev/archives (wx; slow to redo)\n'
-	@printf '  make merge                           combined runtime tree holding both toolkits\n'
+	@printf '  make merge                           combined runtime tree: the app (built once) + both toolkits'"'"' Gfx\n'
 	@printf '  make run [RUN=gtk|qt|runtime] [GUI=auto|gtk|qt] [RUN_ARGS="..."]\n'
 	@printf '  make smoke                           start each tree/--gui combination and check the result\n'
 	@printf '  make update | check-update | quiet | noisy | version\n'
