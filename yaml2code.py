@@ -3753,8 +3753,16 @@ class CppGenerator:
                     # translate: -- index-assignment via param<T>() reading from each entry's
                     # own source anymap/key
                     for n, ty, src_map, src_key, default in translate:
-                        lit = self._resolve_default_literal(default, ty, yaml_file, f"{ctx}.args.translate.'{n}'",
-                                                            string_style="literal")
+                        if isinstance(default, dict) and "fallback" in default:
+                            # `{ fallback: other_key }`: when src_key is absent, use the same map's other_key,
+                            # and failing that the type's null value.
+                            fb = str(default["fallback"]).strip()
+                            null = self._NULL_VALUE_CPP.get(ty, f"{ty}{{}}")
+                            lit = f'param<{ty}>({src_map}, "{fb}", {null})'
+                        else:
+                            lit = self._resolve_default_literal(default, ty, yaml_file,
+                                                                f"{ctx}.args.translate.'{n}'",
+                                                                string_style="literal")
                         lines.append(
                             f'      add_to_anymap({local_name}["{n}"], param<{ty}>({src_map}, "{src_key}", {lit}));')
             elif arg_name:
@@ -4020,7 +4028,24 @@ class CppGenerator:
                       f"non-empty expression; got {raw!r} {yaml_file}", file=sys.stderr)
                 return ("false" if ty in ("bool", "hs_bool") else "0"), True
             return raw[0].strip(), False
+        # `@name` is a framework-provided named value (the runtime form builders resolve the same
+        # token through hs::ui::namedValue); compiled classes need the equivalent C++ expression.
+        if isinstance(raw, str) and raw.startswith("@"):
+            expr = self._NAMED_VALUE_CPP.get(raw[1:].strip())
+            if expr is not None:
+                return expr, False
+            print(f"Warning: {ctx} unknown named value '{raw}' {yaml_file}", file=sys.stderr)
         return self._format_cpp_literal(raw, ty, string_style=string_style), True
+
+    # `@name` tokens usable as default values -> the C++ expression a compiled class uses.
+    _NAMED_VALUE_CPP = {
+        "appDescription": "hs::appDescription()",
+    }
+
+    # The "nothing" value for a translate: default of a given type, when `{ fallback: key }` finds nothing.
+    _NULL_VALUE_CPP = {
+        "wxBitmapBundle": "wxNullBitmap",
+    }
 
     def _resolve_condition_expr(self, cond_raw: Any, anymap_name: Optional[str], yaml_file: Path, ctx: str) -> str:
         """Resolve a conditional's `condition:` field to a C++ bool expression.
