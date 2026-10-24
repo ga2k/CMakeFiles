@@ -1,4 +1,4 @@
-VERSION := 4.1.0
+VERSION := 4.2.0
 # MCA build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
 # (gtk | qt); MyCare itself is toolkit-neutral (libmycare.so links only Core), so it is built once, under
 # the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (they are siblings).
@@ -213,7 +213,7 @@ $(1)-$(2): $(foreach t,$(if $(and $(filter app,$(2)),$(filter-out clean,$(1))),$
 endef
 $(foreach p,$(PHASES),$(foreach w,libs app,$(eval $(call AGG_RULES,$(p),$(w)))))
 
-.PHONY: $(foreach p,$(PHASES),$(p)-all) all merge run smoke
+.PHONY: $(foreach p,$(PHASES),$(p)-all) all merge run smoke package package-smoke
 $(foreach p,$(PHASES),$(eval $(p)-all: $(p)-libs $(p)-app))
 
 all: stage-all
@@ -225,6 +225,36 @@ stage-app:
 merge:
 	@printf "$(GREEN)== merge toolkit stages -> $(RUNTIME)$(NC)\n"
 	STAGE_ROOT="$(STAGE_ROOT)" "$(APP_DIR)/scripts/merge-toolkit-stages.sh" $(BT)
+
+# ---------------------------------------------------------------------------------------------
+# Packages (Linux; RPM + self-extracting installer), collected in $(PKGDIR):
+#   hoffsoft-core, hoffsoft-gfx-gtk, hoffsoft-gfx-qt   from Libs (Core is identical in both trees: gtk's is used)
+#   mycare                                              the toolkit-neutral app (launcher, libmycare.so, resources)
+#   mycare-bundle                                       everything in one (both toolkits), under /opt/HoffSoft/MyCare
+# The -devel packages (headers, module interfaces, CMake files) are built too but only kept with PKG_DEVEL=1.
+# Build type: BT=release for anything you hand out.  TK must be `both`: the set needs both Gfx packages.
+# ---------------------------------------------------------------------------------------------
+PKGDIR   = $(STAGE_ROOT)/linux/$(BT)/packages
+PKGWORK  = $(PKGDIR)/.work
+KEEP_DEVEL = $(if $(PKG_DEVEL),,-not -name '*-devel-*')
+
+package:
+	@test "$(TK)" = both || { echo "make package needs TK=both (the set holds both Gfx packages)"; exit 1; }
+	@$(MAKE) --no-print-directory stage-all
+	@printf "$(GREEN)== package ($(BT)) -> $(PKGDIR)$(NC)\n"
+	rm -rf "$(PKGDIR)"; mkdir -p "$(PKGWORK)"
+	cd "$(LIBS_DIR)/build/$(call STEM,gtk)" && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-gtk" >/dev/null
+	cd "$(LIBS_DIR)/build/$(call STEM,qt)"  && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-qt"  >/dev/null
+	cd "$(APP_DIR)/build/$(call STEM,gtk)"   && cpack --config CPackConfig.cmake -B "$(PKGWORK)/app"      >/dev/null
+	find "$(PKGWORK)/libs-gtk" "$(PKGWORK)/libs-qt" "$(PKGWORK)/app" -maxdepth 1 -type f \
+	    \( -name 'hoffsoft-core-*' -o -name 'hoffsoft-gfx-*' -o -name 'mycare-*' \) $(KEEP_DEVEL) \
+	    ! -path '*/libs-qt/hoffsoft-core-*' -exec cp -a {} "$(PKGDIR)/" \;
+	chmod -R u+w "$(PKGWORK)"; rm -rf "$(PKGWORK)"
+	OUT="$(PKGDIR)" STAGE_ROOT="$(STAGE_ROOT)" "$(APP_DIR)/scripts/package-bundle.sh" $(BT)
+	@printf "$(GREEN)Packages in $(PKGDIR):$(NC)\n"; ls -1 "$(PKGDIR)" | sed 's/^/  /'
+
+package-smoke:
+	@STAGE_ROOT="$(STAGE_ROOT)" RUN_ARGS="$(RUN_ARGS)" "$(APP_DIR)/scripts/package-smoke.sh" $(BT)
 
 # ---------------------------------------------------------------------------------------------
 # Run / smoke
@@ -253,5 +283,7 @@ help:
 	@printf '  make merge                           combined runtime tree: the app (built once) + both toolkits'"'"' Gfx\n'
 	@printf '  make run [RUN=gtk|qt|runtime] [GUI=auto|gtk|qt] [RUN_ARGS="..."]\n'
 	@printf '  make smoke                           start each tree/--gui combination and check the result\n'
+	@printf '  make package [BT=release]            RPMs + installers: hoffsoft-core, hoffsoft-gfx-gtk/-qt, mycare, mycare-bundle\n'
+	@printf '  make package-smoke                   inspect the packages and start MyCare from the modular set and the bundle\n'
 	@printf '  make update | check-update | quiet | noisy | version\n'
 	@printf '  Options: BT=debug|release  TK=gtk|qt|both  JOBS=N  STAGE_ROOT=...   Dry run: make -n <target>\n'
