@@ -290,7 +290,7 @@ function(project_install _Folder)
 
     # Remove .ixx sources installed by FILE_SET CXX_MODULES — if present in the
     # stage dir, Clang ignores pre-built BMIs and recompiles module interfaces from
-    # scratch in downstream projects (e.g. MyHealthGuru).
+    # scratch in downstream projects.
     install(CODE "
         set(_cxx_dest \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/cxx/${APP_VENDOR}/${APP_NAME}\")
         file(GLOB_RECURSE _ixx_files \"\${_cxx_dest}/*.ixx\")
@@ -486,7 +486,7 @@ function(project_install _Folder)
     endif ()
 
     if (UNIX AND NOT APPLE)
-        # libmycare.so (formerly libmycare_<gtk|qt>.so) is the app itself (install(TARGETS) above);
+        # lib<app>.so is the app itself (install(TARGETS) above);
         # excluding it here avoids a duplicate-file error in CPack.
         string(TOLOWER "${APP_NAME}" _hs_app_lc)
         install(DIRECTORY "${OUTPUT_DIR}/${CMAKE_INSTALL_LIBDIR}/"

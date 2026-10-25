@@ -7,7 +7,7 @@ function(addGfxFeatures dry_run)
                 GIT_REPOSITORY "https://github.com/wxWidgets/wxWidgets.git" GIT_TAG "v3.3.2"
                 ARG REQUIRED DRY_RUN ${dry_run})
     else()
-        # Consumer app (e.g. MyHealthGuru): wx is already embedded in the staged
+        # Consumer app: wx is already embedded in the staged
         # libhoffsoft_gfx.so. Ignore so we don't trigger a 1400-file source rebuild.
         # Gfx_postMakeAvailable (below) populates HS_wx* vars from the staged package.
         addPackageData(OPTIONAL FEATURE "GUI" PKGNAME "wxWidgets" METHOD "IGNORE" DRY_RUN ${dry_run})

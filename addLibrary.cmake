@@ -308,7 +308,7 @@ function(addLibrary)
     #
     #   PCH binary location — ONE path for everyone:
     #     ${CMAKE_INSTALL_PREFIX}/lib/cmake/pch/${APP_VENDOR}/wx_pch.gch
-    #   Gfx (builder) writes the PCH DIRECTLY there; MyCare (consumer) reads it from
+    #   Gfx (builder) writes the PCH DIRECTLY there; the app (consumer) reads it from
     #   there.  Using the same path in both roles is mandatory: Clang embeds the PCH
     #   path in every compiled BMI, and if a consumer provides the PCH at a different
     #   path (even a bit-for-bit copy), Clang loads both PCH files simultaneously and
@@ -316,7 +316,7 @@ function(addLibrary)
     # ────────────────────────────────────────────────────────────────────────────
 
     if ( (WIN32 OR LINUX OR APPLE) AND GUI IN_LIST arg_USES AND GUI IN_LIST APP_FEATURES)
-        # CRITICAL: all targets — builders (Gfx) AND consumers (MyCare) — must use the
+        # CRITICAL: all targets — builders (Gfx) AND consumers (the app) — must use the
         # PCH at the SAME FILE PATH.  Clang embeds the PCH path in every BMI (.pcm).
         # If consumers provide a PCH at a different path (even a binary-identical copy),
         # Clang loads BOTH PCH files and sees duplicate declarations for all STL/wx types

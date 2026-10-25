@@ -3,7 +3,7 @@ include("${cmake_root}/tools.cmake")
 
 # Option names below are curl's own upstream CMakeLists.txt cache variables (verified
 # against curl-8_19_0), not vcpkg feature names. We only need the SMTP protocol plus the
-# auth mechanisms exposed in MyHealthGuru's email settings UI (see EmailAuthorityChoice):
+# auth mechanisms exposed in an application's email settings UI (see EmailAuthorityChoice):
 # plain/CRAM-MD5 password auth ships enabled by default, so only NTLM and GSSAPI/Kerberos
 # need to be turned on explicitly.
 function(curl_preMakeAvailable pkgname)

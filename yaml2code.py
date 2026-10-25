@@ -450,7 +450,7 @@ class CppGenerator:
         # tokens are façade objects whose operator()() consults Theming's per-app,
         # per-platform ratio table at call time -- so a width change is a runtime
         # <AppName>Layout.yaml edit, never a rebuild. The legacy fixed-pixel sizeCtrl*/
-        # sizeLabel* wxSize constants were removed with MyCare/include/MyCare/Sizes.h;
+        # sizeLabel* wxSize constants were removed with the application's Sizes.h;
         # any stray reference now collapses to wxDefaultSize (nothing in generator-source
         # YAML still uses them -- everything migrated to fw*).
         self.size_mapping = {
