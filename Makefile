@@ -1,7 +1,8 @@
-VERSION := 4.2.0
+VERSION := 4.3.0
 # MCA build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
 # (gtk | qt); MyCare itself is toolkit-neutral (libmycare.so links only Core), so it is built once, under
-# the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (they are siblings).
+# the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (siblings), and from a MyCare checkout that
+# holds Libs as a subdirectory (add_subdirectory(Libs)): then one tree per toolkit builds Core, Gfx and the app together.
 #
 # This file is maintained in the shared CMakeFiles repo; each project keeps a copy that
 # `make update` keeps current (see the update mechanism below). Edit it in CMakeFiles/.
@@ -56,7 +57,12 @@ APPTKS := $(firstword $(TKS))
 
 # Locate the two projects from wherever make was started.
 THIS := $(abspath $(CURDIR))
-ifneq ($(wildcard $(THIS)/Core/CMakeLists.txt),)
+ifneq ($(wildcard $(THIS)/Libs/Core/CMakeLists.txt),)
+  # In-tree: Libs lives inside the app checkout, and one configure/build/install per toolkit does both.
+  INTREE   := 1
+  LIBS_DIR ?= $(THIS)
+  APP_DIR  ?= $(THIS)
+else ifneq ($(wildcard $(THIS)/Core/CMakeLists.txt),)
   LIBS_DIR ?= $(THIS)
   APP_DIR  ?= $(abspath $(THIS)/../MyCare)
 else
@@ -151,6 +157,7 @@ version:
 # ---------------------------------------------------------------------------------------------
 # Helpers.   $(1) = libs|app   $(2) = gtk|qt
 # ---------------------------------------------------------------------------------------------
+PHASES_ALL := clean configure build stage
 STEM    = linux/$(BT)/shared/$(1)
 PRESET  = Linux $(BTU) Shared $(if $(filter gtk,$(1)),GTK,Qt)
 DIR     = $(if $(filter libs,$(1)),$(LIBS_DIR),$(APP_DIR))
@@ -158,13 +165,17 @@ STAGE   = $(STAGE_ROOT)/$(call STEM,$(1))
 RUNTIME = $(STAGE_ROOT)/linux/$(BT)/shared/runtime
 
 # Paths removed by `make clean-<libs|app>-<tk>`. Only ever per-toolkit trees.
+# In-tree there is one tree per toolkit that holds both, and it is also what gets staged.
 CLEAN_PATHS = $(call DIR,$(1))/build/$(call STEM,$(2)) $(call DIR,$(1))/out/$(call STEM,$(2)) \
-  $(if $(filter libs,$(1)),$(call STAGE,$(2)),$(call DIR,$(1))/generated/$(call STEM,$(2))) \
-  $(if $(DEEP),$(call DIR,$(1))/external/$(call STEM,$(2)) $(if $(filter libs,$(1)),$(ARCHIVE_ROOT)/$(call STEM,$(2))))
+  $(if $(or $(INTREE),$(filter libs,$(1))),$(call STAGE,$(2))) \
+  $(if $(or $(INTREE),$(filter app,$(1))),$(call DIR,$(1))/generated/$(call STEM,$(2))) \
+  $(if $(DEEP),$(call DIR,$(1))/external/$(call STEM,$(2)) $(if $(or $(INTREE),$(filter libs,$(1))),$(ARCHIVE_ROOT)/$(call STEM,$(2))))
 
 # CMakePresets.json is generated (and gitignored): rebuild it when the template is newer.
+ifndef INTREE
 $(LIBS_DIR)/CMakePresets.json: $(LIBS_DIR)/CMakeFiles/templates/CMakePresets.in
 	cd "$(LIBS_DIR)" && sh CMakeFiles/setup
+endif
 $(APP_DIR)/CMakePresets.json: $(APP_DIR)/CMakeFiles/templates/CMakePresets.in
 	cd "$(APP_DIR)" && sh CMakeFiles/setup
 
@@ -183,7 +194,7 @@ clean-$(1)-$(2):
 configure-$(1)-$(2): $(call DIR,$(1))/CMakePresets.json
 	@printf "$(GREEN)== configure $(1) ($(2), $(BT))$(NC)\n"
 	@test -d "$(call DIR,$(1))" || { echo "$(call DIR,$(1)) not found"; exit 1; }
-$(if $(filter app,$(1)),	@test -f "$(call STAGE,$(2))/usr/local/lib64/cmake/CoreConfig.cmake" || { echo "Core for $(2) is not staged in $(call STAGE,$(2)). Run: make stage-libs-$(2)"; exit 1; })
+$(if $(and $(filter app,$(1)),$(if $(INTREE),,1)),	@test -f "$(call STAGE,$(2))/usr/local/lib64/cmake/CoreConfig.cmake" || { echo "Core for $(2) is not staged in $(call STAGE,$(2)). Run: make stage-libs-$(2)"; exit 1; })
 	cd "$(call DIR,$(1))" && cmake --preset "$(call PRESET,$(2))"
 
 _cfg-$(1)-$(2): $(call DIR,$(1))/CMakePresets.json
@@ -198,7 +209,17 @@ stage-$(1)-$(2): build-$(1)-$(2)
 	cd "$(call DIR,$(1))" && cmake --build --preset "$(call PRESET,$(2))" --parallel $(JOBS) --target install
 endef
 
+ifdef INTREE
+# One tree per toolkit builds Libs and the app together: the app rules do the work, the libs ones are aliases.
+$(foreach t,gtk qt,$(eval $(call TK_RULES,app,$(t))))
+define TK_ALIASES
+.PHONY: $(1)-libs-$(2)
+$(1)-libs-$(2): $(1)-app-$(2)
+endef
+$(foreach p,$(PHASES_ALL),$(foreach t,gtk qt,$(eval $(call TK_ALIASES,$(p),$(t)))))
+else
 $(foreach w,libs app,$(foreach t,gtk qt,$(eval $(call TK_RULES,$(w),$(t)))))
+endif
 
 # ---------------------------------------------------------------------------------------------
 # Aggregates over the selected toolkits (TK=gtk|qt|both):  <phase>-libs  <phase>-app  <phase>-all
@@ -209,7 +230,7 @@ PHASES := clean configure build stage
 # which removes the app's tree under every selected toolkit (an older per-toolkit build may linger there).
 define AGG_RULES
 .PHONY: $(1)-$(2)
-$(1)-$(2): $(foreach t,$(if $(and $(filter app,$(2)),$(filter-out clean,$(1))),$(APPTKS),$(TKS)),$(1)-$(2)-$(t))
+$(1)-$(2): $(foreach t,$(if $(and $(filter app,$(2)),$(filter-out clean,$(1)),$(if $(INTREE),,1)),$(APPTKS),$(TKS)),$(1)-$(2)-$(t))
 endef
 $(foreach p,$(PHASES),$(foreach w,libs app,$(eval $(call AGG_RULES,$(p),$(w)))))
 
@@ -243,12 +264,20 @@ package:
 	@$(MAKE) --no-print-directory stage-all
 	@printf "$(GREEN)== package ($(BT)) -> $(PKGDIR)$(NC)\n"
 	rm -rf "$(PKGDIR)"; mkdir -p "$(PKGWORK)"
+ifdef INTREE
+	cd "$(APP_DIR)/build/$(call STEM,gtk)" && cpack --config CPackConfig.cmake -B "$(PKGWORK)/gtk" >/dev/null
+	cd "$(APP_DIR)/build/$(call STEM,qt)"  && cpack --config CPackConfig.cmake -B "$(PKGWORK)/qt"  >/dev/null
+	find "$(PKGWORK)/gtk" "$(PKGWORK)/qt" -maxdepth 1 -type f \
+	    \( -name 'hoffsoft-core-*' -o -name 'hoffsoft-gfx-*' -o -name 'mycare-*' \) $(KEEP_DEVEL) \
+	    ! -path '*/qt/hoffsoft-core-*' ! -path '*/qt/mycare-*' -exec cp -a {} "$(PKGDIR)/" \;
+else
 	cd "$(LIBS_DIR)/build/$(call STEM,gtk)" && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-gtk" >/dev/null
 	cd "$(LIBS_DIR)/build/$(call STEM,qt)"  && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-qt"  >/dev/null
 	cd "$(APP_DIR)/build/$(call STEM,gtk)"   && cpack --config CPackConfig.cmake -B "$(PKGWORK)/app"      >/dev/null
 	find "$(PKGWORK)/libs-gtk" "$(PKGWORK)/libs-qt" "$(PKGWORK)/app" -maxdepth 1 -type f \
 	    \( -name 'hoffsoft-core-*' -o -name 'hoffsoft-gfx-*' -o -name 'mycare-*' \) $(KEEP_DEVEL) \
 	    ! -path '*/libs-qt/hoffsoft-core-*' -exec cp -a {} "$(PKGDIR)/" \;
+endif
 	chmod -R u+w "$(PKGWORK)"; rm -rf "$(PKGWORK)"
 	OUT="$(PKGDIR)" STAGE_ROOT="$(STAGE_ROOT)" "$(APP_DIR)/scripts/package-bundle.sh" $(BT)
 	@printf "$(GREEN)Packages in $(PKGDIR):$(NC)\n"; ls -1 "$(PKGDIR)" | sed 's/^/  /'
