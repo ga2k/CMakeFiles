@@ -1,7 +1,6 @@
-VERSION := 4.3.1
-# HoffSoft build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
-# (gtk | qt); MyCare itself is toolkit-neutral (libmycare.so links only Core), so it is built once, under
-# the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (siblings), and from a MyCare checkout that
+VERSION := 4.4.0
+# HoffSoft build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs and MyCare are built once per GUI
+# toolkit (gtk | qt); each build always runs on its own toolkit's Gfx (there is no run-time choice). Linux only. The same file works from Libs/ and from MyCare/ (siblings), and from a MyCare checkout that
 # holds Libs as a subdirectory (add_subdirectory(Libs)): then one tree per toolkit builds Core, Gfx and the app together.
 #
 # This file is maintained in the shared CMakeFiles repo; each project keeps a copy that
@@ -30,8 +29,7 @@ TK           ?= both
 JOBS         ?= $(shell nproc 2>/dev/null || echo 4)
 STAGE_ROOT   ?= $(HOME)/dev/stage
 ARCHIVE_ROOT ?= $(HOME)/dev/archives
-RUN          ?= runtime
-GUI          ?= auto
+RUN          ?= gtk
 RUN_ARGS     ?= --x-arg=pussy-cat --quiet
 DEEP         ?=
 REPO         ?= git@github.com:ga2k/CMakeFiles.git
@@ -51,9 +49,6 @@ else ifneq ($(filter $(TK),gtk qt),)
 else
   $(error TK must be gtk, qt or both, not '$(TK)')
 endif
-# libmycare.so and the launcher are identical under either toolkit, so the app is built (and staged) once:
-# under gtk when both toolkits are selected. `make merge` then combines it with both toolkits' Gfx.
-APPTKS := $(firstword $(TKS))
 
 # Locate the two projects from wherever make was started.
 THIS := $(abspath $(CURDIR))
@@ -162,7 +157,6 @@ STEM    = linux/$(BT)/shared/$(1)
 PRESET  = Linux $(BTU) Shared $(if $(filter gtk,$(1)),GTK,Qt)
 DIR     = $(if $(filter libs,$(1)),$(LIBS_DIR),$(APP_DIR))
 STAGE   = $(STAGE_ROOT)/$(call STEM,$(1))
-RUNTIME = $(STAGE_ROOT)/linux/$(BT)/shared/runtime
 
 # Paths removed by `make clean-<libs|app>-<tk>`. Only ever per-toolkit trees.
 # In-tree there is one tree per toolkit that holds both, and it is also what gets staged.
@@ -226,34 +220,25 @@ endif
 # ---------------------------------------------------------------------------------------------
 PHASES := clean configure build stage
 
-# Libs goes through every selected toolkit; the (toolkit-neutral) app only through APPTKS, except `clean`,
-# which removes the app's tree under every selected toolkit (an older per-toolkit build may linger there).
+# Libs and the app both go through every selected toolkit.
 define AGG_RULES
 .PHONY: $(1)-$(2)
-$(1)-$(2): $(foreach t,$(if $(and $(filter app,$(2)),$(filter-out clean,$(1)),$(if $(INTREE),,1)),$(APPTKS),$(TKS)),$(1)-$(2)-$(t))
+$(1)-$(2): $(foreach t,$(TKS),$(1)-$(2)-$(t))
 endef
 $(foreach p,$(PHASES),$(foreach w,libs app,$(eval $(call AGG_RULES,$(p),$(w)))))
 
-.PHONY: $(foreach p,$(PHASES),$(p)-all) all merge run smoke package package-smoke
+.PHONY: $(foreach p,$(PHASES),$(p)-all) all run smoke package package-smoke
 $(foreach p,$(PHASES),$(eval $(p)-all: $(p)-libs $(p)-app))
 
 all: stage-all
 
-# Staging for both toolkits also assembles the combined runtime tree (the app from gtk + both Gfx).
-stage-app:
-	$(if $(filter both,$(TK)),@$(MAKE) --no-print-directory merge)
-
-merge:
-	@printf "$(GREEN)== merge toolkit stages -> $(RUNTIME)$(NC)\n"
-	STAGE_ROOT="$(STAGE_ROOT)" "$(APP_DIR)/scripts/merge-toolkit-stages.sh" $(BT)
-
 # ---------------------------------------------------------------------------------------------
 # Packages (Linux; RPM + self-extracting installer), collected in $(PKGDIR):
 #   hoffsoft-core, hoffsoft-gfx-gtk, hoffsoft-gfx-qt   from Libs (Core is identical in both trees: gtk's is used)
-#   mycare                                              the toolkit-neutral app (launcher, libmycare.so, resources)
-#   mycare-bundle                                       everything in one (both toolkits), under /opt/HoffSoft/MyCare
+#   mycare-gtk, mycare-qt                               the app for each toolkit (launcher, libmycare.so, resources)
+#   mycare-bundle-gtk, mycare-bundle-qt                 everything in one, per toolkit, under /opt/HoffSoft/MyCare
 # The -devel packages (headers, module interfaces, CMake files) are built too but only kept with PKG_DEVEL=1.
-# Build type: BT=release for anything you hand out.  TK must be `both`: the set needs both Gfx packages.
+# Build type: BT=release for anything you hand out.  TK must be `both`: the set holds both toolkits' packages.
 # ---------------------------------------------------------------------------------------------
 PKGDIR   = $(STAGE_ROOT)/linux/$(BT)/packages
 PKGWORK  = $(PKGDIR)/.work
@@ -269,12 +254,13 @@ ifdef INTREE
 	cd "$(APP_DIR)/build/$(call STEM,qt)"  && cpack --config CPackConfig.cmake -B "$(PKGWORK)/qt"  >/dev/null
 	find "$(PKGWORK)/gtk" "$(PKGWORK)/qt" -maxdepth 1 -type f \
 	    \( -name 'hoffsoft-core-*' -o -name 'hoffsoft-gfx-*' -o -name 'mycare-*' \) $(KEEP_DEVEL) \
-	    ! -path '*/qt/hoffsoft-core-*' ! -path '*/qt/mycare-*' -exec cp -a {} "$(PKGDIR)/" \;
+	    ! -path '*/qt/hoffsoft-core-*' -exec cp -a {} "$(PKGDIR)/" \;
 else
 	cd "$(LIBS_DIR)/build/$(call STEM,gtk)" && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-gtk" >/dev/null
 	cd "$(LIBS_DIR)/build/$(call STEM,qt)"  && cpack --config CPackConfig.cmake -B "$(PKGWORK)/libs-qt"  >/dev/null
-	cd "$(APP_DIR)/build/$(call STEM,gtk)"   && cpack --config CPackConfig.cmake -B "$(PKGWORK)/app"      >/dev/null
-	find "$(PKGWORK)/libs-gtk" "$(PKGWORK)/libs-qt" "$(PKGWORK)/app" -maxdepth 1 -type f \
+	cd "$(APP_DIR)/build/$(call STEM,gtk)"   && cpack --config CPackConfig.cmake -B "$(PKGWORK)/app-gtk"  >/dev/null
+	cd "$(APP_DIR)/build/$(call STEM,qt)"    && cpack --config CPackConfig.cmake -B "$(PKGWORK)/app-qt"   >/dev/null
+	find "$(PKGWORK)/libs-gtk" "$(PKGWORK)/libs-qt" "$(PKGWORK)/app-gtk" "$(PKGWORK)/app-qt" -maxdepth 1 -type f \
 	    \( -name 'hoffsoft-core-*' -o -name 'hoffsoft-gfx-*' -o -name 'mycare-*' \) $(KEEP_DEVEL) \
 	    ! -path '*/libs-qt/hoffsoft-core-*' -exec cp -a {} "$(PKGDIR)/" \;
 endif
@@ -288,14 +274,13 @@ package-smoke:
 # ---------------------------------------------------------------------------------------------
 # Run / smoke
 # ---------------------------------------------------------------------------------------------
-LAUNCHER = $(if $(filter runtime,$(RUN)),$(RUNTIME),$(call STAGE,$(RUN)))/usr/local/bin/MyCare
+LAUNCHER = $(call STAGE,$(RUN))/usr/local/bin/MyCare
 
 run:
-	@case "$(RUN)" in gtk|qt|runtime) ;; *) echo "RUN must be gtk, qt or runtime"; exit 1;; esac
-	@case "$(GUI)" in auto|gtk|qt) ;; *) echo "GUI must be auto, gtk or qt"; exit 1;; esac
-	@test -x "$(LAUNCHER)" || { echo "$(LAUNCHER) not found: $(if $(filter runtime,$(RUN)),make stage-libs stage-app (TK=both),make stage-libs-$(RUN) stage-app-$(RUN))"; exit 1; }
+	@case "$(RUN)" in gtk|qt) ;; *) echo "RUN must be gtk or qt"; exit 1;; esac
+	@test -x "$(LAUNCHER)" || { echo "$(LAUNCHER) not found: make stage-libs-$(RUN) stage-app-$(RUN)"; exit 1; }
 	@# a staged tree has its resources installed; UNDER_DEVELOPMENT would send the search walking up from the stage dir and find none
-	exec env -u UNDER_DEVELOPMENT WhatsNew=1 "$(LAUNCHER)" $(RUN_ARGS) --gui=$(GUI)
+	exec env -u UNDER_DEVELOPMENT WhatsNew=1 "$(LAUNCHER)" $(RUN_ARGS)
 
 smoke:
 	@STAGE_ROOT="$(STAGE_ROOT)" RUN_ARGS="$(RUN_ARGS)" "$(APP_DIR)/scripts/smoke.sh" $(BT)
@@ -307,12 +292,10 @@ help:
 	@printf '  make all                             configure + build + stage everything (Libs first)\n'
 	@printf '  make <phase>-<what>[-<tk>]           phase: clean configure build stage\n'
 	@printf '                                       what:  libs app all     tk: gtk qt (default: TK=)\n'
-	@printf '                                       (the app is toolkit-neutral: built once, under $(APPTKS))\n'
 	@printf '      e.g. make build-app-qt   make stage-libs   make clean-all   make configure-all TK=gtk\n'
 	@printf '  make clean-all DEEP=1                also remove external/ and ~/dev/archives (wx; slow to redo)\n'
-	@printf '  make merge                           combined runtime tree: the app (built once) + both toolkits'"'"' Gfx\n'
-	@printf '  make run [RUN=gtk|qt|runtime] [GUI=auto|gtk|qt] [RUN_ARGS="..."]\n'
-	@printf '  make smoke                           start each tree/--gui combination and check the result\n'
+	@printf '  make run [RUN=gtk|qt] [RUN_ARGS="..."]\n'
+	@printf '  make smoke                           start each toolkit's staged app and check the result\n'
 	@printf '  make package [BT=release]            RPMs + installers: hoffsoft-core, hoffsoft-gfx-gtk/-qt, mycare, mycare-bundle\n'
 	@printf '  make package-smoke                   inspect the packages and start MyCare from the modular set and the bundle\n'
 	@printf '  make update | check-update | quiet | noisy | version\n'
