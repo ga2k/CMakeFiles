@@ -1,5 +1,5 @@
-VERSION := 4.3.0
-# MCA build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
+VERSION := 4.3.1
+# HoffSoft build driver for HoffSoft Libs (Core + Gfx) and MyCare. Libs is built once per GUI toolkit
 # (gtk | qt); MyCare itself is toolkit-neutral (libmycare.so links only Core), so it is built once, under
 # the first selected toolkit's preset, and the launcher picks the toolkit's Gfx at run time. Linux only. The same file works from Libs/ and from MyCare/ (siblings), and from a MyCare checkout that
 # holds Libs as a subdirectory (add_subdirectory(Libs)): then one tree per toolkit builds Core, Gfx and the app together.
@@ -106,7 +106,7 @@ __autoupdate:
 	@quiet=0; [ -f "$(QUIET_FILE)" ] && quiet=1; \
 	say() { [ "$$quiet" -eq 1 ] || printf "$$@"; }; \
 	now=$$(date +%s); last=0; [ -f "$(MARKER)" ] && last=$$(cut -d' ' -f1 "$(MARKER)" 2>/dev/null || echo 0); \
-	say "$(BOLD)MCA Build System v$(VERSION)$(NC)  (last update check: $(YELLOW)$(LAST_CHECK_TIME)$(NC))\n"; \
+	say "$(BOLD)HoffSoft Build System v$(VERSION)$(NC)  (last update check: $(YELLOW)$(LAST_CHECK_TIME)$(NC))\n"; \
 	if [ $$((now - last)) -lt 86400 ] && [ "$(FORCE)" != "TRUE" ]; then exit 0; fi; \
 	echo "$$now $$(date '+%Y-%m-%d %H:%M:%S')" > "$(MARKER)"; \
 	tmp=$$(mktemp -d "$${TMPDIR:-/tmp}/makefile.repo.XXXXXX"); trap 'rm -rf "$$tmp"' EXIT; \
@@ -294,14 +294,15 @@ run:
 	@case "$(RUN)" in gtk|qt|runtime) ;; *) echo "RUN must be gtk, qt or runtime"; exit 1;; esac
 	@case "$(GUI)" in auto|gtk|qt) ;; *) echo "GUI must be auto, gtk or qt"; exit 1;; esac
 	@test -x "$(LAUNCHER)" || { echo "$(LAUNCHER) not found: $(if $(filter runtime,$(RUN)),make stage-libs stage-app (TK=both),make stage-libs-$(RUN) stage-app-$(RUN))"; exit 1; }
-	WhatsNew=1 exec "$(LAUNCHER)" $(RUN_ARGS) --gui=$(GUI)
+	@# a staged tree has its resources installed; UNDER_DEVELOPMENT would send the search walking up from the stage dir and find none
+	exec env -u UNDER_DEVELOPMENT WhatsNew=1 "$(LAUNCHER)" $(RUN_ARGS) --gui=$(GUI)
 
 smoke:
 	@STAGE_ROOT="$(STAGE_ROOT)" RUN_ARGS="$(RUN_ARGS)" "$(APP_DIR)/scripts/smoke.sh" $(BT)
 
 # ---------------------------------------------------------------------------------------------
 help:
-	@printf '$(BOLD)MCA Build System v$(VERSION)$(NC)   libs: $(LIBS_DIR)\n                              app:  $(APP_DIR)\n'
+	@printf '$(BOLD)HoffSoft Build System v$(VERSION)$(NC)   libs: $(LIBS_DIR)\n                              app:  $(APP_DIR)\n'
 	@printf 'Settings: BT=$(BT)  TK=$(TK) (%s)  JOBS=$(JOBS)\n\n' "$(TKS)"
 	@printf '  make all                             configure + build + stage everything (Libs first)\n'
 	@printf '  make <phase>-<what>[-<tk>]           phase: clean configure build stage\n'
