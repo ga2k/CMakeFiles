@@ -407,6 +407,10 @@ class CppGenerator:
             # @Formatter:on
         }
 
+        # hs::CaseOp enumerators (Libs/Core/src/StringUtil.ixx) that a CapsValidator 'caseop:' may name.
+        self.CASE_OPS = ['ToUpper', 'ToLower', 'ToSentence', 'ToTitle', 'ToName', 'ToHonorific', 'ToState',
+                         'ToGivenName', 'ToFamilyName', 'ToComplex']
+
         self.validator_class_mapping = {
             # @formatter:off
             'CapsValidator':            'CapsValidator',
@@ -2452,6 +2456,7 @@ class CppGenerator:
             },
             "validator_def": {
                 "allow_empty",
+                "caseop",
                 "class",
                 "tool_tip",
                 "transfer_model",
@@ -2659,6 +2664,8 @@ class CppGenerator:
                             vclass = validator.get('class', '')
                             if vclass in self.validator_to_module:
                                 used_modules.add(self.validator_to_module[vclass])
+                            if validator.get('caseop') is not None:
+                                used_modules.add("StringUtil")  # the generated code names hs::CaseOp
 
                 # labels: never carry a 'module:' key -- resolve the label widget's module
                 # from its 'class' (default MarkupText, matching _generate_labels) so a
@@ -3811,8 +3818,22 @@ class CppGenerator:
         control_class = member_def.get('class', 'TextCtrl')
         base_class = member_def.get('base_class', '')
 
+        # 'caseop' selects how a CapsValidator tidies its text. It is meaningless on any other validator class, so
+        # that is a hard error rather than something silently dropped.
+        caseop = validator.get('caseop')
+        if caseop is not None and validator_class != 'CapsValidator':
+            raise ValueError(f"'caseop' is only valid for a CapsValidator, not {validator_class}, on '{member_name}'")
+
         if validator_class == 'CapsValidator':
-            return f"addValidator(new CapsValidator({str(allow_empty).lower()}, {member_name}->liveAddr(), [] {{ return settings()->useCaps(); }}))"
+            caseop_arg = ""
+            if caseop is not None:
+                by_lower = {c.lower(): c for c in self.CASE_OPS}
+                canonical = by_lower.get(str(caseop).strip().lower())
+                if canonical is None:
+                    raise ValueError(
+                        f"unknown caseop '{caseop}' on '{member_name}' (valid: {', '.join(self.CASE_OPS)})")
+                caseop_arg = f", hs::CaseOp::{canonical}"
+            return f"addValidator(new CapsValidator({str(allow_empty).lower()}, {member_name}->liveAddr(), [] {{ return settings()->useCaps(); }}{caseop_arg}))"
         elif validator_class == 'GenericValidator':
             return f"addValidator(new GenericValidator({str(allow_empty).lower()}, {member_name}->liveAddr()))"
         else:
@@ -4697,9 +4718,12 @@ class CppGenerator:
                                     f"{category} root", yaml_file)
 
         generated: List[Tuple[str, str]] = []  # (name, module_content)
+        disabled = 0  # entries skipped via run_generator: false
         for name, item_def in items.items():
             if name == "verbatim":
                 continue  # handled above
+            if isinstance(item_def, dict) and item_def.get('run_generator', True) is False:
+                disabled += 1
 
             # A stray scalar/list sibling at this level (e.g. a misplaced flag that
             # belongs at the document root, not inside 'groups:'/'pages:') used to
@@ -4721,6 +4745,8 @@ class CppGenerator:
                 self._dbg(f"'{category}.{name}': DROPPED (see warning above, or run_generator: false)")
 
         if not generated:
+            if disabled:
+                return ""  # everything was deliberately disabled: not an error
             raise ValueError(f"No valid {category} found to generate")
         suffix = self.target_class
 

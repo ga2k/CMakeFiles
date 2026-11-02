@@ -94,6 +94,15 @@ if ("${compiler_version}" MATCHES "clang")
     )
 endif ()
 
+# HS_SLOC_STATS: report how much of Clang's 2 GiB source-location address space each translation unit uses (the
+# limit the shared PCH exists to stay under). One line per TU goes to ${CMAKE_BINARY_DIR}/sloc.log, see sloc-stats.sh:
+#   cmake -DHS_SLOC_STATS=ON ... ; sort -rn build/.../sloc.log | head
+option(HS_SLOC_STATS "Log Clang source-location address-space use per translation unit" OFF)
+if (HS_SLOC_STATS AND "${compiler_version}" MATCHES "clang")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CMAKE_CURRENT_LIST_DIR}/sloc-stats.sh" "${CMAKE_BINARY_DIR}/sloc.log")
+    add_compile_options("SHELL:$<$<COMPILE_LANGUAGE:CXX>:-Xclang -print-stats>")
+endif ()
+
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-unused-command-line-argument>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-enum-compare-switch>)
 add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-deprecated-declarations>)
