@@ -35,15 +35,15 @@ function(createStandardPackageData dryRun)
     #
 
     addPackageData(SYSTEM FEATURE "REFLECTION" PKGNAME "magic_enum" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/Neargye/magic_enum.git" GIT_TAG "7f7c70473857c47c6eb88261771c4ab3dc7616d4"
             ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "SIGNAL" PKGNAME "eventpp" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/wqking/eventpp.git" GIT_TAG "1224dd6c9bd4577d686ac42334fc545997f5ece1"
             ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "yaml-cpp" NAMESPACE "yaml-cpp" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git" GIT_TAG "c5e65360373d1d99d6b6848c991cd4fcee435009"
             ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "STORAGE" PKGNAME "nlohmann_json" NAMESPACE "nlohmann_json" METHOD "FETCH_CONTENTS"
@@ -55,7 +55,7 @@ function(createStandardPackageData dryRun)
             ARG REQUIRED DRY_RUN ${dryRun})
 
     addPackageData(SYSTEM FEATURE "DATABASE" PKGNAME "soci" NAMESPACE "SOCI" METHOD "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/SOCI/soci.git" GIT_TAG "a9e51707d565baa6e02634453d5e81b84062c94a"
             COMPONENTS Core SQLite3
             ARGS EXCLUDE_FROM_ALL REQUIRED CONFIG COMPONENTS Core SQLite3 DRY_RUN ${dryRun}
             SRCDIR ${ARCHIVE_DIR}/soci/source
@@ -101,7 +101,7 @@ function(createStandardPackageData dryRun)
             ARGS REQUIRED EXCLUDE_FROM_ALL DRY_RUN ${dryRun} FLAGS ADD_TO_LIBRARY)
 
     addPackageData(OPTIONAL FEATURE "SSL" PKGNAME "OpenSSL" NAMESPACE "OpenSSL" METHOD "PROCESS" # "FETCH_CONTENTS"
-            GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "master"
+            GIT_REPOSITORY "https://github.com/OpenSSL/OpenSSL.git" GIT_TAG "openssl-3.5.3"
             ARGS REQUIRED EXCLUDE_FROM_ALL COMPONENTS SSL Crypto DRY_RUN ${dryRun})
 
     # wxWidgets is PINNED to an explicit commit, not a moving branch, so a fresh fetch
