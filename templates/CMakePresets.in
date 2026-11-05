@@ -124,7 +124,7 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
         "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
-        "CMAKE_OSX_SYSROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "CMAKE_OSX_SYSROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
         "CMAKE_OSX_DEPLOYMENT_TARGET": "26.0",
         "CMAKE_SHARED_LINKER_FLAGS": "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",
         "CMAKE_EXE_LINKER_FLAGS":    "-L/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ -Wl,-rpath,/opt/homebrew/Cellar/llvm/22.1.5/lib/c++ /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++.1.0.dylib /opt/homebrew/Cellar/llvm/22.1.5/lib/c++/libc++abi.dylib",

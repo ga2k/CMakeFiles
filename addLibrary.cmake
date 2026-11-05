@@ -22,7 +22,7 @@ function(addLibrary)
             "HEADERS;SOURCES;SOURCE;MODULES;LIBS;DEPENDS;USES;BASE_DIRS;CXX_BASE_DIRS"
             ${ARGN}
     )
-    get_filename_component(LIB_PATH ${CMAKE_PARENT_LIST_FILE} DIRECTORY)
+    set(LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR})
     get_filename_component(LIB_NAME ${LIB_PATH} NAME)
 
     if (NOT arg_HEADERS_FILE_SET)

@@ -1,4 +1,5 @@
 include_guard(GLOBAL)
+include(GenerateExportHeader)
 
 set(SsngfnHHNJLKN) # Stop the text above appearing in the next docstring
 
@@ -1245,12 +1246,12 @@ macro(generateExportHeader)
 
     set(_generated_export_header "${A_GEH_DESTDIR}/${_targetlc}_export.h")
 
-    include(GenerateExportHeader)
+    file(MAKE_DIRECTORY "${A_GEH_DESTDIR}")
 
     # Before generate_export_header
     set(_saved_scan_for_modules ${CMAKE_CXX_SCAN_FOR_MODULES})
     set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
-    generate_export_header(${_target} EXPORT_FILE_NAME ${_generated_export_header})
+    generate_export_header(${_target} EXPORT_FILE_NAME "${_generated_export_header}")
     set(CMAKE_CXX_SCAN_FOR_MODULES ${_saved_scan_for_modules})
 
     target_sources(${_target}
