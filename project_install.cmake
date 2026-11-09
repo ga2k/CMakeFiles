@@ -214,8 +214,6 @@ function(project_install _Folder)
             # yaml-cpp is fully defined as HoffSoft::yaml-cpp in CoreTarget.cmake — no find_dependency needed
         elseif (_ns STREQUAL "wxWidgets")
             # wxWidgets is handled separately via WX_Helper.cmake
-        elseif (_ns STREQUAL "Qt6")
-            # Qt6 (orphaned — GTK is used instead)
         else ()
             string(APPEND HS_FIND_DEPENDENCIES "find_dependency(${_ns})\n")
         endif ()
@@ -494,7 +492,7 @@ function(project_install _Folder)
                 COMPONENT ${APP_NAME}Runtime
                 FILES_MATCHING PATTERN "*.so*"
                 REGEX "libhoffsoft_" EXCLUDE
-                REGEX "lib${_hs_app_lc}(_(gtk|qt))?\\.so" EXCLUDE
+                REGEX "lib${_hs_app_lc}\\.so" EXCLUDE
         )
     endif ()
 

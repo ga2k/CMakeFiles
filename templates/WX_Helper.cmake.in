@@ -164,29 +164,15 @@ endif ()
 # --------------------------------------------------------------------------------------
 if (UNIX AND NOT APPLE)
 
-    # Only the wxQt port needs Qt headers/libs for consumers (QApplication, QPalette, ...).
-    # A wxGTK stage must not drag Qt6 into its consumers, so detect which port was staged.
-    file(GLOB _wx_qt_candidates "${_wx_lib_dir}/libwx_qtu-*.so*")
-    set(_wx_qt_libs "")
-    if (_wx_qt_candidates)
-        set(_wx_qt_libs "Qt6::Core;Qt6::Gui;Qt6::Widgets")
-        if (NOT TARGET Qt6::Widgets)
-            find_dependency(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-        endif ()
-    endif ()
-    unset(_wx_qt_candidates)
-
     if (TARGET wx::wxwidgets AND NOT TARGET wx::wxmono)
         add_library(wx::wxmono INTERFACE IMPORTED)
         set_target_properties(wx::wxmono PROPERTIES
-                INTERFACE_LINK_LIBRARIES "wx::wxwidgets;${_wx_qt_libs}"
+                INTERFACE_LINK_LIBRARIES "wx::wxwidgets"
         )
     endif ()
 
     if (NOT TARGET wx::wxmono)
         file(GLOB _wx_so_candidates
-                "${_wx_lib_dir}/libwx_qtu-*.so"
-                "${_wx_lib_dir}/libwx_qtu-*.so.*"
                 "${_wx_lib_dir}/libwx_gtk*-*.so"
                 "${_wx_lib_dir}/libwx_gtk*-*.so.*"
         )
@@ -208,12 +194,10 @@ if (UNIX AND NOT APPLE)
             add_library(wx::wxmono SHARED IMPORTED)
             set_target_properties(wx::wxmono PROPERTIES
                     IMPORTED_LOCATION "${_wx_mono_so}"
-                    INTERFACE_LINK_LIBRARIES "${_wx_qt_libs}"
             )
         endif ()
     endif ()
 
-    unset(_wx_qt_libs)
     unset(_wx_so_candidates)
     unset(_wx_mono_so)
     unset(_wx_lib_dir)

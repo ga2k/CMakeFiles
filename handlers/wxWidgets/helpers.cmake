@@ -25,11 +25,7 @@ function(wxWidgets_set_build_options)
 
     # @formatter:on
     if (LINUX)
-        if (${APP_LINUX_BUILD_TOOLKIT} STREQUAL "QT")
-            set(wxBUILD_TOOLKIT "qt" CACHE STRING "" FORCE)
-        else ()
-            set(wxBUILD_TOOLKIT "gtk3" CACHE STRING "" FORCE)
-        endif ()
+        set(wxBUILD_TOOLKIT "gtk3" CACHE STRING "" FORCE)
     elseif (APPLE)
         set(wxBUILD_TOOLKIT "osx_cocoa" CACHE STRING "" FORCE)
     elseif (WIN32)

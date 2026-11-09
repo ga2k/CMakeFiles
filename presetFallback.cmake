@@ -13,7 +13,6 @@
 #   ARG_HOST_TYPE   - "Linux" "macOS" "Windows" "WinX"
 #   ARG_BUILD_TYPE  – "Debug" or "Release"
 #   ARG_LINK_TYPE   – "Shared" or "Static"
-#   ARGV3           – optional Linux GUI toolkit stem, "gtk" or "qt" (appended to stemPath)
 
 macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
 
@@ -38,11 +37,7 @@ macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
     set(_hostPath  "/${_hostPathSuffix}")                   # e.g. /linux
     set(_buildPath "/${_buildPathSuffix}")                  # e.g. /debug
     set(_linkPath  "/${_linkPathSuffix}")                   # e.g. /shared
-    set(_toolkitPath "")
-    if(NOT "${ARGV3}" STREQUAL "")
-        set(_toolkitPath "/${ARGV3}")                       # e.g. /qt
-    endif()
-    set(_stemPath  "${_hostPath}${_buildPath}${_linkPath}${_toolkitPath}") # e.g. /linux/debug/shared/qt
+    set(_stemPath  "${_hostPath}${_buildPath}${_linkPath}") # e.g. /linux/debug/shared
 
     # --- ENV vars (host type) ---
     set(ENV{hostPath}   "${_hostPath}")
@@ -61,8 +56,7 @@ macro(fixPresetMess ARG_HOST_TYPE ARG_BUILD_TYPE ARG_LINK_TYPE)
     set(ENV{linkPath}   "${_linkPath}")
 
     # --- Derived ENV (binaryDir / stemPath equivalent) ---
-    set(ENV{toolkitPath} "${_toolkitPath}")
-    set(ENV{stemPath}   "${_stemPath}")   # $hostPath$buildPath$linkPath$toolkitPath
+    set(ENV{stemPath}   "${_stemPath}")   # $hostPath$buildPath$linkPath
 
     # --- CACHE vars (build/link type) ---
     set(buildType       "${ARG_BUILD_TYPE}" CACHE STRING "" FORCE)
