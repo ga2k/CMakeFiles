@@ -1120,8 +1120,8 @@ class CppGenerator:
         # a Group) gets no override at all, relying on RecordSetPage's empty default. Records are
         # always db::Row -- there's no per-table generated struct, so every field read goes
         # through get<T>(name), always wrapped in optional<> so a NULL column never throws
-        # (wx::initFromField already handles the optional-empty case by leaving the control
-        # untouched).
+        # (wx::initFromField clears the control to ValueT{} for a NULL column so stale values
+        # from the previous record don't bleed through on navigation).
         if recordset:
             bound_controls, group_members = self.collect_refresh_targets(elements, yaml_file)
             if self.target_type == "pages":
