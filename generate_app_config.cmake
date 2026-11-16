@@ -67,8 +67,8 @@ endfunction()
 
 set(_TRAC_KEY 90)   # 0x5A — matches kXorKey in TracConfig.cpp
 obfuscate_string_to_hex("${APP_TRAC_URL}"    ${_TRAC_KEY} APP_TRAC_URL_OBF)
-obfuscate_string_to_hex("${APP_TRAC_USER}"   ${_TRAC_KEY} APP_TRAC_USER_OBF)
-obfuscate_string_to_hex("${APP_TRAC_PASSWD}" ${_TRAC_KEY} APP_TRAC_PASSWD_OBF)
+obfuscate_string_to_hex("${APP_DEFAULT_TRAC_USER}"   ${_TRAC_KEY} APP_TRAC_USER_OBF)
+obfuscate_string_to_hex("${APP_DEFAULT_TRAC_PASSWD}" ${_TRAC_KEY} APP_TRAC_PASSWD_OBF)
 obfuscate_string_to_hex("${APP_TRAC_API}"    ${_TRAC_KEY} APP_TRAC_API_OBF)
 
 # License credentials — XOR key comes from APP_LIC_XOR (default 0 → no obfuscation for empty fields)

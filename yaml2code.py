@@ -221,6 +221,7 @@ class CppGenerator:
             'Gauge':                    'int',
             'GridCtrl':                 'dunno',
             'Group':                    'std::string',
+            'GroupBox':                 'std::string',
             'InfoBar':                  'hs::NullType',
             'IntTextCtrl':              'int',
             'Label':                    'std::string',
@@ -231,7 +232,7 @@ class CppGenerator:
             'RadioBox':                 'int',
             'RadioButton':              'bool',
             'ScrollBar':                'int',
-            'SeparatorLabel':           'std::string',
+            'GroupLine':           'std::string',
             'SearchBar':                'std::string',
             'SearchToolBar':            'std::string',
             'Slider':                   'int',
@@ -266,6 +267,7 @@ class CppGenerator:
             'Gauge':                    '0',
             'GridCtrl':                 'dunno',
             'Group':                    '""',
+            'GroupBox':                 '""',
             'InfoBar':                  'Null',
             'IntTextCtrl':              '0',
             'Label':                    '""',
@@ -276,7 +278,7 @@ class CppGenerator:
             'RadioBox':                 '0',
             'RadioButton':              'false',
             'ScrollBar':                '0',
-            'SeparatorLabel':           '""',
+            'GroupLine':           '""',
             'SearchBar':                '""',
             'SearchToolBar':            '""',
             'Slider':                   '0',
@@ -313,6 +315,7 @@ class CppGenerator:
             'Gauge':                    True,
             'GridCtrl':                 True,
             'Group':                    False,
+            'GroupBox':                 False,
             'InfoBar':                  False,
             'IntTextCtrl':              True,
             'Label':                    True,
@@ -325,7 +328,7 @@ class CppGenerator:
             'RadioBox':                 True,
             'RadioButton':              True,
             'ScrollBar':                True,
-            'SeparatorLabel':           False,
+            'GroupLine':           False,
             'SearchBar':                False,
             'SearchToolBar':            False,
             'Slider':                   True,
@@ -395,7 +398,7 @@ class CppGenerator:
             'RadioBox':                 'RadioButton.Ctrl',
             'RadioButton':              'RadioButton.Ctrl',
             'ScrollBar':                'ScrollBar',
-            'SeparatorLabel':           'SeparatorLabel',
+            'GroupLine':           'GroupLine',
             'SearchBar':                'Search.Bar',
             'Slider':                   'Slider',
             'SpinCtrl':                 'SpinCtrl',
@@ -865,6 +868,7 @@ class CppGenerator:
         true_imports = []
         seen_imports: set[str] = set()
         for module in required_imports:
+            module = 'GroupBox' if module == 'Group' else module  # the Group control's module is now GroupBox
             if module == export_module:
                 print(f'export_module {export_module} cannot be imported: {target_name} {yaml_file}')
                 self._dbg(f"'{target_name}': import '{module}' DROPPED (same as this module's own export_module)")
@@ -1912,7 +1916,7 @@ class CppGenerator:
             self._dbg(f"'{group_name}': section '{identity}' (elements[{idx}]): {len(items)} item(s)")
 
             if self.target_type == "groups":
-                target_parent = "getSBSizer()->GetStaticBox();"
+                target_parent = "containerWindow();"
             elif self.target_type == "pages":
                 target_parent = "getForm()"
             elif self.target_type == "wizardpages":
@@ -2271,7 +2275,7 @@ class CppGenerator:
                     item["control"], dict):
                     md = item["control"]
                     var = self.extract_member_variable(md, "control declaration", yaml_file)
-                    ctrl_class = self.resolve_member_cpp_type(var or "Group", md, yaml_file)
+                    ctrl_class = self.resolve_member_cpp_type(var or "GroupBox", md, yaml_file)
                     decls.append(f"   {ctrl_class}* {var} {{}};")
                 elif self.target_type == "groups" and "control" in item and isinstance(item["control"], dict):
                     md = item["control"]
@@ -2357,6 +2361,7 @@ class CppGenerator:
                 "col_widths",
                 "cols",
                 "flags",  # deprecated alias for sizer_style
+                "flexible_direction",
                 "growable_cols",
                 "growable_rows",
                 "hgap",
@@ -2605,16 +2610,16 @@ class CppGenerator:
 
         if self.target_type == "groups":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'StringUtil', 'Validator',
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'GroupBox', 'StringUtil', 'Validator',
                  'wxTypes', 'wxUtil',
                  'Page'])
         elif self.target_type == "pages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'Page', 'StringUtil', 'wxTypes',
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'GroupBox', 'Page', 'StringUtil', 'wxTypes',
                  'wxUtil'])
         elif self.target_type == "wizardpages":
             used_modules.update(
-                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'Group', 'WizardPage', 'StringUtil',
+                ['Ctrl', 'Database', 'DDT', 'RecordSetInterface', 'Interface', 'GroupBox', 'WizardPage', 'StringUtil',
                  'wxTypes', 'wxUtil'])
 
         if not isinstance(elements, list):
@@ -2726,7 +2731,11 @@ class CppGenerator:
         else:
             control_class = control_class.strip()
 
-        return control_class, base_class
+        # The YAML vocabulary still says `base_class: Group` (and a groups: section's default base is
+        # the target_class "Group", which also names the generated XxxGroup classes -- a grouping).
+        # The C++ control class behind it is now wx::GroupBox, so that is what gets emitted.
+        _cpp = {'Group': 'GroupBox'}
+        return _cpp.get(control_class, control_class), _cpp.get(base_class, base_class)
 
     # control_value_mapping entries that are placeholders/sentinels rather than a usable
     # C++ value type -- when 'contains:' is omitted these must NOT displace the std::string

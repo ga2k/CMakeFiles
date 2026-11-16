@@ -45,8 +45,19 @@ license:
 @APP_LIC_KEY_YAML@
 
 pushover:
-  api_key: "@APP_PUSHOVER_API_KEY@"
-  api_user_key: "@APP_PUSHOVER_USER_KEY@"
+  api_key: "@APP_DEFAULT_PUSHOVER_API_KEY@"
+  api_user_key: "@APP_DEFAULT_PUSHOVER_USER_KEY@"
+
+email:
+  authority:            "@APP_DEFAULT_EMAIL_AUTHORITY@"
+  oauth2bearertoken:    "@APP_DEFAULT_EMAIL_OAUTH2_BEARER_TOKEN@"
+  password:             "@APP_DEFAULT_EMAIL_PASSWORD@"
+  security:             "@APP_DEFAULT_EMAIL_SECURITY@"
+  server:               "@APP_DEFAULT_EMAIL_SERVER@"
+  tlsclientcertpath:    "@APP_DEFAULT_EMAIL_TLS_CLIENT_CERT_PATH@"
+  tlsclientkeypath:     "@APP_DEFAULT_EMAIL_TLS_CLIENT_KEY_PATH@"
+  tlsclientkeypassword: "@APP_DEFAULT_EMAIL_TLS_CLIENT_KEY_PASSWORD@"
+  username:             "@APP_DEFAULT_EMAIL_USERNAME@"
 
 twilio:
   account_sid: "@APP_TWILIO_ACCOUNT_SID@"
