@@ -415,7 +415,7 @@ class CppGenerator:
         }
 
         # hs::CaseOp enumerators (Libs/Core/src/StringUtil.ixx) that a CapsValidator 'caseop:' may name.
-        self.CASE_OPS = ['ToUpper', 'ToLower', 'ToSentence', 'ToTitle', 'ToName', 'ToHonorific', 'ToState',
+        self.CASE_OPS = ['ToUpper', 'ToLower', 'ToSentence', 'ToTitle', 'ToName', 'ToState',
                          'ToGivenName', 'ToFamilyName', 'ToComplex']
 
         self.validator_class_mapping = {
