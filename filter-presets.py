@@ -314,6 +314,45 @@ def main(in_file, out_file):
             preset["cacheVariables"] = {}
         preset["cacheVariables"]["MCA_PRESET"] = new_name
 
+    # Step 3.6: Drop the leading platform word ("Linux Debug" -> "Debug"). Only one
+    # platform's presets survive the condition filter, so the prefix is redundant.
+    # A hidden base preset with the same short name (e.g. "Debug") would collide,
+    # so such hidden presets are renamed "<name> Base" and every "inherits" updated.
+    platform_prefix = re.compile(r"^(?:Linux|Darwin|macOS|Windows)\s+(.+)$")
+    short_map = {}
+    for preset in presets:
+        m = platform_prefix.match(preset.get("name", ""))
+        if m:
+            short_map[preset["name"]] = m.group(1).strip()
+
+    if short_map:
+        short_names = set(short_map.values())
+        hidden_map = {}
+        for h in hidden_presets:
+            if h.get("name") in short_names:
+                hidden_map[h["name"]] = f"{h['name']} Base"
+                h["name"] = hidden_map[h["name"]]
+        if hidden_map:
+            for preset in hidden_presets + presets:
+                if "inherits" in preset:
+                    inh = preset["inherits"]
+                    if isinstance(inh, str):
+                        inh = [inh]
+                    preset["inherits"] = [hidden_map.get(i, i) for i in inh]
+
+        for preset in presets:
+            old = preset["name"]
+            if old in short_map:
+                new = short_map[old]
+                preset["name"] = new
+                preset["displayName"] = new
+                preset.setdefault("cacheVariables", {})["MCA_PRESET"] = new
+                # Re-point any earlier mapping (orig -> old) and the old name itself.
+                for k, v in list(name_map.items()):
+                    if v == old:
+                        name_map[k] = new
+                name_map[old] = new
+
     # Step 4: Add the hidden presets back to the final list
     final_presets = hidden_presets + presets
 
