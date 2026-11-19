@@ -10,10 +10,12 @@
       "hidden": true,
       "description": "Create a debug build",
       "cacheVariables": {
-        "buildType": "Debug"
+        "buildType": "Debug",
+        "linkType": "Shared"
       },
       "environment": {
         "buildType": "Debug",
+        "linkType": "Shared",
         "buildPath": "/debug"
       }
     },
@@ -22,35 +24,13 @@
       "hidden": true,
       "description": "Create a release build",
       "cacheVariables": {
-        "buildType": "Release"
-      },
-      "environment": {
         "buildType": "Release",
-        "buildPath": "/release"
-      }
-    },
-    {
-      "name": "Static",
-      "hidden": true,
-      "description": "Create a statically linked library/executable",
-      "cacheVariables": {
-        "linkType": "Static"
-      },
-      "environment": {
-        "linkType": "Static",
-        "linkPath": "/static"
-      }
-    },
-    {
-      "name": "Shared",
-      "hidden": true,
-      "description": "Create a shared library/executable",
-      "cacheVariables": {
         "linkType": "Shared"
       },
       "environment": {
+        "buildType": "Release",
         "linkType": "Shared",
-        "linkPath": "/shared"
+        "buildPath": "/release"
       }
     },
     {
@@ -75,9 +55,7 @@
       "generator": "Ninja",
       "environment": {
         "hostType": "Windows",
-        "hostPath": "/windows",
         "archType": "x64",
-        "archPath": "/x64",
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
@@ -115,9 +93,7 @@
       "generator": "Ninja",
       "environment": {
         "hostType": "Darwin",
-        "hostPath": "/darwin",
         "archType": "arm64",
-        "archPath": "/arm64",
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
@@ -153,9 +129,7 @@
       "generator": "Ninja",
       "environment": {
         "hostType": "Linux",
-        "hostPath": "/linux",
         "archType": "x64",
-        "archPath": "/x64",
         "CMAKE_NINJA_FLAGS": "-k 0"
       },
       "cacheVariables": {
@@ -166,7 +140,7 @@
       }
     },
     {
-      "name": "Windows (Debug Static)",
+      "name": "Windows Debug",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}",
         "SSL_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MDd/libssl.lib",
@@ -175,26 +149,11 @@
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
-        "Debug",
-        "Static"
+        "Debug"
       ]
     },
     {
-      "name": "Windows (Debug Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}",
-        "SSL_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MDd/libssl.lib",
-        "LIB_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MDd/libcrypto.lib"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "Windows",
-        "Debug",
-        "Shared"
-      ]
-    },
-    {
-      "name": "Windows (Release Static)",
+      "name": "Windows Release",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}",
         "SSL_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MD/libssl.lib",
@@ -203,137 +162,78 @@
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Windows",
-        "Release",
-        "Static"
+        "Release"
       ]
     },
     {
-      "name": "Windows (Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}",
-        "SSL_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MD/libssl.lib",
-        "LIB_EAY": "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MD/libcrypto.lib"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "Windows",
-        "Release",
-        "Shared"
-      ]
-    },
-    {
-      "name": "Darwin (Debug Static)",
+      "name": "Darwin Debug",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Darwin",
-        "Debug",
-        "Static"
+        "Debug"
       ]
     },
     {
-      "name": "Darwin (Debug Shared)",
+      "name": "Darwin Release",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Darwin",
-        "Debug",
-        "Shared"
+        "Release"
       ]
     },
     {
-      "name": "Darwin (Release Static)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "Darwin",
-        "Release",
-        "Static"
-      ]
-    },
-    {
-      "name": "Darwin (Release Shared)",
-      "cacheVariables": {
-        "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
-      },
-      "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
-      "inherits": [
-        "Darwin",
-        "Release",
-        "Shared"
-      ]
-    },
-    {
-      "name": "Linux (Debug Shared)",
+      "name": "Linux Debug",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Linux",
-        "Debug",
-        "Shared"
+        "Debug"
       ]
     },
     {
-      "name": "Linux (Release Shared)",
+      "name": "Linux Release",
       "cacheVariables": {
         "stemPath": "$env{hostPath}$env{buildPath}$env{linkPath}"
       },
       "binaryDir": "build$env{hostPath}$env{buildPath}$env{linkPath}",
       "inherits": [
         "Linux",
-        "Release",
-        "Shared"
+        "Release"
       ]
     }
   ],
   "buildPresets": [
     {
-      "name": "Windows (Debug Static)",
-      "configurePreset": "Windows (Debug Static)"
+      "name": "Windows Debug",
+      "configurePreset": "Windows Debug"
     },
     {
-      "name": "Windows (Debug Shared)",
-      "configurePreset": "Windows (Debug Shared)"
+      "name": "Windows Release",
+      "configurePreset": "Windows Release"
     },
     {
-      "name": "Windows (Release Static)",
-      "configurePreset": "Windows (Release Static)"
+      "name": "Darwin Debug",
+      "configurePreset": "Darwin Debug"
     },
     {
-      "name": "Windows (Release Shared)",
-      "configurePreset": "Windows (Release Shared)"
+      "name": "Darwin Release",
+      "configurePreset": "Darwin Release"
     },
     {
-      "name": "Darwin (Debug Static)",
-      "configurePreset": "Darwin (Debug Static)"
+      "name": "Linux Debug",
+      "configurePreset": "Linux Debug"
     },
     {
-      "name": "Darwin (Debug Shared)",
-      "configurePreset": "Darwin (Debug Shared)"
-    },
-    {
-      "name": "Darwin (Release Static)",
-      "configurePreset": "Darwin (Release Static)"
-    },
-    {
-      "name": "Darwin (Release Shared)",
-      "configurePreset": "Darwin (Release Shared)"
-    },
-    {
-      "name": "Linux (Debug Shared)",
-      "configurePreset": "Linux (Debug Shared)"
-    },
-    {
-      "name": "Linux (Release Shared)",
-      "configurePreset": "Linux (Release Shared)"
+      "name": "Linux Release",
+      "configurePreset": "Linux Release"
     }
   ]
 }
