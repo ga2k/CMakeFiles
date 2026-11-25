@@ -81,6 +81,8 @@ obfuscate_string_to_hex("${APP_LIC_URL}"  ${_LIC_KEY} APP_LIC_URL_OBF)
 obfuscate_string_to_hex("${APP_LIC_NAME}" ${_LIC_KEY} APP_LIC_NAME_OBF)
 obfuscate_string_to_hex("${APP_LIC_ENV}"  ${_LIC_KEY} APP_LIC_ENV_OBF)
 obfuscate_string_to_hex("${APP_LIC_CLI}"  ${_LIC_KEY} APP_LIC_CLI_OBF)
+# Datafile encryption passphrase (SQLite3 Multiple Ciphers, SQLCipher v4). Empty = datafiles are not encrypted.
+obfuscate_string_to_hex("${APP_DB_ENCRYPTION_PASSPHRASE}" ${_LIC_KEY} APP_DB_KEY_OBF)
 
 string(STRIP "${APP_LIC_KEY}" _LIC_KEY_STRIPPED)
 if (_LIC_KEY_STRIPPED)

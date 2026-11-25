@@ -44,6 +44,9 @@ license:
   key: |
 @APP_LIC_KEY_YAML@
 
+database:
+  key:    "@APP_DB_KEY_OBF@"
+
 pushover:
   api_key: "@APP_DEFAULT_PUSHOVER_API_KEY@"
   api_user_key: "@APP_DEFAULT_PUSHOVER_USER_KEY@"

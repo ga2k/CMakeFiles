@@ -53,6 +53,30 @@ function(soci_preDownload pkgname url tag srcDir)
     set(SOCI_TESTS           OFF CACHE BOOL "" FORCE)
 
     set(SOCI_SQLITE3_BUILTIN ON CACHE BOOL "Prefer using built-in SQLite3"   FORCE)
+
+    # The "built-in" SQLite3 is SQLite3 Multiple Ciphers' amalgamation instead of SOCI's own, so every datafile can be
+    # encrypted (SQLCipher v4 scheme, keyed with PRAGMA key right after connecting). It is API-compatible with SQLite.
+    set(_mc_ver_tag "2.7.1")
+    set(_mc_ver    "2.7.1-sqlite-3.54.1")
+    set(_mc_sha256 "d6bc59678e015c5ac6d3ec5d7b657c351230b36c8052b185e446c9d52ba01af0")
+    set(_mc_dir    "${ARCHIVE_DIR}/sqlite3mc/${_mc_ver}")
+    if (NOT EXISTS "${_mc_dir}/sqlite3mc_amalgamation.c")
+        set(_mc_zip "${ARCHIVE_DIR}/sqlite3mc/sqlite3mc-${_mc_ver}-amalgamation.zip")
+        message(STATUS "sqlite3mc: downloading ${_mc_ver}")
+        file(DOWNLOAD
+                "https://github.com/utelle/SQLite3MultipleCiphers/releases/download/v${_mc_ver_tag}/sqlite3mc-${_mc_ver}-amalgamation.zip"
+                "${_mc_zip}"
+                EXPECTED_HASH SHA256=${_mc_sha256}
+                STATUS _mc_status)
+        list(GET _mc_status 0 _mc_rc)
+        if (NOT _mc_rc EQUAL 0)
+            message(FATAL_ERROR "sqlite3mc: download failed: ${_mc_status}")
+        endif ()
+        file(MAKE_DIRECTORY "${_mc_dir}")
+        file(ARCHIVE_EXTRACT INPUT "${_mc_zip}" DESTINATION "${_mc_dir}")
+    endif ()
+    set(SOCI_SQLITE3_DIRECTORY   "${_mc_dir}"                             CACHE STRING "SQLite3 Multiple Ciphers amalgamation" FORCE)
+    set(SOCI_SQLITE3_SOURCE_FILE "${_mc_dir}/sqlite3mc_amalgamation.c"    CACHE STRING "SQLite3 Multiple Ciphers amalgamation" FORCE)
     set(SOCI_FMT_BUILTIN    OFF CACHE BOOL "Prefer using built-in fmt"       FORCE)
 
     set(WITH_BOOST          OFF CACHE BOOL "Allow this feature"              FORCE)
